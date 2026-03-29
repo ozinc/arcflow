@@ -208,7 +208,7 @@ CALL db.help
 CALL db.procedures
 CALL db.tutorial
 CALL db.index.fulltext.queryNodes('index_name', 'search query')
-CALL db.checkpoint
+CALL db.checkpointMeta
 ```
 
 ### Temporal procedures

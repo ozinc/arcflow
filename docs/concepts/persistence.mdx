@@ -44,10 +44,17 @@ console.log(result.rows[0].get('data'))  // "critical"
 
 ## Checkpoints
 
-Compact the WAL into a snapshot to reduce recovery time:
+Query checkpoint metadata:
 
 ```typescript
-db.mutate("CALL db.checkpoint()")
+const cp = db.query("CALL db.checkpointMeta")
+console.log(cp.rows[0].toObject())  // { generation, nodeCount, mutationSeq }
+```
+
+In the CLI REPL, use `:checkpoint` to save a snapshot:
+
+```
+arcflow> :checkpoint
 ```
 
 ## Integrity verification

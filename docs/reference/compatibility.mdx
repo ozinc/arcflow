@@ -157,7 +157,7 @@ Run directly — no projection lifecycle needed.
 | `db.tutorial` | Interactive 6-step walkthrough |
 | `db.index.fulltext.queryNodes(index, query)` | Full-text BM25 search |
 | `db.validateQuery(cypher)` | Query validation |
-| `db.checkpoint` | Compact WAL |
+| `db.checkpointMeta` | Checkpoint metadata (generation, node count) |
 
 ## Temporal Procedures (`CALL temporal.*`)
 
@@ -188,3 +188,60 @@ Run directly — no projection lifecycle needed.
 |---|---|---|---|
 | CREATE SKILL | ✅ | `CREATE SKILL name FROM PROMPT ...` | Declarative AI skill |
 | PROCESS NODE | ✅ | `PROCESS NODE (n:Label)` | Execute skill on node |
+
+## Server Protocols
+
+| Feature | Status | Syntax | Notes |
+|---|---|---|---|
+| HTTP API | ✅ | `arcflow --http 8080` | REST query endpoint |
+| PostgreSQL Wire | ✅ | `arcflow --pg 5432` | Connect with psql, DBeaver, Grafana |
+| MCP Server | ✅ | `arcflow-mcp` | AI agent integration via Model Context Protocol |
+
+## Observation & Evidence
+
+| Procedure | Description |
+|---|---|
+| `db.observationClasses` | Observation classification (observed, inferred, predicted) |
+| `db.nodesByObservation.observed` | Nodes with observed labels |
+| `db.nodesByObservation.inferred` | Nodes with inferred labels |
+| `db.nodesByObservation.predicted` | Nodes with predicted labels |
+| `db.proofArtifacts` | Cryptographic proof artifacts |
+| `db.proofGates` | Proof gate information |
+| `db.provenance` | Data provenance |
+
+## Reactive System
+
+| Procedure | Description |
+|---|---|
+| `db.liveViews` | List active live views |
+| `db.liveAlgorithms` | Active running algorithms |
+| `db.liveQueries` | Active standing queries |
+| `db.reactiveSkills` | Active reactive skills |
+| `db.subscriptions` | Active subscriptions |
+| `db.topics` | Message topics |
+| `db.mutations` | Active mutations |
+
+## GPU Acceleration
+
+| Procedure | Description |
+|---|---|
+| `db.gpuStack` | GPU stack information |
+| `algo.pageRankCSR` | PageRank on CSR format (GPU) |
+| `algo.bfsCSR` | BFS on CSR format (GPU) |
+| `algo.triangleCountCSR` | Triangle count on CSR format (GPU) |
+
+## Behavior Graph
+
+| Procedure | Description |
+|---|---|
+| `behavior.tick` | Execute behavior tick |
+| `behavior.status` | Behavior system status |
+| `behavior.nodes` | Behavior node information |
+
+## Swarm / Multi-Agent
+
+| Procedure | Description |
+|---|---|
+| `swarm.agents` | List active swarm agents |
+| `swarm.register` | Register new agent |
+| `swarm.agentCount` | Count active agents |
