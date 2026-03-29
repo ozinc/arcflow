@@ -1,0 +1,131 @@
+---
+title: "Constructors"
+description: "Executable, versioned, auditable programs that build relationships"
+section: "concepts"
+order: 2
+since: "0.2.0"
+status: "stable"
+---
+
+# Constructors
+
+Consider a fraud detection system. You have 10 million transactions and 500,000 accounts. In a traditional graph database, you'd write a batch job to scan for suspicious patterns, generate edges, run it nightly, and hope nothing drifts between runs:
+
+```cypher
+-- In a traditional graph database, this requires an external pipeline:
+-- 1. Export data to Python/Spark
+-- 2. Run fraud detection model
+-- 3. Write results back as edges
+-- 4. No confidence scores. No provenance. No re-evaluation.
+-- 5. Repeat tomorrow. Hope nothing changed overnight.
+```
+
+In ArcFlow, you teach the graph the pattern once. It builds the edges itself:
+
+```cypher
+-- Teach the graph what fraud looks like
+CREATE SKILL FraudDetector
+  FROM PROMPT 'Flag accounts that transact with 3+ flagged accounts within 24h'
+  ALLOWED ON [Account]
+  TIER SYMBOLIC
+
+-- The graph materializes edges — with confidence scores
+PROCESS NODE (n:Account)
+-- => Created 847 SUSPECTED_FRAUD edges, avg confidence 0.73
+
+-- Every edge carries provenance
+MATCH (a)-[r:SUSPECTED_FRAUD]->(b)
+RETURN a.id, b.id, r._confidence, r._skill_version, r._created_at
+
+-- When the model improves, re-evaluate the uncertain ones
+REPROCESS EDGES WHERE confidence < 0.6
+-- => Re-evaluated 203 edges with FraudDetector v2, avg confidence now 0.81
+```
+
+No ETL pipeline. No batch job. No external system. The graph builds and refines its own knowledge.
+
+---
+
+## What is a Constructor?
+
+A **RelConstructor** is a first-class kernel object -- an executable program stored inside the graph that *builds* relationships. Think of it as a materialized view that produces edges instead of rows, with confidence scores and full provenance on every edge it creates.
+
+Constructors sit alongside Nodes and Relationships as native graph primitives. They are ArcFlow's most distinctive feature: the graph is not just a passive store -- it is an active system that can derive, score, and re-evaluate its own knowledge.
+
+## Mental Model
+
+| Traditional Graph | ArcFlow |
+|---|---|
+| Relationships are passive data | Relationships are built by executable programs |
+| Edges inserted manually | Edges materialized with confidence scores (0.0-1.0) |
+| No audit trail | Every edge carries provenance: which constructor, which version, which model |
+| Static schema | Constructors version independently and can self-evolve via meta-prompts |
+
+## Key Types
+
+```rust
+struct RelConstructor {
+    id: ConstructorId,
+    name: String,
+    version: SemanticVersion,         // e.g., "4.2.1"
+    prompt_template: String,          // executable instructions with {{context}}
+    embedding: Vec<f64>,              // for vector-similarity selection
+    output_schema: Option<String>,    // JSON schema for structured output
+    allowed_on: Vec<Label>,           // scoped to specific node types
+    min_confidence: Confidence,       // threshold for edge materialization
+    active: bool,
+    auto_evolve: bool,
+    meta_prompt: Option<String>,      // self-improvement prompt
+    execution_tier: ExecutionTier,    // SYMBOLIC → WASM → LLM
+}
+```
+
+## Execution Tiers
+
+| Tier | Latency | Description |
+|---|---|---|
+| `SYMBOLIC` | < 1ms | Pure logic, pattern matching, rule-based |
+| `WASM` | < 10ms | Wasm-bounded execution (planned) |
+| `LLM` | seconds | Batched LLM inference (planned) |
+
+The engine always tries the cheapest tier first. A rule-based constructor runs in microseconds. LLM inference is reserved for cases where symbolic logic is insufficient -- and even then, results are cached and confidence-scored.
+
+## WorldCypher Operations
+
+### Create a constructor
+
+```sql
+CREATE SKILL ProfessionalNetwork_v4
+  FROM PROMPT 'Given two Person nodes, determine if they have a professional relationship'
+  ALLOWED ON [Person, Organization]
+  TIER SYMBOLIC
+```
+
+### Execute constructors against nodes
+
+```sql
+PROCESS NODE (n:Person)
+```
+
+Evaluates all active constructors against matched nodes. Each constructor produces edges with confidence scores and provenance metadata. Low-confidence edges can be re-evaluated later as models improve or new evidence arrives.
+
+### Re-evaluate low-confidence edges
+
+```sql
+REPROCESS EDGES WHERE confidence < 0.6
+```
+
+Deletes edges below the threshold and re-runs their constructors. This is how the graph self-heals: as constructor versions improve, stale or low-quality edges are replaced with higher-confidence ones.
+
+## Why Constructors Matter
+
+Most graph databases treat edges as static assertions: "Alice KNOWS Bob" is inserted once and never questioned. Constructors make edges *derived* -- computed by programs, scored by confidence, and re-evaluable over time. This turns the graph from a static record into a living knowledge base that improves as its constructors evolve.
+
+For AI applications, this means every RAG answer can trace its evidence chain back to the specific constructor version and confidence threshold that produced each supporting edge.
+
+## See Also
+
+- [Confidence & Provenance](/concepts/confidence-and-provenance)
+- [CREATE CONSTRUCTOR](/constructors/create-constructor)
+- [PROCESS NODE](/constructors/process-node)
+- [REPROCESS EDGES](/constructors/reprocess-edges)

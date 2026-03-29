@@ -1,0 +1,48 @@
+---
+title: "Schema"
+description: "Indexes and constraints for performance and data integrity"
+section: "worldcypher/schema"
+order: 1
+since: "0.10.0"
+status: "stable"
+---
+
+# Schema
+
+WorldCypher supports explicit schema management for indexes and constraints.
+
+## Indexes
+
+Speed up property lookups:
+
+```sql
+CREATE INDEX ON :Person(name)
+CREATE INDEX ON :Person(age)
+DROP INDEX ON :Person(name)
+```
+
+List all indexes:
+
+```sql
+CALL db.indexes()
+```
+
+## Constraints
+
+Enforce data integrity:
+
+```sql
+CREATE CONSTRAINT ON (n:Person) ASSERT n.email IS UNIQUE
+DROP CONSTRAINT ON (n:Person) ASSERT n.email IS UNIQUE
+```
+
+List all constraints:
+
+```sql
+CALL db.constraints()
+```
+
+## See Also
+
+- [CREATE INDEX](/worldcypher/schema/indexes) — index management
+- [UNIQUE Constraint](/worldcypher/schema/constraints) — uniqueness enforcement

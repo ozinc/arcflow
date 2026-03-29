@@ -1,0 +1,34 @@
+---
+title: "OPTIONAL MATCH"
+description: "Left-join semantics — return nulls for missing patterns"
+section: "worldcypher/query-syntax"
+order: 4
+since: "0.9.0"
+status: "stable"
+---
+
+# OPTIONAL MATCH
+
+Left-join semantics -- include nodes even when the pattern doesn't match. Unmatched variables return `null` instead of filtering the row out.
+
+## Syntax
+
+```sql
+MATCH (a:Label) OPTIONAL MATCH (a)-[r:TYPE]->(b) RETURN a, b
+```
+
+## Example
+
+```sql
+MATCH (p:Person)
+OPTIONAL MATCH (p)-[:WORKS_AT]->(c:Company)
+RETURN p.name, c.name
+```
+
+If a person has no `WORKS_AT` relationship, `c.name` returns `null` instead
+of omitting the person from results.
+
+## See Also
+
+- [MATCH](/worldcypher/query-syntax/match) — required matching
+- [IS NULL / IS NOT NULL](/worldcypher/query-syntax/where) — null predicates

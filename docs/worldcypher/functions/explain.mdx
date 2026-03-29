@@ -1,0 +1,30 @@
+---
+title: "EXPLAIN"
+description: "Inspect the query execution plan"
+section: "worldcypher/functions"
+order: 11
+since: "0.7.0"
+status: "stable"
+---
+
+# EXPLAIN
+
+See the query plan without executing. Shows the compiled operator pipeline: scan, filter, project, sort steps.
+
+## Syntax
+
+```sql
+EXPLAIN <any query>
+```
+
+## Example
+
+```sql
+EXPLAIN MATCH (n:Person) WHERE n.age > 25 RETURN n.name ORDER BY n.age
+```
+
+Returns the compiled operator pipeline: scan, filter, project, sort steps.
+
+## See Also
+
+- [WorldCypher Overview](/worldcypher) — all operators

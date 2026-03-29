@@ -1,0 +1,39 @@
+---
+title: "CASE WHEN"
+description: "Conditional expressions in RETURN"
+section: "worldcypher/composition"
+order: 3
+since: "0.12.0"
+status: "stable"
+---
+
+# CASE WHEN
+
+```sql
+MATCH (n:Person) RETURN n.name,
+  CASE WHEN n.age < 18 THEN 'minor'
+       WHEN n.age < 65 THEN 'adult'
+       ELSE 'senior' END AS category
+```
+
+Conditional expressions for computed values in RETURN clauses.
+
+## Syntax
+
+```sql
+CASE WHEN condition THEN result [WHEN condition THEN result]... [ELSE default] END
+```
+
+## Examples
+
+### Null handling
+
+```sql
+MATCH (n:Person) RETURN n.name,
+  CASE WHEN n.email IS NOT NULL THEN 'has email' ELSE 'no email' END AS status
+```
+
+## See Also
+
+- [coalesce()](/worldcypher/functions/built-in) — null fallback
+- [RETURN](/worldcypher/query-syntax/return) — projection

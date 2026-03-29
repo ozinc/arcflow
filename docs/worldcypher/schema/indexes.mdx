@@ -1,0 +1,38 @@
+---
+title: "Indexes"
+description: "CREATE INDEX and DROP INDEX for property lookup performance"
+section: "worldcypher/schema"
+order: 2
+since: "0.10.0"
+status: "stable"
+---
+
+# Indexes
+
+CREATE INDEX for O(1) property lookups. Without an index, MATCH scans every node.
+
+```sql
+CREATE INDEX ON :Person(name)
+```
+
+## Drop an index
+
+```sql
+DROP INDEX ON :Person(name)
+```
+
+## List indexes
+
+```sql
+CALL db.indexes()
+```
+
+Or in the REPL:
+
+```
+:indexes
+```
+
+## See Also
+
+- [Constraints](/worldcypher/schema/constraints) — UNIQUE constraints

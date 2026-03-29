@@ -1,0 +1,160 @@
+---
+title: "Event Sourcing"
+description: "Every state change is a temporal fact — replay any moment, no external broker needed"
+section: "event-sourcing"
+order: 1
+since: "4.0.0"
+status: "stable"
+---
+
+# Event Sourcing Graph
+
+**What normally requires an external message broker + event store + a projection layer + a query database runs in one process with zero external dependencies.**
+
+ArcFlow's WAL automatically records every mutation as a temporal fact. You get point-in-time `AS OF` queries, deterministic replay, change data capture, and Cypher over the full event history — no event bus, no projection rebuilds, no separate read model. One binary, one process, four infrastructure systems eliminated.
+
+```cypher
+-- Current state
+MATCH (o:Order {id: 'ORD-001'}) RETURN o.status  -- "shipped"
+
+-- State 1 hour ago (no projection needed — just query the past)
+MATCH (o:Order {id: 'ORD-001'}) AS OF (timestamp() - 3600000) RETURN o.status  -- "confirmed"
+```
+
+---
+
+## The Mapping
+
+| Event Sourcing Concept | ArcFlow Equivalent | What ArcFlow Adds |
+|---|---|---|
+| Event Stream | WAL (write-ahead log) | Graph-structured events, not flat records |
+| Event Store | `db.mutations()` + CDC log | Queryable with Cypher, not just sequential replay |
+| Aggregate | Graph subgraph | Relationships between entities, not isolated aggregates |
+| Projection | `MATCH ... RETURN` | Real-time Cypher queries, no projection rebuild |
+| Snapshot | `AS OF` temporal queries | Point-in-time snapshot of any entity |
+| Replay | `db.temporalReplay()` | Deterministic replay with seeded randomness |
+| Saga / Process Manager | Workflow steps | WAL-durable, retry policies, dead letter queues |
+| CQRS Read Model | Live queries + subscriptions | Reactive, auto-updating read models |
+
+---
+
+## How It Works
+
+### Every Mutation is Recorded
+
+```cypher
+-- Create an order
+CREATE (o:Order {id: 'ORD-001', status: 'pending', total: 99.99})
+
+-- Update status
+MATCH (o:Order {id: 'ORD-001'})
+SET o.status = 'confirmed'
+
+-- The mutation log captures both events automatically
+CALL db.mutations()
+```
+
+The WAL records every CREATE, SET, DELETE — you don't need to explicitly emit events.
+
+### Query Any Point in Time
+
+```cypher
+-- Current state
+MATCH (o:Order {id: 'ORD-001'}) RETURN o.status
+-- Result: "shipped"
+
+-- State 1 hour ago
+MATCH (o:Order {id: 'ORD-001'}) AS OF (timestamp() - 3600000)
+RETURN o.status
+-- Result: "confirmed"
+
+-- State at order creation
+MATCH (o:Order) AS OF 1711324800000
+RETURN o.id, o.status, o.total
+```
+
+### Change Data Capture
+
+```cypher
+-- All changes since sequence number 42
+CALL db.changesSince(42)
+
+-- Verify data integrity with cryptographic fingerprint
+CALL db.fingerprint()
+-- Returns: hash of entire graph state
+```
+
+### Deterministic Replay
+
+```cypher
+-- Replay a sequence of events to verify correctness
+CALL db.temporalReplay('order_processing_run_7')
+
+-- Compare two timelines
+CALL db.temporalCompare(
+  'MATCH (o:Order) RETURN sum(o.total)',  -- timeline A
+  'MATCH (o:Order) RETURN sum(o.total)'   -- timeline B
+)
+```
+
+---
+
+## Use Cases
+
+### Audit Trail (Compliance)
+
+Every fact has a timestamp, every relationship has provenance. Auditors can query: "What was the state of account X on March 15 at 2:00 PM?"
+
+```cypher
+MATCH (a:Account {id: 'ACC-789'}) AS OF 1710511200000
+RETURN a.balance, a.status, a._updated_at
+```
+
+### Temporal Analytics
+
+Track how metrics evolve over time without maintaining a separate time-series database:
+
+```cypher
+-- Snapshot state at daily intervals
+MATCH (o:Order) AS OF (timestamp() - 86400000)  -- yesterday
+RETURN count(*) AS orders_yesterday
+
+MATCH (o:Order) RETURN count(*) AS orders_today
+```
+
+### Undo / Rollback
+
+Since the full history is in the WAL, you can inspect any previous state and manually restore it:
+
+```cypher
+-- What was the value before the last change?
+MATCH (p:Product {sku: 'WP-100'}) AS OF (timestamp() - 60000)
+RETURN p.price AS previous_price
+```
+
+---
+
+## Compared to Traditional Approaches
+
+### Distributed Streaming Platforms + Event Stores?
+The WAL is your event log. `db.mutations()` is your event stream. `AS OF` queries replace projections. Trade-off: you lose distributed horizontal partitioning and multi-consumer fan-out. You gain: graph-structured events with relationships between them, Cypher queries over history, and zero infrastructure — one process, one binary, no JVM.
+
+### Relational Databases + Temporal Tables?
+Similar concept, but ArcFlow adds graph relationships between temporal entities, confidence scoring on facts, and `db.temporalReplay()` for deterministic replay. Trade-off: relational databases have mature tooling for schema migrations, backups, and replication; ArcFlow's advantage is in-process performance (no client-server round-trip) and graph-native temporal queries.
+
+### Immutable / Temporal Databases?
+Closest architectural match. ArcFlow adds graph-native queries (Cypher vs Datalog), GPU acceleration (154M PageRank nodes/sec), vector search, and spatial primitives. Trade-off: immutable databases support distributed clusters and have battle-tested production deployments at scale; ArcFlow is single-process with higher single-machine throughput.
+
+---
+
+## Vision
+
+ArcFlow is a temporal data engine where time is a queryable dimension across every fact, relationship, and computation.
+
+**Bi-temporal modeling.** ArcFlow records when facts change (transaction time) and supports valid time — the time period a fact was true in the real world, independent of when it was recorded. This enables queries like "what did we believe on March 1 about events that happened in February?" — essential for financial reporting, insurance claims, and regulatory audits.
+
+**Regulatory compliance automation.** The temporal log and provenance metadata combine to automatically answer compliance questions: "Show me the complete audit trail for this account, including who changed what, when, with what authorization, and what the state was at every regulatory checkpoint." Compliance queries are a first-class capability.
+
+**Causal inference over event streams.** Using the temporal ordering of graph mutations to identify causal chains: "Event A preceded Event B by 200ms across 47 occurrences — is there a causal relationship?" This extends beyond simple correlation by leveraging graph structure to distinguish direct causation from confounding.
+
+**Temporal compaction and tiering.** As event history grows, older events can be compacted (merged into summary snapshots) while recent events retain full granularity. This keeps query performance stable as the temporal log grows, without losing the ability to drill into historical detail when needed.

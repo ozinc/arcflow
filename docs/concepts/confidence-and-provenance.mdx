@@ -1,0 +1,54 @@
+---
+title: "Confidence & Provenance"
+description: "Every dynamic edge carries confidence scoring and full audit trail"
+section: "concepts"
+order: 3
+since: "0.2.0"
+status: "stable"
+---
+
+# Confidence & Provenance
+
+Every edge in ArcFlow knows who created it, when, with what tool, and how confident. This is not optional metadata -- it is built into the storage engine. Query `r._confidence`, `r._skill_version`, or `r._created_at` on any relationship, the same way you query `r.weight` or `r.type`.
+
+Static edges (manually created) default to confidence 1.0. Dynamic edges (created by constructors) carry the full provenance chain -- constructor ID, semantic version, model fingerprint, and a hash of the provenance lineage.
+
+## Confidence
+
+```rust
+struct Confidence(f64); // 0.0 to 1.0, clamped
+```
+
+| Value | Meaning |
+|---|---|
+| `1.0` | Static edge or full certainty |
+| `0.75+` | High confidence (default constructor threshold) |
+| `0.5–0.75` | Medium — may need re-evaluation |
+| `< 0.5` | Low — candidate for REPROCESS |
+
+## Edge Provenance
+
+```rust
+struct EdgeProvenance {
+    skill_id: Option<ConstructorId>,       // which constructor created this edge
+    skill_version: Option<SemanticVersion>, // constructor version at creation time
+    model_fingerprint: Option<String>,      // e.g., "claude-opus-4-6"
+    provenance_hash: Option<String>,        // hash of the provenance chain
+}
+```
+
+## Querying by confidence
+
+```sql
+REPROCESS EDGES WHERE confidence < 0.6
+```
+
+## Confidence-weighted traversal
+
+When traversing paths, confidence propagates multiplicatively — a path through
+two 0.9-confidence edges has path confidence 0.81.
+
+## See Also
+
+- [Constructors](/concepts/constructors)
+- [REPROCESS EDGES](/constructors/reprocess-edges)

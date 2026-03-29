@@ -1,0 +1,311 @@
+---
+title: "Language Bindings"
+description: "Native bindings for Rust, Python, TypeScript, C, C++, Docker, and MCP — zero serialization overhead"
+section: "bindings"
+order: 1
+since: "10.0.0"
+status: "stable"
+---
+
+# Language Bindings
+
+One engine, every language.
+
+```bash
+curl -fsSL https://oz.com/install_arcflow | sh  # Native binary
+pip install arcflow        # Python
+npm install arcflow        # TypeScript
+docker run ghcr.io/oz-global/arcflow:latest  # Docker
+```
+
+All bindings wrap a single C ABI shared library (`libarcflow`). Direct function calls when in-process. TCP/HTTP/MCP when you need network access. Docker when you need isolation.
+
+## Rust SDK
+
+The primary interface.
+
+```rust
+use arcflow::{open, open_concurrent, compile, Label, Properties};
+
+// In-memory graph — direct store access
+let mut store = arcflow::open();
+let id = store.create_node(
+    vec![Label::new("Person")],
+    Properties::new(),
+);
+
+// Thread-safe concurrent access — recommended for applications
+let db = arcflow::open_concurrent();
+db.execute("CREATE (n:Person {name: 'Alice', age: 30})").unwrap();
+
+let result = db.execute("MATCH (n:Person) RETURN n.name").unwrap();
+for row in &result.rows {
+    println!("{}", row.get("name").unwrap());
+}
+```
+
+### Key Types
+
+| Type | Description |
+|------|-------------|
+| `GraphStore` | Single-threaded graph store with full low-level API |
+| `ConcurrentStore` | Thread-safe wrapper with `execute()` — auto-detects read vs write |
+| `Engine` | Read-only query engine |
+| `MutableEngine` | Read-write query engine |
+| `QueryResult` | Rows + columns from query execution |
+| `compile()` | Parse WorldCypher text into executable IR |
+
+### Compile + Execute
+
+```rust
+let db = arcflow::open_concurrent();
+db.execute("CREATE (n:Person {name: 'Alice'})").unwrap();
+
+// Pre-compile for repeated execution
+let query = arcflow::compile("MATCH (n:Person) RETURN n.name").unwrap();
+
+// Execute compiled query
+let result = db.execute("CALL algo.pageRank()").unwrap();
+assert!(result.rows.len() > 0);
+```
+
+## Python
+
+ctypes bindings wrapping `libwc_ffi`. No PyO3 compile step needed — loads the shared library at runtime.
+
+```python
+from arcflow import ArcFlow
+
+# In-memory database
+db = ArcFlow()
+
+# Or persistent
+db = ArcFlow("/tmp/mydb")
+
+# Execute queries
+db.execute("CREATE (n:Person {name: 'Alice', age: 30})")
+result = db.execute("MATCH (n:Person) RETURN n.name, n.age")
+
+for row in result:
+    print(row)  # {'name': 'Alice', 'age': '30'}
+
+# Algorithms work the same way
+result = db.execute("CALL algo.pageRank()")
+for row in result:
+    print(f"{row['name']}: {row['score']}")
+
+# Context manager for automatic cleanup
+with ArcFlow() as db:
+    db.execute("CALL db.demo")
+    result = db.execute("MATCH (n) RETURN n.name")
+    print(result.row_count)
+
+# Version check
+print(ArcFlow.version())  # "1.5.0"
+```
+
+## TypeScript / Node.js
+
+napi-rs native addon. Full-speed graph operations from JavaScript/TypeScript with no HTTP layer.
+
+```typescript
+import { Runtime } from 'arcflow';
+
+// In-memory
+const rt = new Runtime();
+
+// Or persistent
+const rt = new Runtime('/tmp/mydb');
+
+// Open a session
+const session = rt.session();
+
+// Execute queries
+session.execute("CREATE (n:Person {name: 'Alice', age: 30})");
+const result = session.execute("MATCH (n:Person) RETURN n.name, n.age");
+
+console.log(result.columns);    // ['name', 'age']
+console.log(result.rowCount);   // 1
+console.log(result.get(0, 0));  // 'Alice'
+
+// Iterate rows as objects
+for (const row of result.toArray()) {
+    console.log(row);  // { name: 'Alice', age: '30' }
+}
+
+// Async execution (non-blocking on event loop)
+const asyncResult = await session.executeAsync(
+    "CALL algo.pageRank()"
+);
+
+// Version
+console.log(rt.version());  // "1.5.0"
+```
+
+### Install
+
+```bash
+npm install arcflow
+```
+
+## C ABI
+
+The foundation all bindings build on. Stable `extern "C"` interface with opaque handles.
+
+### Header: `arcflow.h`
+
+```c
+#include "arcflow.h"
+
+// Open runtime (NULL for in-memory, or path for persistent)
+arcflow_runtime_t* rt = arcflow_open(NULL);
+
+// Open session
+arcflow_session_t* session = arcflow_session_open(rt);
+
+// Execute query
+arcflow_result_t* result = arcflow_execute(session, "MATCH (n) RETURN n.name");
+
+// Read results
+int64_t rows = arcflow_result_row_count(result);
+int64_t cols = arcflow_result_column_count(result);
+
+for (int64_t r = 0; r < rows; r++) {
+    const char* name = arcflow_result_get_string(result, r, 0);
+    printf("%s\n", name);
+}
+
+// Cleanup
+arcflow_result_free(result);
+arcflow_session_close(session);
+arcflow_close(rt);
+
+// Error handling
+const char* err = arcflow_last_error();
+```
+
+### Functions
+
+| Function | Description |
+|----------|-------------|
+| `arcflow_open(path)` | Open runtime. NULL = in-memory |
+| `arcflow_close(rt)` | Close runtime and free memory |
+| `arcflow_session_open(rt)` | Open lightweight session on runtime |
+| `arcflow_session_close(session)` | Close session |
+| `arcflow_execute(session, query)` | Execute WorldCypher query |
+| `arcflow_result_row_count(result)` | Number of result rows |
+| `arcflow_result_column_count(result)` | Number of result columns |
+| `arcflow_result_column_name(result, idx)` | Column name by index |
+| `arcflow_result_get_string(result, row, col)` | Cell value as string |
+| `arcflow_result_free(result)` | Free result memory |
+| `arcflow_last_error()` | Last error message (thread-local) |
+| `arcflow_version()` | Engine version string |
+
+## C++
+
+Header-only RAII wrapper over the C ABI. Include `arcflow.hpp` and link with `-lwc_ffi`.
+
+```cpp
+#include "arcflow.hpp"
+
+int main() {
+    // RAII: runtime auto-freed on scope exit
+    arcflow::Runtime rt;                     // in-memory
+    // arcflow::Runtime rt("/path/to/data"); // persistent
+
+    auto session = rt.session();
+
+    session.execute("CREATE (n:Person {name: 'Alice'})");
+    auto result = session.execute("MATCH (n:Person) RETURN n.name");
+
+    for (int64_t r = 0; r < result.row_count(); ++r) {
+        std::cout << result.get(r, 0) << std::endl;  // "Alice"
+    }
+    // result, session, rt auto-freed on scope exit
+}
+```
+
+### Build
+
+```bash
+g++ -std=c++17 \
+    -I crates/wc-ffi/include \
+    main.cpp \
+    -L target/release -lwc_ffi \
+    -o myapp
+```
+
+## Docker
+
+Scratch base image, statically linked binary, under 20MB. NVIDIA bare-metal strategy — the container adds zero runtime overhead.
+
+```bash
+docker pull ghcr.io/oz-global/arcflow:latest
+```
+
+```bash
+# Run with data directory mounted
+docker run -v /data/arcflow:/data \
+    ghcr.io/oz-global/arcflow:latest \
+    --data-dir /data
+```
+
+```dockerfile
+# The ArcFlow Dockerfile
+FROM scratch
+COPY arcflow /arcflow
+ENTRYPOINT ["/arcflow"]
+```
+
+Volume-mount your data directory. The binary is fully static (musl libc). No dependencies inside the container.
+
+## MCP Server
+
+Model Context Protocol server for Claude integration. 5 tools over stdio JSON-RPC.
+
+```bash
+# Start the MCP server
+arcflow-mcp
+```
+
+### Tools
+
+| Tool | Description | Safety |
+|------|-------------|--------|
+| `get_schema` | Labels, relationship types, properties, indexes, constraints | Read |
+| `get_capabilities` | Available algorithms, procedures, functions | Read |
+| `read_query` | Execute read-only WorldCypher (MATCH, CALL, EXPLAIN) | Read |
+| `write_query` | Execute mutating WorldCypher (CREATE, SET, DELETE, MERGE) | Write |
+| `graph_rag` | Trusted GraphRAG pipeline with confidence scoring | Read |
+
+`read_query` rejects all mutations — CREATE, SET, DELETE, MERGE, REMOVE are refused. Use `write_query` for explicit write operations. This separation prevents accidental data modification by AI agents.
+
+### Claude Desktop Configuration
+
+```json
+{
+  "mcpServers": {
+    "arcflow": {
+      "command": "arcflow-mcp",
+      "args": []
+    }
+  }
+}
+```
+
+## Architecture
+
+All bindings follow PAT-0014 (Native FFI Bindings Over Protocol Adapters):
+
+```
+                    libarcflow.so (C ABI)
+                          │
+              ┌───────────┼───────────┐
+              │           │           │
+          Python      TypeScript     C++
+        (ctypes)     (napi-rs)   (arcflow.hpp)
+```
+
+One shared library. Thin language-specific wrappers. No protocol translation. Function calls go directly into the Rust engine. Result memory is owned by the FFI layer and freed explicitly -- no garbage collector pressure on hot paths.
+
+**Vision:** Every language, every platform, same API. The C ABI is stable and portable. Adding a new language binding means writing a thin wrapper over 12 functions -- the engine does the rest.

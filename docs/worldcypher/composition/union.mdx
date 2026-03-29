@@ -1,0 +1,32 @@
+---
+title: "UNION"
+description: "Combine results from multiple queries"
+section: "worldcypher/composition"
+order: 4
+since: "0.22.0"
+status: "stable"
+---
+
+# UNION
+
+Combine results from two queries into a single result set.
+
+## Syntax
+
+```sql
+query1 UNION query2
+```
+
+## Example
+
+```sql
+MATCH (n:Person) RETURN n.name AS name
+UNION
+MATCH (n:Organization) RETURN n.name AS name
+```
+
+Returns all person and organization names in a single column.
+
+## See Also
+
+- [WITH](/worldcypher/composition/with) — query chaining (within one query)

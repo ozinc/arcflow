@@ -1,0 +1,264 @@
+---
+title: "Agent-Native Database"
+description: "Filesystem-first agent workspace — zero protocol overhead, CLI-native, structured for AI agents"
+section: "agent-native"
+order: 1
+since: "8.0.0"
+status: "stable"
+---
+
+# Agent-Native Database
+
+**The fastest way for an AI agent to use a graph database is the filesystem.**
+
+MCP tool calls are JSON-RPC round-trips. Each one costs tokens, serialization, and latency. An agent calling `arcflow_read_query` 50 times burns thousands of tokens on protocol overhead alone.
+
+ArcFlow's agent interface is the filesystem. The agent writes a `.cypher` file. The CLI executes it. Results appear as a `.json` file. No protocol. No serialization overhead. No token waste. The agent already knows how to read and write files — that's what it does all day.
+
+```bash
+# The agent writes a query file
+echo 'MATCH (n:Person)-[:KNOWS]->(m) RETURN n.name, m.name' > query.cypher
+
+# ArcFlow CLI executes it
+arcflow --data-dir ./project-graph --exec query.cypher --output results.json
+
+# The agent reads the result
+cat results.json
+```
+
+That's it. No MCP server. No WebSocket bridge. No JSON-RPC. The filesystem IS the protocol.
+
+---
+
+## Filesystem Workspace
+
+An ArcFlow agent workspace is a directory:
+
+```
+project-graph/
+├── arcflow.db              # The graph (WAL + data)
+├── queries/
+│   ├── schema.cypher       # CALL db.schema()
+│   ├── find-deps.cypher    # MATCH (a)-[:DEPENDS_ON]->(b) RETURN a, b
+│   └── pagerank.cypher     # CALL algo.pageRank()
+├── results/
+│   ├── schema.json         # Schema output
+│   ├── find-deps.json      # Dependency results
+│   └── pagerank.json       # Algorithm output
+├── imports/
+│   ├── codebase.csv        # Import data
+│   └── architecture.json   # Snapshot to restore
+└── arcflow.toml            # Configuration
+```
+
+The agent creates queries as files. The CLI processes them. Results appear as files. The agent reads results. No protocol layer. No token overhead. Zero latency beyond disk I/O.
+
+### Batch Execution
+
+The agent can queue multiple queries and execute them in one shot:
+
+```bash
+# Agent writes 5 queries to a directory
+ls queries/
+# analyze.cypher  dependencies.cypher  metrics.cypher  pagerank.cypher  schema.cypher
+
+# Execute all at once
+arcflow --data-dir ./project-graph --exec-dir queries/ --output-dir results/
+
+# All results appear as JSON files
+ls results/
+# analyze.json  dependencies.json  metrics.json  pagerank.json  schema.json
+```
+
+One CLI invocation. Five queries executed. Five result files. Zero protocol overhead per query.
+
+### Watch Mode
+
+For interactive agent sessions, the CLI watches a directory and executes queries as they appear:
+
+```bash
+# Start in watch mode
+arcflow --data-dir ./project-graph --watch queries/ --output-dir results/
+
+# Agent writes a query file → result appears automatically
+echo 'MATCH (n) RETURN count(*)' > queries/count.cypher
+# results/count.json appears within milliseconds
+```
+
+The agent doesn't wait for tool calls. It writes files. Results appear. The filesystem is the API.
+
+---
+
+## CLI-Native Tooling
+
+ArcFlow's CLI is designed for agents, not just humans:
+
+### Structured Output
+
+Every CLI command supports `--json` for machine-readable output:
+
+```bash
+# Human-readable
+arcflow --data-dir ./graph --exec "MATCH (n) RETURN count(*)"
+# => 10,234 nodes
+
+# Agent-readable
+arcflow --data-dir ./graph --exec "MATCH (n) RETURN count(*)" --json
+# => {"columns":["count(*)"],"rows":[{"count(*)":"10234"}],"count":1}
+```
+
+### Deterministic Exit Codes
+
+```
+0 — Success
+1 — Query error (syntax, missing label, etc.)
+2 — System error (file not found, permission denied)
+3 — Validation error (constraint violation)
+```
+
+The agent checks `$?` and knows exactly what happened. No parsing error messages.
+
+### Structured Errors with Recovery Hints
+
+```bash
+arcflow --exec "METCH (n) RETURN n" --json 2>&1
+```
+```json
+{
+  "ok": false,
+  "code": "PARSE_FAILED",
+  "message": "Unknown keyword 'METCH'",
+  "recovery_suggestion": "Did you mean MATCH?"
+}
+```
+
+The agent reads `recovery_suggestion` and fixes the query. No guessing. No retry loop.
+
+### Schema Discovery
+
+```bash
+arcflow --data-dir ./graph --exec "CALL db.schema()" --json
+```
+
+Returns every label, relationship type, property key, index, and constraint. The agent knows the shape of the graph before writing a single query.
+
+### Query Validation (Dry Run)
+
+```bash
+arcflow --data-dir ./graph --validate "MATCH (n:Person) RETURN n.name"
+# => Valid (read-only)
+
+arcflow --data-dir ./graph --validate "CREATE (n:Person {name: 'test'})"
+# => Valid (mutating)
+```
+
+The agent checks if a query is valid before executing. No wasted mutations.
+
+---
+
+## Why Filesystem Beats MCP
+
+| | Filesystem | MCP |
+|---|---|---|
+| **Latency** | Disk I/O (~0.1ms) | JSON-RPC round-trip (~5-50ms) |
+| **Token cost** | Zero (file read, not tool call) | ~100-500 tokens per call (schema, marshaling) |
+| **Batch queries** | One CLI call for N queries | N tool calls, N round-trips |
+| **Agent compatibility** | Every agent reads files | Only MCP-native agents |
+| **Debugging** | `cat results/query.json` | Inspect MCP logs |
+| **Persistence** | Queries and results are files | Ephemeral (session-scoped) |
+| **Version control** | `git add queries/` | Not possible |
+| **Offline** | Works without connection | Requires running server |
+
+The filesystem approach means:
+- Queries are version-controlled (commit your `.cypher` files)
+- Results are cacheable (don't re-run if input hasn't changed)
+- Multiple agents can share the same workspace
+- Debugging is `cat` and `diff`, not log parsing
+- CI/CD can run graph queries as build steps
+
+---
+
+## MCP Server (Fallback)
+
+For agents that require MCP (some environments don't have filesystem access), ArcFlow provides a standard MCP server:
+
+```json
+{
+  "mcpServers": {
+    "arcflow": {
+      "command": "arcflow-bridge",
+      "args": ["--data-dir", "~/.arcflow"]
+    }
+  }
+}
+```
+
+Tools: `arcflow_read_query`, `arcflow_write_query`, `arcflow_get_schema`, `arcflow_stats`, `arcflow_graph_rag`.
+
+This works. It's just slower and more expensive than the filesystem approach.
+
+---
+
+## Agent Workflows
+
+### Claude Code: Codebase Knowledge Graph
+
+```bash
+# 1. Agent creates the workspace
+mkdir -p project-graph/queries
+
+# 2. Agent builds the graph from codebase analysis
+echo "CREATE (c:Crate {name: 'wc-core', loc: 5500, tests: 120})" > project-graph/queries/01-create.cypher
+echo "CREATE (c:Crate {name: 'wc-runtime', loc: 17000, tests: 467})" >> project-graph/queries/01-create.cypher
+echo "CREATE (a)-[:DEPENDS_ON]->(b)" >> project-graph/queries/01-create.cypher
+
+# 3. Agent runs queries against the graph
+echo "CALL algo.pageRank()" > project-graph/queries/02-analyze.cypher
+echo "MATCH (c:Crate) RETURN c.name, c.loc ORDER BY c.loc DESC" > project-graph/queries/03-report.cypher
+
+# 4. Execute all
+arcflow --data-dir project-graph --exec-dir project-graph/queries/ --output-dir project-graph/results/ --json
+
+# 5. Agent reads results
+cat project-graph/results/02-analyze.json
+```
+
+### Cursor Agent: Impact Analysis
+
+```bash
+# Agent writes impact query before editing a file
+echo "MATCH (f:File {path: 'src/lib.rs'})-[:IMPORTS*1..3]->(d) RETURN d.path" \
+  > project-graph/queries/impact.cypher
+
+arcflow --data-dir project-graph --exec project-graph/queries/impact.cypher --json
+# Agent reads results and knows which files are affected before making changes
+```
+
+### Multi-Agent Coordination
+
+Multiple agents share the same filesystem workspace. Each writes queries. Each reads results. The graph is the shared state. No message passing. No coordination protocol. Just files.
+
+```
+project-graph/
+├── arcflow.db
+├── agent-a/
+│   ├── queries/    # Agent A's queries
+│   └── results/    # Agent A's results
+├── agent-b/
+│   ├── queries/    # Agent B's queries
+│   └── results/    # Agent B's results
+└── shared/
+    └── results/    # Cross-agent shared results
+```
+
+---
+
+## Vision
+
+Every AI coding agent deserves a persistent, queryable knowledge graph as its working memory — and the interface is the filesystem it already knows.
+
+**Agent memory as files.** Most agents lose context between sessions. ArcFlow's filesystem workspace persists across sessions, across agents, across machines. The graph IS the agent's long-term memory, stored as files it can read, write, query, and version-control.
+
+**Zero-overhead agent tooling.** MCP was a necessary step — it standardized tool calling. But the future is tighter integration: agents that read and write files at filesystem speed, with graph queries as natural as `grep` or `find`. ArcFlow's CLI is designed for this future.
+
+**Multi-agent graph intelligence.** When multiple agents share an ArcFlow workspace, the graph becomes a coordination substrate. Agent A writes facts. Agent B queries them. Agent C runs algorithms. No message broker. No orchestration framework. The filesystem is the protocol. The graph is the shared brain.

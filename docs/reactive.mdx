@@ -1,0 +1,292 @@
+---
+title: "Messaging & Events"
+description: "Built-in pub/sub, live queries, change data capture — no external broker needed"
+section: "reactive"
+order: 1
+since: "1.5.0"
+status: "stable"
+---
+
+# Messaging & Events
+
+**Built-in pub/sub, CDC, and live queries eliminate external message brokers for applications that embed ArcFlow — zero network hops, zero serialization overhead.**
+
+Topics, stored subscriptions, change data capture, and materialized views run in the same process as your graph queries. When a mutation matches a subscription pattern, the handler fires immediately — no external cache, no message broker, no streaming platform. For in-process event routing, this replaces three infrastructure dependencies with zero.
+
+```sql
+-- Publish an event; matching subscriptions fire automatically, in-process
+CREATE TOPIC sensor_data
+SUBSCRIBE TO sensor_data AS temp_alert QUERY 'MATCH (a:Alert) WHERE a.threshold < 30 RETURN a'
+PUBLISH TO sensor_data {temperature: 35.2, sensor: 'roof'}
+```
+
+## Topics
+
+Create a named topic for publishing events:
+
+```sql
+CREATE TOPIC sensor_data
+```
+
+List all topics:
+
+```sql
+CALL db.topics()
+```
+
+```
+| topic       |
+|-------------|
+| sensor_data |
+```
+
+## Publish Events
+
+Publish a structured event to a topic:
+
+```sql
+PUBLISH TO sensor_data {temperature: 22.5, unit: 'celsius', sensor_id: 'S1'}
+```
+
+Events are property maps — the same key-value structure used for node properties. Events are recorded in the mutation log and trigger any matching subscriptions.
+
+```sql
+-- Publish multiple events
+PUBLISH TO sensor_data {temperature: 23.1, unit: 'celsius', sensor_id: 'S1'}
+PUBLISH TO sensor_data {temperature: 19.8, unit: 'celsius', sensor_id: 'S2'}
+```
+
+## Subscriptions
+
+Register a stored query that runs whenever an event is published to a topic:
+
+```sql
+SUBSCRIBE TO sensor_data AS temp_alert QUERY 'MATCH (n:Alert) RETURN n'
+```
+
+| Component | Description |
+|-----------|-------------|
+| topic | The topic to listen on |
+| name | Unique subscription name |
+| query | WorldCypher query to execute on each event |
+
+List active subscriptions:
+
+```sql
+CALL db.subscriptions()
+```
+
+```
+| name       | topic       | query                        |
+|------------|-------------|------------------------------|
+| temp_alert | sensor_data | MATCH (n:Alert) RETURN n     |
+```
+
+## Change Data Capture (CDC)
+
+The mutation log records every write operation: node creates, property updates, relationship changes, deletes. Query it directly:
+
+```sql
+CALL db.mutations()
+```
+
+```
+| tick       | operation | target | details                          |
+|------------|-----------|--------|----------------------------------|
+| 1700000001 | CREATE    | node   | :Person {name: 'Alice'}          |
+| 1700000002 | CREATE    | rel    | (:Person)-[:KNOWS]->(:Person)    |
+| 1700000003 | SET       | prop   | node 1: age = 30                 |
+```
+
+### Changes Since a Tick
+
+Get only mutations after a specific point in time:
+
+```sql
+CALL db.changesSince()
+```
+
+Useful for incremental sync: poll for changes since the last known tick, apply them to a downstream system.
+
+## Materialized Views
+
+Create stored query results that refresh on relevant mutations:
+
+```sql
+CALL db.views()
+```
+
+Views are automatically invalidated when underlying data changes. Query a view for instant results without re-executing the source query.
+
+## Live Delta Stack (v1.5)
+
+The Live Delta Stack unifies batch and streaming into one query definition. Write a query once with the `LIVE` prefix, and the engine maintains it incrementally via Z-set algebra. Results are mathematically identical whether recomputed from scratch or updated via deltas.
+
+### CREATE LIVE VIEW
+
+Register a standing query that maintains its result set as the graph mutates:
+
+```sql
+CREATE LIVE VIEW active_friends AS
+  MATCH (a:Person)-[:KNOWS]->(b:Person)
+  WHERE a.active = true
+  RETURN a.name AS source, b.name AS target
+```
+
+### MATCH FROM VIEW
+
+Read pre-computed results from a live view (zero-cost, no re-execution):
+
+```sql
+MATCH (row) FROM VIEW active_friends
+  WHERE row.source = 'Alice'
+  RETURN row.target
+```
+
+### LIVE MATCH
+
+Anonymous live query (temporary, not persisted):
+
+```sql
+LIVE MATCH (n:Person)-[:KNOWS]->(m)
+  WHERE n.city = 'Berlin'
+  RETURN m.name, m.email
+```
+
+### LIVE CALL
+
+Register incremental algorithms as standing queries:
+
+```sql
+LIVE CALL algo.pageRank({ damping: 0.85 })
+LIVE CALL algo.connectedComponents()
+LIVE CALL algo.louvain()
+```
+
+Six algorithms support LIVE CALL: PageRank, ConnectedComponents, BFS, TriangleCount, Louvain, and ClusteringCoefficient. See [Algorithms](/docs/algorithms) for details.
+
+### View chaining
+
+Live views can depend on other live views. Deltas propagate through the entire DAG in topological order:
+
+```sql
+CREATE LIVE VIEW hot_sensors AS
+  MATCH (s:Sensor) WHERE s.temperature > 100
+  RETURN s.id, s.temperature, s.location
+
+CREATE LIVE VIEW location_alerts AS
+  MATCH (row) FROM VIEW hot_sensors
+  RETURN row.location, count(*) AS hot_count, max(row.temperature) AS peak
+```
+
+### Inspecting live state
+
+```sql
+CALL db.liveViews               -- All registered live views
+CALL db.liveAlgorithms          -- Running incremental algorithms
+CALL db.viewStats('name')       -- Per-view memory and timing metrics
+CALL db.arrangements            -- Shared index status
+```
+
+### Z-set algebra
+
+Every row in the system carries an integer weight: +1 for insertion, -1 for deletion. Every relational operator (filter, join, aggregate, window) has a delta rule that propagates changes correctly. Linear operators (filter, project) are stateless. Bilinear operators (join) maintain left/right accumulators. Aggregates (count, sum) use invertible state. Window operators (LAG, LEAD, rolling_stddev) use ring buffers per partition.
+
+The engine also supports evidence algebra where every weight carries a confidence score (0.0 to 1.0) and observation class (Observed, Inferred, Predicted). Confidence propagates through operators: AND uses min (weakest link), OR uses max (strongest evidence).
+
+Validated on 15.4M rows of real financial data across 246M cells, with 99.48% cell-by-cell match against DuckDB.
+
+## Legacy Live Queries
+
+Register queries that emit results whenever the underlying data changes:
+
+```sql
+CALL db.liveQueries()
+```
+
+Live queries maintain a standing result set. When a mutation affects nodes or relationships matching the query pattern, the result set updates and subscribers are notified.
+
+> **Note:** For new projects, prefer `CREATE LIVE VIEW` over legacy live queries. Live views use Z-set algebra for mathematically guaranteed correctness and support view chaining.
+
+## Execution Context
+
+View the current execution context including active subscriptions and pending events:
+
+```sql
+CALL db.executionContext()
+```
+
+## Replication Status
+
+Monitor the reactive pipeline's replication state:
+
+```sql
+CALL db.replicationStatus()
+```
+
+## Example: Event-Driven Alert Pipeline
+
+```sql
+-- 1. Create the topic
+CREATE TOPIC temperature_readings
+
+-- 2. Set up alert nodes
+CREATE (a:Alert {type: 'high_temp', threshold: 30.0})
+
+-- 3. Subscribe: when a reading arrives, check alerts
+SUBSCRIBE TO temperature_readings AS check_alerts
+  QUERY 'MATCH (a:Alert) WHERE a.threshold < 30 RETURN a.type'
+
+-- 4. Publish readings — subscriptions fire automatically
+PUBLISH TO temperature_readings {value: 35.2, sensor: 'roof'}
+```
+
+## Example: CDC Sync to External System
+
+```sql
+-- Get the current clock tick
+CALL db.clock()
+-- Result: tick = 1700000042
+
+-- ... mutations happen ...
+
+-- Later: get only what changed
+CALL db.changesSince()
+-- Returns mutations from tick 1700000042 onward
+```
+
+The CDC log combined with `db.clock()` enables efficient incremental replication to external databases, search indexes, or analytics pipelines.
+
+---
+
+## Where It Fits
+
+ArcFlow's messaging is **in-process event routing for applications that embed ArcFlow**. It eliminates the need for a separate message broker when all components share the same ArcFlow instance.
+
+| Need | External Broker | ArcFlow Messaging |
+|---|---|---|
+| In-process event routing | Overkill (adds network hop + serialization) | Native — zero overhead |
+| Graph-aware events | Payload is flat bytes | Events carry graph context |
+| Reactive queries | Not possible | `LIVE MATCH` triggers on graph mutations |
+| CDC for downstream sync | CDC connectors / streaming platforms | `db.changesSince()` — built in |
+| Cross-process fan-out | Distributed streaming platforms | Not supported (single-process) |
+| Distributed pub/sub | Distributed streaming / message brokers | Not supported |
+
+**Use ArcFlow messaging when:** your application embeds ArcFlow and needs internal event routing, reactive queries, or CDC without deploying external brokers or caches.
+
+**Use an external broker when:** you need cross-process messaging, distributed fan-out, or durable workflow orchestration at scale.
+
+The in-process messaging layer serves as the foundation for durable, graph-aware workflow orchestration — behavior trees that tick, steps that retry, events that trigger actions. No external infrastructure needed for the common case.
+
+---
+
+## Compared to External Infrastructure
+
+### Lightweight Message Brokers?
+ArcFlow's pub/sub covers the "lightweight in-process messaging" use case that dedicated message brokers handle for single-process applications. You don't need an external broker if your components all share the same ArcFlow instance. For cross-service messaging, a dedicated message broker remains the better tool — ArcFlow doesn't do cross-process messaging.
+
+### Distributed Streaming Platforms?
+ArcFlow's CDC (`db.mutations()`, `db.changesSince()`) covers the "change log for a single data source" use case. It does NOT replace distributed streaming with partitioned topics or multi-consumer fan-out. Use ArcFlow CDC to feed changes to a streaming platform, not to replace it.
+
+### Workflow Orchestration Platforms?
+Workflow orchestration is a separate product category. ArcFlow's workflow capabilities cover durable step execution with retry policies, but cloud-hosted workflow platforms with function-as-a-step models are a different use case. ArcFlow's strength is that the workflow state lives in the same graph as the business data — no separate state store.

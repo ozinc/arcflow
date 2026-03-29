@@ -1,0 +1,34 @@
+---
+title: "PROCESS NODE"
+description: "Execute constructors against matched nodes to materialize dynamic edges"
+section: "constructors"
+order: 3
+since: "0.3.0"
+status: "stable"
+---
+
+# PROCESS NODE
+
+PROCESS NODE runs all constructors against matched nodes, creating edges with confidence scores and provenance metadata.
+
+## Syntax
+
+```sql
+PROCESS NODE (variable:Label)
+```
+
+## Example
+
+```sql
+PROCESS NODE (n:Person)
+```
+
+For each matched Person node, the engine:
+1. Finds constructors where `allowed_on` includes `Person`
+2. Executes each constructor (symbolic tier)
+3. Materializes new edges with `Confidence` and `EdgeProvenance`
+
+## See Also
+
+- [REPROCESS EDGES](/constructors/reprocess-edges) — re-evaluate existing edges
+- [CREATE CONSTRUCTOR](/constructors/create-constructor) — register constructors

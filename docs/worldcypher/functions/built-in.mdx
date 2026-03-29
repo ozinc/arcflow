@@ -1,0 +1,255 @@
+---
+title: "Built-in Functions"
+description: "All 81 built-in functions — aggregation, string, math, type conversion, graph, metadata, date/time, utility, predicates"
+section: "Reference"
+order: 4
+since: "0.8.0"
+status: "stable"
+---
+
+# Built-in Functions
+
+> This reference is designed for both human developers and AI coding agents. Every entry includes complete syntax that can be used directly in queries.
+
+81 built-in functions across 9 categories: Aggregation (11), String (23), Math (15), Type Conversion (5), Graph Introspection (6), Node Metadata (5), Map and List (4), Date/Time (4), Utility (4), and Predicates (4).
+
+## Aggregation (11)
+
+Aggregation functions operate across rows in a result set. Use with or without GROUP BY (via WITH).
+
+| Function | Syntax | Description | Return Type | Since |
+|---|---|---|---|---|
+| `count` | `count(expr)` | Number of non-null values | Integer | 0.4.0 |
+| `count(DISTINCT)` | `count(DISTINCT expr)` | Number of distinct non-null values | Integer | 0.4.0 |
+| `sum` | `sum(expr)` | Sum of numeric values | Float | 0.4.0 |
+| `avg` | `avg(expr)` | Arithmetic mean | Float | 0.4.0 |
+| `min` | `min(expr)` | Minimum value | Same as input | 0.4.0 |
+| `max` | `max(expr)` | Maximum value | Same as input | 0.4.0 |
+| `collect` | `collect(expr)` | Collect values into a list | List | 0.4.0 |
+| `percentile` | `percentile(expr, p)` | Percentile value (p between 0.0 and 1.0) | Float | 4.0.0 |
+| `stdev` | `stdev(expr)` | Sample standard deviation | Float | 4.0.0 |
+| `variance` | `variance(expr)` | Sample variance | Float | 4.0.0 |
+| `median` | `median(expr)` | Median (50th percentile) | Float | 4.0.0 |
+
+```sql
+MATCH (n:Person)
+RETURN count(n) AS total, avg(n.age) AS avgAge, percentile(n.score, 0.95) AS p95
+```
+
+```sql
+MATCH (n:Person)
+WITH n.department AS dept, collect(n.name) AS members, stdev(n.salary) AS salaryStdev
+RETURN dept, members, salaryStdev
+```
+
+## String (23)
+
+| Function | Syntax | Description | Return Type | Since |
+|---|---|---|---|---|
+| `toLower` | `toLower(s)` | Convert to lowercase | String | 0.17.0 |
+| `toUpper` | `toUpper(s)` | Convert to uppercase | String | 0.17.0 |
+| `trim` | `trim(s)` | Strip leading and trailing whitespace | String | 0.17.0 |
+| `ltrim` | `ltrim(s)` | Strip leading whitespace | String | 4.0.0 |
+| `rtrim` | `rtrim(s)` | Strip trailing whitespace | String | 4.0.0 |
+| `substring` | `substring(s, start, len)` | Extract substring from start position | String | 0.17.0 |
+| `left` | `left(s, n)` | First n characters | String | 0.17.0 |
+| `right` | `right(s, n)` | Last n characters | String | 0.17.0 |
+| `head` | `head(expr)` | First element of a list or comma-separated string | Same as element | 3.0.0 |
+| `last` | `last(expr)` | Last element of a list or comma-separated string | Same as element | 3.0.0 |
+| `replace` | `replace(s, find, rep)` | Replace all occurrences of find with rep | String | 0.17.0 |
+| `split` | `split(s, delim)` | Split string by delimiter into list | List | 0.17.0 |
+| `reverse` | `reverse(s)` | Reverse a string or comma-separated list | String | 0.17.0 |
+| `sort` | `sort(expr)` | Alphabetically sort comma-separated string values | String | 4.0.0 |
+| `repeat` | `repeat(s, n)` | Repeat string n times | String | 4.0.0 |
+| `lpad` | `lpad(s, width, char)` | Left-pad string to width with char | String | 4.0.0 |
+| `rpad` | `rpad(s, width, char)` | Right-pad string to width with char | String | 4.0.0 |
+| `contains` | `contains(s, sub)` | True if string contains substring | Boolean | 4.0.0 |
+| `startsWith` | `startsWith(s, prefix)` | True if string starts with prefix | Boolean | 4.0.0 |
+| `endsWith` | `endsWith(s, suffix)` | True if string ends with suffix | Boolean | 4.0.0 |
+| `indexOf` | `indexOf(s, sub)` | Position of substring, -1 if not found | Integer | 4.0.0 |
+| `size` | `size(s)` | Length of string or list | Integer | 0.10.0 |
+| `toString` | `toString(expr)` | Convert any value to string representation | String | 0.10.0 |
+
+```sql
+MATCH (n:Person)
+RETURN toLower(n.name) AS lower, left(n.name, 3) AS initials, size(n.name) AS len
+```
+
+```sql
+MATCH (n:Person)
+WHERE startsWith(n.email, 'admin')
+RETURN n.name, replace(n.email, '@old.com', '@new.com') AS newEmail
+```
+
+```sql
+MATCH (n:Person)
+RETURN lpad(toString(n.id), 6, '0') AS paddedId, repeat('*', n.rating) AS stars
+```
+
+## Math (15)
+
+| Function | Syntax | Description | Return Type | Since |
+|---|---|---|---|---|
+| `abs` | `abs(expr)` | Absolute value | Float | 4.0.0 |
+| `round` | `round(expr)` | Round to nearest integer | Float | 4.0.0 |
+| `ceil` | `ceil(expr)` | Ceiling (round up) | Float | 4.0.0 |
+| `floor` | `floor(expr)` | Floor (round down) | Float | 4.0.0 |
+| `sqrt` | `sqrt(expr)` | Square root | Float | 4.0.0 |
+| `sign` | `sign(expr)` | Signum: -1, 0, or 1 | Float | 4.0.0 |
+| `exp` | `exp(expr)` | e raised to the power of the value | Float | 4.0.0 |
+| `log` | `log(expr)` | Natural logarithm (ln) | Float | 4.0.0 |
+| `power` | `power(base, exp)` | Raise base to exponent | Float | 4.0.0 |
+| `sin` | `sin(expr)` | Sine (radians) | Float | 4.0.0 |
+| `cos` | `cos(expr)` | Cosine (radians) | Float | 4.0.0 |
+| `tan` | `tan(expr)` | Tangent (radians) | Float | 4.0.0 |
+| `atan2` | `atan2(y, x)` | Arctangent of y/x (radians) | Float | 4.0.0 |
+| `pi` | `pi()` | Pi constant (3.14159...) | Float | 4.0.0 |
+| `e` | `e()` | Euler's number (2.71828...) | Float | 4.0.0 |
+
+```sql
+MATCH (n:Sensor)
+RETURN n.name, abs(n.reading) AS magnitude, round(n.value * 100) / 100 AS rounded
+```
+
+```sql
+MATCH (n:Point)
+RETURN atan2(n.y, n.x) AS angle, sqrt(power(n.x, 2) + power(n.y, 2)) AS distance
+```
+
+## Type Conversion (5)
+
+| Function | Syntax | Description | Return Type | Since |
+|---|---|---|---|---|
+| `toString` | `toString(expr)` | Convert to string | String | 0.10.0 |
+| `toInteger` | `toInteger(expr)` | Convert to integer | Integer | 0.10.0 |
+| `toFloat` | `toFloat(expr)` | Convert to float | Float | 0.10.0 |
+| `toBoolean` | `toBoolean(expr)` | Convert to boolean | Boolean | 4.0.0 |
+| `coalesce` | `coalesce(a, b, ...)` | First non-null value | Same as first non-null | 0.10.0 |
+
+```sql
+MATCH (n:Person)
+RETURN toInteger(n.ageStr) AS age, coalesce(n.nickname, n.name) AS displayName
+```
+
+## Graph Introspection (6)
+
+| Function | Syntax | Description | Return Type | Since |
+|---|---|---|---|---|
+| `id` | `id(n)` | Internal node or relationship ID | Integer | 0.8.0 |
+| `labels` | `labels(n)` | List of labels on a node | List\<String\> | 0.8.0 |
+| `type` | `type(r)` | Relationship type string | String | 0.8.0 |
+| `degree` | `degree(n)` | Total degree (in + out) | Integer | 3.0.0 |
+| `inDegree` | `inDegree(n)` | Incoming relationship count | Integer | 3.0.0 |
+| `outDegree` | `outDegree(n)` | Outgoing relationship count | Integer | 3.0.0 |
+
+```sql
+MATCH (n:Person)
+RETURN n.name, degree(n) AS connections, inDegree(n) AS followers, outDegree(n) AS following
+ORDER BY degree(n) DESC
+```
+
+## Node Metadata (5)
+
+ArcFlow world-model metadata functions for provenance and trust scoring.
+
+| Function | Syntax | Description | Return Type | Since |
+|---|---|---|---|---|
+| `confidence` | `confidence(n)` | World-model confidence score (0.0-1.0) | Float | 4.0.0 |
+| `observationClass` | `observationClass(n)` | Observation class: observed, inferred, or predicted | String | 4.0.0 |
+| `authorityPlane` | `authorityPlane(n)` | Authority plane: semantic or scene | String | 4.0.0 |
+| `clockDomain` | `clockDomain(n)` | Temporal clock domain name | String | 4.0.0 |
+| `observationSource` | `observationSource(n)` | Source identity (sensor, model, user) | String | 4.0.0 |
+
+```sql
+MATCH (n:Observation)
+WHERE confidence(n) > 0.8 AND observationClass(n) = 'observed'
+RETURN n.name, confidence(n) AS conf, authorityPlane(n) AS plane
+```
+
+## Map and List (4)
+
+| Function | Syntax | Description | Return Type | Since |
+|---|---|---|---|---|
+| `properties` | `properties(n)` | Full property map as string | String | 4.0.0 |
+| `keys` | `keys(n)` | List of property key names | List\<String\> | 3.0.0 |
+| `range` | `range(start, end)` | Generate integer sequence \[start..=end\] | List\<Integer\> | 4.0.0 |
+| `mapProjection` | `n {.name, .age}` | Return only named properties as a map | Map | 4.0.0 |
+
+```sql
+MATCH (n:Person)
+RETURN keys(n) AS propKeys, properties(n) AS allProps
+```
+
+```sql
+MATCH (n:Person)
+RETURN n {.name, .age} AS profile
+```
+
+```sql
+UNWIND range(1, 10) AS i
+RETURN i
+```
+
+## Date/Time (4)
+
+All date/time functions are non-deterministic (they return the current time).
+
+| Function | Syntax | Description | Return Type | Since |
+|---|---|---|---|---|
+| `timestamp` | `timestamp()` | Current Unix timestamp in milliseconds | Integer | 4.0.0 |
+| `date` | `date()` | Current date as ISO string (YYYY-MM-DD) | String | 4.0.0 |
+| `time` | `time()` | Current time as ISO string (HH:MM:SS.mmm) | String | 4.0.0 |
+| `datetime` | `datetime()` | Current datetime as ISO string (YYYY-MM-DDTHH:MM:SS.mmm) | String | 4.0.0 |
+
+```sql
+CREATE (e:Event {name: 'deploy', createdAt: timestamp(), date: date()})
+RETURN e
+```
+
+## Utility (4)
+
+| Function | Syntax | Description | Return Type | Since |
+|---|---|---|---|---|
+| `randomUUID` | `randomUUID()` | Generate a UUID v4 string | String | 4.0.0 |
+| `hash` | `hash(expr)` | Deterministic FNV-1a 64-bit hash as hex string | String | 4.0.0 |
+| `toJson` | `toJson(n)` | Serialize all node properties to JSON string | String | 4.0.0 |
+| `size` | `size(expr)` | Length of string or list | Integer | 0.10.0 |
+
+```sql
+CREATE (n:Record {id: randomUUID(), fingerprint: hash(n.data)})
+RETURN n
+```
+
+```sql
+MATCH (n:Person)
+RETURN toJson(n) AS json
+```
+
+## Predicates (4)
+
+Predicate expressions used in WHERE clauses and RETURN.
+
+| Predicate | Syntax | Description | Return Type | Since |
+|---|---|---|---|---|
+| `exists` | `exists(n.prop)` | True if property exists | Boolean | 0.6.0 |
+| `IS NULL` | `n.prop IS NULL` | True if property is null or missing | Boolean | 0.15.0 |
+| `IS NOT NULL` | `n.prop IS NOT NULL` | True if property exists and is not null | Boolean | 0.15.0 |
+| `IN` | `expr IN [list]` | True if value is in the list | Boolean | 0.20.0 |
+
+```sql
+MATCH (n:Person)
+WHERE exists(n.email) AND n.role IN ['admin', 'editor']
+RETURN n.name
+```
+
+```sql
+MATCH (n:Person)
+WHERE n.deletedAt IS NULL
+RETURN n.name
+```
+
+## See Also
+
+- [Aggregations](/worldcypher/functions/aggregations) -- detailed aggregation examples
+- [Procedures](/worldcypher/functions/procedures) -- CALL db.* and algo.* procedures
+- [Operators](/reference/operators) -- comparison and logical operators

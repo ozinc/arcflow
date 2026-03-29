@@ -1,0 +1,59 @@
+---
+title: "RETURN"
+description: "Project results with ordering, pagination, and deduplication"
+section: "worldcypher/query-syntax"
+order: 4
+since: "0.2.0"
+status: "stable"
+---
+
+# RETURN
+
+```sql
+MATCH (n:Person)
+RETURN n.name AS person, n.age AS years
+ORDER BY n.age DESC
+LIMIT 10
+```
+
+Project query results with aliases, ordering, pagination, and deduplication.
+
+## Syntax
+
+```sql
+RETURN expression [AS alias], ...
+  [ORDER BY expression [ASC|DESC]]
+  [SKIP n]
+  [LIMIT n]
+```
+
+## Examples
+
+### Basic projection
+
+```sql
+MATCH (n:Person) RETURN n.name, n.age
+```
+
+### Ordering
+
+```sql
+MATCH (n:Person) RETURN n.name ORDER BY n.age DESC
+```
+
+### Pagination
+
+```sql
+MATCH (n:Person) RETURN n.name ORDER BY n.age SKIP 5 LIMIT 10
+```
+
+### Distinct
+
+```sql
+MATCH (n:Person) RETURN DISTINCT n._labels
+```
+
+## See Also
+
+- [Aggregations](/worldcypher/aggregations) — COUNT, SUM, AVG, COLLECT
+- [EXPLAIN](/worldcypher/explain) — see the query plan

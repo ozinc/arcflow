@@ -1,0 +1,234 @@
+---
+title: "Trusted RAG"
+description: "Retrieval-Augmented Generation with confidence scores, provenance trails, and evidence chains"
+section: "trusted-rag"
+order: 1
+since: "4.0.0"
+status: "stable"
+---
+
+# Trusted RAG
+
+<img src="/diagrams/trusted-rag.svg" alt="Trusted RAG Pipeline" style={{width:"100%",margin:"1.5rem 0",borderRadius:"8px"}} />
+
+**Every answer carries a confidence score, a provenance chain, and a classification of how the fact was derived — observed, inferred, or predicted.**
+
+Standard RAG retrieves text chunks and hopes the LLM gets it right. There is no way to filter by reliability, trace an answer to its source document, or distinguish hard facts from statistical guesses. ArcFlow's Trusted RAG scores every fact (0.0-1.0), records which extraction model produced it, and filters low-confidence facts before the LLM ever sees them. The result: auditable answers with a verifiable evidence trail.
+
+```cypher
+-- Trusted GraphRAG: only facts with confidence >= 0.8 reach the LLM
+CALL algo.graphRAGTrusted('warranty Widget Pro', 0.8)
+  YIELD node, score, confidence, observationClass
+  RETURN node, score, confidence, observationClass
+-- Result: "2-year warranty (confidence: 0.95, class: observed, source: manual_v3.pdf)"
+```
+
+---
+
+## The Problem with Standard RAG
+
+```
+User: "What's the warranty on Product X?"
+
+Standard RAG:
+  1. Vector search → find 10 nearest chunks
+  2. Stuff into prompt → hope the right chunk is in there
+  3. LLM generates answer → no way to verify
+
+What can go wrong:
+  - Retrieved chunk is outdated (superseded by newer policy)
+  - Two chunks contradict each other (no conflict resolution)
+  - Answer is plausible but unsupported (hallucination)
+  - No audit trail (compliance nightmare)
+```
+
+## Trusted RAG with ArcFlow
+
+```
+User: "What's the warranty on Product X?"
+
+ArcFlow Trusted RAG:
+  1. GraphRAG → traverse knowledge graph + vector similarity
+  2. Filter by confidence ≥ 0.8 (reject low-trust facts)
+  3. Check observation class → prefer "observed" over "inferred"
+  4. Temporal filter → only facts current AS OF now
+  5. Return answer WITH provenance chain
+
+Result: "2-year warranty (source: product_manual_v3.pdf,
+         confidence: 0.95, class: observed, updated: 2026-01-15)"
+```
+
+---
+
+## How It Works
+
+### 1. Store Knowledge as a Graph
+
+Documents aren't flat chunks — they're connected entities:
+
+```cypher
+CREATE (p:Product {name: 'Widget Pro', sku: 'WP-100'})
+CREATE (w:Warranty {duration: '2 years', type: 'full'})
+CREATE (m:Manual {version: 3, url: 'manual_v3.pdf'})
+
+CREATE (p)-[:HAS_WARRANTY]->(w)
+CREATE (w)-[:DOCUMENTED_IN {confidence: 0.95}]->(m)
+```
+
+### 2. Add Embeddings for Semantic Search
+
+```cypher
+CREATE VECTOR INDEX product_embeddings
+  ON :Product(embedding)
+  DIMENSIONS 768
+  SIMILARITY cosine
+```
+
+### 3. Query with Trusted GraphRAG
+
+```cypher
+-- Standard GraphRAG (retrieval + graph traversal)
+CALL algo.graphRAG('What is the warranty on Widget Pro?')
+  YIELD node, score, path
+  RETURN node, score
+
+-- Trusted GraphRAG (adds confidence filtering)
+CALL algo.graphRAGTrusted('warranty Widget Pro', 0.8)
+  YIELD node, score, confidence, observationClass
+  RETURN node, score, confidence, observationClass
+```
+
+The `0.8` parameter is the minimum confidence threshold. Facts below this confidence are excluded from the result — the LLM never sees them.
+
+### 4. Verify with Temporal Awareness
+
+```cypher
+-- Only facts that are current (not superseded)
+MATCH (w:Warranty)-[:DOCUMENTED_IN]->(m:Manual)
+  WHERE w.confidence >= 0.8
+  RETURN w.duration, m.version, m.url
+
+-- What was the warranty policy 6 months ago?
+MATCH (w:Warranty) AS OF (timestamp() - 15552000000)
+  RETURN w.duration
+```
+
+---
+
+## Observation Classes
+
+Every node in ArcFlow carries an observation class — the epistemological status of the fact:
+
+| Class | Meaning | Trust Level | Example |
+|---|---|---|---|
+| **Observed** | Directly witnessed or documented | Highest | "Manual says 2-year warranty" |
+| **Inferred** | Derived from reasoning over observed facts | Medium | "Product X likely has same warranty as Product Y (same category)" |
+| **Predicted** | Model output, statistical projection | Lowest | "Based on trends, warranty will extend to 3 years next quarter" |
+
+```cypher
+-- Only use hard facts for customer-facing answers
+MATCH (n) WHERE n._observation_class = 'observed'
+  AND n._confidence >= 0.9
+  RETURN n
+
+-- Allow inference for internal analysis
+MATCH (n) WHERE n._observation_class IN ['observed', 'inferred']
+  RETURN n
+```
+
+---
+
+## Provenance Trails
+
+Every relationship carries provenance metadata — who created it, when, with what tool, and how confident:
+
+```cypher
+MATCH (a)-[r:HAS_WARRANTY]->(b)
+RETURN r._confidence,    -- 0.95
+       r._skill_id,      -- "warranty_extractor_v2"
+       r._skill_version, -- "2.1.0"
+       r._model,         -- "gpt-4-turbo-2024-04-09"
+       r._created_at     -- 1711324800000
+```
+
+When the LLM says "2-year warranty," you can trace exactly which document, which extraction model, which version, and when it was processed.
+
+---
+
+## Confidence-Weighted Traversal
+
+Graph traversal respects confidence. Low-confidence paths are deprioritized:
+
+```cypher
+-- Confidence-weighted PageRank
+CALL algo.confidencePageRank()
+  YIELD nodeId, score
+  RETURN nodeId, score ORDER BY score DESC
+
+-- Confidence-weighted shortest path
+CALL algo.confidencePath(startNode, endNode)
+  YIELD path, totalConfidence
+  RETURN path, totalConfidence
+```
+
+---
+
+## The Full Pipeline
+
+```cypher
+-- 1. Ingest documents as nodes with embeddings
+CREATE (d:Document {
+  title: 'Product Manual v3',
+  content: '...',
+  embedding: [0.12, -0.34, ...],  -- 768d vector
+  _observation_class: 'observed'
+})
+
+-- 2. Create vector index
+CREATE VECTOR INDEX docs ON :Document(embedding)
+  DIMENSIONS 768 SIMILARITY cosine
+
+-- 3. Extract entities and relationships (via constructors)
+CREATE SKILL warranty_extractor
+  FROM PROMPT 'Extract warranty terms from document text'
+  ALLOWED ON [Document]
+  TIER LLM
+
+PROCESS NODE (d:Document)  -- creates edges with confidence scores
+
+-- 4. Query with trusted RAG
+CALL algo.graphRAGTrusted('warranty duration', 0.8)
+
+-- 5. Temporal: compare answers over time
+CALL db.temporalCompare(
+  'CALL algo.graphRAG("warranty") YIELD node RETURN node.name',
+  'CALL algo.graphRAG("warranty") YIELD node RETURN node.name'
+)
+```
+
+---
+
+## Compared to Other Approaches
+
+### RAG / LLM Orchestration Frameworks?
+Your vector store retriever becomes `algo.vectorSearch()`. Your graph retriever becomes `algo.graphRAG()`. ArcFlow adds confidence filtering, provenance, and temporal awareness — your RAG pipeline distinguishes facts from guesses, traces every answer to its source, and detects stale information via `AS OF` queries. Trade-off: RAG frameworks have a larger connector ecosystem for third-party vector stores; ArcFlow's advantage is the integrated graph+vector+temporal stack with zero network hops.
+
+### Dedicated Vector Databases?
+These are purpose-built for vector similarity. ArcFlow is a knowledge graph with vector search built in — you get similarity search AND graph traversal, temporal queries, confidence scoring, and relationship-aware retrieval in one in-process database. Trade-off: dedicated vector databases offer higher-throughput vector indexing at scale (millions of vectors); ArcFlow's strength is combining vector similarity with graph structure and provenance in a single query.
+
+### Traditional Graph Databases + GraphRAG?
+Traditional graph database GraphRAG typically requires a separate analytics product and has no confidence scoring, no observation classes, and no temporal awareness. ArcFlow's Trusted RAG is built in, with provenance on every edge and temporal `AS OF` queries on every node. Trade-off: traditional graph databases have a mature distributed clustering story; ArcFlow is single-process with in-process performance (2.7M nodes/sec creation, 154M PageRank nodes/sec).
+
+---
+
+## Vision
+
+ArcFlow provides a trust-aware knowledge infrastructure where AI systems can reason about the reliability of their own knowledge.
+
+**Confidence calibration.** Confidence scores set at ingestion time can be automatically calibrated — measuring how often facts at a given confidence level turn out to be correct, then adjusting scores to match observed accuracy. A `0.9` confidence should mean "correct 90% of the time," verified empirically.
+
+**Automated fact verification.** Cross-referencing new facts against existing graph structure to detect contradictions before they enter the knowledge base. When a new document claims a different warranty period, the system flags the conflict with both sources and their confidence scores, rather than silently overwriting.
+
+**Knowledge graph construction from unstructured data.** Extending the skill/constructor pipeline to automatically extract entities, relationships, and confidence scores from documents, transcripts, and web pages — building the knowledge graph incrementally with full provenance from raw sources to structured facts.
+
+**Decay and freshness modeling.** Facts lose reliability over time. Automatic confidence decay based on fact age and domain-specific half-lives ensures that temporal staleness is reflected in retrieval ranking without manual curation.

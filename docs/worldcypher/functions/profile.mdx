@@ -1,0 +1,31 @@
+---
+title: "PROFILE"
+description: "Execute a query and show microsecond-level performance timing"
+section: "worldcypher/functions"
+order: 6
+since: "0.22.0"
+status: "stable"
+---
+
+# PROFILE
+
+Execute with per-operator microsecond timing. Returns results plus performance breakdown for each stage.
+
+## Syntax
+
+```sql
+PROFILE <any query>
+```
+
+## Example
+
+```sql
+PROFILE MATCH (n:Person) WHERE n.age > 25 RETURN n.name ORDER BY n.age
+```
+
+Returns the query results plus microsecond timing for scan, filter, project,
+and sort stages.
+
+## See Also
+
+- [EXPLAIN](/worldcypher/functions/explain) — show plan without executing

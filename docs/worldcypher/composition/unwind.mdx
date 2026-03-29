@@ -1,0 +1,35 @@
+---
+title: "UNWIND"
+description: "Expand a list into individual rows"
+section: "worldcypher/composition"
+order: 2
+since: "0.12.0"
+status: "stable"
+---
+
+# UNWIND
+
+```sql
+UNWIND ['Alice', 'Bob', 'Carol'] AS name CREATE (n:Person {name: name})
+```
+
+Expand a list into individual rows. Each element becomes its own row for downstream processing.
+
+## Examples
+
+### Expand a literal list
+
+```sql
+UNWIND [1, 2, 3] AS item RETURN item
+```
+
+### Process collected results
+
+```sql
+MATCH (n:Person) WITH collect(n.name) AS names UNWIND names AS name RETURN name
+```
+
+## See Also
+
+- [WITH](/worldcypher/composition/with) — query chaining
+- [COLLECT aggregation](/worldcypher/functions/aggregations) — collect into lists

@@ -1,0 +1,71 @@
+---
+title: "MATCH"
+description: "Find nodes and relationships by pattern"
+section: "worldcypher/query-syntax"
+order: 2
+since: "0.2.0"
+status: "stable"
+related:
+  - "/worldcypher/where"
+  - "/worldcypher/return"
+---
+
+# MATCH
+
+```sql
+MATCH (n:Person)-[:KNOWS]->(friend)
+WHERE n.age > 25
+RETURN n.name, friend.name
+```
+
+Find nodes and relationships by pattern. MATCH is the starting point for every read query.
+
+## Syntax
+
+```sql
+MATCH (variable:Label)                    -- by label
+MATCH (variable:Label {key: value})       -- by property
+MATCH (a)-[r:TYPE]->(b)                   -- relationships
+MATCH (a)-[:TYPE*min..max]->(b)           -- variable-length paths
+```
+
+## Examples
+
+### All nodes with a label
+
+```sql
+MATCH (n:Person) RETURN n
+```
+
+```json
+[
+  {"n": {"_id": 0, "_labels": ["Person"], "name": "Alice", "age": 30}},
+  {"n": {"_id": 1, "_labels": ["Person"], "name": "Bob", "age": 25}}
+]
+```
+
+### Property shorthand filter
+
+```sql
+MATCH (n:Person {name: 'Alice'}) RETURN n
+```
+
+### Relationship traversal
+
+```sql
+MATCH (a:Person {name: 'Alice'})-[r:KNOWS]->(b) RETURN b.name
+```
+
+### Variable-length paths
+
+```sql
+MATCH (a:Person {name: 'Alice'})-[:KNOWS*1..3]->(friend) RETURN friend.name
+```
+
+Finds all people reachable from Alice within 1 to 3 KNOWS hops.
+
+## See Also
+
+- [WHERE](/worldcypher/where) — filter matched patterns
+- [RETURN](/worldcypher/return) — project results
+- [shortestPath](/worldcypher/shortest-path) — find shortest path between nodes

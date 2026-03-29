@@ -1,0 +1,352 @@
+---
+title: "Filesystem Workspace"
+description: "How ArcFlow stores data on disk, how to connect Claude Code, and how AI agents interact with persistent graph state"
+section: "guides"
+order: 4
+since: "10.0.0"
+status: "stable"
+---
+
+# Filesystem Workspace
+
+ArcFlow stores everything on the local filesystem. No database server. No daemon. No cloud account. You point it at a directory and it persists your graph as files you can inspect, back up, and version-control.
+
+---
+
+## Quick Start: One Command
+
+Initialize a workspace in your project, and every command in that tree automatically persists:
+
+```bash
+cd my-project
+wc-cli workspace init
+# => Initialized workspace at my-project/.arcflow
+
+# Now every query auto-persists. No --data-dir flag needed.
+wc-cli query "CREATE (n:Person {name: 'Alice', age: 30})" --json
+wc-cli query "MATCH (n:Person) RETURN n.name, n.age" --json
+# => {"rows":[{"name":"Alice","age":"30"}],"count":1}
+
+# Works from subdirectories too — ArcFlow walks up to find .arcflow/
+cd src
+wc-cli query "MATCH (n) RETURN count(n)" --json
+# => {"rows":[{"count(n)":"1"}],"count":1}
+```
+
+ArcFlow finds `.arcflow/config.yaml` by walking up the directory tree (like `git` finds `.git/`), reads the `data_dir` setting, and persists there automatically.
+
+### Three persistence modes
+
+| Mode | How | When to use |
+|------|-----|-------------|
+| **Auto-discover** | `wc-cli workspace init` once, then just `wc-cli query "..."` | Projects. Recommended. |
+| **Explicit directory** | `wc-cli query "..." --data-dir ./mydata` | Scripts, CI/CD, one-off analysis |
+| **In-memory** | `wc-cli query "..."` (no init, no flag) | Experimentation. Nothing persists. |
+
+`--data-dir` always takes priority over auto-discovery. If neither is set and no `.arcflow/` is found, the graph is in-memory only.
+
+---
+
+## How Persistence Works
+
+### What gets created
+
+When you use `--data-dir`, ArcFlow creates two files in that directory:
+
+```
+mydata/
+├── worldcypher.snapshot.json    # Full graph state (human-readable JSON)
+└── worldcypher.wal              # Write-ahead log (binary, crash recovery)
+```
+
+**`worldcypher.snapshot.json`** -- The full graph serialized as JSON. Created after the first mutation. Updated every 50 mutations, on `:checkpoint`, and on REPL exit. You can inspect it directly:
+
+```json
+{
+  "nodes": [
+    {
+      "id": 1,
+      "labels": ["Person"],
+      "properties": {"name": {"String": "Alice"}, "age": {"Int": 30}},
+      "confidence": 1.0,
+      "observation_class": "Observed"
+    }
+  ],
+  "relationships": [
+    {"id": 0, "start": 1, "end": 2, "rel_type": "KNOWS", "properties": {}}
+  ]
+}
+```
+
+**`worldcypher.wal`** -- Binary write-ahead log with CRC32 checksums. Provides crash recovery between snapshots. You never read this directly.
+
+### Startup sequence
+
+When ArcFlow opens a data directory:
+1. Load `worldcypher.snapshot.json` if it exists
+2. Replay any WAL entries on top of the snapshot
+3. Graph is ready
+
+When the snapshot is deleted, the graph starts empty. This is how you reset.
+
+---
+
+## What `workspace init` Creates
+
+```
+my-project/
+└── .arcflow/
+    ├── config.yaml              # Engine configuration
+    ├── data/                    # Graph data (snapshot + WAL)
+    └── state/                   # Internal state tracking
+```
+
+The generated `config.yaml`:
+
+```yaml
+# ArcFlow workspace configuration
+version: "0.1.0"
+backend: cpu
+data_dir: .arcflow/data
+```
+
+The `data_dir` setting tells ArcFlow where to persist. When you run any `wc-cli` command anywhere inside the project tree, ArcFlow walks up from the current directory looking for `.arcflow/config.yaml` (like `git` finds `.git/`), reads `data_dir`, and persists there.
+
+**Version control:** Add `.arcflow/data/` to `.gitignore`. Keep `.arcflow/config.yaml` tracked so collaborators and agents auto-discover the workspace.
+
+---
+
+## Persistence Modes in Detail
+
+| Mode | Setup | Persistence | Use case |
+|------|-------|-------------|----------|
+| **Workspace (recommended)** | `wc-cli workspace init` once | Auto-discovers `.arcflow/` from any subdirectory | Projects, teams, agents |
+| **Explicit directory** | `--data-dir ./mydata` on every command | Saves to that directory | Scripts, CI/CD |
+| **Interactive REPL** | `wc-cli` (auto-discovers) or `wc-cli --data-dir ./mydata` | On exit + every 50 writes | Exploration, debugging |
+| **In-memory** | No init, no flag, no `.arcflow/` in tree | None | One-off queries |
+
+The REPL supports additional persistence commands:
+
+| Command | Description |
+|---------|-------------|
+| `:checkpoint` | Force save snapshot + clear WAL now |
+| `:snapshot path.json` | Export graph to a specific file |
+| `:restore path.json` | Import graph from a file |
+| `:export json path.json` | Export as JSON |
+| `:export graphml path.xml` | Export as GraphML (for Gephi, yEd) |
+
+---
+
+## Connecting Claude Code
+
+Claude Code can interact with ArcFlow in three ways, from fastest to most compatible.
+
+### Method 1: CLI commands (fastest)
+
+Claude Code already has Bash access. Once you `wc-cli workspace init` in your project, Claude Code can run queries with no extra flags:
+
+```bash
+# Create data (auto-discovers .arcflow/ in project tree)
+wc-cli query "CREATE (f:File {path: 'src/lib.rs', loc: 500})" --json
+
+# Query data
+wc-cli query "MATCH (n:File) RETURN n.path, n.loc ORDER BY n.loc DESC" --json
+
+# Run algorithms
+wc-cli query "CALL algo.pageRank()" --json
+```
+
+Every command returns structured JSON:
+
+```json
+{"rows":[{"path":"src/lib.rs","loc":"500"}],"count":1}
+```
+
+Claude Code reads the JSON directly. No tool calls. No protocol overhead.
+
+**Discover the graph before querying:**
+
+```bash
+# What labels and relationship types exist?
+wc-cli query "CALL db.schema()" --json
+
+# Full engine context (capabilities, algorithms, observation classes)
+wc-cli agent-context synth --json
+```
+
+**Query with parameters (safe from injection):**
+
+```bash
+wc-cli query "MATCH (n:Person {name: \$name}) RETURN n" --param name=Alice --data-dir .arcflow/data --json
+```
+
+### Method 2: MCP server (standard tool protocol)
+
+Add ArcFlow as an MCP server in your Claude Code config:
+
+```json
+{
+  "mcpServers": {
+    "arcflow": {
+      "command": "arcflow-mcp",
+      "args": ["--data-dir", ".arcflow/data"]
+    }
+  }
+}
+```
+
+This gives Claude Code five tools:
+
+| Tool | Description |
+|------|-------------|
+| `get_schema` | Labels, relationship types, properties, indexes |
+| `get_capabilities` | Available algorithms, procedures, observation classes |
+| `read_query` | Execute read-only WorldCypher (MATCH, CALL) |
+| `write_query` | Execute mutations (CREATE, SET, DELETE, MERGE) |
+| `graph_rag` | Trusted GraphRAG on natural language questions |
+
+The MCP server enforces read/write safety -- `read_query` rejects mutations, `write_query` rejects reads. This prevents accidental data loss.
+
+### Method 3: HTTP API (remote access)
+
+Start ArcFlow as an HTTP server:
+
+```bash
+wc-cli --http 8080 --data-dir .arcflow/data --api-key my-secret-key
+```
+
+Then query from any HTTP client:
+
+```bash
+curl -X POST http://localhost:8080/query \
+  -H "Authorization: Bearer my-secret-key" \
+  -d "MATCH (n:Person) RETURN n.name"
+```
+
+Endpoints:
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/health` | Liveness probe |
+| `GET` | `/ready` | Readiness with node/rel counts |
+| `GET` | `/status` | Full engine status |
+| `POST` | `/query` | Execute WorldCypher |
+| `GET` | `/query?q=MATCH...` | Execute from URL parameter |
+
+---
+
+## Practical Example: Codebase Knowledge Graph
+
+Here's how Claude Code would build and query a knowledge graph of your codebase:
+
+### Step 1: Initialize
+
+```bash
+wc-cli workspace init
+```
+
+### Step 2: Build the graph
+
+```bash
+# Create crate nodes (no --data-dir needed — .arcflow/ auto-discovered)
+wc-cli query "CREATE (c:Crate {name: 'wc-core', loc: 5500, tests: 120})" --json
+wc-cli query "CREATE (c:Crate {name: 'wc-runtime', loc: 17000, tests: 467})" --json
+wc-cli query "CREATE (c:Crate {name: 'wc-storage', loc: 2200, tests: 32})" --json
+
+# Create dependency relationships
+wc-cli query "MATCH (a:Crate {name: 'wc-runtime'}), (b:Crate {name: 'wc-core'}) CREATE (a)-[:DEPENDS_ON]->(b)" --json
+wc-cli query "MATCH (a:Crate {name: 'wc-runtime'}), (b:Crate {name: 'wc-storage'}) CREATE (a)-[:DEPENDS_ON]->(b)" --json
+```
+
+### Step 3: Query and analyze
+
+```bash
+# Which crate has the most code?
+wc-cli query "MATCH (c:Crate) RETURN c.name, c.loc ORDER BY c.loc DESC" --json
+
+# What depends on wc-core?
+wc-cli query "MATCH (a:Crate)-[:DEPENDS_ON]->(b:Crate {name: 'wc-core'}) RETURN a.name" --json
+
+# PageRank — which crate is most central?
+wc-cli query "CALL algo.pageRank()" --json
+```
+
+### Step 4: Persist across sessions
+
+The graph survives CLI restarts. Next time Claude Code opens your project, the knowledge graph is already there:
+
+```bash
+wc-cli query "MATCH (c:Crate) RETURN count(c)" --json
+# => {"rows":[{"count(c)":"3"}],"count":1}
+```
+
+---
+
+## REPL Commands Reference
+
+Start the REPL with `wc-cli --data-dir .arcflow/data`. Available commands:
+
+| Command | Description |
+|---------|-------------|
+| `:help` | Full command reference |
+| `:status` | Engine status, query cache hit rate |
+| `:count` | Node/relationship/skill counts |
+| `:schema` | Full database schema (labels, properties) |
+| `:labels` | All node labels |
+| `:types` | All relationship types |
+| `:indexes` | List indexes |
+| `:dump` | Export all nodes as CREATE statements |
+| `:snapshot path.json` | Export graph to file |
+| `:restore path.json` | Import graph from file |
+| `:export json path.json` | Export to JSON |
+| `:export graphml path.xml` | Export to GraphML |
+| `:import csv file.csv Label` | Bulk import CSV |
+| `:checkpoint` | Force save snapshot + clear WAL |
+| `:clear` | Delete all data |
+| `:demo` | Load sample data (30 nodes) |
+
+---
+
+## Diagnostic Commands
+
+```bash
+# Where does ArcFlow store data?
+wc-cli paths --json
+
+# Is the workspace healthy?
+wc-cli doctor --json
+
+# What can the engine do? (for AI agents)
+wc-cli agent-context synth --json
+```
+
+---
+
+## Multi-Agent Workspace
+
+Multiple agents can share the same ArcFlow workspace. Each reads and writes to the same graph through the filesystem:
+
+```
+project/
+└── .arcflow/
+    └── data/
+        └── worldcypher.snapshot.json   # Shared graph state
+```
+
+Agent A creates nodes. Agent B queries them. Agent C runs algorithms. The snapshot file is the coordination point. No message broker. No orchestration framework.
+
+For concurrent writes, start the HTTP server and have agents query through it -- the server handles serialization:
+
+```bash
+wc-cli --http 8080 --data-dir .arcflow/data
+```
+
+---
+
+## Tips
+
+- **Reset the graph:** Delete `worldcypher.snapshot.json` and `worldcypher.wal`. Next query starts fresh.
+- **Back up the graph:** Copy `worldcypher.snapshot.json`. It's a self-contained JSON file.
+- **Version control:** Add `.arcflow/config.yaml` to git. Add `.arcflow/data/` to `.gitignore`.
+- **Inspect the data:** `cat .arcflow/data/worldcypher.snapshot.json | python3 -m json.tool`
+- **Export for other tools:** Use `:export graphml graph.xml` for Gephi, yEd, or Cytoscape.

@@ -1,0 +1,149 @@
+---
+title: "CLI"
+description: "arcflow — graph intelligence for the command line. Like grep, find, and jq, but for knowledge graphs."
+section: "cli"
+order: 1
+since: "0.2.0"
+status: "stable"
+---
+
+# CLI
+
+`arcflow` adds graph intelligence to the command line. The way `grep` searches text and `find` searches files, `arcflow` searches, transforms, and reasons over knowledge graphs — at filesystem speed, with structured JSON output that pipes into any workflow.
+
+```bash
+# Create a graph, query it, get JSON — one line
+echo 'MATCH (n) RETURN count(*)' | arcflow --data-dir ./graph --json
+
+# Pipe results to jq
+arcflow --data-dir ./graph --exec schema.cypher --json | jq '.rows[].name'
+
+# Watch a directory — auto-execute queries as agents write them
+arcflow --data-dir ./graph --watch queries/ --output-dir results/
+```
+
+For AI coding agents, `arcflow` is a tool in the same category as `grep`, `find`, `ls`, and `jq` — a command-line primitive that processes data and returns structured results. The agent doesn't need MCP, WebSocket, or any protocol. It calls a CLI command and reads the output. Zero overhead.
+
+---
+
+## Agent Tooling
+
+### As Fast as grep
+
+An agent calling `arcflow` has the same performance characteristics as calling `grep` or `find`:
+
+```bash
+# grep searches text
+grep -r "class GraphStore" crates/
+
+# arcflow searches a knowledge graph
+arcflow --data-dir ./graph --exec "MATCH (c:Crate)-[:DEPENDS_ON]->(d) RETURN c.name, d.name" --json
+```
+
+Both are single-process CLI calls. Both return structured output. Both complete in milliseconds. No server startup. No connection handshake. No token overhead.
+
+### Structured Output for Agents
+
+Every command supports `--json` for machine-readable output:
+
+```bash
+arcflow --data-dir ./graph --exec "MATCH (n) RETURN count(*)" --json
+```
+```json
+{"columns":["count(*)"],"rows":[{"count(*)":"10234"}],"count":1}
+```
+
+Deterministic exit codes:
+- `0` — success
+- `1` — query error (syntax, missing label)
+- `2` — system error (file not found, permission denied)
+- `3` — validation error (constraint violation)
+
+Structured errors with recovery hints:
+```json
+{"ok":false,"code":"PARSE_FAILED","message":"Unknown keyword 'METCH'","recovery_suggestion":"Did you mean MATCH?"}
+```
+
+### Batch Execution
+
+Execute an entire directory of queries in one call:
+
+```bash
+arcflow --data-dir ./graph --exec-dir queries/ --output-dir results/ --json
+```
+
+One process. N queries. N result files. The agent writes `.cypher` files, calls the CLI once, reads `.json` results.
+
+### Watch Mode
+
+For interactive agent sessions, the CLI watches a directory and auto-executes queries as they appear:
+
+```bash
+arcflow --data-dir ./graph --watch queries/ --output-dir results/
+```
+
+The agent writes a file → the result appears within milliseconds. No polling. No protocol.
+
+---
+
+## Interactive REPL
+
+For human developers, `arcflow` starts an interactive REPL:
+
+```bash
+arcflow --data-dir ./my-graph
+```
+
+Commands:
+- `:help` — command reference
+- `:status` — node/relationship counts
+- `:schema` — labels, types, indexes
+- `:demo` — load sample graph
+- `:bench` — run performance benchmark
+- `:dump` — export graph as JSON
+- `:quit` — exit
+
+See [REPL Commands](/cli/repl) for the full command reference.
+
+---
+
+## Server Modes
+
+Add a flag to serve the same engine over the network:
+
+```bash
+arcflow --data-dir ./graph --pg 5432       # PostgreSQL wire protocol
+arcflow --data-dir ./graph --serve 7687    # TCP
+arcflow --data-dir ./graph --http 8080     # REST API
+arcflow-mcp --data-dir ./graph             # MCP (AI agents)
+```
+
+Run all servers concurrently on the same graph store:
+
+```bash
+arcflow --pg 5432 --serve 7687 --http 8080 --data-dir ./graph
+```
+
+Same engine. Same queries. Same data. The CLI is the primary interface; server modes are for when you need network access. The `--pg` flag lets any PostgreSQL client (psql, pgAdmin, Grafana, psycopg2, node-postgres) connect and run WorldCypher queries transparently.
+
+---
+
+## Self-Update
+
+ArcFlow can update itself:
+
+```bash
+arcflow upgrade            # Check for updates and install
+arcflow upgrade --check    # Check only, don't install
+```
+
+The REPL also checks for updates in the background on startup (cached for 24h). Opt out with `ARCFLOW_NO_UPDATE_CHECK=1`.
+
+Updates use atomic binary replacement with automatic rollback on failure.
+
+---
+
+## Sections
+
+- [REPL Commands](/cli/repl) — interactive query session and meta-commands
+- [Snapshot & Restore](/cli/snapshot-restore) — graph persistence and migration

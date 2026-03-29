@@ -1,0 +1,219 @@
+---
+title: "Platforms"
+description: "Native graph engine — scales from a single process to an autonomous mesh"
+section: "platform"
+order: 1
+since: "10.0.0"
+status: "stable"
+---
+
+# Platforms
+
+ArcFlow is a native graph engine. It runs at full speed on your machine, auto-detects GPU hardware, and scales from a single process to an autonomous mesh of nodes. Every deployment (desktop, server, mobile, edge) runs the same engine with the same query language and the same algorithms.
+
+---
+
+## Native Engine
+
+The core product. Full-speed native binary with automatic hardware detection.
+
+```bash
+# macOS / Linux / Windows
+curl -fsSL https://oz.com/install_arcflow | sh
+arcflow --data-dir ./my-graph
+```
+
+| Capability | Detail |
+|---|---|
+| **Performance** | 154M PageRank nodes/sec, 9.3M node creates/sec, 100M edge traversals/sec (MacBook Air M4) |
+| **GPU** | Auto-detects CUDA (Linux/Windows) and Metal (macOS/iOS). Zero configuration. |
+| **Persistence** | WAL (write-ahead log) + DiskWal for durable storage |
+| **Serving** | Add `--serve 7687` for TCP, `--http 8080` for REST, `arcflow-mcp` for AI agents |
+| **Scale** | Single process handles millions of nodes. For larger workloads, deploy as a mesh. |
+
+ArcFlow auto-detects available hardware and adapts. Same query, different execution paths:
+
+- **CPU only** — full algorithm suite, 154M PageRank nodes/sec
+- **CUDA GPU detected** — large workloads route to GPU automatically. Up to 29.6x speedup.
+- **Metal GPU detected** — Apple Silicon UMA zero-copy acceleration
+- **Multiple cores** — thread-safe via `ConcurrentStore`, parallel reads
+
+---
+
+## Scaling: Single Node → Autonomous Mesh
+
+ArcFlow starts as a single process. When you outgrow one machine, it scales to a **mesh of nodes** that coordinate via CDC (change data capture) and WAL streaming.
+
+```
+    ┌─────────────────────────────────────────────┐
+    │              ArcFlow Mesh                    │
+    │                                              │
+    │   ┌──────────┐  ┌──────────┐  ┌──────────┐ │
+    │   │  Node A   │  │  Node B   │  │  Node C   │ │
+    │   │  (GPU)    │  │  (CPU)    │  │  (GPU)    │ │
+    │   │  Origin   │  │  Replica  │  │  Replica  │ │
+    │   └─────┬────┘  └─────┬────┘  └─────┬────┘ │
+    │         │              │              │      │
+    │         └──────── CDC sync ──────────┘      │
+    │                        │                     │
+    │              ┌─────────┴─────────┐          │
+    │              │  WAL → Object     │          │
+    │              │  Storage (S3/R2)  │          │
+    │              └───────────────────┘          │
+    └─────────────────────────────────────────────┘
+```
+
+Each node runs the full ArcFlow engine. Writes go to the origin. Reads scale horizontally across replicas. CDC keeps replicas consistent. The mesh is self-organizing — add a node, it discovers peers and syncs.
+
+---
+
+## Server Deployment
+
+Same engine, exposed over network protocols for multi-client access.
+
+### HTTP API
+
+```bash
+arcflow --data-dir ./graph --http 8080
+```
+
+- `POST /query` — execute WorldCypher queries
+- `GET /status` — engine metadata
+- `GET /health` — readiness probe
+
+### TCP Server
+
+```bash
+arcflow --data-dir ./graph --serve 7687
+```
+
+Line-delimited JSON protocol. For SDK drivers and lightweight clients.
+
+### MCP Server (AI Agents)
+
+```bash
+arcflow-mcp --data-dir ./graph
+```
+
+5 tools via stdio JSON-RPC: `get_schema`, `get_capabilities`, `read_query`, `write_query`, `graph_rag`. Read/write safety built in.
+
+---
+
+## The Fragment Model
+
+A **fragment** is any lightweight ArcFlow instance that operates independently and syncs to [oz.com/world](https://oz.com/world) when connected. Browsers, mobile devices, and PanoNodes are all fragments.
+
+Every fragment:
+- Runs the full WorldCypher engine with local storage
+- Works offline — no connectivity required to query or mutate
+- Syncs delta to oz.com/world when a connection is available (CDC streaming)
+- Never needs the full graph — it operates on its slice
+
+The sync target is your OZ account at oz.com/world. Fragments from different devices merge automatically via CDC with LWW conflict resolution. A fragment that never connects still works — it's a fully functional local graph engine.
+
+```
+    ┌──────────┐   ┌──────────┐   ┌──────────┐
+    │ Browser  │   │  Mobile  │   │ PanoNode │
+    │ fragment │   │ fragment │   │ fragment │
+    └────┬─────┘   └────┬─────┘   └────┬─────┘
+         │              │              │
+         └──── CDC delta sync ─────────┘
+                        │
+               ┌────────▼────────┐
+               │  oz.com/world   │
+               │  (full engine)  │
+               └─────────────────┘
+```
+
+---
+
+## Mobile Fragments
+
+Mobile devices run ArcFlow as a fragment — a local instance that syncs to oz.com/world when connected.
+
+### iOS (Swift)
+
+```swift
+import ArcFlow
+
+let db = ArcFlow.open(dataDir: documentsPath)
+db.execute("CREATE (n:Location {lat: 37.7749, lng: -122.4194})")
+```
+
+Static library (`libarcflow.a`). Metal GPU acceleration on A-series and M-series chips. Syncs upstream via CDC when connectivity is available.
+
+### Android (Kotlin)
+
+```kotlin
+val db = ArcFlow.open(context.filesDir.absolutePath)
+db.execute("CREATE (n:Sensor {type: 'accelerometer', x: 0.1, y: 9.8})")
+```
+
+JNI library (`libarcflow.so`). Runs on-device, offline-capable. Syncs when connected.
+
+A mobile fragment captures data locally (sensor readings, locations, user actions). The local ArcFlow instance stores and queries it in real-time. When the device connects, CDC streams changes to oz.com/world — which has the full graph, GPU acceleration, and the complete algorithm suite.
+
+---
+
+## Edge: Distributed Instances
+
+The same engine deploys to edge compute platforms for low-latency global access.
+
+### Cloudflare Workers
+
+```javascript
+import init, { execute } from './wc_wasm.js';
+await init();
+
+export default {
+  async fetch(request) {
+    const query = await request.text();
+    return new Response(execute(query));
+  }
+};
+```
+
+### Deno Deploy / Vercel Edge
+
+Same WASM binary, same API. Deploy ArcFlow at 300+ PoPs worldwide. Each edge instance handles reads locally and streams writes to the origin via CDC.
+
+---
+
+## Browser Fragment
+
+[Open ArcFlow Engine](/engine) in your browser. No installation. Persistent storage. Works offline. Syncs to [ArcFlow Cloud](/arcflow/cloud) when you're ready.
+
+The browser engine runs the same codebase compiled to WebAssembly. It's the fastest way to start. Open a URL and build your graph. Your data stays local until you create an account, at which point it syncs automatically.
+
+When you need full native performance, export your graph and load it on native:
+
+```bash
+# Export from browser (JSON snapshot from IndexedDB)
+# Import to native
+arcflow --data-dir ./my-graph
+> :restore browser-export.json
+> CALL algo.pageRank()
+# Now runs at native speed with GPU acceleration
+```
+
+---
+
+## What's the Same Everywhere
+
+| | Native | Server | Mobile | Edge | Browser |
+|---|---|---|---|---|---|
+| **WorldCypher** | Full | Full | Full | Full | Full |
+| **20+ algorithms** | Full | Full | Full | Full | Full |
+| **Vector search** | Full | Full | Full | Full | Full |
+| **Temporal** | Full | Full | Full | Full | Full |
+| **Constructors** | Full | Full | Full | Full | Full |
+
+## What Varies
+
+| | Native | Server | Mobile | Edge | Browser |
+|---|---|---|---|---|---|
+| **GPU** | CUDA + Metal | CUDA | Metal (iOS) | No | No |
+| **Persistence** | DiskWal | DiskWal + Volume | SQLite | Ephemeral + CDC | IndexedDB |
+| **Max graph** | RAM | RAM | Device RAM | Instance memory | ~50MB |
+| **Sync** | Origin or replica | Origin or replica | Fragment (CDC to oz.com/world) | Replica (CDC) | Fragment (CDC to oz.com/world) |
+| **Performance** | Full | Full | Near-native | WASM speed | WASM speed |

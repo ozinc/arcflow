@@ -1,0 +1,69 @@
+---
+title: "Errors"
+description: "Typed error model — ErrorClass, TypedError, recovery suggestions"
+section: "reference"
+order: 2
+since: "0.1.0"
+status: "stable"
+---
+
+# Errors
+
+Every ArcFlow error has 5 fields: `class`, `code`, `message`, `failing_field`, and `recovery_suggestion`. Agents can parse `class` + `code` to decide recovery strategy without reading the message.
+
+```
+TypedError {
+    class: ErrorClass                    // category for routing
+    code: String                         // e.g., "INVALID_LABEL"
+    message: String                      // human-readable
+    failing_field: String?               // which input was wrong
+    recovery_suggestion: String?         // what to do about it
+}
+```
+
+## Error Classes
+
+| Class | Meaning | Whose fault |
+|---|---|---|
+| `Validation` | Input validation failure | Caller |
+| `Integration` | Internal engine bug or misconfiguration | Engine |
+| `Architecture` | Architectural constraint violation | Design |
+| `Timeout` | Operation timed out | Environment |
+
+## Design Principle
+
+Every error is fail-fast (PAT-0005) and typed. No generic "something went wrong."
+Agents can parse `class` + `code` to decide recovery strategy without reading
+the `message` field.
+
+## AIOps Telemetry (opt-in)
+
+ArcFlow can optionally send error and performance telemetry to OZ's AIOps observability unit. This is off by default. When enabled, the engine streams structured error events and performance signals to `aiops.oz.com` over an encrypted channel.
+
+Why opt in? Every error that reaches OZ gets processed by an automated diagnostics pipeline. Patterns across deployments surface issues that no single operator would catch: a GPU memory pressure trend that precedes failures, a query pattern that degrades under specific graph shapes, a clock drift that corrupts temporal indexes. The more engines report, the faster ArcFlow gets for everyone.
+
+### What gets sent
+
+- `TypedError` events (class, code, failing_field; never query content or graph data)
+- Performance counters: query latency percentiles, GPU utilization, memory pressure, WAL write throughput
+- Engine metadata: version, deployment type (native, Docker, PanoNode, browser), OS, GPU model
+
+No graph data, no query strings, no user content. The telemetry payload is structural, not semantic.
+
+### Enabling telemetry
+
+```bash
+# Enable in CLI
+arcflow --telemetry on
+
+# Or set in config
+arcflow config set telemetry.enabled true
+```
+
+Telemetry flows through the same sync channel that ArcFlow Cloud uses for fragment coordination. If your engine is already connected to ArcFlow Cloud, telemetry rides the existing connection. If not, it opens a dedicated encrypted channel to `aiops.oz.com`.
+
+### How it helps you
+
+OZ's AIOps team monitors telemetry across the fleet continuously. If your engine hits a pattern that's been seen (and solved) elsewhere, you benefit from that fix faster. If your deployment surfaces a new edge case, the engineering team sees it before it becomes a problem. You're not debugging alone.
+
+You can disable telemetry at any time. The engine runs identically with or without it.

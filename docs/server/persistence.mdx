@@ -1,0 +1,158 @@
+---
+title: "Persistence"
+description: "WAL-backed durable storage — the filesystem IS the database. Agents read and write graph state as files."
+section: "server"
+order: 2
+since: "0.9.0"
+status: "stable"
+---
+
+# Persistence
+
+```bash
+arcflow --data-dir ./project-graph
+```
+
+One flag. Your graph persists across restarts, crashes, and reboots. Every mutation appends to an append-only write-ahead log. On startup, the WAL replays deterministically to reconstruct the exact graph state. No configuration. No external database. The filesystem IS the database.
+
+---
+
+## The Filesystem as Database
+
+ArcFlow stores everything as files in the `--data-dir` directory:
+
+```
+project-graph/
+├── wal.log              # Write-ahead log — every mutation, in order
+├── checkpoint.json      # Periodic full snapshot (optional)
+├── queries/             # Agent query files (.cypher)
+├── results/             # Agent result files (.json)
+└── arcflow.toml         # Configuration (optional)
+```
+
+This means:
+- **Backup** is `cp -r project-graph/ backup/`
+- **Migration** is `scp -r project-graph/ server:/data/`
+- **Version control** is `git add project-graph/`
+- **Inspection** is `cat project-graph/wal.log`
+
+No proprietary binary format. No database administration tools. Standard filesystem operations work on ArcFlow data the same way they work on any other files.
+
+---
+
+## WAL (Write-Ahead Log)
+
+Every write operation (CREATE, SET, DELETE, MERGE, REMOVE) appends to `wal.log` before modifying the in-memory graph. This guarantees:
+
+1. **Durability** — if the process crashes mid-operation, the WAL preserves the last consistent state
+2. **Deterministic replay** — replaying the WAL from the start always produces the same graph
+3. **Point-in-time recovery** — the WAL is a complete history of every mutation
+
+```bash
+# Start with persistence
+arcflow --data-dir ./graph
+
+# Create data
+> CREATE (a:Sensor {name: 'Cam-01', x: 10.0, y: 20.0})
+> CREATE (b:Sensor {name: 'Cam-02', x: 15.0, y: 25.0})
+
+# Exit
+> :quit
+
+# Restart — data is still there
+arcflow --data-dir ./graph
+> MATCH (s:Sensor) RETURN s.name
+# => Cam-01, Cam-02
+```
+
+## Snapshots
+
+Snapshots capture the full graph state as JSON — faster to restore than replaying a long WAL.
+
+```bash
+# Save snapshot
+arcflow> :snapshot ./backup.json
+
+# Restore from snapshot (replaces current graph)
+arcflow> :restore ./backup.json
+```
+
+Snapshots are portable. Export from one machine, import on another:
+
+```bash
+# Export on laptop
+arcflow --data-dir ./graph
+> :snapshot graph-export.json
+
+# Import on server
+arcflow --data-dir /data/production
+> :restore graph-export.json
+```
+
+## Checkpoints
+
+Periodic checkpoints combine the WAL and current state into a compact snapshot, keeping WAL size manageable:
+
+```bash
+arcflow> :checkpoint
+# Writes checkpoint.json and truncates processed WAL entries
+```
+
+## JSON Export
+
+Full graph export for inspection or integration:
+
+```bash
+arcflow> :export json
+# Outputs the entire graph as structured JSON to stdout
+
+# Or with the CLI
+arcflow --data-dir ./graph --exec "CALL db.export()" --json > graph.json
+```
+
+---
+
+## Agent Filesystem Workspace
+
+For AI coding agents, the `--data-dir` directory is a **workspace** — the agent reads and writes files, the CLI processes them. This is the same model described in the [Agent-Native Database](/agent-native) documentation.
+
+```bash
+# Agent writes a query
+echo 'MATCH (s:Sensor) RETURN s.name, s.x, s.y' > project-graph/queries/sensors.cypher
+
+# CLI executes it
+arcflow --data-dir project-graph --exec project-graph/queries/sensors.cypher --json \
+  > project-graph/results/sensors.json
+
+# Agent reads the result
+cat project-graph/results/sensors.json
+```
+
+The persistence layer and the agent workspace share the same directory. The graph data (WAL) and the agent's queries/results live side by side. `git add project-graph/` captures everything — data, queries, results — in one commit.
+
+---
+
+## Change Data Capture
+
+Track changes for downstream sync:
+
+```bash
+# Get all mutations since a sequence number
+arcflow> CALL db.changesSince(42)
+
+# Verify data integrity
+arcflow> CALL db.fingerprint()
+# Returns: cryptographic hash of the entire graph state
+```
+
+CDC + fingerprint enables incremental replication: poll for changes, verify integrity, sync to external systems — all from the filesystem.
+
+---
+
+## See Also
+
+- [Agent-Native Database](/agent-native) — filesystem workspace for AI agents
+- [CLI](/cli) — `arcflow` as a command-line primitive
+- [Snapshot & Restore](/cli/snapshot-restore) — detailed snapshot operations
+- [Server Modes](/server) — TCP, HTTP, MCP access layers
+- [Platforms](/docs/platform) — persistence across native, mobile, edge, browser

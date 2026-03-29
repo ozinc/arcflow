@@ -1,0 +1,29 @@
+---
+title: "DELETE"
+description: "Remove nodes from the graph"
+section: "worldcypher/statements"
+order: 7
+since: "0.2.0"
+status: "stable"
+---
+
+# DELETE
+
+DELETE removes nodes. DETACH DELETE removes nodes and all their relationships.
+
+```sql
+MATCH (n) WHERE n.name = 'Eve' DELETE n
+MATCH (n) WHERE n.name = 'Eve' DETACH DELETE n
+```
+
+## Syntax
+
+```sql
+MATCH (variable) WHERE predicate DELETE variable
+MATCH (variable) WHERE predicate DETACH DELETE variable
+```
+
+## See Also
+
+- [CREATE](/worldcypher/create) — creation
+- [SET](/worldcypher/set) — mutation (alternative to delete + recreate)

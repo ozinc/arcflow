@@ -1,0 +1,567 @@
+---
+title: "Server & Access Layers"
+description: "In-process, HTTP, TCP, and MCP — the engine adapts to how you deploy"
+section: "server"
+order: 1
+since: "0.11.0"
+status: "stable"
+---
+
+# Server & Access Layers
+
+ArcFlow adapts to how you deploy. In-process by default. Add `--pg` for PostgreSQL clients. Add `--http` for REST. Add `--serve` for TCP. The engine is the same; the access layer changes.
+
+```bash
+arcflow                              # In-process REPL (default)
+arcflow --pg 5432                    # PostgreSQL wire protocol
+arcflow --http 8080                  # HTTP API
+arcflow --serve 7687                 # TCP server
+arcflow-mcp --data-dir ./graph       # MCP server for AI agents
+```
+
+Run multiple servers concurrently on the same graph store:
+
+```bash
+arcflow --pg 5432 --serve 7687 --http 8080 --data-dir ./data
+```
+
+All access layers share the same engine, the same query compiler, the same storage. There are no "modes" to configure. The engine auto-detects available resources (CPU cores, memory) and adapts regardless of which access layer you use.
+
+## In-Process (default)
+
+No flags needed. When used as a Rust library, import `wc-sdk` and call functions directly. Zero serialization. Zero network latency. This is the fastest path.
+
+```rust
+use wc_sdk::GraphStore;
+
+let mut store = GraphStore::new();
+// Direct function calls — no serialization, no network
+store.create_node(vec![Label::new("Person")], props);
+```
+
+As a CLI, launch the interactive REPL:
+
+```bash
+arcflow
+arcflow --data-dir ./mydb        # persistent storage
+arcflow --playground             # preloaded demo data
+```
+
+For non-interactive single-query execution:
+
+```bash
+arcflow query "MATCH (n:Person) RETURN n.name" --json
+```
+
+```json
+{"columns":["n.name"],"rows":[{"n.name":"Alice"},{"n.name":"Bob"}]}
+```
+
+See [REPL Reference](/cli/repl) for all meta-commands and agent usage patterns.
+
+## PostgreSQL Wire Protocol
+
+Start a PostgreSQL-compatible server:
+
+```bash
+arcflow --pg 5432
+arcflow --pg 5432 --data-dir ./mydb
+arcflow --pg 5432 --pg-password my-secret --pg-log-queries
+```
+
+Connect with any PostgreSQL client:
+
+```bash
+psql -h localhost -p 5432
+```
+
+```sql
+stadium=# MATCH (p:Player)-[:NEAR {distance: 2.0}]->(b:Ball)
+          RETURN p.name, p.speed;
+ name    | speed
+---------+-------
+ Salah   | 32.1
+ Haaland | 28.7
+(2 rows)
+```
+
+### Protocol Details
+
+Full PostgreSQL wire protocol v3 implementation:
+
+- **Startup handshake**: SSL rejection, protocol negotiation, authentication, parameter status, backend key data
+- **Simple Query protocol**: RowDescription + DataRow + CommandComplete
+- **Extended Query protocol**: Parse/Bind/Describe/Execute/Sync/Close
+- **Error mapping**: ArcFlow TypedError maps to PG ErrorResponse with SQLSTATE codes (42000 syntax, 40001 serialization, 57014 timeout, etc.)
+- **Type inference**: columns auto-typed as bool/int8/float8/text based on data sampling
+
+### SQL Shims
+
+SQL compatibility shims handle common PostgreSQL client expectations:
+
+| SQL Statement | ArcFlow Response |
+|---|---|
+| `SET ...` | Acknowledged silently |
+| `BEGIN` / `COMMIT` / `ROLLBACK` | Acknowledged (single-node, no distributed transactions) |
+| `SHOW SERVER_VERSION` | Returns ArcFlow version |
+| `SELECT VERSION()` | Returns ArcFlow build info |
+| `SELECT CURRENT_SCHEMA()` | Returns "public" |
+| `DISCARD ALL` | Acknowledged (psql compatibility) |
+| pg_catalog / information_schema queries | Empty result set |
+
+This means ORMs, connection poolers (PgBouncer), and visualization tools (Grafana) connect without modification. WorldCypher queries run transparently underneath.
+
+### Authentication
+
+```bash
+arcflow --pg 5432 --pg-password my-secret
+```
+
+When `--pg-password` is set, the server requires cleartext password authentication. Clients that don't provide the correct password receive SQLSTATE 28P01 (invalid_password).
+
+### Query Logging
+
+```bash
+arcflow --pg 5432 --pg-log-queries
+```
+
+Logs every query to stderr with the client's address, useful for debugging and audit trails.
+
+### Compatible Clients
+
+Tested with: psql, pgAdmin, Grafana, Python psycopg2, Go pgx, Node.js node-postgres, Rust sqlx. Any client that speaks PostgreSQL wire protocol v3 should work.
+
+## HTTP API
+
+Start the HTTP server on any port:
+
+```bash
+arcflow --http 8080
+arcflow --http 8080 --data-dir ./mydb
+arcflow --http 8080 --data-dir ./mydb --api-key my-secret-token
+```
+
+The server prints its configuration to stderr on startup:
+
+```
+WorldCypher HTTP API listening on http://0.0.0.0:8080
+  GET  /query?q=MATCH+(n)+RETURN+n
+  POST /query  (body = query string)
+  GET  /status
+  GET  /health    (liveness probe)
+  GET  /ready     (readiness probe)
+  Auth: API key required (Authorization: Bearer <key>)
+  Data dir: ./mydb
+```
+
+### `POST /query`
+
+Execute a WorldCypher query. The request body is the raw query string (not JSON-wrapped).
+
+```bash
+curl -X POST http://localhost:8080/query \
+  -d "MATCH (n:Person) RETURN n.name, n.age"
+```
+
+Response (200 OK):
+
+```json
+{
+  "columns": ["n.name", "n.age"],
+  "rows": [
+    {"n.name": "Alice", "n.age": "30"},
+    {"n.name": "Bob", "n.age": "25"}
+  ]
+}
+```
+
+Error response (400 Bad Request):
+
+```json
+{"error": true, "code": "COMPILE_ERR", "message": "Unexpected token at position 12"}
+```
+
+Mutation example:
+
+```bash
+curl -X POST http://localhost:8080/query \
+  -d "CREATE (n:Person {name: 'Charlie', age: 35}) RETURN n"
+```
+
+Algorithm example:
+
+```bash
+curl -X POST http://localhost:8080/query \
+  -d "CALL algo.pageRank()"
+```
+
+### `GET /query?q=...`
+
+Execute a query via URL parameter. URL-encode the query string.
+
+```bash
+curl "http://localhost:8080/query?q=MATCH+(n:Person)+RETURN+n.name"
+```
+
+Response format is identical to `POST /query`.
+
+### `GET /status`
+
+Returns engine metadata: version, node count, relationship count, skill count.
+
+```bash
+curl http://localhost:8080/status
+```
+
+```json
+{
+  "name": "worldcypher",
+  "version": "1.5.0",
+  "nodes": 12,
+  "relationships": 15,
+  "skills": 3
+}
+```
+
+### `GET /health`
+
+Kubernetes liveness probe. Always returns 200 if the process is running. Does not require authentication.
+
+```bash
+curl http://localhost:8080/health
+```
+
+```json
+{"status": "healthy"}
+```
+
+### `GET /ready`
+
+Kubernetes readiness probe. Returns 200 with current node/relationship counts. Does not require authentication.
+
+```bash
+curl http://localhost:8080/ready
+```
+
+```json
+{"status": "ready", "nodes": 12, "relationships": 15}
+```
+
+### Authentication
+
+Pass `--api-key` to require a Bearer token on all requests except `/health` and `/ready`.
+
+```bash
+# Start with auth
+arcflow --http 8080 --api-key my-secret-token
+
+# Authenticated request
+curl -X POST http://localhost:8080/query \
+  -H "Authorization: Bearer my-secret-token" \
+  -d "MATCH (n) RETURN count(*)"
+
+# Unauthenticated request (returns 401)
+curl -X POST http://localhost:8080/query \
+  -d "MATCH (n) RETURN count(*)"
+```
+
+401 response:
+
+```json
+{"error": "unauthorized", "message": "Invalid or missing API key. Use Authorization: Bearer <key>"}
+```
+
+### CORS
+
+The HTTP server sets `Access-Control-Allow-Origin: *` on all responses. OPTIONS preflight requests return 204 with appropriate CORS headers.
+
+## TCP Server
+
+Start the TCP server:
+
+```bash
+arcflow --serve 7687
+arcflow --serve 7687 --data-dir ./mydb
+```
+
+Startup output:
+
+```
+WorldCypher server listening on 0.0.0.0:7687
+Protocol: one query per line, JSON response per line
+Data dir: ./mydb
+```
+
+### Protocol
+
+Line-delimited text protocol. Send one WorldCypher query per line. Receive one JSON response per line. No framing, no headers — raw TCP.
+
+### Example session
+
+```bash
+# Connect
+nc localhost 7687
+
+# Send a query (you type this)
+CREATE (n:Person {name: 'Alice', age: 30}) RETURN n
+
+# Receive JSON response (server returns this)
+{"columns":["n"],"rows":[{"n":"{name: Alice, age: 30}"}]}
+
+# Send another query
+MATCH (n:Person) RETURN n.name, n.age
+
+# Response
+{"columns":["n.name","n.age"],"rows":[{"n.name":"Alice","n.age":"30"}]}
+```
+
+### Error response
+
+```json
+{"error": true, "code": "COMPILE_ERR", "message": "Unexpected token at position 5"}
+```
+
+### Scripting with TCP
+
+```bash
+# Single query
+echo "MATCH (n) RETURN count(*)" | nc localhost 7687
+
+# Multiple queries
+printf "CREATE (n:A {x: 1})\nMATCH (n) RETURN count(*)\n" | nc localhost 7687
+```
+
+### Concurrency
+
+Each TCP client gets its own thread. Multiple clients can connect simultaneously. The underlying `ConcurrentStore` uses `Arc<RwLock>` for thread safety: multiple concurrent readers, single writer with exclusive access.
+
+## MCP Server
+
+The MCP (Model Context Protocol) server provides structured tool access for AI agents over stdio JSON-RPC. This is the fallback for environments without filesystem access (cloud IDEs, sandboxed agents).
+
+For environments with filesystem access, prefer `arcflow query "..." --json` instead — it is simpler and faster.
+
+```bash
+arcflow-mcp                        # in-memory
+arcflow-mcp --data-dir ./mydb      # persistent
+```
+
+### Protocol
+
+Stdio JSON-RPC 2.0. Send one JSON object per line to stdin. Receive one JSON object per line from stdout. Notifications (no `id` field) do not produce responses.
+
+### Initialization
+
+```json
+{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}
+```
+
+Response:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "protocolVersion": "2024-11-05",
+    "capabilities": {"tools": {}},
+    "serverInfo": {"name": "arcflow-mcp", "version": "1.5.0"}
+  }
+}
+```
+
+### Tools
+
+The MCP server exposes 5 tools. Call them via `tools/call`:
+
+```json
+{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"TOOL_NAME","arguments":{...}}}
+```
+
+#### `get_schema`
+
+Returns labels, relationship types, property keys, indexes, constraints, node/relationship counts, and per-label schema detail. No arguments.
+
+```json
+{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"get_schema","arguments":{}}}
+```
+
+Response text:
+
+```
+Labels: Person, Company
+Relationship types: WORKS_AT, KNOWS
+Property keys: name, age, domain
+Indexes: :Person.name
+Constraints: UNIQUE :Person.email
+Nodes: 8, Relationships: 5
+Schema detail:
+  :Person (5 nodes) — properties: name, age, email
+  :Company (3 nodes) — properties: name, domain
+```
+
+#### `get_capabilities`
+
+Returns available algorithms, procedures, built-in functions, observation classes, and query features. No arguments.
+
+```json
+{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"get_capabilities","arguments":{}}}
+```
+
+Response includes: 20 graph algorithms (pageRank, louvain, dijkstra, graphRAG, etc.), 68 procedures, 81 built-in functions, observation classes (observed, inferred, predicted), and all supported query clauses.
+
+#### `read_query`
+
+Execute a read-only WorldCypher query. Rejects CREATE, SET, DELETE, MERGE, REMOVE — use `write_query` for mutations.
+
+**Input schema:**
+
+| Parameter | Type   | Required | Description                          |
+|-----------|--------|----------|--------------------------------------|
+| `cypher`  | string | yes      | WorldCypher query (read-only)        |
+
+```json
+{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"read_query","arguments":{"cypher":"MATCH (n:Person) RETURN n.name, n.age"}}}
+```
+
+Response text (JSON-formatted string):
+
+```json
+{
+  "columns": ["n.name", "n.age"],
+  "row_count": 2,
+  "rows": [
+    {"n.name": "Alice", "n.age": "30"},
+    {"n.name": "Bob", "n.age": "25"}
+  ]
+}
+```
+
+If a mutation is attempted, the response has `isError: true`:
+
+```json
+{
+  "content": [{"type": "text", "text": "read_query rejects mutating queries (CREATE, SET, DELETE, MERGE, REMOVE). Use write_query instead."}],
+  "isError": true
+}
+```
+
+#### `write_query`
+
+Execute a mutating WorldCypher query. Supports CREATE, SET, DELETE, MERGE, REMOVE, DETACH DELETE.
+
+**Input schema:**
+
+| Parameter | Type   | Required | Description                          |
+|-----------|--------|----------|--------------------------------------|
+| `cypher`  | string | yes      | WorldCypher mutation query           |
+
+```json
+{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"write_query","arguments":{"cypher":"CREATE (n:Person {name: 'Alice', age: 30})"}}}
+```
+
+Response format is identical to `read_query`.
+
+#### `graph_rag`
+
+Run the trusted GraphRAG pipeline — combines graph traversal, vector search, and confidence-weighted ranking to answer a natural language question.
+
+**Input schema:**
+
+| Parameter | Type   | Required | Description                                      |
+|-----------|--------|----------|--------------------------------------------------|
+| `query`   | string | yes      | Natural language question for the knowledge graph |
+
+```json
+{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"graph_rag","arguments":{"query":"What do we know about water on Mars?"}}}
+```
+
+Response text (JSON-formatted string):
+
+```json
+{
+  "query": "What do we know about water on Mars?",
+  "results": [
+    {"name": "Water ice", "confidence": "0.95", "observation_class": "observed", "note": "Spectral analysis confirmed"},
+    {"name": "Subsurface lake", "confidence": "0.7", "observation_class": "inferred", "note": "Radar echo pattern"}
+  ],
+  "result_count": 2
+}
+```
+
+### Listing available tools
+
+```json
+{"jsonrpc":"2.0","id":7,"method":"tools/list","params":{}}
+```
+
+Returns all 5 tool definitions with input schemas.
+
+## Thread Safety
+
+All server access layers (HTTP, TCP, MCP) use `ConcurrentStore`, which wraps the graph engine in `Arc<RwLock<GraphStore>>`. This provides:
+
+- **Multiple concurrent readers**: MATCH queries run in parallel across threads.
+- **Single writer with exclusive access**: CREATE/SET/DELETE acquire a write lock. Other queries wait.
+- **Automatic persistence**: After mutations, the snapshot is written to disk if `--data-dir` is set.
+
+The REPL is single-threaded and uses `GraphStore` directly (no locking overhead).
+
+## Persistence
+
+All access layers support `--data-dir` for durable storage:
+
+```bash
+arcflow --data-dir ./production-db                # REPL
+arcflow --http 8080 --data-dir ./production-db    # HTTP
+arcflow --serve 7687 --data-dir ./production-db   # TCP
+arcflow-mcp --data-dir ./production-db                # MCP
+```
+
+Storage uses two files in the data directory:
+
+| File                          | Purpose                                    |
+|-------------------------------|--------------------------------------------|
+| `worldcypher.snapshot.json`   | Full graph state, written on checkpoint/exit |
+| `worldcypher.wal`             | Append-only write-ahead log for crash recovery |
+
+On startup, the engine restores from the snapshot, then replays any WAL entries written after the last snapshot.
+
+## Auto-Detection
+
+The engine detects available resources and adapts regardless of access layer:
+
+- **CPU cores**: Thread pool scales to available cores for parallel query execution.
+- **Memory**: Graph storage is in-process — no external database, no network serialization.
+- **GPU**: When compiled with GPU support, CUDA kernels accelerate graph algorithms automatically. The access layer (HTTP, TCP, etc.) is unaffected.
+
+## For AI Agents
+
+Choose the access layer based on your environment:
+
+| Environment                        | Recommended access layer                              |
+|------------------------------------|-------------------------------------------------------|
+| Local filesystem access            | `arcflow query "..." --json`                     |
+| Existing PostgreSQL tooling        | `arcflow --pg 5432` + psql/pgAdmin/Grafana       |
+| Long-running session, many queries | `arcflow --http 8080` + curl                     |
+| Cloud IDE, no filesystem           | `arcflow-mcp --data-dir ./graph`                     |
+| Rust application                   | `wc-sdk` crate, direct function calls                |
+
+For single queries, always prefer `arcflow query "..." --json`. It starts, executes, prints JSON, and exits. No server process to manage.
+
+For batch operations, start the HTTP server once and issue requests:
+
+```bash
+# Terminal 1: start server
+arcflow --http 8080 --data-dir ./mydb &
+
+# Terminal 2: issue queries
+curl -s -X POST http://localhost:8080/query -d "CREATE (n:Person {name: 'Alice'})"
+curl -s -X POST http://localhost:8080/query -d "MATCH (n) RETURN count(*)"
+curl -s http://localhost:8080/status
+```
+
+## See Also
+
+- [REPL Reference](/cli/repl) — all meta-commands and agent usage
+- [Persistence](/server/persistence) — storage internals

@@ -1,0 +1,225 @@
+---
+title: "Spatial Knowledge Graph"
+description: "Spatial-first graph database — native spatial predicates, GPU-accelerated KNN, scene graphs"
+section: "spatial-knowledge"
+order: 1
+since: "4.0.0"
+status: "stable"
+---
+
+# Spatial Knowledge Graph
+
+**GPU-accelerated spatial KNN at 0.3ms — native spatial predicates built into the graph, not bolted on as an afterthought.**
+
+ArcFlow treats spatial coordinates as a first-class query dimension alongside entity relationships. KNN, radius queries, raycasts, and frustum culling run on GPU (CUDA/Metal) with automatic dispatch, delivering 2.7x speedup over CPU. Combined with USD scene loading, zone membership, and multi-clock sensor fusion, you query spatial and graph structure in a single Cypher statement — no join against a separate spatial extension, no separate spatial index.
+
+```cypher
+-- 5 nearest sensors to a position, GPU-accelerated
+CALL algo.nearestNodes(point({x: 10.0, y: 10.0}), 'Sensor', 5)
+  YIELD node, distance
+  RETURN node.name, distance  -- 0.3ms at 1K entities
+```
+
+---
+
+## Spatial Primitives
+
+### Point Type with CRS
+
+```cypher
+-- WGS84 (geographic coordinates)
+CREATE (s:Sensor {
+  name: 'Camera-01',
+  location: point({latitude: 51.5074, longitude: -0.1278})
+})
+
+-- Cartesian (local coordinate system)
+CREATE (r:Robot {
+  name: 'AGV-7',
+  position: point({x: 12.5, y: 8.3, z: 0.0})
+})
+```
+
+### Spatial KNN — Find Nearest
+
+```cypher
+-- 5 nearest sensors to a position
+CALL algo.nearestNodes(
+  point({x: 10.0, y: 10.0}),
+  'Sensor',
+  5
+) YIELD node, distance
+RETURN node.name, distance
+```
+
+Performance: 0.3ms at 1,000 entities with GPU acceleration (2.7x over CPU). See [GPU benchmarks](/gpu) for full numbers.
+
+### Radius Queries
+
+```cypher
+-- All robots within 20 meters
+MATCH (r:Robot)
+WHERE distance(r.position, point({x: 10.0, y: 10.0})) < 20.0
+RETURN r.name, r.position
+```
+
+### Bounding Box
+
+```cypher
+-- Entities within a rectangular zone
+MATCH (e:Entity)
+WHERE e.position.x >= 0.0 AND e.position.x <= 50.0
+  AND e.position.y >= 0.0 AND e.position.y <= 30.0
+RETURN e.name
+```
+
+### Raycast Queries
+
+```cypher
+-- What does a camera see along its viewing direction?
+CALL spatial.raycast(
+  point({x: 0, y: 0, z: 2}),    -- origin
+  point({x: 1, y: 0, z: 0}),    -- direction
+  100.0                           -- max distance
+) YIELD hit, distance
+RETURN hit.name, distance
+```
+
+---
+
+## Scene Graphs (USD / 3D)
+
+ArcFlow can load USD (Universal Scene Description) scene manifests — the standard format for 3D scenes used by Pixar, NVIDIA Omniverse, and Apple Vision Pro:
+
+```cypher
+-- Load scene manifest
+CALL scene.load('venue_layout.usd')
+
+-- Query zones
+MATCH (z:Zone {name: 'PitchArea'})
+RETURN z.bounds, z.cameras
+
+-- Frustum query — what's visible from Camera-03?
+CALL scene.frustum('Camera-03')
+YIELD visible
+RETURN visible.name, visible.type
+```
+
+### Zone Membership
+
+Assign entities to spatial zones and query membership:
+
+```cypher
+MATCH (p:Player)-[:IN_ZONE]->(z:Zone {name: 'RedZone'})
+RETURN p.name, p.position
+```
+
+---
+
+## Multi-Clock Sensor Fusion
+
+Different sensors report at different rates. ArcFlow's temporal clock system handles this natively:
+
+```cypher
+-- Camera at 30 fps
+CALL db.clock('camera_01', 'sensor', 33)  -- 33ms tick
+
+-- LiDAR at 10 Hz
+CALL db.clock('lidar_01', 'sensor', 100)  -- 100ms tick
+
+-- GPS at 1 Hz
+CALL db.clock('gps_01', 'sensor', 1000)   -- 1000ms tick
+
+-- Query fused state: ArcFlow reconciles across clock domains
+MATCH (r:Robot) RETURN r.position, r.orientation, r._clock_domain
+```
+
+---
+
+## GPU-Accelerated Spatial
+
+Spatial computations are automatically routed to GPU when beneficial:
+
+| Operation | CPU | GPU | Speedup |
+|---|---|---|---|
+| Spatial KNN (1K entities) | 0.8ms | 0.3ms | 2.7x |
+| Distance matrix (10K pairs) | 45ms | 3ms | 15x |
+| Raycast (1K targets) | 12ms | 1.2ms | 10x |
+
+Zero configuration — the lane dispatch system detects available GPU (CUDA or Metal) and routes automatically.
+
+---
+
+## Use Cases
+
+### Digital Twin (Venue / Building / Factory)
+
+```cypher
+-- Model the venue
+CREATE (v:Venue {name: 'Stadium', capacity: 60000})
+CREATE (c1:Camera {name: 'Cam-01', position: point({x: 0, y: 50, z: 15})})
+CREATE (c2:Camera {name: 'Cam-02', position: point({x: 100, y: 50, z: 15})})
+CREATE (p:Zone {name: 'Pitch', bounds: 'polygon(...)'})
+
+-- Track entities in real-time
+MATCH (player:Player {jersey: 7})
+SET player.position = point({x: 34.2, y: 67.1, z: 0.0})
+
+-- Spatial query: who's near the ball?
+CALL algo.nearestNodes(ball.position, 'Player', 5)
+```
+
+### Warehouse Robotics
+
+```cypher
+-- Multi-robot coordination
+MATCH (r:Robot) WHERE r.status = 'idle'
+CALL algo.nearestNodes(pickLocation, 'Robot', 1)
+YIELD node AS nearest
+SET nearest.task = 'pick', nearest.target = pickLocation
+
+-- Collision avoidance: any robots within 2m of each other?
+MATCH (a:Robot), (b:Robot)
+WHERE a <> b AND distance(a.position, b.position) < 2.0
+RETURN a.name, b.name, distance(a.position, b.position)
+```
+
+### Game World
+
+```cypher
+-- Persistent game world with spatial queries
+MATCH (npc:NPC)
+WHERE distance(npc.position, player.position) < 50
+RETURN npc.name, npc.faction, npc.hostility
+
+-- Temporal: where was the dragon 5 minutes ago?
+MATCH (d:Dragon {name: 'Smaug'}) AS OF (timestamp() - 300000)
+RETURN d.position
+```
+
+---
+
+## Compared to Other Approaches
+
+### Relational Databases with Spatial Extensions?
+ArcFlow adds graph relationships on top of spatial data. Instead of points in a table, you have entities connected by relationships — with spatial predicates operating across the graph. Trade-off: relational spatial extensions have richer geometry types (LineString, Polygon, MultiPolygon) and mature GIS tooling; ArcFlow currently supports Point with KNN, bbox, and raycast. If you need complex polygon operations, a relational database with spatial extensions is the better choice. If you need spatial queries combined with graph traversal and temporal reasoning, ArcFlow avoids the join between two systems.
+
+### 3D Simulation Platforms / USD?
+ArcFlow loads USD scene manifests and makes them queryable with Cypher — a spatial query engine for your digital twin without running a full 3D simulation deployment. Trade-off: simulation platforms provide real-time rendering and physics simulation; ArcFlow provides the queryable data layer underneath.
+
+### ROS2 / Nav2?
+The multi-clock domain system maps directly to ROS2's multi-rate sensor model. ArcFlow adds persistent spatial state, graph relationships between spatial entities, and Cypher queries for mission planning — complementing Nav2's real-time navigation with higher-level spatial reasoning. Trade-off: Nav2 handles real-time path planning with hard latency guarantees; ArcFlow operates at the mission-planning and spatial-knowledge layer, not the control loop.
+
+---
+
+## Vision
+
+ArcFlow treats spatial intelligence as a first-class query dimension, not an afterthought bolted onto tabular storage.
+
+**Real-time perception pipelines.** Spatial state updates via Cypher mutations, and the architecture supports streaming spatial ingestion — camera feeds, LiDAR point clouds, and GPS tracks flowing directly into the graph with sub-second latency, each tagged with clock domain and confidence scores.
+
+**Venue-scale digital twins.** Combining USD scene loading, zone membership, multi-clock sensor fusion, and temporal queries into a unified query surface for building-scale and venue-scale digital twins. Query "which cameras had line-of-sight to zone B at 14:32?" in a single Cypher statement.
+
+**Spatial-temporal reasoning for robotics and AV.** Fusing spatial KNN (0.3ms GPU) with temporal `AS OF` queries to answer questions like "what was within 5 meters of the robot 10 seconds before the collision?" This is the foundation for post-incident analysis, mission replay, and training data extraction from real-world robot operations.
+
+**Richer geometry types.** Extending beyond Point to support LineString, Polygon, and 3D mesh bounding volumes — closing the gap with relational spatial extensions for GIS workloads while maintaining graph-native spatial-temporal queries.

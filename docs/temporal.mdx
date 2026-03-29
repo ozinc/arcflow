@@ -1,0 +1,182 @@
+---
+title: "Temporal Features"
+description: "Time-travel queries, temporal ingest, clock domains, and monotonic validation"
+section: "temporal"
+order: 1
+since: "7.0.0"
+status: "stable"
+---
+
+# Temporal Features
+
+**"What was the state of this entity 5 minutes ago?" — one `AS OF` clause answers it, on any node, with no schema changes.**
+
+Every mutation in ArcFlow is timestamped and preserved. Point-in-time queries, deterministic replay, temporal comparison, and clock domain merging are built into the query language. No temporal tables to configure, no event-sourcing framework to integrate — add `AS OF <timestamp>` to any `MATCH` and you see the graph as it existed at that moment.
+
+```sql
+-- Current state
+MATCH (o:Order {id: 'ORD-001'}) RETURN o.status  -- "shipped"
+
+-- State 1 hour ago
+MATCH (o:Order {id: 'ORD-001'}) AS OF (timestamp() - 3600000) RETURN o.status  -- "confirmed"
+```
+
+## Clock and Ticks
+
+The engine maintains a logical clock. Each mutation advances the clock tick.
+
+```sql
+CALL db.clock()
+```
+
+```
+| field | value      |
+|-------|------------|
+| tick  | 1700000042 |
+```
+
+### Clock Domains
+
+View all active clock domains and their current state:
+
+```sql
+CALL db.clockDomains()
+```
+
+## AS OF Queries
+
+Query the graph as it existed at a specific timestamp. Nodes created after the given tick are excluded from results.
+
+```sql
+MATCH (n:Person) AS OF 1700000000 RETURN n.name
+```
+
+```sql
+-- Create nodes at different times
+CREATE (a:Person {name: 'Alice'})
+-- ... time passes, clock advances ...
+CREATE (b:Person {name: 'Bob'})
+
+-- Query the graph as it was before Bob was created
+MATCH (n:Person) AS OF 1700000000 RETURN n.name
+```
+
+```
+| name  |
+|-------|
+| Alice |
+```
+
+Only nodes that existed at or before tick 1700000000 appear in the result set.
+
+### Nodes As Of
+
+Procedure form for temporal point-in-time queries:
+
+```sql
+CALL db.nodesAsOf()
+```
+
+## Temporal Ingest
+
+Insert nodes with explicit timestamps, independent of the current clock:
+
+```rust
+// Rust SDK: ingest a historical fact
+store.temporal_ingest(
+    vec![Label::new("Event")],
+    props! { "name" => "Launch" },
+    1609459200, // 2021-01-01 00:00:00 UTC
+);
+```
+
+Temporal ingest is used for backfilling historical data, replaying event streams, and merging data from external systems with their original timestamps.
+
+## Temporal Compare
+
+Compare the graph state between two points in time:
+
+```sql
+CALL db.temporalCompare()
+```
+
+Returns the diff: nodes added, removed, and properties changed between two temporal snapshots.
+
+## Temporal Replay
+
+Replay mutations in chronological order from a starting tick:
+
+```sql
+CALL db.temporalReplay()
+```
+
+Useful for auditing, debugging, and reconstructing how the graph evolved over time.
+
+## Temporal Gate
+
+Conditional logic based on temporal state. Gate procedures validate that certain temporal preconditions hold before allowing a mutation:
+
+```sql
+CALL db.temporalGate()
+```
+
+## Change Tracking
+
+### Changes Since
+
+Get all mutations since a given tick:
+
+```sql
+CALL db.changesSince()
+```
+
+Returns the mutation log entries — node creates, property updates, relationship changes — that occurred after the specified tick.
+
+### Mutation Log
+
+View the full mutation history:
+
+```sql
+CALL db.mutations()
+```
+
+## Fingerprinting
+
+Cryptographic fingerprint of the current graph state. Two graphs with identical content produce identical fingerprints regardless of insertion order.
+
+```sql
+CALL db.fingerprint()
+```
+
+```
+| fingerprint                                      |
+|--------------------------------------------------|
+| sha256:a1b2c3d4e5f6...                           |
+```
+
+## Monotonic Validation
+
+ArcFlow enforces monotonic clock progression within a single engine instance. Timestamps never go backward. This guarantees causal ordering: if fact A was created before fact B, A's timestamp is strictly less than B's.
+
+External timestamps from `temporal_ingest` are stored as-is but are clearly marked as externally sourced. The engine's own clock remains monotonic.
+
+## Stream Merging
+
+When merging data from multiple sources with independent clocks:
+
+1. Each source's timestamps are preserved in their original clock domain
+2. Conflicts are detected when two sources assert contradictory facts at overlapping time ranges
+3. The merge result includes provenance metadata identifying which source contributed each fact
+
+```sql
+-- View clock domains from different data sources
+CALL db.clockDomains()
+```
+
+```
+| domain   | current_tick | source        |
+|----------|-------------|---------------|
+| local    | 1700000042  | engine        |
+| import_1 | 1609459200  | external      |
+| import_2 | 1672531200  | external      |
+```

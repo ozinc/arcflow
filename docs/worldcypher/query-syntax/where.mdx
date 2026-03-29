@@ -1,0 +1,65 @@
+---
+title: "WHERE"
+description: "Filter matched patterns with predicates"
+section: "worldcypher/query-syntax"
+order: 3
+since: "0.2.0"
+status: "stable"
+related:
+  - "/worldcypher/match"
+---
+
+# WHERE
+
+Filter results with 15+ predicates: comparisons, boolean logic, string matching, null checks, regex, and list membership.
+
+```sql
+MATCH (n:Person)
+WHERE n.age >= 25 AND n.name STARTS WITH 'A'
+RETURN n.name, n.age
+```
+
+## Operators
+
+| Operator | Example | Since |
+|---|---|---|
+| `=` | `WHERE n.age = 30` | 0.2.0 |
+| `<>` | `WHERE n.name <> 'Bob'` | 0.6.0 |
+| `>`, `<`, `>=`, `<=` | `WHERE n.age > 25` | 0.6.0 |
+| `AND` | `WHERE n.age > 25 AND n.age <= 35` | 0.6.0 |
+| `OR` | `WHERE n.age < 20 OR n.age > 60` | 0.6.0 |
+| `NOT` | `WHERE NOT n.name = 'Carol'` | 0.6.0 |
+| `CONTAINS` | `WHERE n.name CONTAINS 'li'` | 0.6.0 |
+| `STARTS WITH` | `WHERE n.name STARTS WITH 'A'` | 0.6.0 |
+| `EXISTS()` | `WHERE EXISTS(n.email)` | 0.6.0 |
+
+## Examples
+
+### Comparison
+
+```sql
+MATCH (n:Person) WHERE n.age >= 25 AND n.age < 35 RETURN n.name
+```
+
+### String predicates
+
+```sql
+MATCH (n:Person) WHERE n.name STARTS WITH 'A' RETURN n
+```
+
+### Existence check
+
+```sql
+MATCH (n:Person) WHERE EXISTS(n.email) RETURN n.name, n.email
+```
+
+### Compound boolean
+
+```sql
+MATCH (n:Person) WHERE n.age > 25 AND NOT n.name = 'Carol' RETURN n.name
+```
+
+## See Also
+
+- [MATCH](/worldcypher/match) — pattern matching
+- [RETURN](/worldcypher/return) — projection

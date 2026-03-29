@@ -1,0 +1,72 @@
+---
+title: "Agent Integration"
+description: "Using ArcFlow from AI coding agents (Claude Code, Cursor, etc.)"
+section: "guides"
+order: 3
+since: "0.2.0"
+status: "stable"
+---
+
+# Agent Integration
+
+ArcFlow speaks the language of AI agents -- structured errors with recovery suggestions, deterministic output (same query + same state = same results), and filesystem-native operation with no daemon process required. Agents interact through the CLI or MCP server, and every response is machine-parseable.
+
+## CLI as control surface
+
+Agents interact with ArcFlow through the CLI. Every query returns structured,
+parseable output.
+
+```bash
+# Agent sends a query
+echo "MATCH (n:Person) RETURN n.name, n.age" | arcflow
+```
+
+## Deterministic behavior
+
+- Same query against same state = same results
+- Replay of write sequence produces same graph
+- No ambiguity in result schemas
+
+## Structured errors
+
+Every error is typed with machine-readable fields:
+
+```json
+{
+  "class": "Validation",
+  "code": "UNKNOWN_LABEL",
+  "message": "Label 'Perso' not found",
+  "failing_field": "label",
+  "recovery_suggestion": "Check label spelling. Available: Person, Organization"
+}
+```
+
+Agents parse `class` + `code` to decide recovery strategy without reading
+the `message` field.
+
+## EXPLAIN for planning
+
+Before executing an expensive query, agents can inspect the plan:
+
+```sql
+EXPLAIN MATCH (a)-[:KNOWS*1..5]->(b) RETURN b.name
+```
+
+## Snapshot/restore for checkpointing
+
+Agents can checkpoint state before risky operations:
+
+```
+:snapshot ./before-migration.json
+```
+
+And roll back if something goes wrong:
+
+```
+:restore ./before-migration.json
+```
+
+## See Also
+
+- [CLI Reference](/cli) — full command surface
+- [Errors Reference](/reference/errors) — all error types

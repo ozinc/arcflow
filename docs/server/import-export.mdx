@@ -1,0 +1,35 @@
+---
+title: "Import & Export"
+description: "CSV import and JSON export for data loading"
+section: "server"
+order: 3
+since: "0.17.0"
+status: "stable"
+---
+
+# Import & Export
+
+LOAD CSV to import. JSON to export. Each row becomes a node; headers become property keys.
+
+## CSV Import
+
+```
+arcflow> :import csv ./people.csv
+```
+
+CSV headers become property keys. Each row creates a node.
+
+## JSON Export
+
+Export the full graph state:
+
+```
+arcflow> :export json
+```
+
+Outputs all nodes and relationships as structured JSON.
+
+## See Also
+
+- [Persistence](/server/persistence) — automatic durability
+- [Snapshot & Restore](/cli/snapshot-restore) — point-in-time snapshots

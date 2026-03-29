@@ -1,0 +1,379 @@
+---
+title: "Graph Algorithms"
+description: "27 built-in graph algorithms — centrality, community detection, pathfinding, similarity, graph metrics, and 6 incremental via LIVE CALL"
+section: "algorithms"
+order: 1
+since: "4.0.0"
+status: "stable"
+---
+
+# Graph Algorithms
+
+154M PageRank nodes/sec. 29.6x GPU speedup on community detection. 19.8x on triangle count. 27 algorithms ship as built-in `CALL` procedures -- no plugins, no extensions, no separate analytics service. Six of them run incrementally via `LIVE CALL`, maintaining results as the graph mutates.
+
+All algorithms run in-process with zero serialization overhead. GPU acceleration is automatic when hardware is available: same query, same syntax, automatic routing (see [GPU Acceleration](/gpu)).
+
+## Centrality
+
+### PageRank
+
+Iterative eigenvector centrality. 20 iterations, damping factor 0.85. 154M nodes/sec on CPU, 2.4x faster on GPU.
+
+```sql
+CALL algo.pageRank()
+```
+
+| Column | Type | Description |
+|--------|------|-------------|
+| nodeId | integer | Internal node ID |
+| name | string | Node label or name property |
+| score | float | PageRank score (sums to 1.0) |
+
+```sql
+-- PageRank on a social network
+CREATE (a:Person {name: 'Alice'})-[:FOLLOWS]->(b:Person {name: 'Bob'})
+CREATE (b)-[:FOLLOWS]->(c:Person {name: 'Carol'})
+CREATE (c)-[:FOLLOWS]->(a)
+
+CALL algo.pageRank()
+```
+
+```
+| nodeId | name  | score    |
+|--------|-------|----------|
+| 1      | Alice | 0.333333 |
+| 2      | Bob   | 0.333333 |
+| 3      | Carol | 0.333333 |
+```
+
+### Confidence-Weighted PageRank
+
+PageRank weighted by edge confidence values. Higher-confidence edges contribute more to rank propagation.
+
+```sql
+CALL algo.confidencePageRank()
+```
+
+### Betweenness Centrality
+
+Measures how often a node lies on shortest paths between other nodes. Identifies bridges and brokers in the graph.
+
+```sql
+CALL algo.betweenness()
+```
+
+| Column | Type | Description |
+|--------|------|-------------|
+| nodeId | integer | Internal node ID |
+| name | string | Node label or name property |
+| betweenness | float | Betweenness centrality score |
+
+```sql
+CREATE (a:Person {name: 'Alice'})-[:KNOWS]->(b:Person {name: 'Bob'})
+CREATE (b)-[:KNOWS]->(c:Person {name: 'Carol'})
+CREATE (b)-[:KNOWS]->(d:Person {name: 'Dave'})
+
+CALL algo.betweenness()
+```
+
+```
+| nodeId | name | betweenness |
+|--------|------|-------------|
+| 2      | Bob  | 4.000000    |
+| 1      | Alice| 0.000000    |
+| 3      | Carol| 0.000000    |
+| 4      | Dave | 0.000000    |
+```
+
+### Closeness Centrality
+
+Inverse of the average shortest path distance from a node to all reachable nodes. Higher values indicate more central position.
+
+```sql
+CALL algo.closeness()
+```
+
+| Column | Type | Description |
+|--------|------|-------------|
+| nodeId | integer | Internal node ID |
+| name | string | Node label or name property |
+| closeness | float | Closeness centrality score |
+
+### Degree Centrality
+
+Count of relationships per node, optionally filtered by direction.
+
+```sql
+CALL algo.degreeCentrality()
+```
+
+## Community Detection
+
+### Louvain
+
+Hierarchical community detection via modularity optimization. 29.6x GPU speedup on large graphs.
+
+```sql
+CALL algo.louvain()
+```
+
+| Column | Type | Description |
+|--------|------|-------------|
+| nodeId | integer | Internal node ID |
+| name | string | Node label or name property |
+| community | integer | Community assignment ID |
+
+```sql
+-- Detect communities in a social network
+CREATE (a:Person {name: 'Alice'})-[:KNOWS]->(b:Person {name: 'Bob'})
+CREATE (a)-[:KNOWS]->(c:Person {name: 'Carol'})
+CREATE (d:Person {name: 'Dave'})-[:KNOWS]->(e:Person {name: 'Eve'})
+
+CALL algo.louvain()
+```
+
+```
+| nodeId | name  | community |
+|--------|-------|-----------|
+| 1      | Alice | 0         |
+| 2      | Bob   | 0         |
+| 3      | Carol | 0         |
+| 4      | Dave  | 1         |
+| 5      | Eve   | 1         |
+```
+
+### Leiden
+
+Refined community detection that guarantees well-connected communities. Improvement over Louvain that avoids poorly connected intermediate communities.
+
+```sql
+CALL algo.leiden()
+```
+
+Returns the same schema as Louvain (nodeId, name, community).
+
+### Connected Components (WCC)
+
+Weakly connected components via union-find. Identifies disconnected subgraphs.
+
+```sql
+CALL algo.connectedComponents()
+```
+
+| Column | Type | Description |
+|--------|------|-------------|
+| nodeId | integer | Internal node ID |
+| name | string | Node label or name property |
+| component | integer | Component assignment ID |
+
+### Community Detection (Label Propagation)
+
+Fast community detection using label propagation. Near-linear time complexity.
+
+```sql
+CALL algo.communityDetection()
+```
+
+Returns nodeId, name, and community columns. 29.6x GPU speedup on large graphs.
+
+### K-Core Decomposition
+
+Computes the k-core number for each node. A k-core is a maximal subgraph where every node has degree >= k.
+
+```sql
+CALL algo.kCore()
+```
+
+| Column | Type | Description |
+|--------|------|-------------|
+| nodeId | integer | Internal node ID |
+| name | string | Node label or name property |
+| core | integer | Core number |
+
+## Path Finding
+
+### BFS Shortest Path
+
+Unweighted shortest path via breadth-first search. 6.3M edges/sec on CPU, 3.5x faster on GPU.
+
+```sql
+MATCH p = shortestPath((a:Person {name: 'Alice'})-[*..10]->(b:Person {name: 'Dave'}))
+RETURN p
+```
+
+Variable-length traversal with depth bounds:
+
+```sql
+MATCH (a:Person {name: 'Alice'})-[:KNOWS*1..5]->(b)
+RETURN b.name
+```
+
+### Confidence-Weighted Shortest Path
+
+Shortest path weighted by edge confidence. Finds the most trusted route between two nodes.
+
+```sql
+CALL algo.confidencePath(1, 2)
+```
+
+| Column | Type | Description |
+|--------|------|-------------|
+| path | string | Ordered node IDs in the path |
+| confidence | float | Aggregate path confidence |
+
+### All-Pairs Shortest Path
+
+Computes shortest path distances between all node pairs. GPU-accelerated for large graphs.
+
+```sql
+CALL algo.allPairsShortestPath()
+```
+
+| Column | Type | Description |
+|--------|------|-------------|
+| source | integer | Source node ID |
+| target | integer | Target node ID |
+| distance | integer | Shortest path distance |
+
+## Similarity
+
+### Jaccard Similarity
+
+Available through node similarity computation. Measures overlap of neighbor sets between node pairs.
+
+### Node Similarity
+
+Pairwise similarity between all nodes based on shared neighbors.
+
+```sql
+CALL algo.similarNodes()
+```
+
+### Clustering Coefficient
+
+Local clustering coefficient for each node. Measures how close a node's neighbors are to forming a clique.
+
+```sql
+CALL algo.clusteringCoefficient()
+```
+
+| Column | Type | Description |
+|--------|------|-------------|
+| nodeId | integer | Internal node ID |
+| name | string | Node label or name property |
+| coefficient | float | Local clustering coefficient (0.0 to 1.0) |
+
+GPU-accelerated: dispatches to CUDA/Metal when graph exceeds 50 nodes.
+
+## Graph Metrics
+
+### Triangle Count
+
+Counts the number of triangles in the graph. 19.8x GPU speedup.
+
+```sql
+CALL algo.triangleCount()
+```
+
+| Column | Type | Description |
+|--------|------|-------------|
+| triangles | integer | Total triangle count |
+
+### Density
+
+Graph density: ratio of actual edges to possible edges.
+
+```sql
+CALL algo.density()
+```
+
+| Column | Type | Description |
+|--------|------|-------------|
+| density | float | Graph density (0.0 to 1.0) |
+
+### Diameter
+
+Longest shortest path in the graph.
+
+```sql
+CALL algo.diameter()
+```
+
+| Column | Type | Description |
+|--------|------|-------------|
+| diameter | integer | Graph diameter |
+
+## GraphRAG Pipeline
+
+### Trusted GraphRAG
+
+Full retrieval-augmented generation pipeline: query decomposition, graph traversal, evidence collection with confidence scoring.
+
+```sql
+CALL algo.graphRAG('What connections exist between Alice and the project?')
+```
+
+### GraphRAG Context
+
+Retrieves structured context from the graph for a natural language query.
+
+```sql
+CALL algo.graphRAGContext('Tell me about Alice')
+```
+
+### Trusted GraphRAG
+
+Confidence-filtered GraphRAG — only returns evidence above the trust threshold.
+
+```sql
+CALL algo.graphRAGTrusted('high-confidence relationships for Alice')
+```
+
+## Incremental Algorithms (LIVE CALL)
+
+Six algorithms can run as standing queries via `LIVE CALL`. Instead of recomputing from scratch on every mutation, they maintain state incrementally. Cost per update is O(affected neighborhood), not O(V+E).
+
+```sql
+-- Register incremental PageRank -- updates automatically on graph mutations
+LIVE CALL algo.pageRank({ damping: 0.85 })
+
+-- Register incremental community detection
+LIVE CALL algo.connectedComponents()
+LIVE CALL algo.louvain()
+
+-- Register incremental pathfinding and metrics
+LIVE CALL algo.bfs({ source: 42 })
+LIVE CALL algo.triangleCount()
+LIVE CALL algo.clusteringCoefficient()
+```
+
+### Inspecting live algorithms
+
+```sql
+-- List all running incremental algorithms
+CALL db.liveAlgorithms()
+
+-- Check a specific algorithm's memory and timing
+CALL db.viewStats('pageRank')
+```
+
+Built on the [Live Delta Stack](/docs/reactive) and Z-set algebra. Every mutation produces a delta (weighted +1/-1) that propagates through the algorithm's state. Results are mathematically identical to a full recompute.
+
+## Algorithm Performance Summary
+
+Benchmarked on a MacBook Air M4 (10-core, 24GB) with 10K-node graphs, single-threaded CPU baseline. GPU speedups measured with CUDA on equivalent hardware. These are laptop numbers — server hardware with more cores and memory will scale further.
+
+| Algorithm | CPU Throughput | GPU Speedup |
+|-----------|---------------|-------------|
+| PageRank | 154M nodes/sec | 2.4x |
+| BFS Shortest Path | 6.3M edges/sec | 3.5x |
+| Triangle Count | — | 19.8x |
+| Community Detection | — | 29.6x |
+| Louvain | — | 29.6x |
+| Vector Search | 25K queries/sec | 4.2x |
+| All-Pairs Shortest Path | — | GPU-accelerated |
+| Clustering Coefficient | — | GPU-accelerated |
+
+All algorithms are available as `CALL` procedures with identical syntax on CPU and GPU. No configuration, no warm-up, no separate analytics service. The engine dispatches to the fastest available backend automatically.
+
+Six algorithms also support `LIVE CALL` for incremental maintenance -- see the Incremental Algorithms section above.

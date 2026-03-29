@@ -1,0 +1,43 @@
+---
+title: "CREATE"
+description: "Create nodes and relationships"
+section: "worldcypher/statements"
+order: 5
+since: "0.2.0"
+status: "stable"
+---
+
+# CREATE
+
+```sql
+CREATE (a:Person {name: 'Alice', age: 30})-[:KNOWS]->(b:Person {name: 'Bob', age: 25})
+```
+
+Create nodes and relationships in one statement. Returns nothing unless you add `RETURN`.
+
+## Syntax
+
+```sql
+CREATE (variable:Label {key: value, ...}) [RETURN variable]
+CREATE (a:Label {props})-[:TYPE]->(b:Label {props})
+```
+
+## Examples
+
+### Create a node
+
+```sql
+CREATE (n:Person {name: 'Eve', age: 28}) RETURN n
+```
+
+## Notes
+
+- Node IDs are engine-assigned (monotonic `NodeId`).
+- Properties are set at creation time. Use [SET](/worldcypher/set) for mutations.
+- For upsert semantics (find-or-create), use [MERGE](/worldcypher/merge).
+
+## See Also
+
+- [MERGE](/worldcypher/merge) — upsert
+- [DELETE](/worldcypher/delete) — removal
+- [SET](/worldcypher/set) — property mutation

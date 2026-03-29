@@ -1,0 +1,189 @@
+---
+title: "Cloud Architecture"
+description: "ArcFlow Edge Mesh — a distributed graph database that runs everywhere, not just one data center"
+section: "cloud-architecture"
+order: 1
+since: "10.1.0"
+---
+
+# ArcFlow Cloud: Edge-Native Graph Mesh
+
+**ArcFlow deploys as a mesh of edge nodes — browser, Cloudflare Workers, IoT devices, mobile — that sync via CDC to a GPU-accelerated origin. Not a centralized cloud database.**
+
+Where managed cloud graph databases require every query to cross the network to a single data center, ArcFlow runs the same engine at every edge location with sub-millisecond local reads and offline capability. WAL segments ship to object storage for durability; the origin handles GPU-accelerated analytics. Zero cold start (in-process), under 20MB Docker image, no per-query pricing.
+
+---
+
+## The Problem with Centralized Graph Databases
+
+Traditional managed graph databases follow a single pattern: your graph lives in one data center. Every query crosses the network. Every write has round-trip latency. Offline? You're dead.
+
+This worked when applications lived on servers. It doesn't work when your graph needs to be in:
+
+- **The browser** — collaborative editing, offline-first apps
+- **Edge PoPs** — sub-millisecond reads at Cloudflare's 300+ locations
+- **IoT devices** — robots, drones, game engines with local graph state
+- **Mobile apps** — offline knowledge graphs that sync when connected
+
+---
+
+## ArcFlow's Architecture: The Edge Mesh
+
+ArcFlow takes a fundamentally different approach. Instead of one centralized database, ArcFlow deploys as a **mesh of edge nodes** that sync via CDC to a GPU-accelerated origin.
+
+```
+              Browser (WASM)
+                │
+                ▼
+     ┌─────────────────────┐
+     │   Edge PoP (WASM)    │ ◄── Cloudflare Workers / Deno Deploy
+     │   Edge PoP (WASM)    │     Sub-ms reads, local writes
+     │   Edge PoP (WASM)    │
+     └─────────┬───────────┘
+               │ CDC Delta Sync
+               ▼
+     ┌─────────────────────┐
+     │   Object Storage     │ ◄── R2 / S3 / GCS
+     │   (WAL Segments)     │     Durable, geo-replicated
+     └─────────┬───────────┘
+               │
+               ▼
+     ┌─────────────────────┐
+     │   Origin Server      │ ◄── Docker (<20MB), GPU-accelerated
+     │   Full ArcFlow       │     PageRank, vector search, spatial
+     │   CUDA + Metal       │     Complex analytics, full graph
+     └─────────────────────┘
+```
+
+Every node in the mesh runs the same ArcFlow engine. The optimized WASM engine handles reads and local writes at the edge. The origin server handles GPU-accelerated analytics. WAL segments ship to object storage for durability and sync.
+
+---
+
+## Head-to-Head: ArcFlow vs Managed Cloud Graph Databases
+
+| Capability | Managed Cloud Graph DB | ArcFlow Edge Mesh |
+|---|---|---|
+| **Query language** | Cypher | WorldCypher (Cypher-inspired + spatial/temporal primitives) |
+| **Graph algorithms** | Separate analytics product (paid) | 20+ built-in, free |
+| **Vector search** | Plugin or add-on | HNSW built-in |
+| **Edge deployment** | No | optimized WASM, 300+ PoPs |
+| **Browser execution** | No | Yes (WASM playground) |
+| **Offline capability** | No | Yes |
+| **Embedded in app** | No (client-server only) | Yes (in-process, 0ms cold start) |
+| **Temporal queries** | No | `AS OF` built-in |
+| **Confidence/provenance** | No | Built-in (Trusted GraphRAG) |
+| **GPU acceleration** | No | CUDA + Metal, 29 kernels |
+| **Cold start** | ~200ms connection | 0ms (in-process) |
+| **Binary size** | ~500MB+ JVM | optimized WASM / under 20MB Docker |
+| **Cost** | \$65+/month | \$0 (self-hosted) |
+
+**Where managed cloud databases win:** managed hosting, multi-region HA, automatic backups, monitoring dashboard. These are ops features, not engine features.
+
+**Where ArcFlow wins:** everywhere else. Edge, browser, offline, embedded, GPU, temporal, vector, provenance, cost.
+
+---
+
+## How It Works
+
+### 1. WAL Segment Shipping
+
+Every write to ArcFlow generates a WAL (Write-Ahead Log) entry with CRC32 integrity. WAL segments rotate at configurable thresholds (default: 4MB or 10K entries) and ship to S3-compatible object storage.
+
+```rust
+use arcflow::{WalShipper, WalShipperConfig, LocalFsBackend};
+
+let config = WalShipperConfig {
+    db_id: "my-graph".into(),
+    max_segment_bytes: 4 * 1024 * 1024,  // 4MB segments
+    max_segment_entries: 10_000,
+};
+
+let backend = LocalFsBackend::new("/var/lib/arcflow/object-store")?;
+let mut shipper = WalShipper::new(config, backend, "/var/lib/arcflow/wal")?;
+
+// Writes automatically rotate and ship
+shipper.append(op, txn_id)?;
+shipper.ship_closed()?;  // Upload to object storage
+```
+
+Recovery from object storage: load the latest checkpoint, replay WAL segments after it. CRC32 verified on every segment download.
+
+### 2. CDC Delta Sync
+
+Edge nodes sync with the origin using Change Data Capture. Each edge tracks its last-synced sequence number. Deltas are batched and compressed.
+
+```
+Edge Node                          Origin
+    │                                │
+    │── GET /sync/changes?since=N ──>│
+    │                                │
+    │<── Delta { ops: [...], seq } ──│
+    │                                │
+    │── POST /sync/push { ops } ────>│
+    │                                │
+    │<── ACK { new_seq } ───────────│
+```
+
+Fingerprint verification (`db.fingerprint()`) ensures consistency after sync.
+
+### 3. Conflict Resolution
+
+When multiple edge nodes write concurrently:
+- **Default:** Last-Writer-Wins (LWW) with timestamps
+- **Pluggable:** `MergeStrategy` trait for custom resolution
+- **Auditable:** Conflict log records all resolutions with both versions
+- **Causal:** Vector clocks detect truly concurrent writes vs. ordered writes
+
+### 4. Deploy in One Command
+
+```bash
+# arcflow.cloud.toml
+[project]
+name = "my-knowledge-graph"
+
+[edge]
+provider = "cloudflare"
+regions = ["us-east", "eu-west", "ap-southeast"]
+
+[storage]
+provider = "r2"
+bucket = "my-graph-wal"
+
+[origin]
+provider = "fly"
+gpu = true
+
+# Deploy everything
+arcflow deploy
+```
+
+---
+
+## Core Components
+
+| Component | Technology |
+|---|---|
+| Edge runtime | WASM binary |
+| Origin server | Docker container (under 20MB) |
+| Binary WAL | bincode + CRC32 + fsync |
+| Checkpoints | Atomic snapshot + restore |
+| WAL segment shipping | ObjectStorageBackend + WalShipper |
+| Change tracking | `db.changesSince()` CDC |
+| Data integrity | `db.fingerprint()` |
+| HTTP API | `--http PORT` |
+| MCP server | 5 tools, read/write safety |
+| GPU acceleration | 17 CUDA + 6 Metal kernels |
+
+---
+
+## The Positioning
+
+ArcFlow Cloud is not a cheaper managed graph database. It's a different architecture.
+
+**Managed cloud graph databases:** "We run a centralized graph database for you."
+
+**ArcFlow:** "Your graph runs everywhere your users are — browser, edge, mobile, embedded — and syncs to a GPU-accelerated origin for heavy analytics. No vendor lock-in. No per-query pricing. Your data, your infrastructure."
+
+The graph database market is \$5.3B and growing 24% annually. Every player offers the same thing: a centralized cloud database. ArcFlow is the only engine that can run at every edge PoP worldwide, sync to a GPU-accelerated origin, and also run offline in the browser.
+
+That's not a feature improvement. It's a category shift.

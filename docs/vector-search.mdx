@@ -1,0 +1,184 @@
+---
+title: "Vector Search"
+description: "HNSW vector indexes with cosine, euclidean, and dot product similarity — 25K queries/sec at 128d"
+section: "vector-search"
+order: 1
+since: "6.0.0"
+status: "stable"
+---
+
+# Vector Search
+
+**HNSW vector search built into the graph database — 25,000 queries/sec at 128d, zero serialization between graph traversal and similarity search.**
+
+No dedicated vector database, no separate similarity service. ArcFlow indexes vectors in the same process as your graph nodes, so you can combine graph traversal with vector similarity in a single query without network hops. GPU acceleration delivers 4.2x additional speedup when available.
+
+```sql
+-- Vector search + graph traversal in one query, one process
+CALL algo.vectorSearch('movie_embeddings', [0.12, -0.34, 0.56, ...], 5)
+```
+
+## Create a Vector Index
+
+```sql
+CREATE VECTOR INDEX movie_embeddings
+  FOR (m:Movie)
+  ON (m.embedding)
+  OPTIONS {dimensions: 128, similarity: 'cosine'}
+```
+
+| Option | Values | Default | Description |
+|--------|--------|---------|-------------|
+| dimensions | 1–4096 | required | Vector dimensionality |
+| similarity | `'cosine'`, `'euclidean'`, `'dotProduct'` | `'cosine'` | Distance function |
+
+### Similarity Functions
+
+**Cosine** — angle between vectors, normalized. Best for text embeddings where magnitude is irrelevant.
+
+**Euclidean** — L2 distance. Best for spatial data and embeddings where absolute position matters.
+
+**Dot Product** — raw inner product. Best for pre-normalized vectors where higher values mean more similar.
+
+```sql
+-- Euclidean distance for spatial embeddings
+CREATE VECTOR INDEX spatial_vec
+  FOR (p:Point)
+  ON (p.coords)
+  OPTIONS {dimensions: 3, similarity: 'euclidean'}
+
+-- Dot product for pre-normalized embeddings
+CREATE VECTOR INDEX doc_vec
+  FOR (d:Document)
+  ON (d.embedding)
+  OPTIONS {dimensions: 768, similarity: 'dotProduct'}
+```
+
+## Search
+
+### K-Nearest Neighbor Search
+
+```sql
+CALL algo.vectorSearch('movie_embeddings', [0.1, 0.2, 0.3, ...], 10)
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| index name | string | Name of the vector index |
+| query vector | float[] | Query vector (must match index dimensions) |
+| k | integer | Number of nearest neighbors to return |
+
+Returns rows with nodeId, similarity score, and all node properties.
+
+```sql
+-- Find 5 movies most similar to a query embedding
+CALL algo.vectorSearch('movie_embeddings', [0.12, -0.34, 0.56, ...], 5)
+```
+
+```
+| nodeId | name              | score    |
+|--------|-------------------|----------|
+| 42     | The Matrix        | 0.952341 |
+| 17     | Blade Runner      | 0.891205 |
+| 23     | Ghost in the Shell| 0.847193 |
+| 8      | Tron              | 0.812045 |
+| 31     | Ex Machina        | 0.798412 |
+```
+
+### Similar Nodes
+
+Find nodes structurally similar based on their vector embeddings:
+
+```sql
+CALL algo.similarNodes()
+```
+
+## Hybrid Search
+
+Combine graph traversal with vector similarity in a single query. Graph structure constrains the candidate set, then vector similarity ranks results.
+
+```sql
+CALL algo.hybridSearch()
+```
+
+Hybrid search uses graph adjacency to narrow candidates before running vector comparison — faster than brute-force vector scan on large graphs.
+
+```sql
+-- Example: find documents similar to a query, but only within a specific project
+CREATE (p:Project {name: 'ArcFlow'})
+CREATE (d1:Document {name: 'Architecture', embedding: [0.1, 0.2, 0.3]})
+CREATE (d2:Document {name: 'API Guide', embedding: [0.15, 0.22, 0.28]})
+CREATE (p)-[:CONTAINS]->(d1)
+CREATE (p)-[:CONTAINS]->(d2)
+
+-- Traverse graph to project, then vector search within results
+MATCH (p:Project {name: 'ArcFlow'})-[:CONTAINS]->(d:Document)
+RETURN d.name
+```
+
+## Vector Indexes Management
+
+List all vector indexes:
+
+```sql
+CALL db.indexes()
+```
+
+## Performance
+
+| Dimension | Throughput | Latency (p50) |
+|-----------|-----------|---------------|
+| 128d | 25,000 queries/sec | 0.04ms |
+| 768d | 4,600 queries/sec | 0.22ms |
+
+GPU acceleration delivers 4.2x speedup on vector search when available. Dispatch is automatic based on index size — no configuration required.
+
+## Use Cases
+
+### RAG Pipeline
+
+ArcFlow's vector search integrates directly with the GraphRAG pipeline:
+
+```sql
+-- Index document embeddings
+CREATE VECTOR INDEX doc_embeddings
+  FOR (d:Document)
+  ON (d.embedding)
+  OPTIONS {dimensions: 768, similarity: 'cosine'}
+
+-- Ingest documents with embeddings
+CREATE (d:Document {
+  name: 'Architecture Overview',
+  content: 'ArcFlow is a graph database...',
+  embedding: [0.12, -0.34, ...]
+})
+
+-- Run GraphRAG with vector-backed retrieval
+CALL algo.graphRAG('How does the storage engine work?')
+```
+
+### Semantic Search
+
+```sql
+-- Create embeddings from your ML pipeline, store directly in the graph
+CREATE (n:Concept {
+  name: 'machine learning',
+  embedding: [0.45, 0.12, -0.33, ...]
+})
+
+-- Query with a new embedding
+CALL algo.vectorSearch('concept_embeddings', [0.44, 0.13, -0.31, ...], 10)
+```
+
+### Recommendation Engine
+
+```sql
+-- Users and items with embeddings in the same vector space
+CREATE VECTOR INDEX user_item_vec
+  FOR (n:Entity)
+  ON (n.embedding)
+  OPTIONS {dimensions: 128, similarity: 'dotProduct'}
+
+-- Find items closest to a user's embedding
+CALL algo.vectorSearch('user_item_vec', [0.2, 0.8, -0.1, ...], 20)
+```

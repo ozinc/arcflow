@@ -1,0 +1,70 @@
+---
+title: "Modeling a Social Graph"
+description: "Build a social network with nodes, relationships, and traversal"
+section: "guides"
+order: 1
+since: "0.2.0"
+status: "stable"
+---
+
+# Modeling a Social Graph
+
+Build a social network graph, traverse friendships, and run PageRank -- all in under 2 minutes. By the end of this guide, you will have nodes with properties, directed relationships, multi-hop traversals, and centrality scores.
+
+## Create people
+
+```sql
+CREATE (alice:Person {name: 'Alice', age: 30, city: 'London'})
+CREATE (bob:Person {name: 'Bob', age: 25, city: 'Berlin'})
+CREATE (carol:Person {name: 'Carol', age: 35, city: 'London'})
+CREATE (dave:Person {name: 'Dave', age: 28, city: 'Paris'})
+```
+
+## Create relationships
+
+```sql
+CREATE (a:Person {name: 'Alice'})-[:KNOWS]->(b:Person {name: 'Bob'})
+CREATE (b:Person {name: 'Bob'})-[:KNOWS]->(c:Person {name: 'Carol'})
+CREATE (a:Person {name: 'Alice'})-[:KNOWS]->(d:Person {name: 'Dave'})
+```
+
+## Query: who does Alice know?
+
+```sql
+MATCH (a:Person {name: 'Alice'})-[:KNOWS]->(friend) RETURN friend.name
+```
+
+## Query: friends of friends
+
+```sql
+MATCH (a:Person {name: 'Alice'})-[:KNOWS*2..2]->(fof) RETURN fof.name
+```
+
+## Query: shortest path
+
+```sql
+shortestPath (a:Person {name: 'Alice'}), (c:Person {name: 'Carol'})
+```
+
+## Query: people in London over 25
+
+```sql
+MATCH (n:Person) WHERE n.city = 'London' AND n.age > 25 RETURN n.name, n.age
+```
+
+## Query: statistics
+
+```sql
+MATCH (n:Person) RETURN count(n) AS total, avg(n.age) AS avg_age, collect(n.city) AS cities
+```
+
+## Snapshot for later
+
+```
+:snapshot ./social-graph.json
+```
+
+## See Also
+
+- [Using Constructors](/guides/using-constructors) — add dynamic relationships
+- [WorldCypher Reference](/worldcypher) — full query language

@@ -1,0 +1,61 @@
+---
+title: "Types"
+description: "Core type primitives — NodeId, RelId, PropertyValue, Label, RelType"
+section: "reference"
+order: 1
+since: "0.1.0"
+status: "stable"
+---
+
+# Types
+
+Core type primitives used across the ArcFlow engine.
+
+## Identifiers
+
+| Type | Rust | Display | Description |
+|---|---|---|---|
+| `NodeId` | `NodeId(u64)` | `n42` | Unique node identifier, monotonically assigned |
+| `RelId` | `RelId(u64)` | `r7` | Unique relationship identifier |
+| `ConstructorId` | `ConstructorId(u64)` | `s3` | Unique constructor identifier |
+| `Generation` | `Generation(u64)` | — | Snapshot cache invalidation counter |
+| `Timestamp` | `Timestamp(u64)` | `1711234567:000` | Milliseconds since UNIX epoch |
+
+## Property Values
+
+```rust
+enum PropertyValue {
+    Null,
+    Bool(bool),
+    Int(i64),
+    Float(f64),
+    String(String),
+    IntList(Vec<i64>),
+    FloatList(Vec<f64>),
+    StringList(Vec<String>),
+}
+```
+
+## Graph Primitives
+
+| Type | Description |
+|---|---|
+| `Label(String)` | Node label (e.g., "Person") |
+| `RelType(String)` | Relationship type (e.g., "KNOWS") |
+| `Properties` | `HashMap<String, PropertyValue>` |
+| `Confidence(f64)` | 0.0–1.0, clamped |
+| `SemanticVersion` | major.minor.patch |
+
+## Execution
+
+| Type | Values |
+|---|---|
+| `ExecutionTier` | `Symbolic`, `Wasm`, `Llm` |
+| `BackendId` | `Cpu`, `Cuda`, `Metal` |
+
+## Errors
+
+| Type | Description |
+|---|---|
+| `ErrorClass` | `Validation`, `Integration`, `Architecture`, `Timeout` |
+| `TypedError` | `{ class, code, message, failing_field, recovery_suggestion }` |

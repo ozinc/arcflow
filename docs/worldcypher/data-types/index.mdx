@@ -1,0 +1,39 @@
+---
+title: "Data Types"
+description: "Property value types supported in WorldCypher"
+section: "worldcypher/data-types"
+order: 1
+since: "0.1.0"
+status: "stable"
+---
+
+# Data Types
+
+9 types: **Null**, **Bool**, **Int** (i64), **Float** (f64), **String**, **IntList**, **FloatList**, **StringList**, **Point**. No implicit coercion.
+
+## Scalar Types
+
+| Type | WorldCypher Literal | Rust Type | Example |
+|---|---|---|---|
+| Null | `null` | `PropertyValue::Null` | `null` |
+| Boolean | `true`, `false` | `PropertyValue::Bool(bool)` | `true` |
+| Integer | numeric literal | `PropertyValue::Int(i64)` | `42` |
+| Float | decimal literal | `PropertyValue::Float(f64)` | `3.14` |
+| String | single-quoted | `PropertyValue::String(String)` | `'hello'` |
+
+## Collection Types
+
+| Type | Rust Type | Description |
+|---|---|---|
+| IntList | `PropertyValue::IntList(Vec<i64>)` | List of integers |
+| FloatList | `PropertyValue::FloatList(Vec<f64>)` | List of floats |
+| StringList | `PropertyValue::StringList(Vec<String>)` | List of strings |
+
+## Type Coercion
+
+WorldCypher does not perform implicit type coercion. Comparing an `Int` to a `String`
+returns no match — it does not error or cast.
+
+## See Also
+
+- [Types Reference](/reference/types) — full Rust type inventory

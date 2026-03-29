@@ -1,0 +1,298 @@
+---
+title: "Procedures"
+description: "All 83 CALL procedures — database introspection, graph algorithms, temporal, reactive, system, health, extensions, behavior"
+section: "Reference"
+order: 5
+since: "0.19.0"
+status: "stable"
+---
+
+# Procedures
+
+> This reference is designed for both human developers and AI coding agents. Every entry includes complete CALL syntax and return columns that can be used directly in queries.
+
+83 CALL procedures: Database Introspection (20), Graph Algorithms (24), Temporal (9), Reactive (5), System (14), Health (3), Extensions (5), and Behavior Graph (3). All return tabular results.
+
+```sql
+CALL db.procedures()
+```
+
+Returns the full list of available procedures (column: `name`).
+
+## Database Introspection (20)
+
+Core procedures for inspecting database state, schema, and metadata.
+
+| Procedure | Return Columns | Description | Since |
+|---|---|---|---|
+| `CALL db.nodeCount()` | `count` | Total node count | 0.19.0 |
+| `CALL db.relCount()` | `count` | Total relationship count | 0.19.0 |
+| `CALL db.labels()` | `label` | All node labels in use | 0.19.0 |
+| `CALL db.types()` | `type` | All relationship types in use | 0.19.0 |
+| `CALL db.keys()` | `key` | All property keys in use | 0.19.0 |
+| `CALL db.version()` | `name`, `version`, `crates`, `waves` | Engine version and build info | 0.19.0 |
+| `CALL db.stats()` | `nodes`, `relationships`, `skills` | Database statistics summary | 0.20.0 |
+| `CALL db.stats.json()` | `json` | All metadata as single JSON object | 5.0.0 |
+| `CALL db.schema()` | `label`, `properties`, `count` | Schema overview: labels, property keys per label, counts, and relationship patterns | 4.0.0 |
+| `CALL db.indexes()` | `label`, `property` | All indexes with target label and property | 0.19.0 |
+| `CALL db.constraints()` | `label`, `property`, `type` | All constraints with target and type | 0.19.0 |
+| `CALL db.procedures()` | `name` | List all available procedure names | 0.20.0 |
+| `CALL db.help()` | `procedure`, `description`, `example` | Quick-reference of key procedures with examples | 5.0.0 |
+| `CALL db.tutorial()` | `step`, `title`, `query`, `description` | Interactive 6-step walkthrough for new users | 5.0.0 |
+| `CALL db.doctor()` | `check`, `status`, `detail` | Diagnostic health check: 5 checks + HEALTHY/ISSUES_FOUND summary | 4.0.0 |
+| `CALL db.export()` | `snapshot`, `nodes`, `relationships`, `generation` | Export full graph as JSON snapshot | 3.0.0 |
+| `CALL db.import('<json>')` | `status`, `nodes_before`, `nodes_after` | Import graph from JSON snapshot (mutating) | 5.0.0 |
+| `CALL db.import.csv('<csv>', '<Label>')` | `imported` | Import CSV rows as nodes with given label (mutating) | 5.0.0 |
+| `CALL db.clear()` | `status`, `nodes_removed`, `rels_removed` | Delete all nodes, relationships, and indexes (mutating) | 5.0.0 |
+| `CALL db.demo()` | _(demo graph)_ | Load sample social network graph with example queries (mutating) | 5.0.0 |
+
+```sql
+-- Get a schema overview
+CALL db.schema()
+```
+
+Returns one row per label with property keys and node count, plus relationship patterns.
+
+```sql
+-- Run diagnostics
+CALL db.doctor()
+```
+
+Returns rows for each check (node_count, relationship_integrity, index_consistency, constraints, generation) plus a summary row with HEALTHY or ISSUES_FOUND status.
+
+## Graph Algorithms (24)
+
+### Centrality (5)
+
+| Procedure | Return Columns | Description | Since |
+|---|---|---|---|
+| `CALL algo.pageRank()` | `nodeId`, `name`, `rank` | PageRank (20 iterations, damping 0.85). GPU-accelerated when available. | 0.26.0 |
+| `CALL algo.confidencePageRank()` | `nodeId`, `name`, `confidence`, `rank` | PageRank weighted by node confidence scores | 5.0.0 |
+| `CALL algo.betweenness()` | `nodeId`, `name`, `betweenness` | Betweenness centrality scores | 3.0.0 |
+| `CALL algo.closeness()` | `nodeId`, `name`, `closeness` | Closeness centrality scores | 3.0.0 |
+| `CALL algo.degreeCentrality()` | `nodeId`, `name`, `centrality` | Degree centrality scores | 3.0.0 |
+
+```sql
+CALL algo.pageRank()
+```
+
+Returns one row per node, sorted by rank. Uses 20 iterations with damping factor 0.85.
+
+### Community Detection (5)
+
+| Procedure | Return Columns | Description | Since |
+|---|---|---|---|
+| `CALL algo.connectedComponents()` | `nodeId`, `name`, `component` | Connected component IDs via union-find | 0.26.0 |
+| `CALL algo.communityDetection()` | `nodeId`, `name`, `community` | Community IDs via label propagation. GPU-accelerated when available. | 0.26.0 |
+| `CALL algo.louvain()` | `nodeId`, `name`, `community` | Community IDs via Louvain modularity optimization. GPU-accelerated when available. | 3.0.0 |
+| `CALL algo.leiden()` | `nodeId`, `community` | Community IDs via Leiden algorithm (20 iterations) | 5.0.0 |
+| `CALL algo.kCore()` | `nodeId`, `name`, `coreness` | K-core decomposition values | 3.0.0 |
+
+```sql
+CALL algo.louvain()
+```
+
+Returns one row per node with hierarchical community assignment.
+
+### Graph Metrics (4)
+
+| Procedure | Return Columns | Description | Since |
+|---|---|---|---|
+| `CALL algo.density()` | `density` | Graph density ratio (0.0 to 1.0) | 3.0.0 |
+| `CALL algo.diameter()` | `diameter` | Graph diameter (longest shortest path) | 3.0.0 |
+| `CALL algo.triangleCount()` | `triangles` | Total triangle count in the graph. GPU-accelerated when available. | 3.0.0 |
+| `CALL algo.clusteringCoefficient()` | `nodeId`, `name`, `coefficient` | Per-node clustering coefficients. GPU-accelerated when available. | 3.0.0 |
+
+```sql
+CALL algo.triangleCount()
+```
+
+Returns a single row with the total number of triangles.
+
+### Path Analysis (2)
+
+| Procedure | Return Columns | Description | Since |
+|---|---|---|---|
+| `CALL algo.allPairsShortestPath()` | `source`, `target`, `distance` | Shortest path distances between all node pairs (capped at 100 rows). GPU-accelerated when available. | 3.0.0 |
+| `CALL algo.confidencePath(startId, endId)` | `path`, `cost`, `length` | Shortest path between two nodes weighted by confidence | 5.0.0 |
+
+```sql
+-- Find confidence-weighted shortest path between node 1 and node 5
+CALL algo.confidencePath(1, 5)
+```
+
+Returns the path as "id1 -> id2 -> id3", total cost, and hop count.
+
+### Similarity and Spatial (3)
+
+| Procedure | Return Columns | Description | Since |
+|---|---|---|---|
+| `CALL algo.nodeSimilarity()` | `node1`, `node2`, `similarity` | Pairs of nodes with Jaccard similarity scores (top 20) | 4.0.0 |
+| `CALL algo.similarNodes()` | `nodeId`, `score` | Nodes similar to the first vector-bearing node (cosine similarity) | 5.0.0 |
+| `CALL algo.nearestNodes()` | `nodeId`, `name`, `distance` | K nearest nodes by spatial distance. GPU-accelerated when available. | 5.0.0 |
+
+### Vector Search and RAG (5)
+
+| Procedure | Return Columns | Description | Since |
+|---|---|---|---|
+| `CALL algo.vectorSearch()` | `nodeId`, `score`, `labels` | Vector similarity search over HNSW index. Accepts optional query vector argument. GPU-accelerated when available. | 5.0.0 |
+| `CALL algo.hybridSearch()` | `nodeId`, `score`, `hops` | Combined vector + graph traversal search | 5.0.0 |
+| `CALL algo.graphRAG()` | `nodeId`, `score`, `hops`, `labels` | Graph-augmented retrieval for RAG pipelines. Accepts optional query vector argument. | 5.0.0 |
+| `CALL algo.graphRAGContext()` | `context`, `node_count`, `tokens_approx` | Formatted LLM context from graph retrieval. Accepts optional query vector and max_tokens arguments. | 5.0.0 |
+| `CALL algo.graphRAGTrusted()` | `nodeId`, `trusted_score`, `hops`, `observation` | Trusted RAG with confidence-filtered context, ranked by observation class | 5.0.0 |
+
+```sql
+-- Vector similarity search with a query vector
+CALL algo.vectorSearch([0.1, 0.9, 0.3])
+```
+
+Returns nodes ranked by cosine similarity to the query vector.
+
+```sql
+-- Trusted RAG pipeline
+CALL algo.graphRAGTrusted()
+```
+
+Returns nodes with trusted_score, observation class (observed > inferred > predicted), filtering low-trust paths.
+
+## Temporal (9)
+
+Procedures for temporal queries, clock management, and change tracking.
+
+| Procedure | Return Columns | Description | Since |
+|---|---|---|---|
+| `CALL db.clock()` | `name`, `tick` | Current engine clock name and tick value | 4.0.0 |
+| `CALL db.clockDomains()` | `domain`, `count` | All registered clock domains with node counts | 4.0.0 |
+| `CALL db.temporalCompare()` | `changeCount`, `fromSequence`, `toSequence`, `operation` | Compare mutations from sequence 0 to current | 4.0.0 |
+| `CALL db.temporalGate()` | `valid`, `violationCount`, `violation` | Check temporal gate consistency; lists violations if any | 4.0.0 |
+| `CALL db.temporalReplay()` | `sequence`, `operation`, `timestamp` | Replay all WAL mutations from sequence 0 | 4.0.0 |
+| `CALL db.nodesAsOf()` | `nodeId`, `labels`, `createdAt` | Return all nodes that existed at or before current time | 4.0.0 |
+| `CALL db.changesSince()` | `sequence`, `operation` | Recent mutations (last 100 entries) | 5.0.0 |
+| `CALL db.mutations()` | `sequence`, `operation`, `timestamp` | Recent mutation log (last 50 entries) with timestamps | 5.0.0 |
+| `CALL db.fingerprint()` | `fingerprint` | Deterministic FNV hash of current graph state (hex string) | 5.0.0 |
+
+```sql
+-- See recent mutations with timestamps
+CALL db.mutations()
+```
+
+Returns rows with sequence number, operation description, and timestamp.
+
+```sql
+-- Point-in-time query (query modifier, not a CALL procedure)
+MATCH (n:Person) AS OF 1700000000000
+RETURN n.name
+```
+
+Note: `AS OF` is a query modifier, not a CALL procedure.
+
+## Reactive (5)
+
+Procedures for the reactive fabric: topics, subscriptions, live queries, and causal chains.
+
+| Procedure | Return Columns | Description | Since |
+|---|---|---|---|
+| `CALL db.topics()` | `id`, `name`, `events` | All registered event topics with event counts | 3.0.0 |
+| `CALL db.subscriptions()` | `name`, `topic`, `query`, `active` | Active subscriptions with topic bindings | 3.0.0 |
+| `CALL db.liveQueries()` | `name`, `query` | Active live query registrations | 3.0.0 |
+| `CALL db.causalChain()` | `origin`, `depth`, `target`, `target_labels`, `confidence` | Traces CAUSES chains from all Action nodes (depth 10) | 3.0.0 |
+| `CALL db.views()` | `name`, `query` | Materialized view definitions | 4.0.0 |
+
+```sql
+CALL db.causalChain()
+```
+
+Finds all `:Action` nodes and traces outgoing CAUSES relationships up to depth 10, returning each hop with confidence scores.
+
+## System (14)
+
+Procedures for backend management, validation, and observability.
+
+| Procedure | Return Columns | Description | Since |
+|---|---|---|---|
+| `CALL db.backends()` | `id`, `available`, `message` | Available compute backends (CPU, CUDA, Metal) with status | 5.0.0 |
+| `CALL db.storageInfo()` | `format`, `nodes` | Storage backend details (format, generation, node/rel counts, mutation sequence) | 5.0.0 |
+| `CALL db.validateQuery()` | `valid`, `warnings` | Parse and validate a query without executing | 5.0.0 |
+| `CALL db.vectorIndexes()` | `name`, `label`, `property`, `dimensions`, `similarity` | All vector indexes with configuration | 5.0.0 |
+| `CALL db.observationClasses()` | `class`, `count` | Observation class counts (observed, inferred, predicted) | 4.0.0 |
+| `CALL db.nodesByObservation.observed()` | `_id`, `_labels`, `_observation_class`, `_confidence` | All nodes with observation class "observed" | 5.0.0 |
+| `CALL db.nodesByObservation.inferred()` | `_id`, `_labels`, `_observation_class`, `_confidence` | All nodes with observation class "inferred" | 5.0.0 |
+| `CALL db.nodesByObservation.predicted()` | `_id`, `_labels`, `_observation_class`, `_confidence` | All nodes with observation class "predicted" | 5.0.0 |
+| `CALL db.nodesByPlane.semantic()` | `_id`, `_labels`, `_authority_plane` | Nodes in the semantic authority plane | 5.0.0 |
+| `CALL db.nodesByPlane.scene()` | `_id`, `_labels`, `_authority_plane` | Nodes in the scene authority plane | 5.0.0 |
+| `CALL db.proofGates()` | `gate`, `status`, `evidence` | Proof gate definitions and their validation status | 5.0.0 |
+| `CALL db.proofArtifacts()` | `artifact`, `type`, `detail` | Generated proof artifacts | 5.0.0 |
+| `CALL db.executionContext()` | `context`, `fallback_disabled`, `backends_available` | Current execution context (backend, GPU availability) | 5.0.0 |
+| `CALL db.affordances()` | `from`, `to`, `confidence` | All AFFORDS relationships in the graph | 5.0.0 |
+
+```sql
+-- Check available GPU backends
+CALL db.backends()
+```
+
+Returns one row per backend (cpu, metal, cuda) with availability and status message.
+
+```sql
+-- Query by observation class
+CALL db.nodesByObservation.observed()
+```
+
+Returns all nodes classified as "observed" with their confidence scores.
+
+## Health (3)
+
+| Procedure | Return Columns | Description | Since |
+|---|---|---|---|
+| `CALL db.replicationStatus()` | `mode`, `replica_count`, `writes_enabled` | Replication mode, replica count, and write status | 5.0.0 |
+| `CALL db.checkpointMeta()` | `generation`, `nodes` | Last checkpoint generation, node/rel counts, mutation sequence | 5.0.0 |
+| `CALL db.schemaRegistry()` | `label`, `property`, `type` | Registered schema versions with property types | 5.0.0 |
+
+```sql
+CALL db.replicationStatus()
+```
+
+Returns the current replication mode (standalone/primary/replica), replica count, and whether writes are enabled.
+
+## Extension Procedures (5)
+
+Additional domain-specific procedures.
+
+| Procedure | Return Columns | Description | Since |
+|---|---|---|---|
+| `CALL vector.search()` | `nodeId`, `score`, `labels` | Alias for algo.vectorSearch — searches first available vector index | 5.0.0 |
+| `CALL swarm.agents()` | `id`, `type`, `status`, `position` | All registered agent definitions | 8.0.0 |
+| `CALL swarm.register('agent_id', 'agent_type')` | `id`, `type`, `status` | Register a new agent (requires agent_id argument) | 8.0.0 |
+| `CALL swarm.agentCount()` | `active`, `total` | Number of active and total registered agents | 8.0.0 |
+| `CALL geo.cells()` | `cell_id`, `name`, `status`, `entities`, `agents` | Spatial grid cells with entity/agent counts | 9.0.0 |
+
+```sql
+-- Register a drone agent
+CALL swarm.register('drone_01', 'drone')
+```
+
+## Behavior Graph (3)
+
+Behavior tree procedures backed by the knowledge graph. Nodes labeled `:BehaviorNode` form the tree; `CHILD` relationships define structure.
+
+| Procedure | Return Columns | Description | Since |
+|---|---|---|---|
+| `CALL behavior.tick('treeName')` | `tree`, `status`, `running`, `success`, `failure` | Tick a behavior tree: evaluate from root, propagate SUCCESS/FAILURE/RUNNING | 9.0.0 |
+| `CALL behavior.status('treeName')` | `nodeId`, `name`, `type`, `status`, `lastTick` | Current status of all nodes in a behavior tree | 9.0.0 |
+| `CALL behavior.nodes()` | `nodeId`, `name`, `type`, `children` | List all behavior tree nodes with child counts | 9.0.0 |
+
+```sql
+-- Tick a behavior tree named "patrol"
+CALL behavior.tick('patrol')
+```
+
+```sql
+-- List all behavior nodes
+CALL behavior.nodes()
+```
+
+## See Also
+
+- [Built-in Functions](/worldcypher/functions/built-in) -- 81 scalar functions
+- [EXPLAIN](/worldcypher/functions/explain) -- query plan introspection
+- [PROFILE](/worldcypher/functions/profile) -- query execution profiling
+- [RAG Pipeline Guide](/guides/rag-pipeline) -- building RAG with ArcFlow

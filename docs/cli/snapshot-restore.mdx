@@ -1,0 +1,36 @@
+---
+title: "Snapshot & Restore"
+description: "Persist and reload graph state"
+section: "cli"
+order: 3
+since: "0.2.0"
+status: "stable"
+---
+
+# Snapshot & Restore
+
+Snapshot your graph to JSON. Restore it anywhere. The file is human-readable and version-controllable.
+
+## Snapshot
+
+```
+arcflow> :snapshot ./my-graph.json
+```
+
+Serializes all nodes, relationships, properties, constructors, and metadata.
+
+## Restore
+
+```
+arcflow> :restore ./my-graph.json
+```
+
+Loads the snapshot, replacing the current in-memory graph.
+
+## Format
+
+The snapshot is a JSON file — human-readable and version-controlled.
+
+## See Also
+
+- [REPL](/cli/repl) — interactive session

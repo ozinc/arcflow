@@ -1,0 +1,34 @@
+---
+title: "Constraints"
+description: "UNIQUE constraints for data integrity"
+section: "worldcypher/schema"
+order: 3
+since: "0.14.0"
+status: "stable"
+---
+
+# Constraints
+
+UNIQUE constraints prevent duplicate property values across all nodes with a given label.
+
+```sql
+CREATE CONSTRAINT ON (n:Person) ASSERT n.email IS UNIQUE
+```
+
+Attempting to create a node with a duplicate value will return a typed error.
+
+## Drop a constraint
+
+```sql
+DROP CONSTRAINT ON (n:Person) ASSERT n.email IS UNIQUE
+```
+
+## List constraints
+
+```sql
+CALL db.constraints()
+```
+
+## See Also
+
+- [Indexes](/worldcypher/schema/indexes) — performance indexes

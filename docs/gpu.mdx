@@ -1,0 +1,169 @@
+---
+title: "GPU & Sparse Linear Algebra"
+description: "Graph algorithms as sparse matrix operations — 8 semirings, CSR storage, auto Metal/CUDA dispatch"
+section: "gpu"
+order: 1
+since: "9.0.0"
+status: "stable"
+---
+
+# Why ArcFlow Is Fast
+
+ArcFlow doesn't run graph algorithms the way other graph databases do. Most graph databases traverse edges one at a time — visit a node, follow an edge, visit the next node. This is inherently sequential and cache-hostile.
+
+ArcFlow represents the graph as a **sparse matrix** and runs algorithms as **linear algebra operations**. PageRank becomes a sparse matrix-vector multiply. BFS becomes a boolean matrix-vector multiply. Triangle counting becomes a masked sparse matrix-matrix multiply. These operations are massively parallel, cache-friendly, and map directly to GPU hardware.
+
+This is **GraphBLAS** — the Graph Basic Linear Algebra Subprograms standard. ArcFlow implements it natively in Rust.
+
+---
+
+## The Insight: Graphs Are Matrices
+
+Every graph is a sparse matrix. An edge from node A to node B is a non-zero entry at position (A, B) in the adjacency matrix. Most entries are zero (sparse) — a 10K-node graph with 50K edges has 10K x 10K = 100M potential entries, but only 50K are non-zero (0.05% density).
+
+ArcFlow stores this matrix in **CSR (Compressed Sparse Row)** format — three flat arrays instead of a nested HashMap:
+
+```
+offsets: [0, 3, 5, 8, ...]     // Where each row starts
+targets: [2, 5, 7, 1, 4, ...]  // Column indices (target nodes)
+values:  [1.0, 1.0, 0.8, ...]  // Edge weights
+```
+
+CSR is cache-friendly (sequential memory access), GPU-friendly (flat arrays transfer to GPU in one copy), and compact (no pointer chasing, no HashMap overhead).
+
+---
+
+## Semirings: One Abstraction, Many Algorithms
+
+The key insight of GraphBLAS: different graph algorithms are the same matrix operation with different **semirings** — different definitions of "add" and "multiply."
+
+| Algorithm | Semiring | "Multiply" | "Add" | What it computes |
+|---|---|---|---|---|
+| **PageRank** | Plus-Times | `a * b` | `a + b` | Authority scores via iterative SpMV |
+| **BFS** | Logical OR-AND | `a AND b` | `a OR b` | Reachability frontier expansion |
+| **Shortest Path** | Min-Plus | `a + b` | `min(a, b)` | Minimum cost paths |
+| **Connected Components** | Min-Second | `b` | `min(a, b)` | Component labeling |
+| **Widest Path** | Max-First | `a` | `max(a, b)` | Maximum bottleneck path |
+| **Triangle Count** | Plus-Times (masked) | `a * b` | `a + b` | Count via masked SpGEMM |
+
+ArcFlow implements 8 semirings:
+
+```
+PlusTimesFP32    — standard linear algebra (PageRank, triangle count)
+MinPlusUint32    — shortest paths (Dijkstra, APSP)
+MinPlusFP32      — weighted shortest paths
+MaxFirstUint32   — widest/bottleneck paths
+LogicalOrAnd     — BFS, reachability
+PlusMinFP32      — alternative path metrics
+MinSecondUint32  — connected components (label propagation)
+MaxPlusFP32      — longest paths
+```
+
+One SpMV kernel. Eight semirings. Twenty-seven algorithms. The same matrix operation — just with different definitions of "add" and "multiply."
+
+---
+
+## GPU Dispatch: Same Query, Automatic Routing
+
+```cypher
+CALL algo.pageRank()
+```
+
+This query runs the same on every platform. ArcFlow auto-detects hardware and routes:
+
+1. **Graph has fewer than 200 nodes** → CPU (dispatch overhead exceeds GPU benefit)
+2. **Metal GPU available (macOS/iOS)** → SpMV runs on Apple Silicon GPU, UMA zero-copy
+3. **CUDA GPU available (Linux)** → SpMV runs on NVIDIA GPU, managed memory
+4. **No GPU** → CPU SpMV (still fast — CSR + semirings are inherently efficient)
+
+The developer writes one query. The engine picks the fastest path. Zero configuration.
+
+### Metal GPU (Apple Silicon)
+
+On macOS and iOS, ArcFlow dispatches SpMV operations to Metal compute shaders. Apple Silicon's Unified Memory Architecture means **zero-copy** — the CSR matrix doesn't need to be transferred to the GPU. CPU and GPU read the same memory.
+
+```
+CPU: PageRank on 10K nodes → 0.6ms
+GPU: PageRank on 10K nodes → 0.25ms (2.4x)
+```
+
+Metal dispatch is automatic. The `grb_mxv()` function checks if a Metal SpMV backend is registered and the matrix exceeds the minimum size threshold (200 rows). If both conditions are true, it dispatches to GPU. If Metal fails or isn't available, it falls back to CPU transparently.
+
+### CUDA GPU (Linux / Windows)
+
+On systems with NVIDIA GPUs, ArcFlow dispatches to CUDA kernels via dynamic loading (`libcuda.so`). No compile-time CUDA dependency — the driver is discovered at runtime.
+
+14 CUDA kernels (SpMV, SpGEMM, reduce, apply, eWise operations) covering PageRank, BFS, vector distance, triangle counting, community detection, and spatial operations. 25 Metal GPU kernels on macOS for the same operations via Apple Silicon's unified memory.
+
+| Algorithm | CPU | GPU Speedup |
+|---|---|---|
+| PageRank | 154M nodes/sec | 2.4x |
+| BFS Frontier | 6.3M edges/sec | 3.5x |
+| Vector Distance | 25K queries/sec | 4.2x |
+| Triangle Count | 943K nodes/sec | 19.8x |
+| Community Detection | 185K nodes/sec | 29.6x |
+
+---
+
+## GraphBLAS Operations
+
+### SpMV: Sparse Matrix-Vector Multiply
+
+The workhorse. Every iterative algorithm (PageRank, BFS, SSSP, label propagation) is a sequence of SpMV operations.
+
+```
+y = A ⊕.⊗ x
+
+Where:
+  A = adjacency matrix (CSR)
+  x = input vector (node values)
+  y = output vector (new node values)
+  ⊗ = "multiply" (depends on semiring)
+  ⊕ = "add" (depends on semiring)
+```
+
+ArcFlow's `grb_mxv()` auto-dispatches to Metal GPU when available, falls back to CPU.
+
+### SpGEMM: Sparse Matrix-Matrix Multiply
+
+Used for multi-hop operations and triangle counting. `C = A * B` where both A and B are sparse.
+
+Triangle count: `C = A * A` masked by A — non-zero entries in C where A also has an entry indicate triangles.
+
+### Masked SpGEMM
+
+SpGEMM with a mask matrix — only compute entries where the mask is non-zero. Critical for triangle counting and filtered graph operations.
+
+### Reduce
+
+Collapse a matrix to a scalar or vector. Used for computing graph metrics (density, total weight, degree distribution).
+
+---
+
+## Why This Matters
+
+Most graph databases implement algorithms as **graph traversals** — recursive walks through adjacency lists. This is:
+- **Sequential** — each step depends on the previous
+- **Cache-hostile** — pointer chasing through scattered memory
+- **Hard to parallelize** — dependencies between steps prevent concurrent execution
+- **Hard to GPU-accelerate** — irregular memory access patterns don't map to GPU cores
+
+GraphBLAS reformulates these same algorithms as **sparse linear algebra** — matrix operations on flat arrays. This is:
+- **Parallel** — each row of the matrix is independent
+- **Cache-friendly** — CSR format is sequential memory
+- **GPU-native** — SpMV maps directly to GPU thread blocks
+- **Composable** — new algorithms are new semirings, not new code
+
+The result: ArcFlow runs the same algorithms as separate graph analytics libraries or distributed graph databases, but on a fundamentally different computational substrate — one that was designed for parallel hardware from the start.
+
+---
+
+## Vision
+
+ArcFlow provides a complete GraphBLAS runtime where the entire algorithm suite runs on sparse linear algebra primitives. Every graph operation — from simple traversal to complex analytics — expressed as matrix operations, automatically dispatched to the best available hardware.
+
+**Full GraphBLAS C API compatibility.** ArcFlow's GraphBLAS primitives can be exposed through the standard C API, allowing any GraphBLAS-compatible library or tool to use ArcFlow as a backend.
+
+**Fused kernel pipelines.** Beyond per-algorithm SpMV sequences, fused kernel pipelines run multiple operations in a single GPU kernel launch — PageRank + triangle count + community detection in one pass through the graph, sharing the CSR representation.
+
+**Adaptive precision.** FP16 on GPU for algorithms where full precision isn't needed (BFS, reachability) and FP64 where it is (PageRank convergence, shortest path weights). Half-precision doubles throughput on modern GPUs.

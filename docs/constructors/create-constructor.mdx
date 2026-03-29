@@ -1,0 +1,39 @@
+---
+title: "CREATE CONSTRUCTOR"
+description: "Register a new relationship constructor in the store"
+section: "constructors"
+order: 2
+since: "0.2.0"
+status: "stable"
+---
+
+# CREATE CONSTRUCTOR
+
+```sql
+CREATE SKILL ProfessionalNetwork_v4
+  FROM PROMPT 'Given two Person nodes, determine if they have a professional relationship'
+  ALLOWED ON [Person, Organization]
+  TIER SYMBOLIC
+```
+
+Register a relationship constructor. Once created, use [PROCESS NODE](/constructors/process-node) to execute it against matched nodes.
+
+## Syntax
+
+```sql
+CREATE SKILL <name>
+  FROM PROMPT '<prompt_template>'
+  ALLOWED ON [<Label>, ...]
+  TIER <SYMBOLIC|WASM|LLM>
+```
+
+## Notes
+
+- `CREATE SKILL` is the current WorldCypher syntax (will migrate to `CREATE CONSTRUCTOR`)
+- Constructor is stored in the graph store with a `ConstructorId`
+- `TIER` determines execution strategy (SYMBOLIC is the only active tier currently)
+
+## See Also
+
+- [PROCESS NODE](/constructors/process-node) — execute constructors
+- [Concepts: Constructors](/concepts/constructors) — design philosophy

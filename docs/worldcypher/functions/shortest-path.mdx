@@ -1,0 +1,26 @@
+---
+title: "shortestPath"
+description: "Find the shortest path between two nodes"
+section: "worldcypher/functions"
+order: 10
+since: "0.6.0"
+status: "stable"
+---
+
+# shortestPath
+
+```sql
+shortestPath (a:Person {name: 'Alice'}), (b:Person {name: 'Dave'})
+```
+
+BFS-based shortest path between two nodes. Returns the path as a sequence of nodes and relationships.
+
+## Syntax
+
+```sql
+shortestPath (a:Label {key: value}), (b:Label {key: value})
+```
+
+## See Also
+
+- [MATCH variable-length paths](/worldcypher/match) — `*min..max` traversal

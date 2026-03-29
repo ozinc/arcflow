@@ -1,0 +1,81 @@
+---
+title: "WorldCypher"
+description: "The ArcFlow query language — a Cypher-dialect for graph operations"
+section: "worldcypher"
+order: 1
+since: "0.2.0"
+status: "stable"
+---
+
+# WorldCypher
+
+WorldCypher is Cypher with extensions -- temporal queries (`AS OF`), confidence filtering (`WHERE r._confidence > 0.8`), spatial predicates, and constructor operations (`CREATE SKILL`, `PROCESS NODE`). If you know Cypher, you already know WorldCypher. The extensions add capabilities that traditional graph query languages lack: provenance-aware traversal, built-in vector search, and deterministic agent-operable execution.
+
+## Operator Summary
+
+| Category | Operators |
+|---|---|
+| Read | `MATCH`, `WHERE` (`=`, `<>`, `>`, `<`, `>=`, `<=`), `AND`/`OR`/`NOT`, `CONTAINS`, `STARTS WITH`, `EXISTS` |
+| Traversal | Single-hop, variable-length `*min..max`, `shortestPath()` |
+| Write | `CREATE` node, `CREATE` relationship, `MERGE` (upsert), `DELETE`, `SET` |
+| Projection | `RETURN`, `RETURN ... AS`, `DISTINCT`, `ORDER BY`, `SKIP`, `LIMIT` |
+| Aggregation | `COUNT`, `SUM`, `AVG`, `COLLECT` |
+| Constructors | `CREATE SKILL`, `PROCESS NODE`, `REPROCESS EDGES` |
+| Introspection | `EXPLAIN` |
+
+## Quick Examples
+
+### Read
+
+```sql
+MATCH (n:Person) WHERE n.age > 25 AND n.name CONTAINS 'li' RETURN n.name
+```
+
+### Write
+
+```sql
+CREATE (n:Person {name: 'Eve', age: 28}) RETURN n
+MERGE (n:Person {name: 'Eve'}) RETURN n
+MATCH (n) WHERE n.name = 'Eve' SET n.age = 29
+MATCH (n) WHERE n.name = 'Eve' DELETE n
+```
+
+### Traverse
+
+```sql
+MATCH (a:Person {name: 'Alice'})-[:KNOWS*1..3]->(b) RETURN b.name
+shortestPath (a:Person {name: 'Alice'}), (b:Person {name: 'Dave'})
+```
+
+### Aggregate
+
+```sql
+MATCH (n:Person) RETURN count(n), avg(n.age), collect(n.name) ORDER BY n.age DESC
+```
+
+### Introspect
+
+```sql
+EXPLAIN MATCH (n:Person) WHERE n.age > 25 RETURN n.name
+```
+
+## Sections
+
+### Query Syntax
+- [MATCH](/worldcypher/query-syntax/match) — pattern matching
+- [WHERE](/worldcypher/query-syntax/where) — filtering predicates
+- [RETURN](/worldcypher/query-syntax/return) — projection, ordering, pagination
+
+### Statements
+- [CREATE](/worldcypher/statements/create) — node and relationship creation
+- [MERGE](/worldcypher/statements/merge) — upsert semantics
+- [DELETE](/worldcypher/statements/delete) — removal
+- [SET](/worldcypher/statements/set) — property mutation
+
+### Data Types
+- [Overview](/worldcypher/data-types) — property value types
+
+### Functions
+- [Aggregations](/worldcypher/functions/aggregations) — COUNT, SUM, AVG, COLLECT
+- [shortestPath](/worldcypher/functions/shortest-path) — graph algorithms
+- [EXPLAIN](/worldcypher/functions/explain) — query plan introspection

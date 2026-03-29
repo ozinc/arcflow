@@ -1,0 +1,92 @@
+---
+title: "Architecture"
+description: "SoC modular monolith — one process, zero serialization, all modules share memory"
+section: "architecture"
+order: 1
+since: "0.1.0"
+status: "stable"
+---
+
+# Architecture
+
+One process, zero serialization, all modules share memory. ArcFlow is a **SoC modular monolith** -- like Apple's M1 chip, which puts CPU, GPU, and RAM on one die with unified memory instead of bolting them together over buses. ArcFlow does the same for data infrastructure: graph storage, vector search, graph algorithms, and GPU dispatch share one `GraphStore` in one address space. No network hops. No message queues. No external cache. No separate vector database.
+
+<img src="/diagrams/architecture-soc.svg" alt="ArcFlow SoC Architecture" style={{width:"100%",margin:"1.5rem 0",borderRadius:"8px"}} />
+
+This architecture eliminates entire categories of infrastructure: no external cache service (the graph is already in-process), no separate vector database (HNSW indexes live alongside graph data), no workflow engine for orchestration (procedures run in the same runtime). The result is fewer moving parts, lower latency, and a single binary to deploy.
+
+## Design Principles
+
+- **Deterministic**: Same query + same state = same results. Always.
+- **Local-first**: Single binary, full authority, no network dependency.
+- **Agent-native**: Structured output, typed errors, machine-readable contracts.
+- **Rust-native**: Zero-cost abstractions, memory safety, single binary.
+- **Zero serialization**: Modules communicate through shared Rust types, not wire protocols.
+
+## Three-Plane Architecture
+
+| Plane | Authority | What lives here |
+|---|---|---|
+| **Authored Workspace** | Source of truth for intent | Schemas, queries, facts in git |
+| **Canonical Engine** | Engine-managed durability | WAL, checkpoint, manifest |
+| **Derived Projection** | Non-authoritative | Exports, caches, compatibility files |
+
+Rules: Workspace → Engine (explicit load). Engine → Projection (explicit export).
+Projections never feed back as authority.
+
+## Crate Map (14 crates)
+
+```
+wc-cli ─── wc-sdk ─── wc-runtime ─── wc-query-compiler ─── wc-query-ir
+  │                       │
+wc-mcp                 wc-storage ─── wc-core ─── wc-types
+  │                                      │
+wc-ffi                              (zset, delta_engine,
+wc-wasm                              standing_query,
+wc-bench                              window_ops,
+wc-bridge                             live_algorithm,
+                                       arrangement)
+```
+
+**Core (bottom of stack):**
+
+| Crate | Responsibility |
+|---|---|
+| `wc-types` | Core primitives: NodeId, PropertyValue, ZSet, EvidenceWeight, Confidence |
+| `wc-core` | Graph store, property index, adjacency lists, Z-set algebra, delta engine, standing queries, window operators, live algorithms, arrangements |
+| `wc-storage` | Journaled storage, WAL, snapshot/restore |
+
+**Query and incremental (middle):**
+
+| Crate | Responsibility |
+|---|---|
+| `wc-query-ir` | Query IR (17 ZSetOp variants), compilation target |
+| `wc-query-compiler` | WorldCypher parser, QueryPlan to ZSetOp lowering, incrementalization |
+| `wc-runtime` | Execution engine, GPU dispatch, 14 CUDA kernels, 25 Metal kernels |
+
+**Public API (top of stack):**
+
+| Crate | Responsibility |
+|---|---|
+| `wc-sdk` | Public Rust SDK (published as `arcflow` on crates.io) |
+| `wc-cli` | CLI REPL, TCP/HTTP/PG servers, self-update, structured output |
+| `wc-ffi` | C ABI (cdylib + staticlib) for Python/TypeScript/C++ bindings |
+| `wc-mcp` | Model Context Protocol server (stdio JSON-RPC) |
+| `wc-wasm` | WASM binary for browser and edge |
+| `wc-bench` | Stress benchmarks |
+| `wc-bridge` | Language interop utilities |
+
+Dependencies flow inward. Transport/CLI depend on core, never reverse.
+
+## Why This Matters
+
+A typical knowledge-graph stack requires 4-6 services: a graph database, a vector store, an analytics engine, a job runner, a cache, and a message bus. Each introduces serialization overhead, operational complexity, and failure modes. ArcFlow collapses this to one process and one binary. v1.5 adds incremental computation (Live Delta Stack) and PostgreSQL wire protocol compatibility, all in the same unified address space.
+
+For AI workloads, in-process execution means a GraphRAG query can traverse the graph, run vector similarity, execute PageRank, and score confidence -- all without a single network call or data format conversion. Measured end-to-end on a MacBook Air M4 (10-core, 24GB), this architecture delivers 154M PageRank nodes/sec and 25K vector queries/sec on CPU alone -- on a fanless laptop.
+
+**Forward vision:** The unified address space is the foundation for in-process AI inference, real-time sensor fusion, and perception pipelines where latency budgets are measured in microseconds, not milliseconds. Same architecture, same query language, expanded compute fabric across CPU, CUDA, and Metal.
+
+## See Also
+
+- [GPU Acceleration](/gpu) — unified compute across CPU, CUDA, and Metal
+- [Language Bindings](/bindings) — same architecture, every language

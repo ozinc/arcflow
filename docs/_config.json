@@ -7,7 +7,24 @@
         { "slug": "get-started", "title": "Get Started", "order": 1 },
         { "slug": "quickstart", "title": "Quickstart", "order": 2 },
         { "slug": "installation", "title": "Installation", "order": 3 },
-        { "slug": "project-setup", "title": "Project Setup", "order": 4 }
+        { "slug": "project-setup", "title": "Project Setup", "order": 4 },
+        { "slug": "platform", "title": "Platforms", "order": 5 },
+        { "slug": "bindings", "title": "Bindings", "order": 6 }
+      ]
+    },
+    {
+      "id": "capabilities",
+      "title": "Capabilities",
+      "items": [
+        { "slug": "behavior-graph", "title": "Behavior Graph", "order": 1 },
+        { "slug": "trusted-rag", "title": "Trusted RAG", "order": 2 },
+        { "slug": "agent-native", "title": "Agent-Native", "order": 3 },
+        { "slug": "spatial-knowledge", "title": "Spatial Knowledge", "order": 4 },
+        { "slug": "event-sourcing", "title": "Event Sourcing", "order": 5 },
+        { "slug": "vector-search", "title": "Vector Search", "order": 6 },
+        { "slug": "temporal", "title": "Temporal", "order": 7 },
+        { "slug": "reactive", "title": "Reactive & Live Queries", "order": 8 },
+        { "slug": "gpu", "title": "GPU Acceleration", "order": 9 }
       ]
     },
     {
@@ -15,11 +32,13 @@
       "title": "Concepts",
       "items": [
         { "slug": "concepts/graph-model", "title": "Graph Model", "order": 1 },
-        { "slug": "concepts/worldcypher", "title": "WorldCypher Intro", "order": 2 },
-        { "slug": "concepts/parameters", "title": "Parameters", "order": 3 },
-        { "slug": "concepts/results", "title": "Query Results", "order": 4 },
-        { "slug": "concepts/persistence", "title": "Persistence & WAL", "order": 5 },
-        { "slug": "concepts/error-handling", "title": "Error Handling", "order": 6 }
+        { "slug": "concepts/constructors", "title": "Constructors", "order": 2 },
+        { "slug": "concepts/confidence-and-provenance", "title": "Confidence & Provenance", "order": 3 },
+        { "slug": "concepts/worldcypher", "title": "WorldCypher Intro", "order": 4 },
+        { "slug": "concepts/parameters", "title": "Parameters", "order": 5 },
+        { "slug": "concepts/results", "title": "Query Results", "order": 6 },
+        { "slug": "concepts/persistence", "title": "Persistence & WAL", "order": 7 },
+        { "slug": "concepts/error-handling", "title": "Error Handling", "order": 8 }
       ]
     },
     {
@@ -27,9 +46,70 @@
       "title": "WorldCypher",
       "items": [
         { "slug": "worldcypher", "title": "Overview", "order": 1 },
-        { "slug": "worldcypher/spatial", "title": "Spatial Queries", "order": 2 },
-        { "slug": "worldcypher/temporal", "title": "Temporal Queries", "order": 3 },
-        { "slug": "worldcypher/algorithms", "title": "Algorithms", "order": 4 }
+        { "slug": "worldcypher/query-syntax/match", "title": "MATCH", "order": 2 },
+        { "slug": "worldcypher/query-syntax/where", "title": "WHERE", "order": 3 },
+        { "slug": "worldcypher/query-syntax/return", "title": "RETURN", "order": 4 },
+        { "slug": "worldcypher/query-syntax/optional-match", "title": "OPTIONAL MATCH", "order": 5 },
+        { "slug": "worldcypher/statements/create", "title": "CREATE", "order": 6 },
+        { "slug": "worldcypher/statements/set", "title": "SET", "order": 7 },
+        { "slug": "worldcypher/statements/merge", "title": "MERGE", "order": 8 },
+        { "slug": "worldcypher/statements/delete", "title": "DELETE", "order": 9 },
+        { "slug": "worldcypher/statements/remove", "title": "REMOVE", "order": 10 },
+        { "slug": "worldcypher/composition/with", "title": "WITH", "order": 11 },
+        { "slug": "worldcypher/composition/union", "title": "UNION", "order": 12 },
+        { "slug": "worldcypher/composition/unwind", "title": "UNWIND", "order": 13 },
+        { "slug": "worldcypher/composition/case", "title": "CASE", "order": 14 },
+        { "slug": "worldcypher/spatial", "title": "Spatial Queries", "order": 15 },
+        { "slug": "worldcypher/temporal", "title": "Temporal Queries", "order": 16 },
+        { "slug": "worldcypher/algorithms", "title": "Algorithms", "order": 17 }
+      ]
+    },
+    {
+      "id": "schema",
+      "title": "Schema",
+      "items": [
+        { "slug": "worldcypher/schema", "title": "Overview", "order": 1 },
+        { "slug": "worldcypher/schema/indexes", "title": "Indexes", "order": 2 },
+        { "slug": "worldcypher/schema/constraints", "title": "Constraints", "order": 3 },
+        { "slug": "worldcypher/data-types", "title": "Data Types", "order": 4 }
+      ]
+    },
+    {
+      "id": "functions",
+      "title": "Functions",
+      "items": [
+        { "slug": "worldcypher/functions/built-in", "title": "Built-in Functions", "order": 1 },
+        { "slug": "worldcypher/functions/aggregations", "title": "Aggregations", "order": 2 },
+        { "slug": "worldcypher/functions/procedures", "title": "Procedures", "order": 3 },
+        { "slug": "worldcypher/functions/shortest-path", "title": "Shortest Path", "order": 4 },
+        { "slug": "worldcypher/functions/explain", "title": "EXPLAIN", "order": 5 },
+        { "slug": "worldcypher/functions/profile", "title": "PROFILE", "order": 6 }
+      ]
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "items": [
+        { "slug": "constructors", "title": "Overview", "order": 1 },
+        { "slug": "constructors/create-constructor", "title": "CREATE SKILL", "order": 2 },
+        { "slug": "constructors/process-node", "title": "PROCESS NODE", "order": 3 },
+        { "slug": "constructors/reprocess-edges", "title": "REPROCESS EDGES", "order": 4 }
+      ]
+    },
+    {
+      "id": "operations",
+      "title": "Operations",
+      "items": [
+        { "slug": "cli", "title": "CLI", "order": 1 },
+        { "slug": "cli/repl", "title": "REPL Commands", "order": 2 },
+        { "slug": "cli/snapshot-restore", "title": "Snapshot & Restore", "order": 3 },
+        { "slug": "server", "title": "Server Modes & PG Wire", "order": 4 },
+        { "slug": "server/persistence", "title": "Persistence", "order": 5 },
+        { "slug": "server/import-export", "title": "Import & Export", "order": 6 },
+        { "slug": "algorithms", "title": "Algorithms", "order": 7 },
+        { "slug": "architecture", "title": "Architecture", "order": 8 },
+        { "slug": "cloud-architecture", "title": "Cloud Architecture", "order": 9 },
+        { "slug": "deployment/docker", "title": "Docker", "order": 10 }
       ]
     },
     {
@@ -40,6 +120,19 @@
         { "slug": "tutorials/entity-linking", "title": "Entity Linking", "order": 2 },
         { "slug": "tutorials/vector-search", "title": "Vector Search", "order": 3 },
         { "slug": "tutorials/graph-algorithms", "title": "Graph Algorithms", "order": 4 }
+      ]
+    },
+    {
+      "id": "guides",
+      "title": "Guides",
+      "items": [
+        { "slug": "guides/world-model", "title": "World Model Guide", "order": 1 },
+        { "slug": "guides/modeling-a-social-graph", "title": "Modeling a Social Graph", "order": 2 },
+        { "slug": "guides/rag-pipeline", "title": "RAG Pipeline", "order": 3 },
+        { "slug": "guides/agent-integration", "title": "Agent Integration", "order": 4 },
+        { "slug": "guides/using-constructors", "title": "Using Constructors", "order": 5 },
+        { "slug": "guides/filesystem-workspace", "title": "Filesystem Workspace", "order": 6 },
+        { "slug": "guides/migrating-from-neo4j", "title": "Migrating from Neo4j", "order": 7 }
       ]
     },
     {
@@ -72,14 +165,10 @@
       "items": [
         { "slug": "reference/api", "title": "TypeScript API", "order": 1 },
         { "slug": "reference/compatibility", "title": "Compatibility Matrix", "order": 2 },
-        { "slug": "reference/known-issues", "title": "Known Issues", "order": 3 }
-      ]
-    },
-    {
-      "id": "deployment",
-      "title": "Deployment",
-      "items": [
-        { "slug": "deployment/docker", "title": "Docker", "order": 1 }
+        { "slug": "reference/types", "title": "Data Types", "order": 3 },
+        { "slug": "reference/operators", "title": "Operators", "order": 4 },
+        { "slug": "reference/errors", "title": "Error Codes", "order": 5 },
+        { "slug": "reference/known-issues", "title": "Known Issues", "order": 6 }
       ]
     }
   ]

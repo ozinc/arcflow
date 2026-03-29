@@ -1,0 +1,257 @@
+---
+title: "Building a World Model"
+description: "Use ArcFlow as the state substrate for a spatial-temporal world model with confidence-scored observations"
+section: "Guides"
+order: 2
+since: "10.0.0"
+status: "stable"
+---
+
+# Building a World Model
+
+Build a persistent, queryable world model where entities have spatial positions, velocities, and confidence-scored observations that evolve over time. By the end of this guide you'll have a scene with 20 entities, spatial proximity queries, temporal memory, and the ability to distinguish what was **observed** from what was **predicted**.
+
+This is the foundation for robotics perception, game AI, autonomous systems, digital twins, and active inference agents.
+
+---
+
+## Step 1: Create the Scene
+
+A world model starts with entities in space. Each entity has a position, a velocity, and an observation class that records how the entity was detected.
+
+```cypher
+-- Observed entities (directly detected by sensors)
+CREATE (d1:Entity {
+  name: 'Drone-Alpha',
+  type: 'aerial',
+  x: 34.2, y: 67.1, z: 12.0,
+  vx: 2.1, vy: -0.8, vz: 0.0,
+  energy: 87.5,
+  _observation_class: 'observed'
+})
+
+CREATE (d2:Entity {
+  name: 'Drone-Beta',
+  type: 'aerial',
+  x: 41.0, y: 52.3, z: 15.5,
+  vx: -1.3, vy: 2.0, vz: -0.5,
+  energy: 62.0,
+  _observation_class: 'observed'
+})
+
+-- Ground vehicles
+CREATE (v1:Entity {
+  name: 'Rover-01',
+  type: 'ground',
+  x: 20.0, y: 30.0, z: 0.0,
+  vx: 1.5, vy: 0.3, vz: 0.0,
+  energy: 94.0,
+  _observation_class: 'observed'
+})
+
+CREATE (v2:Entity {
+  name: 'Rover-02',
+  type: 'ground',
+  x: 55.0, y: 70.0, z: 0.0,
+  vx: -0.5, vy: 1.2, vz: 0.0,
+  energy: 45.0,
+  _observation_class: 'observed'
+})
+
+-- Predicted entity (inferred from radar, not directly visible)
+CREATE (u1:Entity {
+  name: 'Unknown-Contact',
+  type: 'unknown',
+  x: 80.0, y: 90.0, z: 5.0,
+  vx: 0.0, vy: 0.0, vz: 0.0,
+  energy: -1,
+  _observation_class: 'predicted'
+})
+```
+
+The `_observation_class` field is built into ArcFlow's node model. It distinguishes:
+- **observed** — directly measured by a sensor (highest trust)
+- **inferred** — derived from reasoning over observed facts
+- **predicted** — model output, statistical projection (lowest trust)
+
+## Step 2: Build Relationships
+
+Entities in a world model don't exist in isolation. They have relationships: communication links, formation membership, line-of-sight, proximity alerts.
+
+```cypher
+-- Communication links
+CREATE (d1)-[:COMMS_WITH {latency_ms: 12, signal_strength: 0.95}]->(d2)
+CREATE (d1)-[:COMMS_WITH {latency_ms: 45, signal_strength: 0.72}]->(v1)
+
+-- Formation membership
+CREATE (f:Formation {name: 'Alpha-Squad', pattern: 'diamond'})
+CREATE (d1)-[:MEMBER_OF {position: 'lead'}]->(f)
+CREATE (d2)-[:MEMBER_OF {position: 'wing'}]->(f)
+CREATE (v1)-[:MEMBER_OF {position: 'tail'}]->(f)
+
+-- Sensor detection (with confidence)
+CREATE (d1)-[:DETECTS {confidence: 0.35, sensor: 'radar', range: 120.0}]->(u1)
+```
+
+Note the confidence score on the `:DETECTS` edge: 0.35. The unknown contact was detected by radar with low confidence. ArcFlow stores this as a provenance-tracked edge — you can query which sensor produced it and when.
+
+## Step 3: Spatial Queries
+
+Query the world model spatially — find entities near a point, within a radius, or closest to each other.
+
+```cypher
+-- What's within 30 units of position (40, 60)?
+MATCH (e:Entity)
+WHERE (e.x - 40) * (e.x - 40) + (e.y - 60) * (e.y - 60) < 900
+RETURN e.name, e.type, e.x, e.y
+
+-- Which entities are closest to Drone-Alpha?
+MATCH (d:Entity {name: 'Drone-Alpha'}), (other:Entity)
+WHERE d <> other
+RETURN other.name,
+       ((d.x - other.x) * (d.x - other.x) +
+        (d.y - other.y) * (d.y - other.y)) AS dist_squared
+ORDER BY dist_squared ASC
+LIMIT 3
+```
+
+For larger scenes, use the built-in spatial KNN algorithm:
+
+```cypher
+CALL algo.nearestNodes(point({x: 40.0, y: 60.0}), 'Entity', 5)
+YIELD node, distance
+RETURN node.name, distance
+```
+
+## Step 4: Temporal Memory
+
+Update entity positions as time progresses. ArcFlow records every mutation with a timestamp — you can query any previous state.
+
+```cypher
+-- Time step: update positions based on velocity
+MATCH (e:Entity)
+SET e.x = e.x + e.vx,
+    e.y = e.y + e.vy,
+    e.z = e.z + e.vz
+
+-- 10 ticks later, update again
+MATCH (e:Entity)
+SET e.x = e.x + e.vx * 10,
+    e.y = e.y + e.vy * 10
+```
+
+Now query the past:
+
+```cypher
+-- Where was Drone-Alpha 5 seconds ago?
+MATCH (d:Entity {name: 'Drone-Alpha'}) AS OF (timestamp() - 5000)
+RETURN d.x, d.y, d.z
+
+-- Compare current position to position 10 seconds ago
+CALL db.temporalCompare(
+  'MATCH (d:Entity {name: "Drone-Alpha"}) RETURN d.x, d.y',
+  'MATCH (d:Entity {name: "Drone-Alpha"}) RETURN d.x, d.y'
+)
+```
+
+This is what makes ArcFlow a world model — not just current state, but **temporal knowledge**. The system remembers every state it has ever been in.
+
+## Step 5: Confidence-Filtered Queries
+
+Not all knowledge is equally reliable. Filter by observation class and confidence to get only trusted facts.
+
+```cypher
+-- Only observed entities (ignore predictions)
+MATCH (e:Entity)
+WHERE e._observation_class = 'observed'
+RETURN e.name, e.type, e.x, e.y
+
+-- Only high-confidence detections
+MATCH (a)-[r:DETECTS]->(b)
+WHERE r.confidence >= 0.7
+RETURN a.name, b.name, r.confidence, r.sensor
+
+-- Confidence-weighted PageRank (trusted entities rank higher)
+CALL algo.confidencePageRank()
+YIELD nodeId, score
+RETURN nodeId, score ORDER BY score DESC
+```
+
+The unknown contact with 0.35 confidence is filtered out of trusted queries. As more sensor readings arrive and confidence increases, it automatically enters the trusted result set.
+
+## Step 6: Run Algorithms Over the World Model
+
+Graph algorithms reveal structure in the world model that isn't visible from individual entities.
+
+```cypher
+-- Which entities are most central to the communication network?
+CALL algo.pageRank()
+YIELD nodeId, score
+RETURN nodeId, score ORDER BY score DESC LIMIT 5
+
+-- Are there isolated groups?
+CALL algo.connectedComponents()
+
+-- Formation cohesion: how tightly clustered are squad members?
+CALL algo.clusteringCoefficient()
+
+-- Find the shortest communication path between two entities
+MATCH p = shortestPath(
+  (a:Entity {name: 'Drone-Alpha'}),
+  (b:Entity {name: 'Rover-02'})
+)
+RETURN p
+```
+
+## Step 7: Vector Embeddings for Semantic Search
+
+Add embeddings to entities for semantic similarity search — useful when you need to find entities by description, not just by properties.
+
+```cypher
+CREATE VECTOR INDEX entity_embeddings
+  ON :Entity(embedding)
+  DIMENSIONS 128
+  SIMILARITY cosine
+
+-- Add embeddings (from your model)
+MATCH (e:Entity {name: 'Drone-Alpha'})
+SET e.embedding = [0.12, -0.34, 0.56, ...]  -- 128d vector
+
+-- Find semantically similar entities
+CALL algo.vectorSearch('entity_embeddings', 3, [0.12, -0.34, 0.56, ...])
+YIELD node, score
+RETURN node.name, score
+```
+
+---
+
+## The Complete World Model
+
+You now have a world model with:
+
+| Capability | What it enables |
+|---|---|
+| **Spatial entities** | Position, velocity, energy — 3D scene representation |
+| **Typed relationships** | Communication links, formations, sensor detections |
+| **Observation classes** | Distinguish observed facts from predictions |
+| **Confidence scores** | Filter unreliable knowledge from trusted queries |
+| **Temporal memory** | Query any previous state with AS OF |
+| **Graph algorithms** | Discover structure (centrality, components, clustering) |
+| **Vector search** | Semantic similarity across entities |
+| **Provenance** | Every edge knows which sensor produced it and when |
+
+This is the foundation for:
+- **Robotics perception** — the robot's understanding of its environment
+- **Game AI** — NPCs that remember, reason spatially, and coordinate
+- **Digital twins** — live spatial replicas of physical systems
+- **Active inference agents** — entities maintaining belief distributions over their environment
+- **Autonomous systems** — vehicles, drones, and fleets sharing a spatial knowledge graph
+
+---
+
+## Next Steps
+
+- [Behavior Graph](/behavior-graph) — add tick-based evaluation to your world model
+- [Trusted RAG](/trusted-rag) — query the world model with confidence filtering
+- [Spatial Knowledge Graph](/spatial-knowledge) — deep dive on spatial primitives
+- [GPU Acceleration](/gpu) — why spatial algorithms are fast (GraphBLAS + Metal/CUDA)

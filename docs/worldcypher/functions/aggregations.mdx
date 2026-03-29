@@ -1,0 +1,33 @@
+---
+title: "Aggregations"
+description: "COUNT, SUM, AVG, COLLECT — aggregate query results"
+section: "worldcypher/functions"
+order: 9
+since: "0.4.0"
+status: "stable"
+---
+
+# Aggregations
+
+```sql
+MATCH (n:Person) RETURN count(n), sum(n.age), avg(n.age), collect(n.name)
+```
+
+Four aggregation functions: COUNT, SUM, AVG, COLLECT.
+
+## Functions
+
+| Function | Description | Example |
+|---|---|---|
+| `count(expr)` | Count matching rows | `count(n)` -> `3` |
+| `sum(expr)` | Sum numeric values | `sum(n.age)` -> `90` |
+| `avg(expr)` | Average numeric values | `avg(n.age)` -> `30.0` |
+| `collect(expr)` | Collect into a list | `collect(n.name)` -> `["Alice","Bob","Carol"]` |
+
+```json
+[{"count(n)": 3, "avg(n.age)": 30.0, "collect(n.name)": ["Alice", "Bob", "Carol"]}]
+```
+
+## See Also
+
+- [RETURN](/worldcypher/return) — projection and ordering

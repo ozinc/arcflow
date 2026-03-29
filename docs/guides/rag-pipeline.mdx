@@ -1,0 +1,268 @@
+---
+title: "RAG Pipeline"
+description: "Building a Retrieval-Augmented Generation pipeline with ArcFlow — vector search, graph context, trusted RAG"
+section: "Guides"
+order: 11
+since: "5.0.0"
+status: "stable"
+---
+
+# Building a RAG Pipeline with ArcFlow
+
+Build a RAG pipeline with confidence scoring and provenance in 6 steps. Unlike flat-chunk retrieval, ArcFlow adds a third dimension: graph context. You retrieve nodes *and their relationships*, so the LLM gets structured knowledge about how concepts connect -- plus confidence scores that tell it which facts to trust. Every retrieved edge carries provenance back to its source.
+
+## Architecture Overview
+
+```
+User Query
+    |
+    v
+[1. Embed query] -----> Embedding model (OpenAI, local, etc.)
+    |
+    v
+[2. Vector search] ---> ArcFlow HNSW index
+    |
+    v
+[3. Graph context] ---> Traverse neighbors, confidence filter
+    |
+    v
+[4. Assemble prompt] -> Query + retrieved context
+    |
+    v
+[5. LLM generation] --> Response with citations
+```
+
+ArcFlow handles steps 2 and 3. The embedding model and LLM are external. The MCP server can connect ArcFlow directly to LLM agents.
+
+## Step 1: Store Documents as Nodes
+
+Each document (or chunk) becomes a node with an embedding property. Store the embedding as a list of floats.
+
+```sql
+CREATE (d:Document {
+  title: 'Rust Ownership',
+  content: 'Rust uses ownership rules to manage memory...',
+  source: 'rust-book-ch4',
+  embedding: [0.12, -0.34, 0.56, 0.78, -0.91, ...]
+})
+```
+
+For chunked documents, create a structure:
+
+```sql
+-- Parent document
+CREATE (doc:Document {title: 'Rust Book Chapter 4', source: 'rust-book'})
+
+-- Chunks with embeddings
+CREATE (c1:Chunk {
+  text: 'Each value in Rust has a variable that is its owner...',
+  position: 0,
+  embedding: [0.12, -0.34, 0.56, ...]
+})
+CREATE (c2:Chunk {
+  text: 'When the owner goes out of scope, the value is dropped...',
+  position: 1,
+  embedding: [0.15, -0.28, 0.61, ...]
+})
+
+-- Link chunks to document
+MATCH (doc:Document {title: 'Rust Book Chapter 4'}), (c:Chunk)
+WHERE c.position >= 0
+CREATE (doc)-[:HAS_CHUNK]->(c)
+```
+
+Connect related concepts with edges:
+
+```sql
+MATCH (c1:Chunk), (c2:Chunk)
+WHERE c1.text CONTAINS 'ownership' AND c2.text CONTAINS 'borrowing'
+CREATE (c1)-[:RELATED_TO {weight: 0.85}]->(c2)
+```
+
+## Step 2: Create an HNSW Vector Index
+
+Create a vector index on the embedding property. ArcFlow uses HNSW (Hierarchical Navigable Small World) for approximate nearest neighbor search.
+
+```sql
+CREATE VECTOR INDEX ON :Document(embedding)
+```
+
+```sql
+CREATE VECTOR INDEX ON :Chunk(embedding)
+```
+
+The index is built in-memory and persisted via WAL. It supports cosine similarity, euclidean distance, and dot product.
+
+## Step 3: Query with Vector Similarity
+
+Search for nodes similar to a query vector:
+
+```sql
+CALL algo.vectorSearch()
+```
+
+This searches the HNSW index and returns the k nearest neighbors by vector distance.
+
+For more control, use `algo.similarNodes()`:
+
+```sql
+CALL algo.similarNodes()
+```
+
+Returns nodes ranked by similarity score.
+
+## Step 4: Enrich with Graph Context
+
+This is where ArcFlow differs from flat vector databases. After finding similar nodes, traverse the graph to gather structured context.
+
+```sql
+-- Find similar chunks, then get their parent documents and related chunks
+MATCH (c:Chunk)-[:RELATED_TO]->(related:Chunk)
+RETURN c.text AS match, related.text AS relatedContext, type(r) AS relation
+```
+
+Use `algo.graphRAGContext()` to automate context extraction:
+
+```sql
+CALL algo.graphRAGContext()
+```
+
+This returns not just the matching nodes but their neighborhood: connected nodes, relationship types, and metadata.
+
+## Step 5: Trusted RAG with Confidence Filtering
+
+ArcFlow's confidence scoring enables trusted RAG. Every node has a confidence score (0.0-1.0) and an observation class (observed, inferred, predicted).
+
+```sql
+-- Create nodes with confidence metadata
+CREATE (f:Fact {
+  claim: 'Rust prevents data races at compile time',
+  embedding: [0.23, -0.45, 0.67, ...],
+  source: 'rust-reference'
+})
+```
+
+Use `algo.graphRAGTrusted()` to filter results by confidence:
+
+```sql
+CALL algo.graphRAGTrusted()
+```
+
+This returns context with confidence scores, filtering out low-trust paths. The LLM receives only information from trusted sources.
+
+Query confidence directly:
+
+```sql
+MATCH (n:Fact)
+WHERE confidence(n) > 0.8 AND observationClass(n) = 'observed'
+RETURN n.claim, confidence(n) AS trust
+ORDER BY trust DESC
+```
+
+## Step 6: Connect via MCP Server
+
+ArcFlow includes an MCP (Model Context Protocol) server that connects directly to LLM agents. The MCP server exposes 5 tools:
+
+| Tool | Purpose |
+|---|---|
+| `get_schema` | Describe the graph structure to the LLM |
+| `get_capabilities` | Report available functions and procedures |
+| `read_query` | Execute read-only WorldCypher queries |
+| `write_query` | Execute write WorldCypher queries |
+| `graph_rag` | Run the full GraphRAG pipeline |
+
+Start the MCP server:
+
+```bash
+arcflow-mcp
+```
+
+The server communicates via stdio JSON-RPC. Configure it in your LLM agent's MCP settings:
+
+```json
+{
+  "mcpServers": {
+    "arcflow": {
+      "command": "arcflow-mcp",
+      "args": ["--data-dir", "./my-graph"]
+    }
+  }
+}
+```
+
+The LLM can then query the graph directly:
+
+```
+Agent: "What are the key concepts related to Rust ownership?"
+
+[MCP tool call: graph_rag]
+  query: "Rust ownership concepts"
+
+[ArcFlow returns graph context with confidence scores]
+
+Agent: "Based on the knowledge graph (confidence: 0.95), Rust ownership
+has three key rules: each value has one owner, ownership can be
+transferred (moved), and when the owner goes out of scope..."
+```
+
+## Complete Pipeline Example
+
+Putting it all together -- a knowledge base with vector search, graph context, and confidence scoring:
+
+```sql
+-- 1. Create the knowledge graph
+CREATE (rust:Topic {name: 'Rust', embedding: [0.1, 0.2, ...]})
+CREATE (ownership:Concept {
+  name: 'Ownership',
+  description: 'Memory management without garbage collection',
+  embedding: [0.15, 0.25, ...]
+})
+CREATE (borrowing:Concept {
+  name: 'Borrowing',
+  description: 'References that do not take ownership',
+  embedding: [0.18, 0.22, ...]
+})
+CREATE (lifetimes:Concept {
+  name: 'Lifetimes',
+  description: 'Annotations ensuring references remain valid',
+  embedding: [0.12, 0.28, ...]
+})
+
+-- 2. Build relationships
+CREATE (rust)-[:COVERS]->(ownership)
+CREATE (rust)-[:COVERS]->(borrowing)
+CREATE (rust)-[:COVERS]->(lifetimes)
+CREATE (ownership)-[:ENABLES]->(borrowing)
+CREATE (borrowing)-[:REQUIRES]->(lifetimes)
+
+-- 3. Create vector index
+CREATE VECTOR INDEX ON :Concept(embedding)
+
+-- 4. Query: "How does Rust manage memory?"
+-- Vector search finds: Ownership (closest), Borrowing, Lifetimes
+CALL algo.vectorSearch()
+
+-- 5. Graph context enriches the results:
+-- Ownership --ENABLES--> Borrowing --REQUIRES--> Lifetimes
+-- The LLM receives not just the chunks but the concept graph
+CALL algo.graphRAGTrusted()
+```
+
+## Tips
+
+**Chunk size**: 256-512 tokens per chunk works well. Smaller chunks give more precise retrieval; larger chunks give more context per result.
+
+**Embedding dimensions**: ArcFlow's HNSW index works with any dimensionality. Common choices: 384 (MiniLM), 768 (BERT), 1536 (OpenAI ada-002), 3072 (OpenAI text-embedding-3-large).
+
+**Graph structure matters**: The value of graph RAG over flat vector search scales with the richness of your graph. Invest in meaningful relationships between nodes.
+
+**Confidence thresholds**: Start with 0.7 for trusted RAG. Lower if recall is too low; raise if precision matters more.
+
+**GPU acceleration**: On large graphs (10K+ nodes), vector search and PageRank automatically dispatch to GPU (CUDA or Metal) when available. No code changes needed.
+
+## See Also
+
+- [Procedures](/worldcypher/functions/procedures) -- algo.vectorSearch, algo.graphRAG, algo.graphRAGTrusted
+- [Built-in Functions](/worldcypher/functions/built-in) -- confidence(), observationClass()
+- [Architecture](/architecture) -- SoC modular monolith design
+- [Agent Integration](/guides/agent-integration) -- connecting ArcFlow to AI agents

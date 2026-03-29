@@ -1,0 +1,502 @@
+---
+title: "REPL"
+description: "Interactive query session — full meta-command reference"
+section: "cli"
+order: 2
+since: "0.2.0"
+status: "stable"
+---
+
+# REPL
+
+The ArcFlow REPL is an interactive shell for executing WorldCypher queries and managing the graph database. Launch it with `arcflow`. Every meta-command starts with `:`. Any other input is executed as a WorldCypher query.
+
+## Starting the REPL
+
+```bash
+# In-memory (data lost on exit)
+arcflow
+
+# Persistent storage (WAL + snapshots, survives restarts)
+arcflow --data-dir ./mydb
+
+# Persistent with demo data preloaded
+arcflow --data-dir ./mydb --playground
+```
+
+On startup, the REPL prints a welcome banner:
+
+```
+  ArcFlow 0.1.0 — graph database engine
+
+  Quick start:
+    CALL db.demo            Load sample graph
+    MATCH (n) RETURN n      Query everything
+    CALL algo.pageRank()     Run an algorithm
+    CALL db.help             Full procedure guide
+    CALL db.tutorial         Interactive walkthrough
+
+  Type :quit to exit
+
+arcflow>
+```
+
+## Executing Queries
+
+Type any WorldCypher query at the `arcflow>` prompt. Results display as a formatted table.
+
+```
+arcflow> CREATE (n:Person {name: 'Alice', age: 30}) RETURN n
++----+--------+-----+
+| n  | n.name | n.age |
++----+--------+-----+
+| 0  | Alice  | 30  |
++----+--------+-----+
+1 row
+
+arcflow> MATCH (n:Person) RETURN n.name, n.age
++--------+-----+
+| n.name | n.age |
++--------+-----+
+| Alice  | 30  |
++--------+-----+
+1 row
+```
+
+## Meta-Command Reference
+
+Every meta-command begins with `:` and is case-sensitive. Arguments are space-separated.
+
+### `:help`
+
+Show the quick reference for queries, algorithms, and shell commands.
+
+```
+arcflow> :help
+ArcFlow Quick Reference
+
+  Getting Started
+    CALL db.demo             Load sample graph
+    CALL db.tutorial         Interactive 6-step walkthrough
+    CALL db.help             Full procedure guide with examples
+
+  Queries
+    MATCH (n:Label) RETURN n
+    MATCH (n) WHERE n.age > 25 RETURN n.name
+    CREATE (n:Person {name: 'Alice'}) RETURN n
+    MATCH (a)-[:KNOWS]->(b) RETURN b.name
+
+  Algorithms
+    CALL algo.pageRank()             PageRank
+    CALL algo.louvain()              Community detection
+    CALL algo.connectedComponents()  Find subgraphs
+    CALL algo.graphRAG('query')      GraphRAG pipeline
+
+  Shell Commands
+    :status    Engine status       :demo      Load demo data
+    :schema    Full schema         :bench     Run benchmark
+    :count     Node/rel counts     :clear     Reset database
+    :dump      Export as CREATE     :quit      Exit
+```
+
+### `:status`
+
+Show engine backend, node count, relationship count, and generation counter.
+
+```
+arcflow> :status
+Backend: cpu (CPU backend active)
+Nodes: 12
+Relationships: 15
+Generation: 27
+```
+
+### `:count`
+
+Quick summary of node, relationship, and skill counts.
+
+```
+arcflow> :count
+Nodes: 12
+Relationships: 15
+Skills: 3
+```
+
+### `:schema`
+
+Full database schema: labels with node counts, relationship types, property keys, indexes, and constraints.
+
+```
+arcflow> :schema
+=== WorldCypher Schema ===
+
+Labels:
+  :Person (5 nodes)
+  :Company (3 nodes)
+  :Project (4 nodes)
+
+Relationship Types:
+  :WORKS_AT
+  :KNOWS
+  :MANAGES
+
+Property Keys:
+  name
+  age
+  title
+
+Indexes:
+  INDEX ON :Person(name)
+
+Constraints:
+  UNIQUE ON :Person(email)
+
+Skills: 3
+```
+
+### `:labels`
+
+List all node labels with counts.
+
+```
+arcflow> :labels
+  :Person (5 nodes)
+  :Company (3 nodes)
+  :Project (4 nodes)
+```
+
+On an empty graph:
+
+```
+arcflow> :labels
+No labels
+```
+
+### `:types`
+
+List all relationship types.
+
+```
+arcflow> :types
+  :WORKS_AT
+  :KNOWS
+  :MANAGES
+```
+
+On an empty graph:
+
+```
+arcflow> :types
+No relationship types
+```
+
+### `:keys`
+
+List all property keys in the graph.
+
+```
+arcflow> :keys
+  name
+  age
+  title
+  email
+```
+
+On an empty graph:
+
+```
+arcflow> :keys
+No property keys
+```
+
+### `:indexes`
+
+List all indexes.
+
+```
+arcflow> :indexes
+  INDEX ON :Person(name)
+  INDEX ON :Company(domain)
+```
+
+On an empty graph:
+
+```
+arcflow> :indexes
+No indexes defined
+```
+
+### `:constraints`
+
+List all uniqueness constraints.
+
+```
+arcflow> :constraints
+  UNIQUE ON :Person(email)
+```
+
+On an empty graph:
+
+```
+arcflow> :constraints
+No constraints defined
+```
+
+### `:stats`
+
+Detailed engine statistics including node/relationship counts, skill count, index count, generation, backend, and data directory.
+
+```
+arcflow> :stats
+=== WorldCypher Engine Stats ===
+Nodes:         12
+Relationships: 15
+Skills:        3
+Indexes:       2
+Generation:    27
+Backend:       cpu
+Data dir:      ./mydb
+```
+
+### `:bench`
+
+Run a performance benchmark: creates 1000 nodes, times count/filter/aggregation queries, then cleans up. Results include throughput in nodes/sec and query latency in microseconds.
+
+```
+arcflow> :bench
+Running benchmark...
+
+Create 1000 nodes:     45 ms (22222 nodes/sec)
+Count all:           12 μs → 1000
+Filter (idx > 500):  18 μs → 499
+Aggregation (avg):   15 μs
+Delete 1000 nodes:    30 ms
+
+Benchmark complete.
+```
+
+### `:demo`
+
+Load a sample graph with Person, Company, and Project nodes connected by relationships. Useful for exploration.
+
+```
+arcflow> :demo
+Loaded demo data: 12 nodes, 15 relationships
+```
+
+### `:dump`
+
+Export the entire graph as WorldCypher CREATE statements. Includes indexes, constraints, nodes, and relationships.
+
+```
+arcflow> :dump
+-- WorldCypher dump
+-- Nodes: 12, Relationships: 15
+
+CREATE INDEX ON :Person(name);
+CREATE CONSTRAINT ON :Person(email) ASSERT UNIQUE;
+CREATE (n:Person {name: 'Alice', age: 30});
+CREATE (n:Person {name: 'Bob', age: 25});
+CREATE (n:Company {name: 'Acme'});
+-- REL 0 -[:WORKS_AT]-> 2
+-- REL 1 -[:WORKS_AT]-> 2
+
+-- End dump
+```
+
+### `:clear`
+
+Delete all nodes, relationships, indexes, constraints, and skills. Irreversible.
+
+```
+arcflow> :clear
+Database cleared.
+```
+
+### `:checkpoint`
+
+Force a WAL checkpoint by writing the current graph state to the snapshot file. Only works when `--data-dir` is set.
+
+```
+arcflow> :checkpoint
+Checkpoint saved.
+```
+
+Without `--data-dir`:
+
+```
+arcflow> :checkpoint
+No --data-dir set. Use --data-dir to enable persistence.
+```
+
+### `:import csv <file> <Label>`
+
+Bulk-import a CSV file. The first row is treated as column headers (property keys). Each subsequent row becomes a node with the specified label. Values are auto-typed: integers, floats, or strings.
+
+**Syntax:** `:import csv <path-to-file.csv> <NodeLabel>`
+
+```
+arcflow> :import csv ./users.csv User
+Imported 150 rows as :User nodes
+```
+
+### `:export json <path>`
+
+Export the graph as a JSON snapshot file.
+
+```
+arcflow> :export json ./backup.json
+Exported to ./backup.json (4523 bytes)
+```
+
+### `:export graphml <path>`
+
+Export the graph as a GraphML XML file.
+
+```
+arcflow> :export graphml ./graph.graphml
+Exported GraphML to ./graph.graphml (8192 bytes)
+```
+
+### `:snapshot <path>`
+
+Save the current graph state to a JSON snapshot file. Identical format to `:export json`.
+
+```
+arcflow> :snapshot ./backup.json
+Snapshot saved to ./backup.json (4523 bytes)
+```
+
+### `:restore <path>`
+
+Restore graph state from a JSON snapshot file. Replaces the current graph entirely.
+
+```
+arcflow> :restore ./backup.json
+Restored: 12 nodes, 15 relationships, 3 skills
+```
+
+### `:cache`
+
+Display query plan cache statistics: number of cached plans, hit/miss counts, and hit rate.
+
+```
+arcflow> :cache
+Query Plan Cache:
+  cached plans: 8
+  hits:         42
+  misses:       12
+  hit rate:     77.8%
+```
+
+### `:quit` / `:q` / `:exit`
+
+Exit the REPL. If `--data-dir` is set and mutations occurred, the graph is auto-saved before exit. `Ctrl+D` (EOF) also exits.
+
+```
+arcflow> :quit
+```
+
+## For AI Agents
+
+AI coding agents should not use the interactive REPL. Use non-interactive modes instead.
+
+### Single-query execution
+
+Pass a query directly as a CLI argument. Use `--json` for machine-parseable output.
+
+```bash
+# Human-readable table output
+arcflow query "MATCH (n:Person) RETURN n.name, n.age"
+
+# JSON output (preferred for agents)
+arcflow query "MATCH (n:Person) RETURN n.name, n.age" --json
+```
+
+JSON output format:
+
+```json
+{
+  "columns": ["n.name", "n.age"],
+  "rows": [
+    {"n.name": "Alice", "n.age": "30"},
+    {"n.name": "Bob", "n.age": "25"}
+  ]
+}
+```
+
+Error format:
+
+```json
+{"error": true, "code": "EXEC_ERR", "message": "Unknown label: Foo"}
+```
+
+### Parameterized queries
+
+Bind parameters with `--param key=value`. Reference them with `$key` in the query.
+
+```bash
+arcflow query "MATCH (n:Person) WHERE n.name = \$name RETURN n" \
+  --param name=Alice --json
+```
+
+### Piping queries via stdin
+
+For batch execution, pipe queries line by line. Each line is executed independently.
+
+```bash
+echo "MATCH (n) RETURN count(*)" | arcflow
+```
+
+### Persistent storage
+
+Always pass `--data-dir` for durable state across invocations:
+
+```bash
+arcflow query "CREATE (n:Person {name: 'Alice'})" --data-dir ./mydb --json
+arcflow query "MATCH (n:Person) RETURN n.name" --data-dir ./mydb --json
+```
+
+### Health check
+
+```bash
+arcflow doctor --json
+```
+
+```json
+{"version":"0.1.0","crate_count":8,"workspace_valid":true,"data_dir":".","data_dir_writable":true,"backend":"cpu","status":"ok"}
+```
+
+### Path discovery
+
+```bash
+arcflow paths --json
+```
+
+```json
+{"data_dir":".","wal_path":"./worldcypher.wal","snapshot_path":"./worldcypher.snapshot.json","workspace_root":"/home/user/project","config_path":".arcflow/config.yaml","crate_count":8,"version":"0.1.0"}
+```
+
+### Agent context synthesis
+
+Get full engine context (schema, capabilities, stats) in one call:
+
+```bash
+arcflow agent-context synth --json --data-dir ./mydb
+```
+
+```json
+{"version":"0.1.0","backend":"cpu","node_count":12,"rel_count":15,"labels":["Person","Company"],"rel_types":["WORKS_AT","KNOWS"],"procedure_count":68,"algorithm_count":20,"observation_classes":["observed","inferred","predicted"],"replication_mode":"standalone","clock_domains":["wall"],"capabilities":["pageRank","louvain","graphRAG"]}
+```
+
+### Decision tree for agents
+
+1. Need schema or capabilities? Use `arcflow agent-context synth --json`.
+2. Need to run a single query? Use `arcflow query "..." --json`.
+3. Need a server for multiple queries? Use `arcflow --http 8080` and POST to `/query`.
+4. Need MCP integration? Use `arcflow-mcp --data-dir ./mydb` over stdio.
+
+## See Also
+
+- [Server Modes](/server) — TCP, HTTP, and MCP access
+- [Snapshot & Restore](/cli/snapshot-restore)

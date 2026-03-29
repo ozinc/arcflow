@@ -1,0 +1,26 @@
+---
+title: "SET"
+description: "Mutate properties on matched nodes"
+section: "worldcypher/statements"
+order: 8
+since: "0.3.0"
+status: "stable"
+---
+
+# SET
+
+```sql
+MATCH (n) WHERE n.name = 'Alice' SET n.age = 31
+```
+
+Update properties on matched nodes or relationships. Automatically updates the `updated_at` timestamp.
+
+## Syntax
+
+```sql
+MATCH (variable) WHERE predicate SET variable.key = value
+```
+
+## See Also
+
+- [MATCH](/worldcypher/match) + [WHERE](/worldcypher/where) — select what to update

@@ -1,0 +1,21 @@
+---
+title: "REMOVE"
+description: "Remove properties from nodes or relationships"
+section: "worldcypher/statements"
+order: 5
+since: "0.8.0"
+status: "stable"
+---
+
+# REMOVE
+
+```sql
+MATCH (n:Person) WHERE n.name = 'Alice' REMOVE n.temporary_flag
+```
+
+Remove a property from a matched node or relationship. Unlike DELETE, REMOVE only drops properties -- the node stays.
+
+## See Also
+
+- [SET](/worldcypher/statements/set) — set properties
+- [DELETE](/worldcypher/statements/delete) — remove entire nodes
