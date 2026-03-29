@@ -9,7 +9,8 @@
         { "slug": "installation", "title": "Installation", "order": 3 },
         { "slug": "project-setup", "title": "Project Setup", "order": 4 },
         { "slug": "platform", "title": "Platforms", "order": 5 },
-        { "slug": "bindings", "title": "Bindings", "order": 6 }
+        { "slug": "bindings", "title": "Bindings", "order": 6 },
+        { "slug": "licensing", "title": "Licensing", "order": 7 }
       ]
     },
     {
@@ -27,7 +28,8 @@
         { "slug": "behavior-graph", "title": "Behavior Graph", "order": 9 },
         { "slug": "agent-native", "title": "Agent-Native", "order": 10 },
         { "slug": "event-sourcing", "title": "Event Sourcing", "order": 11 },
-        { "slug": "gpu", "title": "GPU Acceleration", "order": 12 }
+        { "slug": "gpu", "title": "GPU Acceleration", "order": 12 },
+        { "slug": "relay", "title": "Intent Relay", "order": 13 }
       ]
     },
     {

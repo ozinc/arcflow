@@ -1,0 +1,54 @@
+---
+title: "Licensing"
+description: "ArcFlow licensing — free artifacts, intent-based contributions, no source distribution"
+section: "get-started"
+status: "stable"
+---
+
+# Licensing
+
+ArcFlow uses the **OZ Intent-Source License (OISL)** — a new licensing model where compiled artifacts are freely usable and contributions happen through structured intents, not source code access.
+
+## Quick summary
+
+| What | License |
+|---|---|
+| **SDK** (this repo, `npm install arcflow`) | MIT |
+| **Engine** (compiled binaries) | OISL — free to use commercially |
+| **Source code** | Proprietary — not distributed |
+| **Contributions** | Via Intent Relay — describe what you want, agent implements it |
+
+## What you can do
+
+- **Use** ArcFlow binaries in development, testing, and production — including commercial products
+- **Embed** ArcFlow in your applications and distribute them to end users
+- **Benchmark** ArcFlow internally without restriction
+- **Submit Intents** — describe desired changes, the relay service implements them
+
+## What you can't do
+
+- Reverse engineer, decompile, or derive source code from binaries
+- Redistribute ArcFlow binaries as a standalone product (embedding in your app is fine)
+- Sub-license ArcFlow independently
+
+## Intent-Source model
+
+Instead of traditional open-source contributions (fork → PR → merge), ArcFlow uses **intent-based contribution**:
+
+1. You describe what you want changed (bug fix, feature, performance improvement)
+2. You submit the intent to the **OZ Build Relay**
+3. A server-side AI agent implements the change against the private source
+4. You receive compiled artifacts + test results
+5. If the change passes quality gates, it may be promoted to the official release
+
+**You own your ideas. OZ owns the implementation.**
+
+## The SDK is MIT
+
+Everything in this repo — the TypeScript SDK, documentation, examples, MCP server, agent context files — is MIT licensed. You can fork, modify, and redistribute freely.
+
+The OISL applies only to the **engine binaries** that power the SDK. From a user perspective, this is transparent: `npm install arcflow` just works.
+
+## Full license text
+
+See [legal/ENGINE-LICENSE.md](https://github.com/ozinc/arcflow/blob/main/legal/ENGINE-LICENSE.md) and [legal/INTENT-SOURCE-TERM-SHEET.md](https://github.com/ozinc/arcflow/blob/main/legal/INTENT-SOURCE-TERM-SHEET.md).

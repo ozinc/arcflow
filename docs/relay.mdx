@@ -1,0 +1,147 @@
+---
+title: "Intent Relay"
+description: "Contribute to ArcFlow without source code access — describe what you want, the relay builds it"
+section: "capabilities"
+status: "stable"
+---
+
+# Intent Relay
+
+The OZ Intent Relay is a build service that lets you contribute to ArcFlow without accessing source code. Describe what you want changed, submit an intent, and receive compiled artifacts.
+
+```
+Developer                        OZ Build Relay                    ArcFlow Source
+┌──────────────┐    Intent       ┌──────────────────┐              ┌─────────────┐
+│ "Fix the bug │───────────────→ │ Sandboxed build  │─────────────→│ Private     │
+│  where X     │                 │ AI agent         │              │ source code │
+│  happens"    │   Artifact      │ implements fix   │              │             │
+│              │←─────────────── │ runs tests       │←─────────────│             │
+│              │                 │ signs binary     │              │             │
+└──────────────┘                 └──────────────────┘              └─────────────┘
+```
+
+## How it works
+
+### 1. Write an intent
+
+An intent describes what you want, not how to implement it:
+
+```json
+{
+  "category": "bug_fix",
+  "description": "MERGE with ON CREATE SET creates duplicates when the match key contains a dash character",
+  "motivation": "Breaks our entity resolution pipeline when IDs contain hyphens",
+  "test_cases": [
+    {
+      "input": "MERGE (n:Entity {id: 'abc-123'}) ON CREATE SET n.name = 'test'",
+      "expected_output": "1 node created on first run, 0 on second run",
+      "description": "Idempotent MERGE with hyphenated ID"
+    }
+  ],
+  "context": "Reproduction: run the MERGE twice, count(*) returns 2 instead of 1"
+}
+```
+
+### 2. Submit via CLI
+
+```bash
+arcflow-relay submit --category bug_fix --description "..." --test-case "..."
+```
+
+Or via the API:
+
+```bash
+curl -X POST https://relay.arcflow.dev/v1/intents \
+  -H "Authorization: Bearer bsk_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{ "category": "bug_fix", "description": "...", "test_cases": [...] }'
+```
+
+### 3. Receive artifacts
+
+The relay:
+1. Spawns an isolated, sandboxed build session
+2. AI agent implements the change against the private source
+3. Runs the full test suite + your test cases
+4. Signs the compiled artifact (Ed25519)
+5. Returns the binary + test results
+
+```json
+{
+  "status": "pass",
+  "artifact": {
+    "url": "https://relay.arcflow.dev/artifacts/abc123.dylib",
+    "hash": "sha256:...",
+    "signature": "ed25519:..."
+  },
+  "tests": {
+    "total": 654,
+    "passed": 654,
+    "failed": 0,
+    "your_tests": { "total": 1, "passed": 1 }
+  },
+  "summary": "Fixed MERGE match predicate to handle hyphenated string keys correctly."
+}
+```
+
+### 4. Use the artifact
+
+The custom artifact is a drop-in replacement:
+
+```bash
+# Replace the standard binary
+cp artifact.dylib node_modules/arcflow-core/arcflow.darwin-arm64.node
+
+# Everything works the same, with your fix included
+```
+
+### 5. Promotion
+
+If the change passes OZ's quality review, it gets promoted to the official release. You get:
+- Credit in the changelog
+- Early access (14 days before general availability)
+
+## Intent categories
+
+| Category | When to use |
+|---|---|
+| `bug_fix` | Something doesn't work as documented |
+| `feature` | New functionality needed |
+| `performance` | Existing feature is too slow |
+| `compatibility` | Integration issue with a specific platform/tool |
+
+## Service tiers
+
+| Tier | Intents/day | Concurrent sessions | Artifact retention | Price |
+|---|---|---|---|---|
+| Community | 3 | 1 | 7 days | Free |
+| Professional | 10 | 3 | 90 days | Contact |
+| Enterprise | Custom | 10+ | 1 year+ | Annual contract |
+
+## Security
+
+- Each build runs in process-level isolation (sandboxed)
+- No outbound network access during builds
+- Maximum 30 minutes per intent
+- All artifacts signed with Ed25519
+- Artifact signature verification built into the SDK
+
+## What the relay never returns
+
+- Source code, diffs, or patches
+- Internal file paths or function signatures
+- Build logs beyond pass/fail
+- Internal test source code
+
+## CLI reference
+
+```bash
+arcflow-relay submit     # Submit an intent
+arcflow-relay status     # Check intent status
+arcflow-relay artifacts  # List your artifacts
+arcflow-relay verify     # Verify artifact signature
+```
+
+## A2A Protocol
+
+The relay uses the Agent-to-Agent (A2A) protocol for communication. Each intent is wrapped in an A2A Message with structured Parts (text description, test cases, context).
