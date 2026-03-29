@@ -1,0 +1,44 @@
+{
+  "name": "arcflow-mcp",
+  "version": "0.1.0",
+  "description": "ArcFlow MCP server — let AI agents query your graph directly",
+  "type": "module",
+  "bin": {
+    "arcflow-mcp": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsup",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "arcflow-core": "file:../../bindings/typescript"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  },
+  "files": [
+    "dist/"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ozinc/arcflow"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "arcflow",
+    "graph-database",
+    "ai-agent"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}
