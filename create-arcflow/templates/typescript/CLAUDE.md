@@ -1,61 +1,44 @@
-# CLAUDE.md
+This project uses **ArcFlow** — an embedded graph database. No server needed.
 
-This project uses **ArcFlow** as its graph database.
-
-## Key Commands
+## Commands
 
 ```bash
-npm start          # Run the project
-npm test           # Run tests
+npm start          # Run src/index.ts
+npm test           # Run tests (Vitest)
 npm run dev        # Watch mode
 ```
 
 ## Database
 
-- ArcFlow is an embedded graph database — no server needed
-- Use `openInMemory()` for development and testing
-- Use `open('./data')` for persistent storage
-- Query language: WorldCypher (Cypher-compatible with spatial/temporal extensions)
-
-## API
-
 ```typescript
 import { openInMemory, open } from 'arcflow'
 
-const db = openInMemory()              // In-memory (tests, prototyping)
-const db = open('./data')              // Persistent (production)
+const db = openInMemory()                         // In-memory (dev/test)
+const db = open('./data')                          // Persistent (production)
 
-db.query('MATCH (n) RETURN n')         // Read queries
-db.mutate('CREATE (n:Label {k: v})')   // Write queries
-db.batchMutate([...queries])           // Bulk writes
-db.stats()                             // { nodes, relationships, indexes }
-db.close()                             // Flush and close
+db.mutate("CREATE (n:Person {name: 'Alice'})")     // Write
+db.query("MATCH (n:Person) RETURN n.name")         // Read (typed results)
+db.query("MATCH (n {id: $id}) RETURN n", { id })   // Parameters
+db.batchMutate([...queries])                       // Bulk writes
+db.query("CALL algo.pageRank()")                   // Algorithms — no setup
+db.stats()                                         // { nodes, relationships, indexes }
+db.close()
 ```
 
-## WorldCypher Quick Reference
+## WorldCypher
 
 ```cypher
-// Create nodes and relationships
-CREATE (a:Person {name: 'Alice'})-[:KNOWS]->(b:Person {name: 'Bob'})
-
-// Query with pattern matching
-MATCH (p:Person)-[:KNOWS]->(friend)
-WHERE p.name = 'Alice'
-RETURN friend.name
-
-// Spatial queries
-MATCH (p:Player) WHERE WITHIN(p.pos, Zone('penalty_box'))
-
-// Graph algorithms
-CALL algo.pageRank() YIELD node, score
-RETURN node.name, score ORDER BY score DESC
-
-// Vector search
-CALL vector.search('embeddings', [0.1, 0.2, ...], 10) YIELD node, distance
+CREATE (n:Label {key: 'value'})
+MATCH (n:Label) WHERE n.key = 'value' RETURN n
+MATCH (a)-[:REL]->(b) RETURN a.name, b.name
+MERGE (n:Label {id: 'unique'})
+CALL algo.pageRank()
+CALL algo.vectorSearch('index', $vector, 10)
+CALL db.stats
 ```
 
 ## Docs
 
-- Full docs: https://oz.com/docs
-- WorldCypher reference: https://oz.com/docs/worldcypher
-- MCP server for AI agents: `npx arcflow-mcp`
+- Full docs: https://github.com/ozinc/arcflow
+- MCP server: `npx arcflow-mcp`
+- Try in browser: https://arcflow.dev/engine

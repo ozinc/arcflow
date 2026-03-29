@@ -1,36 +1,41 @@
-# AGENTS.md
+This project uses **ArcFlow** — an embedded graph database. No server needed.
 
-## Project Database: ArcFlow
+Install: `npm install arcflow`
+Docs: https://github.com/ozinc/arcflow
+MCP: `npx arcflow-mcp`
+Try: https://arcflow.dev/engine
 
-This project uses ArcFlow, an embedded graph database. No server needed.
-
-### Install: `npm install arcflow`
-### Docs: https://oz.com/docs
-### MCP: `npx arcflow-mcp`
-
-### API
+## API
 
 ```typescript
-import { openInMemory } from 'arcflow'
-const db = openInMemory()
-db.query('MATCH (n) RETURN n')     // reads
-db.mutate('CREATE (n:Thing)')      // writes
+import { openInMemory, open, ArcflowError } from 'arcflow'
+
+const db = openInMemory()                          // No server. No Docker.
+db.mutate("CREATE (n:Person {name: $name})", { name: 'Alice' })
+db.query("MATCH (n:Person) RETURN n.name, n.age")  // Typed: age is number
+db.batchMutate(["MERGE (a:X {id: '1'})", "MERGE (b:X {id: '2'})"])
+db.query("CALL algo.pageRank()")                   // 30+ algorithms
+db.query("CALL algo.vectorSearch('idx', $v, 10)")  // Vector search
+db.stats()                                         // { nodes, relationships, indexes }
+db.close()
 ```
 
-### Testing
-
-Use `openInMemory()` per test — no setup, no teardown, no Docker:
+## Testing
 
 ```typescript
-import { openInMemory } from 'arcflow'
-import { describe, it, expect } from 'vitest'
+const db = openInMemory()  // Fresh graph per test, no cleanup, no Docker
+db.mutate("CREATE (n:Test {x: 1})")
+expect(db.query("MATCH (n:Test) RETURN n.x").rows[0].get('x')).toBe(1)
+```
 
-describe('graph', () => {
-  it('creates and queries nodes', () => {
-    const db = openInMemory()
-    db.mutate(`CREATE (a:Person {name: 'Alice'})`)
-    const result = db.query(`MATCH (p:Person) RETURN p.name`)
-    expect(result.rows[0].get('p.name')).toBe('Alice')
-  })
-})
+## Error handling
+
+```typescript
+try { db.query("BAD") } catch (e) {
+  if (e instanceof ArcflowError) {
+    e.code        // "EXPECTED_KEYWORD"
+    e.category    // "parse" | "validation" | "execution" | "integration"
+    e.suggestion  // "Expected MATCH or CREATE"
+  }
+}
 ```
