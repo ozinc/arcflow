@@ -1,0 +1,196 @@
+---
+title: "Agent Tooling"
+description: "ArcFlow as ephemeral in-process tooling for coding agents — ad-hoc graph processing, testing, and data exploration"
+section: "use-cases"
+status: "stable"
+---
+
+# Agent Tooling
+
+ArcFlow runs in-process with zero setup. This makes it a powerful tool for coding agents — spin up a graph, process data, query results, discard. No infrastructure to provision, no cleanup.
+
+## Why agents need an embedded graph
+
+When a coding agent is working on a task, it often needs to:
+- **Explore relationships** in data (who connects to whom, what depends on what)
+- **Run algorithms** (PageRank for importance, community detection for clustering)
+- **Test queries** before writing them into application code
+- **Process structured data** temporarily (parse a CSV, build a graph, extract insights)
+- **Prototype** a knowledge graph before committing to a schema
+
+With Neo4j or Memgraph, the agent would need to ask the user to start a database server. With ArcFlow, the agent just does it:
+
+```typescript
+const db = openInMemory()  // instant, no permission needed
+// ... process data ...
+db.close()  // gone, no cleanup
+```
+
+## Patterns
+
+### Ad-hoc data exploration
+
+An agent analyzing a codebase can model dependencies as a graph:
+
+```typescript
+import { openInMemory } from 'arcflow'
+
+const db = openInMemory()
+
+// Model file dependencies
+db.batchMutate([
+  "CREATE (f:File {path: 'src/index.ts', lines: 150})",
+  "CREATE (f:File {path: 'src/utils.ts', lines: 80})",
+  "CREATE (f:File {path: 'src/db.ts', lines: 200})",
+  "CREATE (f:File {path: 'src/index.ts'})-[:IMPORTS]->(g:File {path: 'src/utils.ts'})",
+  "CREATE (f:File {path: 'src/index.ts'})-[:IMPORTS]->(g:File {path: 'src/db.ts'})",
+  "CREATE (f:File {path: 'src/db.ts'})-[:IMPORTS]->(g:File {path: 'src/utils.ts'})",
+])
+
+// Which files are most depended on?
+const pr = db.query("CALL algo.pageRank()")
+
+// Are there circular dependencies?
+const components = db.query("CALL algo.connectedComponents()")
+
+db.close()
+```
+
+### Temporary knowledge graph
+
+An agent building a research summary can create a knowledge graph, query it, then discard it:
+
+```typescript
+const db = openInMemory()
+
+// Ingest extracted entities
+db.batchMutate(entities.map(e =>
+  `MERGE (n:${e.type} {id: '${e.id}', name: '${e.name}'})`
+))
+
+// Ingest relationships
+db.batchMutate(relations.map(r =>
+  `MATCH (a {id: '${r.from}'}) MATCH (b {id: '${r.to}'}) MERGE (a)-[:${r.type}]->(b)`
+))
+
+// Find the most connected entities
+const important = db.query("CALL algo.pageRank()")
+
+// Find clusters
+const communities = db.query("CALL algo.louvain()")
+
+// Get the answer, discard the graph
+db.close()
+```
+
+### Test fixture builder
+
+An agent writing tests can create graph fixtures inline:
+
+```typescript
+import { openInMemory } from 'arcflow'
+
+describe('social features', () => {
+  it('finds mutual friends', () => {
+    const db = openInMemory()
+
+    db.batchMutate([
+      "CREATE (a:User {name: 'Alice'})",
+      "CREATE (b:User {name: 'Bob'})",
+      "CREATE (c:User {name: 'Carol'})",
+      "CREATE (a:User {name: 'Alice'})-[:FRIENDS]->(c:User {name: 'Carol'})",
+      "CREATE (b:User {name: 'Bob'})-[:FRIENDS]->(c:User {name: 'Carol'})",
+    ])
+
+    const mutual = db.query(`
+      MATCH (a:User {name: 'Alice'})-[:FRIENDS]->(m)<-[:FRIENDS]-(b:User {name: 'Bob'})
+      RETURN m.name
+    `)
+    expect(mutual.rows[0].get('name')).toBe('Carol')
+
+    db.close()
+  })
+})
+```
+
+### Pipeline scratch space
+
+An agent processing data through multiple stages can use ArcFlow as a scratch graph:
+
+```typescript
+const db = openInMemory()
+
+// Stage 1: Load raw data
+db.batchMutate(rawRecords.map(r =>
+  `CREATE (n:Raw {id: '${r.id}', value: '${r.value}', source: '${r.source}'})`
+))
+
+// Stage 2: Deduplicate (find similar nodes)
+const similar = db.query("CALL algo.nodeSimilarity()")
+
+// Stage 3: Merge duplicates
+// ... process similar pairs ...
+
+// Stage 4: Extract result
+const clean = db.query("MATCH (n:Raw) RETURN n.id, n.value")
+const output = clean.rows.map(r => r.toObject())
+
+db.close()
+return output
+```
+
+## Browser WASM — agent verification playground
+
+The browser runtime at [arcflow.dev/engine](https://arcflow.dev/engine) gives agents another tool: verify a query works by running it in the playground before writing it into code.
+
+An agent can:
+1. Open `arcflow.dev/engine` (or instruct the user to)
+2. Paste test data + query
+3. Verify results
+4. Then write the confirmed-working query into the application
+
+With sync enabled, the playground becomes persistent:
+
+```
+arcflow.dev/engine?sync=af_xxxxxxxxxxxx
+```
+
+The agent builds a graph in the browser, the user reviews it visually, then the same graph syncs to the application backend.
+
+## MCP — agents query directly
+
+With the MCP server, agents don't generate code at all — they interact with the graph directly:
+
+```json
+// .claude/settings.json
+{
+  "mcpServers": {
+    "arcflow": {
+      "command": "npx",
+      "args": ["arcflow-mcp"]
+    }
+  }
+}
+```
+
+Now the agent can:
+- `get_schema` — understand the data model
+- `read_query` — run any WorldCypher query
+- `write_query` — create/modify data
+- `graph_rag` — answer questions from the graph
+
+No code generation. Direct interaction.
+
+## Why this matters for agent adoption
+
+| Capability | Effect |
+|---|---|
+| `openInMemory()` | Agent can use a graph DB without asking user to start a server |
+| Zero cleanup | Graph disappears on `close()` — no Docker containers to stop |
+| Browser WASM | Agent can verify queries in a live playground |
+| MCP server | Agent queries the graph directly, no code needed |
+| Sync | Ephemeral graph can optionally persist to cloud |
+| Typed results | Agent doesn't have to parse strings — numbers are numbers |
+| Structured errors | Agent can pattern-match on error codes and self-correct |
+
+This is why coding agents prefer ArcFlow over Neo4j/Memgraph: **it's a tool they can use directly, not infrastructure they have to ask the user to provision.**

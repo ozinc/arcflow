@@ -111,7 +111,8 @@
         { "slug": "algorithms", "title": "Algorithms", "order": 7 },
         { "slug": "architecture", "title": "Architecture", "order": 8 },
         { "slug": "cloud-architecture", "title": "Cloud Architecture", "order": 9 },
-        { "slug": "deployment/docker", "title": "Docker", "order": 10 }
+        { "slug": "deployment/docker", "title": "Docker", "order": 10 },
+        { "slug": "architecture/sync", "title": "Sync Architecture", "order": 11 }
       ]
     },
     {
@@ -160,7 +161,8 @@
         { "slug": "use-cases/rag-pipeline", "title": "RAG Pipeline", "order": 2 },
         { "slug": "use-cases/sports-analytics", "title": "Sports Analytics", "order": 3 },
         { "slug": "use-cases/grounded-neural-objects", "title": "Grounded Neural Objects", "order": 4 },
-        { "slug": "use-cases/behavior-graphs", "title": "Behavior Graphs", "order": 5 }
+        { "slug": "use-cases/behavior-graphs", "title": "Behavior Graphs", "order": 5 },
+        { "slug": "use-cases/agent-tooling", "title": "Agent Tooling", "order": 6 }
       ]
     },
     {

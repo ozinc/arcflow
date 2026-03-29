@@ -1,0 +1,243 @@
+---
+title: "Sync Architecture"
+description: "Local-first sync — browser/edge instances sync to cloud via HTTPS using WAL deltas and Z-set conflict resolution"
+section: "operations"
+status: "planned"
+---
+
+# Sync Architecture
+
+ArcFlow instances run locally (browser WASM, Node.js, edge device) and optionally sync to a persistent cloud graph via HTTPS. Local operations are instant. Sync is eventual, conflict-resolved, and resumable.
+
+## Overview
+
+```
+Local instance              Cloud / Primary
+┌──────────────────┐  HTTPS  ┌──────────────────┐
+│ Browser (WASM)   │────────→│ ArcFlow Cloud    │
+│ Node.js process  │←────────│                  │
+│ Edge device      │  sync   │ Persistent graph │
+│                  │         │ Shared state     │
+│ Local WAL        │         │ Multi-client     │
+└──────────────────┘         └──────────────────┘
+```
+
+All operations happen locally first. Sync pushes WAL deltas to the cloud and pulls remote changes back. Conflicts are resolved algebraically.
+
+## Activation
+
+### Browser
+
+```
+https://arcflow.dev/engine?sync=af_xxxxxxxxxxxx
+```
+
+### SDK
+
+```typescript
+import { open, openInMemory } from 'arcflow'
+
+// In-memory with cloud sync
+const db = openInMemory({
+  sync: 'https://api.arcflow.dev/v1/graphs/my-graph',
+  token: 'af_xxxxxxxxxxxx'
+})
+
+// Persistent with cloud sync
+const db = open('./local-graph', {
+  sync: 'https://api.arcflow.dev/v1/graphs/my-graph',
+  token: 'af_xxxxxxxxxxxx'
+})
+
+// Self-hosted sync target
+const db = openInMemory({
+  sync: 'https://my-company.com/arcflow/sync',
+  token: process.env.ARCFLOW_TOKEN
+})
+```
+
+### MCP server
+
+```bash
+npx arcflow-mcp --sync https://api.arcflow.dev/v1/graphs/my-graph --token af_xxx
+```
+
+## Sync protocol
+
+### Data flow
+
+```
+1. Local mutation
+   ↓
+2. Append to WAL (WalOp with sequence number)
+   ↓
+3. Batch into SyncDelta { peer_id, seq_start, seq_end, ops[], fingerprint }
+   ↓
+4. POST to sync endpoint
+   ↓
+5. Cloud applies ops with conflict resolution
+   ↓
+6. Cloud responds with remote changes since client's high-water mark
+   ↓
+7. Client applies remote changes locally
+   ↓
+8. Fingerprint comparison — both sides should match
+```
+
+### SyncDelta format
+
+```typescript
+interface SyncDelta {
+  peer_id: string           // Client identifier
+  seq_start: number         // First sequence number in batch
+  seq_end: number           // Last sequence number in batch
+  ops: WalOp[]              // Mutations (CreateNode, DeleteNode, SetProperty, etc.)
+  fingerprint: number       // Graph state hash after applying ops
+}
+```
+
+### WalOp types
+
+```typescript
+type WalOp =
+  | { type: 'CreateNode', id: string, labels: string[], properties: Record<string, string> }
+  | { type: 'CreateRelationship', id: string, start: string, end: string, rel_type: string, properties: Record<string, string> }
+  | { type: 'UpdateNodeProperties', id: string, properties: Record<string, string> }
+  | { type: 'SetNodeProperties', id: string, properties: Record<string, string> }
+  | { type: 'RemoveNodeProperty', id: string, key: string }
+  | { type: 'DeleteNode', id: string }
+  | { type: 'DeleteRelationship', id: string }
+```
+
+### Resume protocol
+
+Each client tracks a `high_water_mark` — the highest sequence number received from the cloud. On reconnect, the client sends its HWM and receives only the changes since then:
+
+```
+POST /sync
+{
+  "peer_id": "browser-abc123",
+  "high_water_mark": 4207,
+  "delta": { ... }         // local changes since last sync
+}
+
+Response:
+{
+  "remote_delta": { ... }, // changes from other clients since HWM
+  "new_high_water_mark": 4215,
+  "fingerprint": 9823471   // expected state after applying all
+}
+```
+
+## Conflict resolution
+
+When two clients mutate the same entity concurrently, ArcFlow resolves conflicts using **vector clocks** and **Z-set algebra**.
+
+### Vector clock ordering
+
+```
+Client A: { A: 5, B: 3 }
+Client B: { A: 4, B: 6 }
+
+Neither dominates → concurrent → conflict detected
+```
+
+### Resolution strategies
+
+| Strategy | Rule | Use case |
+|---|---|---|
+| Last-writer-wins | Higher vector clock wins | Default, simple |
+| Confidence-weighted | Higher confidence value wins | Evidence/observation data |
+| Z-set merge | Algebraic: insertions add, retractions subtract | Counters, aggregates |
+
+### Evidence-aware merge
+
+For nodes with confidence scores, the merge preserves the highest-confidence observation:
+
+```
+Client A writes: { name: 'Alice', confidence: 0.87, observation: 'inferred' }
+Client B writes: { name: 'Alice', confidence: 0.95, observation: 'observed' }
+
+Merge result: { name: 'Alice', confidence: 0.95, observation: 'observed' }
+```
+
+This uses the Z-set `EvidenceWeight` algebra: `add(a, b) = (max_confidence, highest_observation)`.
+
+### Fingerprint verification
+
+After applying all changes, both client and cloud compute a fingerprint (hash of graph state). If they match, sync is consistent. If not, a full snapshot reconciliation is triggered.
+
+## Implementation waves
+
+### Wave 1: Push-only sync (cloud backup)
+
+Local → cloud. No conflict resolution needed. Client pushes WAL deltas, cloud applies them.
+
+```typescript
+const db = openInMemory({ sync: url, token, mode: 'push' })
+// All local mutations automatically batched and pushed
+```
+
+### Wave 2: Bidirectional sync (multi-client)
+
+Cloud → local + local → cloud. Vector clock conflict resolution. Resume via high-water marks.
+
+```typescript
+const db = openInMemory({ sync: url, token, mode: 'sync' })
+// Mutations sync both ways, conflicts auto-resolved
+```
+
+### Wave 3: Replicated live views
+
+Standing queries (`CREATE LIVE VIEW`) replicated across clients. A live view defined on one client is automatically maintained on others.
+
+```typescript
+// Client A defines a view
+db.mutate("CREATE LIVE VIEW top_scores AS MATCH (n) WHERE n.score > 0.9 RETURN n")
+
+// Client B reads the same view (synced, incrementally maintained)
+db.query("MATCH (row) FROM VIEW top_scores RETURN row")
+```
+
+### Wave 4: Edge sync (offline-first)
+
+Edge devices (IoT, mobile) that go offline and reconcile when back online. Full conflict log with manual resolution option.
+
+## Engine primitives used
+
+All building blocks exist in the engine:
+
+| Primitive | Location | Purpose |
+|---|---|---|
+| `WalOp` | wc-storage | Mutation representation |
+| `MemoryWal` | wc-storage | WAL with `append()` and `replay_from()` |
+| `SyncDelta` | wc-storage/sync | Batched changes with fingerprint |
+| `SyncTracker` | wc-storage/sync | Per-peer HWM and ack tracking |
+| `VectorClock` | wc-storage/sync | Causal ordering across peers |
+| `ConflictResolver` | wc-storage/sync | Entity-level conflict detection + resolution |
+| `GraphDelta` | wc-core | CDC events (NodeCreated, PropertyChanged, etc.) |
+| `walop_to_graph_deltas()` | wc-storage/sync | WAL → CDC bridge |
+| `ZSet<K>` | wc-core | Algebraic merge (insert/retract/consolidate) |
+| `EvidenceWeight` | wc-types | Confidence-aware merge algebra |
+| `fingerprint()` | wc-core | Graph state hash for verification |
+| `changes_since()` | wc-core | Mutation log query by sequence |
+| `snapshot_json()` | wc-core | Full state serialization |
+| `ReplicationState` | wc-types | Primary/Replica/Edge mode tracking |
+
+## HTTP API endpoints (planned)
+
+```
+POST   /v1/graphs/:id/sync     — push delta, receive remote changes
+GET    /v1/graphs/:id/snapshot  — full graph snapshot (for initial sync)
+GET    /v1/graphs/:id/changes   — changes since sequence N
+POST   /v1/graphs/:id/resolve   — manual conflict resolution
+GET    /v1/graphs/:id/status    — sync status, peer count, lag
+```
+
+## Security
+
+- All sync over HTTPS (TLS 1.3)
+- Bearer token authentication per graph
+- Optional: per-peer write permissions (read-only replicas)
+- Fingerprint verification prevents tampering
+- WAL ops are signed with peer_id for provenance
