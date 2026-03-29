@@ -1,0 +1,215 @@
+# Use Case: Grounded Neural Objects
+
+Real-world objects — players, vehicles, robots, equipment — lifted into persistent, queryable, actionable graph entities with confidence, provenance, and real-time identity.
+
+## The Problem
+
+Tracking systems produce detections. Detections are ephemeral — they appear, disappear, get new IDs after occlusions, and lose continuity across camera handoffs. The gap between "I detected something" and "I know what this object is, where it's been, and what it can do" is where most production systems break down.
+
+**World-model labs ask:** how do objects emerge from pixels?
+**Production systems ask:** how do real objects stay identifiable, queryable, and actionable under occlusion, handoff, and sub-second control loops?
+
+## The Architecture
+
+Five layers, from physical reality to downstream actions:
+
+### 1. Physical object
+
+The real thing: player, ball, referee, vehicle, robot, sensor, pitch zone.
+
+### 2. Perceptual evidence plane
+
+Detection, pose estimation, keypoints, ReID embeddings, multicam association, triangulation. This layer produces **evidence** — timestamped, confidence-scored observations with provenance.
+
+### 3. Grounded Neural Object (GNO)
+
+A persistent object handle tied to evidence. Not a vague embedding — a typed runtime contract:
+
+```typescript
+interface GroundedNeuralObject {
+  gnoId: string              // Persistent ID (distinct from detector track IDs)
+  physicalClass: string      // 'player' | 'ball' | 'referee' | 'vehicle'
+  venueId: string            // Deployment site
+  tickerId: number           // Frame-aligned monotonic clock
+
+  // 3D state
+  pose3d: [number, number, number]
+  velocity: [number, number, number]
+  skeleton3d?: number[][]
+
+  // Identity
+  appearanceEmbedding: number[]
+  reidSignature: string
+  occlusionState: 'visible' | 'partial' | 'occluded' | 'lost'
+  visibilityByCamera: Record<string, number>  // cameraId → confidence
+
+  // Confidence (per-dimension, not scalar)
+  confidence: {
+    position: number
+    identity: number
+    relation: number
+  }
+
+  // Evidence trail
+  evidenceSources: string[]
+  lineage: string[]
+  traceId: string
+
+  // Learned sidecar (rides alongside physical track)
+  sidecar: {
+    dynamicsLatent: number[]
+    affordanceScores: Record<string, number>
+  }
+
+  // Graph relationships
+  relations: Array<{
+    type: string
+    targetGnoId: string
+    confidence: number
+  }>
+}
+```
+
+Key rules:
+- `gnoId` is distinct from detector track IDs — identity survives detector loss
+- Every update carries provenance and confidence
+- Relations are first-class, not post-hoc annotations
+- Downstream consumers (framing, zoom, analytics) consume the same object instance
+
+### 4. ArcFlow runtime
+
+This is where tracking becomes knowledge:
+
+```typescript
+import { open } from '@arcflow/sdk'
+
+const db = open('./venue-graph')
+
+// Mint a grounded neural object
+db.mutate(`CREATE (p:Player {
+  gnoId: $gnoId,
+  physicalClass: 'player',
+  venueId: $venueId,
+  name: $name,
+  teamId: $teamId,
+  x: $x, y: $y, z: $z,
+  speed: $speed,
+  confidence_position: $confPos,
+  confidence_identity: $confId,
+  occlusionState: 'visible',
+  reidSignature: $reid
+})`, {
+  gnoId: 'gno-player-10',
+  venueId: 'wembley',
+  name: 'Player 10',
+  teamId: 'home',
+  x: 52.3, y: 34.1, z: 0.0,
+  speed: 7.2,
+  confPos: 0.95,
+  confId: 0.92,
+  reid: 'reid-abc123'
+})
+
+// Create live relationship view: who's near the ball?
+db.mutate(`CREATE LIVE VIEW near_ball AS
+  MATCH (p:Player) MATCH (b:Ball)
+  WHERE p.confidence_position > 0.8
+  RETURN p.gnoId, p.name, p.x, p.y, b.x AS ballX, b.y AS ballY
+`)
+
+// Update position (delta propagation — not full recompute)
+db.mutate("MATCH (p:Player {gnoId: $id}) SET p.x = $x", {
+  id: 'gno-player-10', x: 53.1
+})
+
+// Live view updates automatically via CDC
+
+// Query: who's nearest to the ball right now?
+const nearest = db.query(`
+  MATCH (p:Player)
+  MATCH (b:Ball)
+  RETURN p.name, p.x, p.y, p.speed, p.confidence_position
+  ORDER BY p.confidence_position DESC
+  LIMIT 3
+`)
+
+// Temporal: where was player 10 at minute 35?
+const historical = db.query(
+  "MATCH (p:Player {gnoId: $id}) AS OF $ts RETURN p.x, p.y, p.speed",
+  { id: 'gno-player-10', ts: matchStartTimestamp + (35 * 60) }
+)
+```
+
+ArcFlow provides:
+- **Stable identity continuity** — `gnoId` persists through occlusions and camera handoffs
+- **Relations as graph edges** — `(:Player)-[:NEAR]->(:Ball)` maintained in real time
+- **Delta propagation** — one position update triggers live view refresh, not full recompute
+- **Confidence propagation** — per-dimension confidence flows through graph operations
+- **Batch/incremental equivalence** — same query, both modes, provably identical results
+- **Temporal snapshots** — AS OF queries for any point in time
+- **Lineage** — every state change traceable to evidence sources
+
+### 5. Downstream actions
+
+Framing, zoom, replay, analytics, operator prompts, robotic PTZ control, API consumers — all read from the same grounded neural object. No separate data models per consumer.
+
+## Use case: Ball + nearest 2 players through camera handoff
+
+The smallest viable experiment:
+
+### Build
+```typescript
+const db = open('./venue-graph')
+
+// Ingest detector/tracker/fusion outputs
+function ingestDetection(det: Detection) {
+  db.mutate(`
+    MERGE (obj:${det.class} {gnoId: $gnoId})
+    SET obj.x = $x, obj.y = $y, obj.z = $z,
+        obj.speed = $speed,
+        obj.confidence_position = $confPos,
+        obj.occlusionState = $occState
+  `, {
+    gnoId: det.gnoId,
+    x: det.x, y: det.y, z: det.z,
+    speed: det.speed,
+    confPos: det.confidence,
+    occState: det.occluded ? 'occluded' : 'visible'
+  })
+}
+
+// Maintain live relation: nearest players to ball
+db.mutate(`CREATE LIVE VIEW ball_proximity AS
+  MATCH (p:Player) MATCH (b:Ball)
+  WHERE p.confidence_position > 0.7
+  RETURN p.gnoId, p.name, p.x, p.y, b.x AS bx, b.y AS by
+  ORDER BY p.confidence_position DESC
+  LIMIT 3
+`)
+
+// Drive framing from the same object
+function getFramingTarget() {
+  return db.query("MATCH (b:Ball) RETURN b.x, b.y, b.confidence_position")
+}
+```
+
+### Measure
+- ID switch rate (how often `gnoId` incorrectly changes)
+- Occlusion reacquisition latency (ms to recover after occlusion)
+- Tracking ↔ framing disagreement rate
+- Batch vs delta divergence (should be zero)
+- Operator override rate
+
+## Applicable domains
+
+| Domain | Physical objects | Key challenge |
+|---|---|---|
+| Sports analytics | Players, ball, referee, formations | Camera handoff, occlusion, sub-second control |
+| Fleet management | Vehicles, warehouses, delivery zones | GPS drift, tunnel loss, geofence transitions |
+| IoT / robotics | Sensors, robots, equipment, zones | Sensor failure, partial observability |
+| Security / CCTV | People, vehicles, restricted areas | Multi-camera identity, dwell detection |
+| Gaming / simulation | NPCs, items, terrain, projectiles | State synchronization, spatial awareness |
+
+## Key insight
+
+The learned layer (sidecar) rides **alongside** the physical track — it doesn't replace it. This is not a generative model hallucinating objects. It's an evidence pipeline under real-time physical constraints, with ArcFlow maintaining the objects as a live executable graph.

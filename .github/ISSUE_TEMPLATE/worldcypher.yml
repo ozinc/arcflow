@@ -1,0 +1,31 @@
+name: WorldCypher Compatibility
+description: Report a WorldCypher syntax that doesn't work as expected
+labels: [worldcypher, compatibility]
+body:
+  - type: textarea
+    id: query
+    attributes:
+      label: WorldCypher Query
+      description: The query that doesn't work or behaves unexpectedly
+      render: cypher
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should happen?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What actually happens? Include error messages if any.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: SDK Version
+      placeholder: "0.1.0"

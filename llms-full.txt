@@ -1,0 +1,295 @@
+# ArcFlow SDK — Complete Agent Reference
+
+This file contains the complete API surface, WorldCypher syntax, and all patterns
+needed to integrate ArcFlow into any TypeScript/Node.js application.
+
+## Installation
+
+```bash
+npm install @arcflow/sdk
+```
+
+## Complete API
+
+```typescript
+import { open, openInMemory, ArcflowError } from '@arcflow/sdk'
+
+// ── Lifecycle ──
+const db = openInMemory()                    // In-memory (testing)
+const db = open('./data/graph')              // Persistent (WAL-journaled)
+db.version()                                 // "7.0.0"
+db.isHealthy()                               // true
+db.stats()                                   // { nodes: N, relationships: N, indexes: N }
+db.close()                                   // Flush WAL, release resources
+
+// ── Queries ──
+const result = db.query("MATCH (n:Person) RETURN n.name, n.age")
+const result = db.query("MATCH (n {id: $id}) RETURN n", { id: 'p1' })
+
+result.columns                               // ["n.name", "n.age"]
+result.rows                                  // TypedRow[]
+result.rowCount                              // number
+result.computeMs                             // number (ms)
+result.rows[0].get('name')                   // "Alice" (string)
+result.rows[0].get('age')                    // 30 (number)
+result.rows[0].get('nonexistent')            // null
+result.rows[0].toObject()                    // { 'n.name': 'Alice', 'n.age': 30 }
+
+// ── Mutations ──
+const mr = db.mutate("CREATE (n:Person {name: $name, age: $age})", { name: 'Alice', age: 30 })
+mr.nodesCreated                              // number
+mr.relationshipsCreated                      // number
+
+// ── Batch ──
+const count = db.batchMutate([
+  "MERGE (a:Person {id: 'p1', name: 'Alice'})",
+  "MERGE (b:Org {id: 'o1', name: 'Acme'})",
+])                                           // 2
+
+// ── Errors ──
+try { db.query("INVALID") } catch (e) {
+  if (e instanceof ArcflowError) {
+    e.code                                   // "EXPECTED_KEYWORD"
+    e.category                               // "parse"
+    e.suggestion                             // "Expected MATCH or CREATE"
+    e.message                                // full error message
+  }
+}
+
+// ── Parameters ──
+// type QueryParams = Record<string, string | number | boolean | null>
+db.query("MATCH (n {name: $name, score: $s}) RETURN n", { name: 'Alice', s: 42 })
+// Arrays: pass as JSON string
+db.query("CALL algo.vectorSearch('idx', $v, 10)", { v: JSON.stringify([0.1, 0.2]) })
+```
+
+## WorldCypher — Complete Syntax Reference
+
+### CREATE
+```cypher
+CREATE (n:Person {name: 'Alice', age: 30})
+CREATE (a:Person {name: 'Alice'})-[:KNOWS]->(b:Person {name: 'Bob'})
+```
+
+### MATCH + RETURN
+```cypher
+MATCH (n:Person) RETURN n.name, n.age
+MATCH (n:Person {name: 'Alice'}) RETURN n
+MATCH (n:Person) WHERE n.age > 25 RETURN n.name
+MATCH (n:Person) WHERE n.name CONTAINS 'ali' RETURN n.name
+MATCH (n:Person) WHERE n.name STARTS WITH 'A' RETURN n.name
+MATCH (n) WHERE (n:Person OR n:Company) RETURN n.name
+MATCH (n:Person) RETURN count(*), avg(n.age), sum(n.score), min(n.age), max(n.age)
+MATCH (n:Person) RETURN n.city, count(*) AS cnt ORDER BY cnt DESC LIMIT 10
+MATCH (n:Person) RETURN COALESCE(n.email, 'none') AS email
+MATCH (n:Person) RETURN toLower(n.name) AS lower
+MATCH (n:Person) RETURN labels(n)
+```
+
+### Relationships
+```cypher
+MATCH (a:Person)-[:KNOWS]->(b:Person) RETURN a.name, b.name
+MATCH (a)-[:KNOWS*1..3]->(b) RETURN b.name
+MATCH (a:Person)-[r]->(b) RETURN a.name, type(r), b.name
+```
+
+### Multi-MATCH (joins)
+```cypher
+MATCH (a:Person {id: $pid}) MATCH (b:Org {id: $oid}) RETURN a.name, b.name
+MATCH (a:Person {id: 'p1'}) MATCH (b:Org {id: 'o1'}) MERGE (a)-[:WORKS_AT]->(b)
+```
+
+### OPTIONAL MATCH
+```cypher
+MATCH (p:Person) OPTIONAL MATCH (p)-[:WORKS_AT]->(o:Org) RETURN p.name, o.name
+```
+
+### MERGE (upsert)
+```cypher
+MERGE (n:Person {id: 'p1', name: 'Alice'})
+MERGE (n:Person {id: $id}) ON CREATE SET n.name = $name ON MATCH SET n.updated = $ts
+```
+
+### SET (update)
+```cypher
+MATCH (n:Person {name: 'Alice'}) SET n.age = 31
+```
+
+### DELETE
+```cypher
+MATCH (n:Person {name: 'Alice'}) DELETE n
+MATCH (n:Person {name: 'Alice'}) DETACH DELETE n
+```
+
+### REMOVE
+```cypher
+MATCH (n:Person {name: 'Alice'}) REMOVE n.email
+```
+
+### WITH
+```cypher
+MATCH (n:Person) WITH n WHERE n.age > 25 RETURN n.name
+```
+
+### UNWIND
+```cypher
+UNWIND [1, 2, 3] AS x RETURN x
+```
+
+### ORDER BY + LIMIT
+```cypher
+MATCH (n:Person) RETURN n.name ORDER BY n.age DESC LIMIT 10
+```
+
+### Temporal
+```cypher
+MATCH (n:Person) AS OF 1700000000 RETURN n.name
+```
+
+### Indexes
+```cypher
+CREATE VECTOR INDEX name FOR (n:Label) ON (n.embedding) OPTIONS {dimensions: 1536, similarity: 'cosine'}
+CREATE FULLTEXT INDEX name FOR (n:Label) ON (n.prop)
+```
+
+### Algorithms
+```cypher
+CALL algo.pageRank()
+CALL algo.louvain()
+CALL algo.leiden()
+CALL algo.betweenness()
+CALL algo.closeness()
+CALL algo.degreeCentrality()
+CALL algo.connectedComponents()
+CALL algo.communityDetection()
+CALL algo.clusteringCoefficient()
+CALL algo.nodeSimilarity()
+CALL algo.triangleCount()
+CALL algo.kCore()
+CALL algo.density()
+CALL algo.diameter()
+CALL algo.allPairsShortestPath()
+CALL algo.nearestNodes()
+CALL algo.confidencePath()
+CALL algo.confidencePageRank()
+CALL algo.vectorSearch('index_name', $vector, 10)
+CALL algo.similarNodes()
+CALL algo.hybridSearch()
+CALL algo.graphRAG()
+CALL algo.graphRAGTrusted()
+CALL algo.compoundingScore
+CALL algo.contradictions()
+CALL algo.audienceProjection('Person=0.9,Company=0.5')
+CALL algo.factsByRegime('2024')
+CALL algo.multiModalFusion()
+```
+
+### Database procedures
+```cypher
+CALL db.stats
+CALL db.schema
+CALL db.labels
+CALL db.types
+CALL db.propertyKeys
+CALL db.indexes
+CALL db.nodeCount
+CALL db.relationshipCount
+CALL db.version
+CALL db.capabilities
+CALL db.doctor
+CALL db.fingerprint
+CALL db.validateQuery('MATCH (n) RETURN n')
+CALL db.export
+CALL db.import
+CALL db.import.csv
+CALL db.clear
+CALL db.demo
+CALL db.help
+CALL db.procedures
+CALL db.tutorial
+CALL db.index.fulltext.queryNodes('index_name', 'search query')
+CALL db.checkpoint
+```
+
+### Temporal procedures
+```cypher
+CALL temporal.decay(7, 0.01)
+CALL temporal.trajectory()
+CALL temporal.velocity(7)
+```
+
+### Reactive
+```cypher
+LIVE MATCH (n:Person) WHERE n.score > 0.9 RETURN n
+LIVE CALL algo.pageRank()
+CREATE LIVE VIEW top_scores AS MATCH (n:Person) WHERE n.score > 0.9 RETURN n.name
+```
+
+### Session / Multi-tenancy
+```cypher
+USE PARTITION 'workspace-42'
+SET SESSION ACTOR 'user-1' ROLE 'admin'
+```
+
+### Skills
+```cypher
+CREATE SKILL summarize FROM PROMPT 'Summarize the following: {{input}}'
+PROCESS NODE (n:Document)
+```
+
+## Common Patterns
+
+### CRUD
+```typescript
+db.mutate("CREATE (n:Person {name: $name, age: $age})", { name: 'Alice', age: 30 })
+db.query("MATCH (n:Person {name: $name}) RETURN n.age", { name: 'Alice' })
+db.mutate("MATCH (n:Person {name: $name}) SET n.age = $age", { name: 'Alice', age: 31 })
+db.mutate("MATCH (n:Person {name: $name}) DETACH DELETE n", { name: 'Alice' })
+```
+
+### Entity linking (knowledge graph pattern)
+```typescript
+db.mutate("CREATE (p:Person {id: 'p1', name: 'Alice'})")
+db.mutate("CREATE (o:Org {id: 'o1', name: 'Acme'})")
+db.mutate("MATCH (a:Person {id: $pid}) MATCH (b:Org {id: $oid}) MERGE (a)-[:WORKS_AT]->(b)", { pid: 'p1', oid: 'o1' })
+```
+
+### Batch ingestion (pipeline pattern)
+```typescript
+db.batchMutate([
+  "MERGE (p:Person {id: 'p1', name: 'Alice'})",
+  "MERGE (o:Org {id: 'o1', name: 'Acme'})",
+  "MERGE (f:Fact {uuid: 'f1', predicate: 'employment', confidence: 0.87})",
+])
+// Then link:
+db.batchMutate([
+  "MATCH (p:Person {id: 'p1'}) MATCH (f:Fact {uuid: 'f1'}) MERGE (p)-[:SUBJECT_OF]->(f)",
+  "MATCH (f:Fact {uuid: 'f1'}) MATCH (o:Org {id: 'o1'}) MERGE (f)-[:OBJECT_IS]->(o)",
+])
+```
+
+### Vector search + graph traversal (RAG pattern)
+```typescript
+db.mutate("CREATE VECTOR INDEX docs FOR (n:Doc) ON (n.embedding) OPTIONS {dimensions: 1536, similarity: 'cosine'}")
+const results = db.query("CALL algo.vectorSearch('docs', $vec, 5)", { vec: JSON.stringify(embedding) })
+for (const row of results.rows) {
+  const related = db.query("MATCH (d:Doc {title: $t})-[:MENTIONS]->(e) RETURN e.name", { t: String(row.get('title')) })
+}
+```
+
+### Testing
+```typescript
+import { openInMemory, ArcflowError } from '@arcflow/sdk'
+const db = openInMemory()  // Fresh graph per test, no cleanup
+db.mutate("CREATE (n:Test {x: 1})")
+const r = db.query("MATCH (n:Test) RETURN n.x")
+assert(r.rows[0].get('x') === 1)
+```
+
+## Caveats
+
+- SET: one property per clause (no comma-separated SET n.a=1, n.b=2)
+- UNWIND: literal lists only ([1,2,3]), not variables
+- Parameters: all values coerced to strings internally
+- Metal GPU: set ARCFLOW_METAL_FORCE_UNAVAILABLE=true if module load hangs
+- pnpm file: protocol may need manual .node binary copy after rebuild

@@ -1,0 +1,14 @@
+services:
+  arcflow:
+    image: ghcr.io/oz-global/arcflow:latest
+    ports:
+      - "7687:7687"    # Bolt protocol
+      - "8080:8080"    # HTTP API
+    volumes:
+      - arcflow-data:/data
+    environment:
+      - ARCFLOW_DATA_DIR=/data
+      - ARCFLOW_LOG_LEVEL=info
+
+volumes:
+  arcflow-data:

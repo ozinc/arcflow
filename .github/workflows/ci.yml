@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: typescript/package-lock.json
+      - run: cd typescript && npm ci
+      - run: cd typescript && npm run typecheck
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: typescript/package-lock.json
+      - run: cd typescript && npm ci
+      - run: cd typescript && npm run lint
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: typescript/package-lock.json
+      - run: cd typescript && npm ci
+      - run: cd typescript && npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: typescript/dist/
+
+  test:
+    name: Test (Node ${{ matrix.node-version }})
+    needs: build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        node-version: [18, 20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+          cache-dependency-path: typescript/package-lock.json
+      - run: cd typescript && npm ci
+      - run: cd typescript && npm run build
+      - run: cd typescript && npm test
+        env:
+          ARCFLOW_METAL_FORCE_UNAVAILABLE: 'true'
+
+  release:
+    name: Release
+    needs: [typecheck, lint, build, test]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: typescript/package-lock.json
+          registry-url: 'https://registry.npmjs.org'
+      - run: cd typescript && npm ci
+      - run: cd typescript && npm run build
+      - name: Create Release Pull Request or Publish
+        uses: changesets/action@v1
+        with:
+          publish: cd typescript && npx changeset publish
+          title: 'chore: release @arcflow/sdk'
+          commit: 'chore: release @arcflow/sdk'
+          cwd: typescript
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

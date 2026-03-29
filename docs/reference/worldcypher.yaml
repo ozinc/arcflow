@@ -1,0 +1,184 @@
+# WorldCypher Compatibility — Machine-Readable Format
+# Use this file for programmatic consumption by agents and tools.
+
+version: "1.6.0"
+last_updated: "2026-03-29"
+
+clauses:
+  - name: CREATE
+    status: supported
+    syntax: "CREATE (n:Label {key: 'value'})"
+  - name: CREATE_RELATIONSHIP
+    status: supported
+    syntax: "CREATE (a:L1)-[:REL]->(b:L2)"
+  - name: MATCH
+    status: supported
+    syntax: "MATCH (n:Label {key: 'value'})"
+  - name: MULTI_MATCH
+    status: supported
+    syntax: "MATCH (a) MATCH (b) RETURN a, b"
+    note: "CartesianProduct"
+  - name: OPTIONAL_MATCH
+    status: supported
+    syntax: "MATCH (a) OPTIONAL MATCH (a)-[:R]->(b)"
+  - name: MERGE
+    status: supported
+    syntax: "MERGE (n:Label {props})"
+    note: "ON CREATE/ON MATCH SET supported"
+  - name: MERGE_RELATIONSHIP
+    status: partial
+    syntax: "MERGE (a)-[:R]->(b)"
+    note: "May create duplicates if match criteria are not precise"
+  - name: DELETE
+    status: supported
+    syntax: "MATCH (n) DELETE n"
+  - name: DETACH_DELETE
+    status: supported
+    syntax: "MATCH (n) DETACH DELETE n"
+  - name: SET
+    status: supported
+    syntax: "SET n.key = value"
+    note: "One property per SET clause"
+  - name: SET_MULTIPLE
+    status: partial
+    syntax: "SET n.a = 1 SET n.b = 2"
+    note: "Comma-separated not supported; use separate SET clauses"
+  - name: REMOVE
+    status: supported
+    syntax: "REMOVE n.key"
+  - name: WITH
+    status: supported
+    syntax: "WITH n WHERE ... RETURN"
+  - name: UNWIND
+    status: supported
+    syntax: "UNWIND [1,2,3] AS x"
+    note: "Literal lists only"
+  - name: WHERE
+    status: supported
+    syntax: "WHERE n.age > 30"
+  - name: WHERE_OR_LABELS
+    status: supported
+    syntax: "WHERE (n:Person OR n:Company)"
+  - name: RETURN
+    status: supported
+    syntax: "RETURN n.name, count(*)"
+  - name: ORDER_BY
+    status: supported
+    syntax: "ORDER BY n.age DESC"
+  - name: LIMIT
+    status: supported
+    syntax: "LIMIT 10"
+  - name: AS_OF
+    status: supported
+    syntax: "MATCH (n) AS OF 1700000000"
+
+expressions:
+  - name: CONTAINS
+    status: supported
+    syntax: "WHERE n.name CONTAINS 'ali'"
+  - name: STARTS_WITH
+    status: supported
+    syntax: "WHERE n.name STARTS WITH 'A'"
+  - name: toLower
+    status: supported
+    syntax: "RETURN toLower(n.name)"
+  - name: COALESCE
+    status: supported
+    syntax: "RETURN COALESCE(n.x, 0)"
+  - name: labels
+    status: supported
+    syntax: "RETURN labels(n)"
+  - name: variable_length_paths
+    status: supported
+    syntax: "MATCH (a)-[:KNOWS*1..3]->(b)"
+
+aggregations:
+  - { name: "count", syntax: "count(*)" }
+  - { name: "sum", syntax: "sum(n.x)" }
+  - { name: "avg", syntax: "avg(n.x)" }
+  - { name: "min", syntax: "min(n.x)" }
+  - { name: "max", syntax: "max(n.x)" }
+  - { name: "collect", syntax: "collect(n.x)" }
+
+indexes:
+  - name: VECTOR_INDEX
+    status: supported
+    syntax: "CREATE VECTOR INDEX name FOR (n:Label) ON (n.prop) OPTIONS {dimensions: N, similarity: 'cosine'}"
+  - name: FULLTEXT_INDEX
+    status: supported
+    syntax: "CREATE FULLTEXT INDEX name FOR (n:Label) ON (n.prop)"
+
+algorithms:
+  - algo.pageRank
+  - algo.confidencePageRank
+  - algo.betweenness
+  - algo.closeness
+  - algo.degreeCentrality
+  - algo.louvain
+  - algo.leiden
+  - algo.communityDetection
+  - algo.connectedComponents
+  - algo.clusteringCoefficient
+  - algo.nodeSimilarity
+  - algo.triangleCount
+  - algo.kCore
+  - algo.density
+  - algo.diameter
+  - algo.allPairsShortestPath
+  - algo.nearestNodes
+  - algo.confidencePath
+  - algo.vectorSearch
+  - algo.similarNodes
+  - algo.hybridSearch
+  - algo.graphRAG
+  - algo.graphRAGContext
+  - algo.graphRAGTrusted
+  - algo.compoundingScore
+  - algo.contradictions
+  - algo.audienceProjection
+  - algo.factsByRegime
+  - algo.multiModalFusion
+
+db_procedures:
+  - db.stats
+  - db.schema
+  - db.labels
+  - db.types
+  - db.propertyKeys
+  - db.indexes
+  - db.nodeCount
+  - db.relationshipCount
+  - db.version
+  - db.capabilities
+  - db.doctor
+  - db.fingerprint
+  - db.validateQuery
+  - db.export
+  - db.import
+  - db.import.csv
+  - db.clear
+  - db.demo
+  - db.help
+  - db.procedures
+  - db.tutorial
+  - db.index.fulltext.queryNodes
+  - db.checkpoint
+
+temporal_procedures:
+  - temporal.decay
+  - temporal.trajectory
+  - temporal.velocity
+
+reactive:
+  - { name: LIVE_MATCH, syntax: "LIVE MATCH (n:Person) RETURN n" }
+  - { name: LIVE_CALL, syntax: "LIVE CALL algo.pageRank()" }
+  - { name: CREATE_LIVE_VIEW, syntax: "CREATE LIVE VIEW name AS ..." }
+
+session:
+  - { name: USE_PARTITION, syntax: "USE PARTITION 'workspace-id'" }
+  - { name: SET_SESSION, syntax: "SET SESSION ACTOR 'user-id' ROLE 'admin'" }
+
+parameters:
+  binding: "$param"
+  types: ["string", "number", "boolean", "null"]
+  note: "All values coerced to strings internally"

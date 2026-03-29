@@ -1,0 +1,77 @@
+# Use Case: Knowledge Management
+
+Build a knowledge graph that captures entities, relationships, and facts from unstructured data — then query it with graph algorithms and semantic search.
+
+## The problem
+
+Your application processes documents, conversations, or data feeds and needs to:
+- Extract entities (people, organizations, events, concepts)
+- Link entities across sources
+- Score relationship confidence
+- Search by meaning, not just keywords
+- Find hidden connections via graph traversal
+
+## Why ArcFlow
+
+- **Single engine** — graph storage, vector search, full-text search, and algorithms in one process
+- **No infrastructure** — no separate Neo4j, Pinecone, Elasticsearch instances to manage
+- **In-process speed** — no network roundtrips between your app and the database
+- **Fact-based modeling** — first-class confidence scores and provenance on relationships
+
+## Architecture
+
+```
+Data Sources → Extraction Pipeline → ArcFlow Graph → Query API → Application
+                                         ↕
+                                   Vector Index
+                                   Full-Text Index
+                                   Graph Algorithms
+```
+
+## Implementation sketch
+
+```typescript
+import { open } from '@arcflow/sdk'
+
+const db = open('./knowledge-graph')
+
+// Ingest pipeline: extract entities and facts from documents
+function ingestDocument(doc: Document, extractedEntities: Entity[], extractedFacts: Fact[]) {
+  // Create document node
+  db.mutate("MERGE (d:Document {id: $id, title: $title, embedding: $emb})", {
+    id: doc.id, title: doc.title, emb: JSON.stringify(doc.embedding)
+  })
+
+  // Create entity nodes
+  const entityMutations = extractedEntities.map(e =>
+    `MERGE (n:${e.type} {id: '${e.id}', name: '${e.name}'})`
+  )
+  db.batchMutate(entityMutations)
+
+  // Create facts with confidence
+  for (const fact of extractedFacts) {
+    db.batchMutate([
+      `MERGE (f:Fact {uuid: '${fact.id}', predicate: '${fact.predicate}', confidence: ${fact.confidence}})`,
+      `MATCH (s {id: '${fact.subjectId}'}) MATCH (f:Fact {uuid: '${fact.id}'}) MERGE (s)-[:SUBJECT_OF]->(f)`,
+      `MATCH (f:Fact {uuid: '${fact.id}'}) MATCH (o {id: '${fact.objectId}'}) MERGE (f)-[:OBJECT_IS]->(o)`,
+    ])
+  }
+}
+
+// Query: semantic search + graph expansion
+function search(queryEmbedding: number[]) {
+  const docs = db.query(
+    "CALL algo.vectorSearch('doc_embeddings', $v, 5)",
+    { v: JSON.stringify(queryEmbedding) }
+  )
+
+  const entities = db.query("CALL algo.pageRank()")
+  const communities = db.query("CALL algo.louvain()")
+
+  return { docs, entities, communities }
+}
+```
+
+## Real-world example
+
+See [BASAL](https://github.com/ArcFlowLabs) — a knowledge management platform built on ArcFlow that processes unstructured data into a queryable knowledge graph with confidence-scored facts.

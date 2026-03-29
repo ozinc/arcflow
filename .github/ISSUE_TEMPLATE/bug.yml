@@ -1,0 +1,43 @@
+name: Bug Report
+description: Report a bug in the ArcFlow SDK
+labels: [bug]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened? What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Minimal code to reproduce the issue
+      render: typescript
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: SDK Version
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - macOS (Apple Silicon)
+        - macOS (Intel)
+        - Linux (x64)
+        - Linux (ARM64)
+        - Windows (x64)
+    validations:
+      required: true
+  - type: input
+    id: node-version
+    attributes:
+      label: Node.js Version
+      placeholder: "22.0.0"

@@ -1,0 +1,134 @@
+# Tutorial: Graph Algorithms
+
+Run graph algorithms directly — no projection lifecycle, no GDS catalog, no setup.
+
+## Key difference from Neo4j GDS
+
+In Neo4j, you'd do: create catalog → project graph → run algorithm → drop projection.
+
+In ArcFlow: just run it.
+
+```typescript
+// That's it. No projection. No catalog.
+const pr = db.query("CALL algo.pageRank()")
+```
+
+## PageRank
+
+Find the most important nodes in your graph:
+
+```typescript
+import { openInMemory } from '@arcflow/sdk'
+
+const db = openInMemory()
+
+// Build a small web graph
+db.batchMutate([
+  "CREATE (a:Page {name: 'Home'})",
+  "CREATE (b:Page {name: 'About'})",
+  "CREATE (c:Page {name: 'Blog'})",
+  "CREATE (d:Page {name: 'Contact'})",
+  "CREATE (a:Page {name: 'Home'})-[:LINKS]->(b:Page {name: 'About'})",
+  "CREATE (a:Page {name: 'Home'})-[:LINKS]->(c:Page {name: 'Blog'})",
+  "CREATE (b:Page {name: 'About'})-[:LINKS]->(a:Page {name: 'Home'})",
+  "CREATE (c:Page {name: 'Blog'})-[:LINKS]->(a:Page {name: 'Home'})",
+  "CREATE (c:Page {name: 'Blog'})-[:LINKS]->(d:Page {name: 'Contact'})",
+])
+
+const pr = db.query("CALL algo.pageRank()")
+for (const row of pr.rows) {
+  console.log(`${row.get('name')}: ${row.get('rank')}`)
+}
+// Home has the highest rank (most incoming links)
+```
+
+## Community Detection
+
+Find clusters of densely connected nodes:
+
+```typescript
+// Louvain — fast, hierarchical communities
+const communities = db.query("CALL algo.louvain()")
+for (const row of communities.rows) {
+  console.log(`${row.get('name')} → community ${row.get('community')}`)
+}
+
+// Leiden — more accurate for large graphs
+const leiden = db.query("CALL algo.leiden()")
+```
+
+## Centrality Measures
+
+### Betweenness centrality
+
+Which nodes are bridges between communities?
+
+```typescript
+const betweenness = db.query("CALL algo.betweenness()")
+for (const row of betweenness.rows) {
+  console.log(`${row.get('name')}: ${row.get('score')}`)
+}
+```
+
+### Closeness centrality
+
+Which nodes can reach all others most quickly?
+
+```typescript
+const closeness = db.query("CALL algo.closeness()")
+```
+
+### Degree centrality
+
+Which nodes have the most connections?
+
+```typescript
+const degree = db.query("CALL algo.degreeCentrality()")
+```
+
+## Path Finding
+
+### All-pairs shortest paths
+
+```typescript
+const paths = db.query("CALL algo.allPairsShortestPath()")
+```
+
+### Confidence-weighted paths
+
+Find the most reliable path (highest minimum confidence):
+
+```typescript
+const path = db.query("CALL algo.confidencePath()")
+```
+
+## Graph Properties
+
+```typescript
+// How many triangles exist?
+const tri = db.query("CALL algo.triangleCount()")
+
+// Local clustering coefficient
+const cc = db.query("CALL algo.clusteringCoefficient()")
+
+// Graph density (0 to 1)
+const density = db.query("CALL algo.density()")
+
+// Graph diameter (longest shortest path)
+const diameter = db.query("CALL algo.diameter()")
+```
+
+## Node Similarity
+
+Find nodes with similar connection patterns:
+
+```typescript
+const similar = db.query("CALL algo.nodeSimilarity()")
+for (const row of similar.rows) {
+  console.log(`${row.get('node1')} ↔ ${row.get('node2')}: ${row.get('score')}`)
+}
+```
+
+## Available algorithms
+
+See the full list in the [Compatibility Matrix](../reference/compatibility.md#algorithms-call-algo).

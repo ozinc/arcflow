@@ -1,0 +1,58 @@
+# Recipe: Multi-MATCH Patterns
+
+How to work with multiple independent MATCH clauses in a single query.
+
+**Important:** When returning the same property name from multiple variables (e.g., `a.name` and `b.name`), use `AS` aliases to avoid column name collisions.
+
+## Basic multi-MATCH
+
+Find two nodes independently and return both:
+
+```typescript
+const result = db.query(
+  "MATCH (a:Person {id: $pid}) MATCH (b:Org {id: $oid}) RETURN a.name AS aName, b.name AS bName",
+  { pid: 'p1', oid: 'o1' }
+)
+```
+
+## Create relationship between matched nodes
+
+```typescript
+db.mutate(
+  "MATCH (a:Person {id: $pid}) MATCH (b:Org {id: $oid}) MERGE (a)-[:WORKS_AT]->(b)",
+  { pid: 'p1', oid: 'o1' }
+)
+```
+
+## Triple-MATCH (three independent patterns)
+
+```typescript
+const result = db.query(`
+  MATCH (p:Person {id: $pid})
+  MATCH (o:Org {id: $oid})
+  MATCH (f:Fact {uuid: $fid})
+  RETURN p.name AS pName, o.name AS oName, f.predicate
+`, { pid: 'p1', oid: 'o1', fid: 'f1' })
+```
+
+## Cartesian product (cross join)
+
+Without filters, multi-MATCH creates a cartesian product:
+
+```typescript
+// 3 people × 2 orgs = 6 rows
+const result = db.query("MATCH (a:Person) MATCH (b:Org) RETURN a.name AS aName, b.name AS bName")
+```
+
+## OPTIONAL MATCH
+
+Left join — returns the first match even if the second has no results:
+
+```typescript
+const result = db.query(`
+  MATCH (p:Person {id: $id})
+  OPTIONAL MATCH (p)-[:WORKS_AT]->(o:Org)
+  RETURN p.name AS pName, o.name AS oName
+`, { id: 'p1' })
+// If person has no WORKS_AT, oName is null
+```

@@ -1,0 +1,42 @@
+# Recipe: Temporal Queries
+
+Query the graph at a specific point in time.
+
+## Snapshot query (AS OF)
+
+```typescript
+// Query the graph as it was at a Unix timestamp
+const result = db.query("MATCH (n:Person) AS OF 1700000000 RETURN n.name, n.age")
+```
+
+## Temporal decay
+
+Apply exponential decay to rank recent data higher:
+
+```typescript
+const decayed = db.query("CALL temporal.decay(7, 0.01)")
+// halfLife=7 days, floor=0.01
+```
+
+## Velocity (rate of change)
+
+How fast is the graph changing?
+
+```typescript
+const v = db.query("CALL temporal.velocity(7)")  // last 7 days
+console.log(v.rows[0].get('totalNodes'))
+```
+
+## Trajectory
+
+Track an entity's changes over time:
+
+```typescript
+const trajectory = db.query("CALL temporal.trajectory()")
+```
+
+## Changes since checkpoint
+
+```typescript
+const changes = db.query("CALL db.changesSince")
+```

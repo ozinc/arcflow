@@ -1,0 +1,183 @@
+# WorldCypher Compatibility Matrix
+
+Complete reference of supported WorldCypher features, syntax, and current status.
+
+## Query Clauses
+
+| Feature | Status | Syntax | Notes |
+|---|---|---|---|
+| CREATE node | ✅ | `CREATE (n:Label {props})` | |
+| CREATE relationship | ✅ | `CREATE (a)-[:REL]->(b)` | Inline with nodes |
+| MATCH | ✅ | `MATCH (n:Label {props})` | |
+| Multi-MATCH | ✅ | `MATCH (a) MATCH (b) RETURN a, b` | CartesianProduct |
+| OPTIONAL MATCH | ✅ | `MATCH (a) OPTIONAL MATCH (a)-[:R]->(b)` | |
+| MERGE node | ✅ | `MERGE (n:Label {props})` | ON CREATE/ON MATCH SET |
+| MERGE relationship | ⚠️ | `MERGE (a)-[:R]->(b)` | Creates if not found; find-or-create may create duplicates |
+| DELETE | ✅ | `MATCH (n) DELETE n` | |
+| DETACH DELETE | ✅ | `MATCH (n) DETACH DELETE n` | Cascade deletes relationships |
+| SET property | ✅ | `SET n.key = value` | One property per SET clause |
+| SET multiple | ⚠️ | `SET n.a = 1, n.b = 2` | Use separate SET clauses: `SET n.a = 1 SET n.b = 2` |
+| REMOVE | ✅ | `REMOVE n.key` | Remove a property |
+| WITH | ✅ | `WITH n WHERE ... RETURN` | Projection + CTE forms |
+| UNWIND | ✅ | `UNWIND [1,2,3] AS x` | Literal lists only |
+| WHERE | ✅ | `WHERE n.age > 30` | |
+| WHERE OR labels | ✅ | `WHERE (n:Person OR n:Company)` | |
+| RETURN | ✅ | `RETURN n.name, count(*)` | |
+| ORDER BY | ✅ | `ORDER BY n.age DESC` | |
+| LIMIT | ✅ | `LIMIT 10` | |
+
+## Expressions & Predicates
+
+| Feature | Status | Syntax | Notes |
+|---|---|---|---|
+| CONTAINS | ✅ | `WHERE n.name CONTAINS 'ali'` | |
+| STARTS WITH | ✅ | `WHERE n.name STARTS WITH 'A'` | |
+| toLower | ✅ | `RETURN toLower(n.name)` | String transformation |
+| COALESCE | ✅ | `RETURN COALESCE(n.x, 0)` | Null coalescing with default |
+| labels() | ✅ | `RETURN labels(n)` | |
+| Variable-length paths | ✅ | `MATCH (a)-[:KNOWS*1..3]->(b)` | |
+
+## Aggregation Functions
+
+| Feature | Status | Syntax | Notes |
+|---|---|---|---|
+| count(*) | ✅ | `RETURN count(*)` | |
+| sum | ✅ | `RETURN sum(n.x)` | |
+| avg | ✅ | `RETURN avg(n.age)` | |
+| min / max | ✅ | `RETURN min(n.x), max(n.x)` | |
+| collect | ✅ | `RETURN collect(n.name)` | |
+
+## Window Functions
+
+| Feature | Status | Syntax | Notes |
+|---|---|---|---|
+| LAG | ✅ | `lag(n.close, 1) OVER (PARTITION BY n.symbol ORDER BY n.date)` | Previous row value |
+| LEAD | ✅ | `lead(n.close, 21) OVER (PARTITION BY n.symbol ORDER BY n.date)` | Future row value |
+| AVG OVER | ✅ | `avg(n.close) OVER (... ROWS BETWEEN 199 PRECEDING AND CURRENT ROW)` | Rolling average |
+| STDDEV_POP OVER | ✅ | `stddev_pop(n.close) OVER (...)` | Rolling standard deviation |
+| SUM OVER | ✅ | `sum(n.volume) OVER (PARTITION BY n.symbol ORDER BY n.date)` | Expanding sum |
+| PERCENT_RANK | ✅ | `percent_rank() OVER (PARTITION BY n.date ORDER BY n.close)` | Cross-sectional ranking |
+| ROW_NUMBER | ✅ | `row_number() OVER (PARTITION BY n.date ORDER BY n.close DESC)` | Row numbering |
+| SKEWNESS OVER | ✅ | `skewness(n.close) OVER (...)` | Rolling skewness |
+| MAX OVER | ✅ | `max(n.close) OVER (...)` | Rolling maximum |
+
+## Live Views (Incremental Computation)
+
+| Feature | Status | Syntax | Notes |
+|---|---|---|---|
+| CREATE LIVE VIEW | ✅ | `CREATE LIVE VIEW name AS MATCH ... RETURN ...` | Maintained via CDC |
+| Read from view | ✅ | `MATCH (row) FROM VIEW name RETURN row` | Zero-cost read |
+| List views | ✅ | `CALL db.liveViews` | |
+
+## Temporal
+
+| Feature | Status | Syntax | Notes |
+|---|---|---|---|
+| AS OF | ✅ | `MATCH (n) AS OF 1700000000` | Temporal snapshot query |
+
+## Indexes
+
+| Feature | Status | Syntax | Notes |
+|---|---|---|---|
+| CREATE VECTOR INDEX | ✅ | `CREATE VECTOR INDEX name FOR (n:Label) ON (n.prop) OPTIONS {dimensions: N, similarity: 'cosine'}` | HNSW k-NN |
+| CREATE FULLTEXT INDEX | ✅ | `CREATE FULLTEXT INDEX name FOR (n:Label) ON (n.prop)` | BM25 scoring |
+
+## Parameterized Queries
+
+| Feature | Status | Syntax | Notes |
+|---|---|---|---|
+| Parameter binding | ✅ | `$param` in queries | Substituted before compilation, prevents injection |
+
+## Algorithms (`CALL algo.*`)
+
+Run directly — no projection lifecycle needed.
+
+| Procedure | Description |
+|---|---|
+| `algo.pageRank()` | PageRank centrality (20 iterations, damping 0.85) |
+| `algo.confidencePageRank()` | Confidence-weighted PageRank |
+| `algo.betweenness()` | Betweenness centrality |
+| `algo.closeness()` | Closeness centrality |
+| `algo.degreeCentrality()` | Degree centrality |
+| `algo.louvain()` | Louvain community detection |
+| `algo.leiden()` | Leiden community detection |
+| `algo.communityDetection()` | Community detection |
+| `algo.connectedComponents()` | Connected components (union-find) |
+| `algo.clusteringCoefficient()` | Local clustering coefficient |
+| `algo.nodeSimilarity()` | Node similarity |
+| `algo.triangleCount()` | Triangle count |
+| `algo.kCore()` | K-core decomposition |
+| `algo.density()` | Graph density |
+| `algo.diameter()` | Graph diameter |
+| `algo.allPairsShortestPath()` | All-pairs shortest paths |
+| `algo.nearestNodes()` | Find nearest nodes |
+| `algo.vectorSearch(index, vector, k)` | HNSW k-NN vector search |
+| `algo.similarNodes()` | Find similar nodes |
+| `algo.hybridSearch()` | Hybrid vector + graph search |
+| `algo.graphRAG()` | Trusted GraphRAG pipeline |
+| `algo.graphRAGContext()` | GraphRAG context generation |
+| `algo.graphRAGTrusted()` | GraphRAG with trust scoring |
+| `algo.compoundingScore` | Compounding score calculation |
+| `algo.contradictions()` | Find contradictions in data |
+| `algo.audienceProjection(weights)` | Audience projection analytics |
+| `algo.factsByRegime(args)` | Facts by time regime |
+| `algo.confidencePath()` | Confidence-weighted shortest path |
+| `algo.multiModalFusion()` | Multi-modal data fusion |
+
+## Database Procedures (`CALL db.*`)
+
+| Procedure | Description |
+|---|---|
+| `db.stats` | Node, relationship, and index counts |
+| `db.schema` | Label→property mappings + relationship patterns |
+| `db.labels` | All node labels |
+| `db.types` | All relationship types |
+| `db.propertyKeys` | All property keys |
+| `db.indexes` | Index information |
+| `db.nodeCount` | Total node count |
+| `db.relationshipCount` | Total relationship count |
+| `db.version` | Engine version |
+| `db.capabilities` | GPU, incremental, Z-set support |
+| `db.doctor` | 5 health checks |
+| `db.fingerprint` | Graph hash for integrity verification |
+| `db.export` | Full graph as JSON snapshot |
+| `db.import` | Restore from JSON snapshot |
+| `db.import.csv` | Import from CSV |
+| `db.clear` | Reset graph to empty |
+| `db.demo` | Load sample social network |
+| `db.help` | Complete procedure guide |
+| `db.procedures` | List all available procedures |
+| `db.tutorial` | Interactive 6-step walkthrough |
+| `db.index.fulltext.queryNodes(index, query)` | Full-text BM25 search |
+| `db.validateQuery(cypher)` | Query validation |
+| `db.checkpoint` | Compact WAL |
+
+## Temporal Procedures (`CALL temporal.*`)
+
+| Procedure | Description |
+|---|---|
+| `temporal.decay(halfLife, floor)` | Exponential decay |
+| `temporal.trajectory()` | Entity trajectory over time |
+| `temporal.velocity(days)` | Rate of change |
+
+## Reactive / Live Queries
+
+| Feature | Status | Syntax | Notes |
+|---|---|---|---|
+| LIVE MATCH | ✅ | `LIVE MATCH (n:Person) RETURN n` | Standing query |
+| LIVE CALL | ✅ | `LIVE CALL algo.pageRank()` | Incremental algorithm |
+| CREATE LIVE VIEW | ✅ | `CREATE LIVE VIEW name AS ...` | Persistent live view |
+
+## Session & Multi-tenancy
+
+| Feature | Status | Syntax | Notes |
+|---|---|---|---|
+| USE PARTITION | ✅ | `USE PARTITION 'workspace-42'` | Tenant isolation |
+| SET SESSION | ✅ | `SET SESSION ACTOR 'user-1' ROLE 'admin'` | Session context |
+
+## Skills
+
+| Feature | Status | Syntax | Notes |
+|---|---|---|---|
+| CREATE SKILL | ✅ | `CREATE SKILL name FROM PROMPT ...` | Declarative AI skill |
+| PROCESS NODE | ✅ | `PROCESS NODE (n:Label)` | Execute skill on node |

@@ -1,0 +1,79 @@
+# Use Case: RAG Pipeline
+
+Build a retrieval-augmented generation pipeline that combines vector similarity, graph traversal, and full-text search for richer LLM context.
+
+## The problem
+
+Standard RAG (vector search → LLM) misses structural context:
+- Related entities that aren't in the retrieved chunks
+- Relationship paths between concepts
+- Community structure and importance rankings
+
+## Why graph-powered RAG
+
+ArcFlow combines three retrieval strategies in one engine:
+
+1. **Vector search** — semantic similarity over embeddings
+2. **Graph traversal** — follow relationships for structured context
+3. **Full-text search** — keyword matching with BM25 scoring
+
+No separate databases. No orchestration layer. One query engine.
+
+## Implementation
+
+```typescript
+import { open } from '@arcflow/sdk'
+
+const db = open('./rag-graph')
+
+async function graphRAG(query: string, queryEmbedding: number[]) {
+  // 1. Vector search: find semantically similar documents
+  const similar = db.query(
+    "CALL algo.vectorSearch('doc_index', $vec, 5)",
+    { vec: JSON.stringify(queryEmbedding) }
+  )
+
+  // 2. Graph expansion: follow relationships from retrieved docs
+  const context: string[] = []
+  for (const row of similar.rows) {
+    const title = String(row.get('title'))
+    context.push(`Document: ${title}`)
+
+    // Get mentioned entities
+    const entities = db.query(
+      "MATCH (d:Document {title: $t})-[:MENTIONS]->(e) RETURN e.name, labels(e)",
+      { t: title }
+    )
+    for (const e of entities.rows) {
+      context.push(`  Mentions: ${e.get('name')} (${e.get('labels(e)')})`)
+    }
+  }
+
+  // 3. Full-text search: keyword-based retrieval
+  const keywords = db.query(
+    "CALL db.index.fulltext.queryNodes('doc_text', $q)",
+    { q: query }
+  )
+
+  // 4. Graph algorithms: importance ranking
+  const ranked = db.query("CALL algo.pageRank()")
+
+  // 5. Assemble context for LLM
+  return {
+    vectorResults: similar.rows.map(r => r.toObject()),
+    graphContext: context,
+    keywordResults: keywords.rows.map(r => r.toObject()),
+    topEntities: ranked.rows.slice(0, 10).map(r => r.toObject()),
+  }
+}
+```
+
+## Built-in GraphRAG
+
+ArcFlow includes a built-in Trusted GraphRAG pipeline:
+
+```typescript
+const context = db.query("CALL algo.graphRAGTrusted()")
+```
+
+This combines vector retrieval, graph traversal, and trust scoring in a single call.

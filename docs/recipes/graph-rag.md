@@ -1,0 +1,89 @@
+# Recipe: GraphRAG
+
+Retrieval-augmented generation using graph structure + vector similarity.
+
+## The pattern
+
+1. **Index** documents/facts with vector embeddings
+2. **Retrieve** by semantic similarity (vector search)
+3. **Expand** using graph traversal for context
+4. **Feed** to an LLM with structured context
+
+## Setup
+
+```typescript
+import { open } from '@arcflow/sdk'
+
+const db = open('./rag-graph')
+
+// Create documents with embeddings
+db.mutate("CREATE (d:Document {title: 'Quarterly Report', embedding: '[0.1, ...]', body: '...'})")
+
+// Create entities extracted from documents
+db.mutate("CREATE (p:Person {name: 'Alice Chen', role: 'CTO'})")
+db.mutate("MATCH (d:Document {title: 'Quarterly Report'}) MATCH (p:Person {name: 'Alice Chen'}) MERGE (d)-[:MENTIONS]->(p)")
+
+// Create vector index
+db.mutate("CREATE VECTOR INDEX doc_embeddings FOR (n:Document) ON (n.embedding) OPTIONS {dimensions: 1536, similarity: 'cosine'}")
+```
+
+## Retrieve + expand
+
+```typescript
+function graphRAGRetrieve(db: ArcflowDB, queryEmbedding: number[], k: number = 5) {
+  // Step 1: Vector search for relevant documents
+  const docs = db.query(
+    "CALL algo.vectorSearch('doc_embeddings', $vector, $k)",
+    { vector: JSON.stringify(queryEmbedding), k }
+  )
+
+  // Step 2: For each document, traverse for context
+  const context: Array<{ doc: string; entities: string[] }> = []
+
+  for (const row of docs.rows) {
+    const title = String(row.get('title'))
+
+    const entities = db.query(
+      "MATCH (d:Document {title: $title})-[:MENTIONS]->(e) RETURN labels(e), e.name",
+      { title }
+    )
+
+    context.push({
+      doc: title,
+      entities: entities.rows.map(r => String(r.get('name'))),
+    })
+  }
+
+  return context
+}
+```
+
+## Built-in GraphRAG
+
+ArcFlow includes a built-in GraphRAG procedure:
+
+```typescript
+const context = db.query("CALL algo.graphRAG()")
+const trusted = db.query("CALL algo.graphRAGTrusted()")
+```
+
+## Full-text + vector hybrid
+
+```typescript
+// Create full-text index for keyword search
+db.mutate("CREATE FULLTEXT INDEX doc_text FOR (n:Document) ON (n.title, n.body)")
+
+// Keyword search
+const keywordResults = db.query(
+  "CALL db.index.fulltext.queryNodes('doc_text', $query)",
+  { query: 'quarterly revenue' }
+)
+
+// Vector search
+const vectorResults = db.query(
+  "CALL algo.vectorSearch('doc_embeddings', $vector, 10)",
+  { vector: JSON.stringify(queryEmbedding) }
+)
+
+// Merge results and feed to LLM
+```
