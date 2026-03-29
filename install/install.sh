@@ -4,7 +4,8 @@
 
 set -e
 
-BASE_URL="${ARCFLOW_BASE_URL:-https://arcflow.dev/releases}"
+REPO="ozinc/arcflow"
+BASE_URL="https://github.com/${REPO}/releases"
 INSTALL_DIR="${ARCFLOW_INSTALL_DIR:-$HOME/.arcflow/bin}"
 
 # Detect platform
@@ -33,21 +34,20 @@ if [ "$PLATFORM" = "linux" ]; then
   fi
 fi
 
-# Get latest version (or use specified)
-VERSION="${ARCFLOW_VERSION:-latest}"
+# Get latest version
+VERSION="${ARCFLOW_VERSION:-}"
 
-if [ "$VERSION" = "latest" ]; then
-  VERSION=$(curl -fsSL "${BASE_URL}/latest/VERSION" 2>/dev/null || echo "")
+if [ -z "$VERSION" ]; then
+  VERSION=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name"' | sed 's/.*"v\(.*\)".*/\1/')
 fi
 
 if [ -z "$VERSION" ]; then
-  # Fallback: download latest directly
-  ASSET="arcflow-latest-${PLATFORM}-${ARCH}${LIBC}.tar.gz"
-  URL="${BASE_URL}/latest/${ASSET}"
-else
-  ASSET="arcflow-${VERSION}-${PLATFORM}-${ARCH}${LIBC}.tar.gz"
-  URL="${BASE_URL}/v${VERSION}/${ASSET}"
+  echo "Failed to detect latest version. Check https://github.com/${REPO}/releases"
+  exit 1
 fi
+
+ASSET="arcflow-${VERSION}-${PLATFORM}-${ARCH}${LIBC}.tar.gz"
+URL="${BASE_URL}/download/v${VERSION}/${ASSET}"
 
 echo "Installing ArcFlow v${VERSION} (${PLATFORM}-${ARCH}${LIBC})..."
 echo "  From: $URL"

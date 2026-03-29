@@ -1,6 +1,6 @@
 # ArcFlow Binary Distribution
 
-Pre-built binaries are hosted on Cloudflare (deployed via `wrangler`) and distributed through `arcflow.dev`.
+Pre-built binaries are distributed via [GitHub Releases](https://github.com/ozinc/arcflow/releases).
 
 ## Asset naming convention
 
@@ -46,47 +46,15 @@ ghcr.io/ozinc/arcflow:{version}
 ghcr.io/ozinc/arcflow:latest
 ```
 
-## Hosting
-
-Binaries are hosted on Cloudflare R2/Pages via `wrangler`:
-
-```
-https://arcflow.dev/releases/v{version}/arcflow-{version}-{platform}-{arch}.tar.gz
-https://arcflow.dev/releases/latest/arcflow-latest-{platform}-{arch}.tar.gz
-https://arcflow.dev/install                    # Install script
-https://arcflow.dev/install/arcflow.sh         # Same, explicit path
-```
-
-### Upload flow (from arcflow-core CI)
-
-```bash
-# Build binaries in arcflow-core
-cargo build --release --target aarch64-apple-darwin
-
-# Package
-tar czf arcflow-${VERSION}-darwin-arm64.tar.gz -C target/aarch64-apple-darwin/release arcflow arcflow-mcp
-
-# Upload to Cloudflare
-wrangler r2 object put arcflow-releases/v${VERSION}/arcflow-${VERSION}-darwin-arm64.tar.gz \
-  --file arcflow-${VERSION}-darwin-arm64.tar.gz
-
-# Update latest symlink
-wrangler r2 object put arcflow-releases/latest/arcflow-latest-darwin-arm64.tar.gz \
-  --file arcflow-${VERSION}-darwin-arm64.tar.gz
-```
-
 ### Checksums
 
-Every release includes:
-```
-SHA256SUMS              # sha256 checksums for all assets
-```
+Every release includes `SHA256SUMS` with checksums for all assets.
 
 ## Install methods
 
-| Method | Command | Source |
-|---|---|---|
-| curl | `curl -fsSL https://arcflow.dev/install \| sh` | Cloudflare |
-| npm | `npm install arcflow` | npm registry |
-| Docker | `docker run ghcr.io/ozinc/arcflow:latest` | GHCR |
-| Manual | Download from `arcflow.dev/releases/` | Cloudflare |
+| Method | Command |
+|---|---|
+| curl | `curl -fsSL https://github.com/ozinc/arcflow/releases/latest/download/install.sh \| sh` |
+| npm | `npm install arcflow` |
+| Docker | `docker run ghcr.io/ozinc/arcflow:latest` |
+| Manual | Download from [Releases](https://github.com/ozinc/arcflow/releases) |
