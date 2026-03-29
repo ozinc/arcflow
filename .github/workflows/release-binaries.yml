@@ -1,0 +1,125 @@
+name: Release Binaries
+
+# Triggered manually or by repository dispatch from arcflow-core CI
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., 1.6.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  upload-binaries:
+    name: Upload binaries to Cloudflare
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install wrangler
+        run: npm install -g wrangler
+
+      # Binary artifacts are built in arcflow-core CI and stored as workflow artifacts
+      # or uploaded directly. This workflow picks them up and publishes to Cloudflare.
+      - name: Upload to Cloudflare R2
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          VERSION="${{ inputs.version }}"
+          BUCKET="arcflow-releases"
+
+          for asset in artifacts/arcflow-*; do
+            [ -f "$asset" ] || continue
+            FILENAME=$(basename "$asset")
+
+            echo "Uploading $FILENAME to v${VERSION}/"
+            wrangler r2 object put "${BUCKET}/v${VERSION}/${FILENAME}" --file "$asset"
+
+            # Also update latest/
+            LATEST_NAME=$(echo "$FILENAME" | sed "s/${VERSION}/latest/")
+            wrangler r2 object put "${BUCKET}/latest/${LATEST_NAME}" --file "$asset"
+          done
+
+          # Write version file
+          echo "$VERSION" > VERSION
+          wrangler r2 object put "${BUCKET}/latest/VERSION" --file VERSION
+
+      - name: Upload install script
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          wrangler r2 object put "arcflow-releases/install/arcflow.sh" --file install/install.sh
+
+  create-github-release:
+    name: Create GitHub Release
+    needs: upload-binaries
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ inputs.version }}
+          name: ArcFlow v${{ inputs.version }}
+          generate_release_notes: true
+          body: |
+            ## Install
+
+            ```bash
+            curl -fsSL https://arcflow.dev/install | sh
+            ```
+
+            Or specific version:
+            ```bash
+            ARCFLOW_VERSION=${{ inputs.version }} curl -fsSL https://arcflow.dev/install | sh
+            ```
+
+            ## npm
+            ```bash
+            npm install arcflow
+            ```
+
+            ## Docker
+            ```bash
+            docker run ghcr.io/ozinc/arcflow:${{ inputs.version }}
+            ```
+
+  publish-npm:
+    name: Publish to npm
+    needs: upload-binaries
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: 'https://registry.npmjs.org'
+      - run: cd typescript && npm ci && npm run build
+      - run: cd typescript && npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  publish-docker:
+    name: Publish Docker image
+    needs: upload-binaries
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Push image
+        run: |
+          echo "Docker build will be configured with Dockerfile"
+          # docker build -t ghcr.io/ozinc/arcflow:${{ inputs.version }} .
+          # docker tag ghcr.io/ozinc/arcflow:${{ inputs.version }} ghcr.io/ozinc/arcflow:latest
+          # docker push ghcr.io/ozinc/arcflow:${{ inputs.version }}
+          # docker push ghcr.io/ozinc/arcflow:latest
