@@ -1,7 +1,7 @@
 {
   "name": "arcflow",
   "version": "0.1.0",
-  "description": "ArcFlow TypeScript SDK — typed, ergonomic graph database access",
+  "description": "Embedded graph database with vector search, algorithms, and live queries. No server needed. Like SQLite, but for graphs.",
   "type": "module",
   "exports": {
     ".": {
@@ -58,14 +58,18 @@
   },
   "keywords": [
     "graph-database",
-    "worldcypher",
-    "cypher",
-    "arcflow",
-    "sdk",
-    "typescript",
+    "embedded-database",
     "knowledge-graph",
     "vector-search",
-    "graph-algorithms"
+    "graph-algorithms",
+    "spatial",
+    "temporal",
+    "cypher",
+    "worldcypher",
+    "rag",
+    "world-model",
+    "behavior-tree",
+    "arcflow"
   ],
   "publishConfig": {
     "access": "public"

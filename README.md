@@ -1,124 +1,125 @@
 # ArcFlow
 
-The spatial-temporal graph database. One engine for graphs, vectors, time, space, and algorithms.
-
-## Install
+The embedded graph database. Like SQLite, but for graphs.
 
 ```bash
 npm install arcflow
 ```
 
-Three paths to hello world:
-
-| Path | Time | Command |
-|---|---|---|
-| Docker | 30s | `docker run -p 7687:7687 ghcr.io/oz-global/arcflow:latest` |
-| Binary | 60s | `curl -fsSL https://arcflow.dev/install \| sh && arcflow` |
-| SDK | 2 min | `npm install arcflow` then 5 lines of TypeScript |
-
-## See it work
-
 ```typescript
 import { openInMemory } from 'arcflow'
 
-const db = openInMemory()
-
-db.mutate("CREATE (alice:Person {name: 'Alice', age: 30})")
-db.mutate("CREATE (bob:Person {name: 'Bob', age: 35})")
-db.mutate("CREATE (a:Person {name: 'Alice'})-[:KNOWS]->(b:Person {name: 'Bob'})")
-
-const result = db.query("MATCH (n:Person) RETURN n.name, n.age ORDER BY n.name")
-for (const row of result.rows) {
-  console.log(row.get('name'), row.get('age'))
-}
-// Alice 30
-// Bob 35
-
-db.query("CALL algo.pageRank()")   // Graph algorithms — no setup
+const db = openInMemory()  // No server. No Docker. No connection string.
+db.mutate("CREATE (n:Person {name: 'Alice', age: 30})")
+const result = db.query("MATCH (n:Person) RETURN n.name, n.age")
+console.log(result.rows[0].get('name'))  // "Alice"
+console.log(result.rows[0].get('age'))   // 30 (typed)
 db.close()
 ```
 
+Two lines to a working graph. No infrastructure to provision.
+
+## Why ArcFlow
+
+One in-process library replaces six services:
+
+| You'd otherwise need | ArcFlow has it built in |
+|---|---|
+| Neo4j (graph DB) | Cypher-compatible graph store |
+| Redis (cache) | In-memory, zero-copy |
+| DuckDB (analytics) | Window functions, aggregations |
+| Pinecone (vector DB) | HNSW vector index |
+| Elasticsearch (search) | BM25 full-text search |
+| Temporal (workflows) | Graph-native durable workflows |
+
+### vs. Neo4j / Memgraph
+
+| | ArcFlow | Neo4j / Memgraph |
+|---|---|---|
+| Install | `npm install arcflow` | Docker + driver + connection |
+| First query | 2 lines | 10+ lines |
+| Server needed | **No** — in-process | Yes — separate process |
+| Testing | `openInMemory()` | Docker container + teardown |
+| Algorithms | `CALL algo.pageRank()` | GDS: project → catalog → run → drop |
+| Vector search | Built-in | Separate service |
+| Window functions | LAG, LEAD, STDDEV_POP, PERCENT_RANK | Not available |
+| Live views | `CREATE LIVE VIEW` — auto-maintained | Not available |
+
 ## What you can build
 
-| Use Case | Example | Query Flavor |
-|---|---|---|
-| Knowledge graphs | Entity extraction, fact linking, confidence scoring | `MATCH (a)-[:SUBJECT_OF]->(f:Fact) WHERE f.confidence > 0.9` |
-| RAG pipelines | Vector + graph + full-text retrieval for LLMs | `CALL algo.vectorSearch('docs', $vec, 10)` |
-| Sports analytics | Track players, compute formations, detect events | `MATCH (p:Player) WHERE p.speed > 5.0 RETURN p.name` |
-| Fleet/logistics | Vehicle routing, geofencing, ETA prediction | `MATCH (v:Vehicle)-[:ON_ROUTE]->(r) RETURN v.pos` |
-| IoT/robotics | Sensor networks, spatial awareness, path planning | `MATCH (s:Sensor) AS OF $timestamp RETURN s.reading` |
-| AI agents | Give LLMs spatial reasoning via MCP | `arcflow-mcp --data-dir ./graph` |
-| Gaming/simulation | NPC awareness, world state, behavior trees | `MATCH (npc:NPC)-[:CAN_SEE]->(target) RETURN target` |
+| Use Case | Why ArcFlow |
+|---|---|
+| Knowledge graphs | Entity linking, confidence-scored facts, provenance — all in one engine |
+| RAG pipelines | Vector search + graph traversal + full-text in a single query |
+| AI agent memory | In-process graph the agent can spin up, use, and discard |
+| Trading pipelines | Window functions, live views, proven batch/delta equivalence |
+| Sports analytics | Spatial queries, player tracking, real-time algorithms |
+| Game state | Behavior trees as graph subgraphs, persistent world model |
+| IoT / robotics | Sensor state, spatial awareness, temporal snapshots |
 
 ## Features
 
-- **30+ graph algorithms** — PageRank, Louvain, betweenness, connected components, k-core
-- **Vector search** — HNSW index, cosine/euclidean similarity, hybrid search
-- **Full-text search** — BM25-scored indexes
-- **Temporal queries** — `AS OF` snapshots, time windows, trajectory tracking
-- **Reactive queries** — `LIVE MATCH`, `LIVE CALL`, persistent live views
-- **WAL persistence** — crash-safe with automatic recovery
-- **GPU acceleration** — Metal (macOS) and CUDA (Linux) for graph operations
-- **Typed results** — numbers, booleans, and nulls as native types
-- **Structured errors** — codes, categories, and recovery suggestions
+```typescript
+// 30+ algorithms — no projection, no catalog
+db.query("CALL algo.pageRank()")
+db.query("CALL algo.louvain()")
+
+// Vector search — no separate service
+db.mutate("CREATE VECTOR INDEX idx FOR (n:Doc) ON (n.embedding) OPTIONS {dimensions: 1536, similarity: 'cosine'}")
+db.query("CALL algo.vectorSearch('idx', $vec, 10)", { vec: JSON.stringify(embedding) })
+
+// Full-text search — BM25
+db.mutate("CREATE FULLTEXT INDEX ft FOR (n:Person) ON (n.name)")
+db.query("CALL db.index.fulltext.queryNodes('ft', 'Alice')")
+
+// Window functions
+db.query("MATCH (n:Bar) RETURN lag(n.close, 1) OVER (PARTITION BY n.symbol ORDER BY n.date)")
+
+// Live views — incremental, auto-maintained
+db.mutate("CREATE LIVE VIEW stats AS MATCH (n) RETURN labels(n), count(*)")
+
+// Temporal snapshots
+db.query("MATCH (n:Person) AS OF 1700000000 RETURN n.name")
+
+// Persistence — WAL-journaled
+const db = open('./data/graph')
+
+// Structured errors — not stack traces
+try { db.query("BAD") } catch (e) {
+  e.code       // "EXPECTED_KEYWORD"
+  e.suggestion // "Expected MATCH or CREATE"
+}
+```
+
+## Install
+
+| Method | Command |
+|---|---|
+| Binary (recommended) | `curl -fsSL https://github.com/ozinc/arcflow/releases/latest/download/install.sh \| sh` |
+| npm | `npm install arcflow` |
+| Python | `pip install arcflow` |
+| Rust | `cargo add arcflow` |
+| Docker | `docker run ghcr.io/ozinc/arcflow:latest` |
+| MCP (AI agents) | `npx arcflow-mcp` |
 
 ## Documentation
 
 | Section | What you'll learn |
 |---|---|
-| [Quickstart](docs/getting-started/quickstart.md) | First query in 5 minutes |
-| [Installation](docs/getting-started/installation.md) | npm, Docker, binary, local dev |
-| [WorldCypher](docs/core-concepts/worldcypher.md) | Query language reference |
-| [Tutorials](docs/tutorials/knowledge-graph.md) | Build a knowledge graph, vector search, algorithms |
-| [Recipes](docs/recipes/crud.md) | Copy-paste patterns for common operations |
-| [API Reference](docs/reference/api.md) | Complete TypeScript SDK API |
-| [Compatibility](docs/reference/compatibility.md) | Full WorldCypher feature matrix |
-
-## SDKs
-
-| Language | Package | Status |
-|---|---|---|
-| TypeScript | `npm install arcflow` | Stable |
-| Python | `pip install arcflow` | Available |
-| Rust | `arcflow = "x.y"` | Available |
-| C/C++ | `libarcflow.h` / `arcflow.hpp` | Available |
-| Docker | `ghcr.io/oz-global/arcflow` | Available |
-| MCP | `arcflow-mcp` | Available |
+| [Quickstart](docs/quickstart.mdx) | First query in 5 minutes |
+| [WorldCypher](docs/worldcypher/index.mdx) | Query language reference |
+| [Tutorials](docs/tutorials/knowledge-graph.mdx) | Knowledge graph, vector search, algorithms |
+| [Recipes](docs/recipes/crud.mdx) | Copy-paste patterns |
+| [API Reference](docs/reference/api.mdx) | TypeScript SDK API |
+| [Compatibility](docs/reference/compatibility.mdx) | Full feature matrix |
 
 ## For AI coding agents
 
-This repo is optimized for agent consumption. All agent context lives in neutral, tool-agnostic files:
-
 | File | Purpose |
 |---|---|
-| [`AGENTS.md`](AGENTS.md) | Full context: API, WorldCypher reference, repo structure |
-| [`llms.txt`](llms.txt) | Compact reference (quick orientation) |
-| [`llms-full.txt`](llms-full.txt) | Complete reference (every pattern and procedure) |
-
-## API at a glance
-
-```typescript
-import { open, openInMemory, ArcflowError } from 'arcflow'
-
-const db = openInMemory()                              // or open('./data')
-db.query(cypher, params?)                              // → QueryResult
-db.mutate(cypher, params?)                             // → MutationResult
-db.batchMutate(queries[])                              // → number
-db.query("CALL algo.pageRank()")                       // 30+ algorithms
-db.query("CALL algo.vectorSearch('idx', $vec, 10)")    // Vector search
-db.stats()                                             // { nodes, relationships, indexes }
-db.isHealthy()                                         // boolean
-db.close()
-```
-
-## Development
-
-```bash
-just install    # Install dependencies
-just build      # Build (ESM + CJS + types)
-just test       # Run tests
-just check      # Build + typecheck + lint + test
-```
+| [`AGENTS.md`](AGENTS.md) | Full context — API, WorldCypher, comparison table, patterns |
+| [`llms.txt`](llms.txt) | Compact reference for quick orientation |
+| [`llms-full.txt`](llms-full.txt) | Complete reference with every procedure |
 
 ## License
 

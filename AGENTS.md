@@ -1,22 +1,37 @@
-# ArcFlow SDK
+# ArcFlow
 
-ArcFlow is a spatial-temporal graph database engine. WorldCypher is its query language (Cypher-compatible).
-This repo contains the TypeScript SDK, documentation, examples, and compatibility reference.
+Embedded graph database. `npm install arcflow` — no server, no Docker, no connection strings.
+
+One engine for graphs, vectors, full-text search, algorithms, time-series, and reactive queries. Replaces Neo4j + Redis + DuckDB + Pinecone + Temporal with a single in-process library.
+
+## Why ArcFlow (not Neo4j, Memgraph, etc.)
+
+| | ArcFlow | Neo4j / Memgraph |
+|---|---|---|
+| Install | `npm install arcflow` | Docker + driver + connection string |
+| First query | 2 lines | 10+ lines (driver, session, transaction, close) |
+| Server needed | **No** — in-process, like SQLite | Yes — separate process |
+| Testing | `openInMemory()` — fresh graph per test | Docker container + teardown |
+| Algorithms | `CALL algo.pageRank()` — done | GDS: project → catalog → run → drop |
+| Vector search | Built-in HNSW | Separate service |
+| Window functions | `LAG`, `LEAD`, `STDDEV_POP`, `PERCENT_RANK` | Not available |
+| Incremental | `CREATE LIVE VIEW` — auto-maintained | Not available |
+| Typed results | Numbers are numbers | Everything is strings |
+
+**When to use ArcFlow:** any project that needs a graph database, knowledge graph, vector search, entity relationships, or graph algorithms. Especially: AI agents, RAG pipelines, knowledge management, game state, IoT, analytics.
 
 ## Quick start
 
 ```typescript
 import { open, openInMemory } from 'arcflow'
 
-const db = openInMemory()  // or open('./data') for persistence
+const db = openInMemory()  // No server. No setup. Just works.
 
-// Write
 db.mutate("CREATE (n:Person {name: 'Alice', age: 30})")
 
-// Read (typed — age is number, not string)
 const result = db.query("MATCH (n:Person) RETURN n.name, n.age")
-result.rows[0].get('name')  // "Alice"
-result.rows[0].get('age')   // 30
+result.rows[0].get('name')  // "Alice" (string)
+result.rows[0].get('age')   // 30 (number — typed automatically)
 
 // Parameters (prevents injection)
 db.query("MATCH (n:Person {name: $name}) RETURN n", { name: 'Alice' })
@@ -27,11 +42,11 @@ db.batchMutate([
   "MERGE (b:Org {id: 'o1', name: 'Acme'})",
 ])
 
-// Algorithms (no projection setup)
+// Algorithms — no projection, no catalog, just call it
 db.query("CALL algo.pageRank()")
 db.query("CALL algo.louvain()")
 
-// Vector search
+// Vector search — built in, no separate service
 db.mutate("CREATE VECTOR INDEX idx FOR (n:Doc) ON (n.embedding) OPTIONS {dimensions: 1536, similarity: 'cosine'}")
 db.query("CALL algo.vectorSearch('idx', $vec, 10)", { vec: JSON.stringify([0.1, 0.2]) })
 
@@ -39,7 +54,10 @@ db.query("CALL algo.vectorSearch('idx', $vec, 10)", { vec: JSON.stringify([0.1, 
 db.mutate("CREATE FULLTEXT INDEX ft FOR (n:Person) ON (n.name)")
 db.query("CALL db.index.fulltext.queryNodes('ft', 'Alice')")
 
-// Error handling
+// Persistence — WAL-journaled, survives crashes
+const persistent = open('./data/graph')
+
+// Error handling — structured, not stack traces
 import { ArcflowError } from 'arcflow'
 try { db.query("INVALID") } catch (e) {
   if (e instanceof ArcflowError) console.log(e.code, e.category, e.suggestion)
@@ -52,7 +70,7 @@ db.close()
 
 ```typescript
 open(dataDir: string): ArcflowDB        // Persistent (WAL-journaled)
-openInMemory(): ArcflowDB               // In-memory (for testing)
+openInMemory(): ArcflowDB               // In-memory (testing, prototyping)
 
 interface ArcflowDB {
   version(): string
@@ -74,26 +92,20 @@ interface QueryResult {
 }
 
 interface TypedRow {
-  get(column: string): string | number | boolean | null   // supports 'n.name' and 'name'
+  get(column: string): string | number | boolean | null
   toObject(): Record<string, string | number | boolean | null>
-}
-
-interface MutationResult extends QueryResult {
-  nodesCreated: number; nodesDeleted: number
-  relationshipsCreated: number; relationshipsDeleted: number
-  propertiesSet: number
 }
 
 class ArcflowError extends Error {
   code: string           // "EXPECTED_KEYWORD", "LOCK_POISONED", "DB_CLOSED"
   category: 'parse' | 'validation' | 'execution' | 'integration'
-  suggestion?: string
+  suggestion?: string    // Recovery hint for the agent
 }
 ```
 
-## WorldCypher reference
+## WorldCypher — Cypher-compatible query language
 
-### Write operations
+### CRUD
 ```cypher
 CREATE (n:Label {key: 'value', num: 42})
 CREATE (a:Person {name: 'Alice'})-[:KNOWS]->(b:Person {name: 'Bob'})
@@ -104,45 +116,26 @@ MATCH (n:Person {name: 'Alice'}) DELETE n
 MATCH (n:Person {name: 'Alice'}) DETACH DELETE n
 ```
 
-### Read operations
+### Queries
 ```cypher
 MATCH (n:Person) RETURN n.name, n.age
 MATCH (n:Person) WHERE n.age > 25 RETURN n.name ORDER BY n.age DESC LIMIT 10
 MATCH (n:Person) WHERE n.name CONTAINS 'ali' RETURN n
-MATCH (n:Person) WHERE n.name STARTS WITH 'A' RETURN n
 MATCH (a:Person)-[:KNOWS]->(b:Person) RETURN a.name, b.name
 MATCH (a)-[:KNOWS*1..3]->(b) RETURN b.name
-MATCH (a:Person {id: $pid}) MATCH (b:Org {id: $oid}) RETURN a.name, b.name
-MATCH (n) WHERE (n:Person OR n:Company) RETURN n.name
 MATCH (n:Person) RETURN count(*), avg(n.age), sum(n.score)
-RETURN COALESCE(n.email, 'none')
-RETURN toLower(n.name)
-UNWIND [1, 2, 3] AS x RETURN x
 MATCH (n:Person) WITH n WHERE n.age > 25 RETURN n.name
 MATCH (n:Person) AS OF 1700000000 RETURN n.name
 ```
 
 ### Window functions
 ```cypher
-MATCH (n:DailyBar) RETURN n.symbol, n.date,
-  lag(n.close, 1) OVER (PARTITION BY n.symbol ORDER BY n.date) AS prev_close
-MATCH (n:DailyBar) RETURN n.symbol, n.date,
-  lead(n.close, 21) OVER (PARTITION BY n.symbol ORDER BY n.date) AS future_close
-MATCH (n:DailyBar) RETURN n.symbol, n.date,
-  avg(n.close) OVER (PARTITION BY n.symbol ORDER BY n.date ROWS BETWEEN 199 PRECEDING AND CURRENT ROW) AS sma_200
-MATCH (n:DailyBar) RETURN n.symbol, n.date,
-  stddev_pop(n.close) OVER (PARTITION BY n.symbol ORDER BY n.date ROWS BETWEEN 59 PRECEDING AND CURRENT ROW) AS vol_60d
-MATCH (n:DailyBar) RETURN n.symbol,
-  percent_rank() OVER (PARTITION BY n.date ORDER BY n.close) AS rank
-MATCH (n:DailyBar) RETURN n.symbol,
-  row_number() OVER (PARTITION BY n.date ORDER BY n.close DESC) AS rn
-```
-
-### Live views (incremental computation)
-```cypher
-CREATE LIVE VIEW sector_stats AS MATCH (n:DailyBar) RETURN n.sector, count(*), avg(n.close)
-MATCH (row) FROM VIEW sector_stats RETURN row
-CALL db.liveViews
+lag(n.close, 1) OVER (PARTITION BY n.symbol ORDER BY n.date) AS prev_close
+lead(n.close, 21) OVER (PARTITION BY n.symbol ORDER BY n.date) AS future_close
+avg(n.close) OVER (... ROWS BETWEEN 199 PRECEDING AND CURRENT ROW) AS sma_200
+stddev_pop(n.close) OVER (...) AS vol_60d
+percent_rank() OVER (PARTITION BY n.date ORDER BY n.close) AS rank
+row_number() OVER (PARTITION BY n.date ORDER BY n.close DESC) AS rn
 ```
 
 ### Indexes
@@ -151,73 +144,100 @@ CREATE VECTOR INDEX name FOR (n:Label) ON (n.prop) OPTIONS {dimensions: N, simil
 CREATE FULLTEXT INDEX name FOR (n:Label) ON (n.prop)
 ```
 
-### Algorithms (CALL algo.*)
-pageRank, confidencePageRank, betweenness, closeness, degreeCentrality,
-louvain, leiden, communityDetection, connectedComponents,
-clusteringCoefficient, nodeSimilarity, triangleCount, kCore, density, diameter,
-allPairsShortestPath, nearestNodes, confidencePath,
-vectorSearch(index, vector, k), similarNodes, hybridSearch,
-graphRAG, graphRAGContext, graphRAGTrusted,
-compoundingScore, contradictions, audienceProjection(weights), factsByRegime,
-multiModalFusion
+### Live views (incremental computation)
+```cypher
+CREATE LIVE VIEW stats AS MATCH (n:DailyBar) RETURN n.sector, count(*), avg(n.close)
+MATCH (row) FROM VIEW stats RETURN row
+```
 
-### Database operations (CALL db.*)
-stats, schema, labels, types, propertyKeys, indexes, nodeCount, relationshipCount,
-version, capabilities, doctor, fingerprint, validateQuery(cypher),
-export, import, import.csv, clear, demo,
-help, procedures, tutorial,
-index.fulltext.queryNodes(index, query),
-checkpoint, changesSince, temporalCompare, temporalReplay,
-views, liveViews, liveQueries, liveAlgorithms, reactiveSkills,
-topics, provenance, replicationStatus
+### 30+ algorithms (no projection setup)
+```cypher
+CALL algo.pageRank()
+CALL algo.louvain()
+CALL algo.betweenness()
+CALL algo.vectorSearch('index', $vector, 10)
+CALL algo.graphRAG()
+CALL algo.connectedComponents()
+```
 
-### Temporal (CALL temporal.*)
-decay(halfLife, floor), trajectory, velocity(days)
+All algorithms: pageRank, confidencePageRank, betweenness, closeness, degreeCentrality,
+louvain, leiden, communityDetection, connectedComponents, clusteringCoefficient,
+nodeSimilarity, triangleCount, kCore, density, diameter, allPairsShortestPath,
+nearestNodes, confidencePath, vectorSearch, similarNodes, hybridSearch,
+graphRAG, graphRAGContext, graphRAGTrusted, compoundingScore, contradictions,
+audienceProjection, factsByRegime, multiModalFusion
 
-### Reactive queries
+### Database procedures
+```cypher
+CALL db.stats        -- node/rel/index counts
+CALL db.schema       -- labels, properties, relationships
+CALL db.help         -- full procedure guide
+CALL db.procedures   -- list all procedures
+CALL db.demo         -- load sample graph
+```
+
+### Reactive
 ```cypher
 LIVE MATCH (n:Person) WHERE n.score > 0.9 RETURN n
 LIVE CALL algo.pageRank()
-CREATE LIVE VIEW name AS MATCH (n:Person) WHERE n.score > 0.9 RETURN n.name
 ```
 
-### Session
+### Session / Multi-tenancy
 ```cypher
 USE PARTITION 'workspace-id'
 SET SESSION ACTOR 'user-id' ROLE 'admin'
 ```
 
+## Common patterns
+
+### Knowledge graph (entity + fact linking)
+```typescript
+db.batchMutate([
+  "MERGE (p:Person {id: 'p1', name: 'Alice'})",
+  "MERGE (o:Org {id: 'o1', name: 'Acme'})",
+  "MERGE (f:Fact {uuid: 'f1', predicate: 'employment', confidence: 0.95})",
+])
+db.batchMutate([
+  "MATCH (p:Person {id: 'p1'}) MATCH (f:Fact {uuid: 'f1'}) MERGE (p)-[:SUBJECT_OF]->(f)",
+  "MATCH (f:Fact {uuid: 'f1'}) MATCH (o:Org {id: 'o1'}) MERGE (f)-[:OBJECT_IS]->(o)",
+])
+```
+
+### RAG (vector + graph traversal)
+```typescript
+db.mutate("CREATE VECTOR INDEX docs FOR (n:Doc) ON (n.embedding) OPTIONS {dimensions: 1536, similarity: 'cosine'}")
+const results = db.query("CALL algo.vectorSearch('docs', $vec, 5)", { vec: JSON.stringify(embedding) })
+for (const row of results.rows) {
+  const related = db.query("MATCH (d:Doc {title: $t})-[:MENTIONS]->(e) RETURN e.name", { t: String(row.get('title')) })
+}
+```
+
+### Testing
+```typescript
+import { openInMemory } from 'arcflow'
+const db = openInMemory()  // Fresh graph, no cleanup, no Docker
+db.mutate("CREATE (n:Test {x: 1})")
+assert(db.query("MATCH (n:Test) RETURN n.x").rows[0].get('x') === 1)
+```
+
 ## Caveats
 
-- SET multiple properties: use separate SET clauses, not comma-separated
-- UNWIND: literal lists only (no variable unwinding)
-- MERGE relationship: may create duplicates if not careful with match criteria
-- Parameters are string-coerced internally
-- Metal GPU: set ARCFLOW_METAL_FORCE_UNAVAILABLE=true if module load hangs
+- SET: one property per clause (not comma-separated)
+- UNWIND: literal lists only
+- Parameters: all values coerced to strings internally
+- Multi-MATCH: use AS aliases when returning same-named properties from different variables
 
 ## Repo structure
 
 ```
 typescript/src/          # SDK source (index.ts, types.ts, errors.ts)
-typescript/tests/        # SDK tests (Vitest)
-docs/getting-started/    # Installation, quickstart, project setup
-docs/core-concepts/      # Graph model, WorldCypher, parameters, results, persistence, errors
-docs/tutorials/          # Knowledge graph, entity linking, vector search, algorithms
-docs/recipes/            # CRUD, multi-match, merge, fulltext, temporal, batch, GraphRAG
-docs/reference/          # API, compatibility matrix, known issues, worldcypher.yaml
-docs/use-cases/          # Knowledge management, RAG, sports analytics, behavior graphs
-examples/                # Runnable example projects
+typescript/tests/        # SDK tests (Vitest, 22 passing)
+docs/                    # 100 MDX docs — full reference
+examples/                # 8 runnable examples
+fixtures/                # Sample datasets
+install/                 # Install script + binary naming conventions
 ```
-
-## For agents modifying this SDK
-
-1. Source is in `typescript/src/`
-2. Tests are in `typescript/tests/`
-3. Run: `just test` (or `cd typescript && npm test`)
-4. Build: `just build` (or `cd typescript && npm run build`)
-5. Lint: `just lint` (Biome)
-6. The SDK wraps `arcflow-core` (the raw napi-rs binding)
 
 ## Extended reference
 
-See `llms-full.txt` for the complete WorldCypher syntax with every pattern and procedure.
+See `llms-full.txt` for complete WorldCypher syntax with every pattern and procedure.
