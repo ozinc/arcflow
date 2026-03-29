@@ -1,6 +1,10 @@
 # ArcFlow
 
-> Embedded graph database. Like SQLite, but for graphs. No server needed.
+> Embedded graph database. Runs in browser (WASM), Node.js, Python, Rust, Docker. No server needed.
+
+## Try instantly (zero install)
+
+Open https://arcflow.dev/engine in your browser. Paste any query. Persistent storage.
 
 ## Install
 
@@ -34,12 +38,14 @@ const persistent = open('./data/graph')
 
 ## Why not Neo4j/Memgraph
 
+- Runs in browser (WASM) — zero install, arcflow.dev/engine
 - No server needed — in-process like SQLite
 - `openInMemory()` for testing — no Docker, no teardown
 - Algorithms: `CALL algo.pageRank()` — no GDS projection lifecycle
 - Vector search built in — no separate Pinecone/Qdrant
 - Window functions: LAG, LEAD, STDDEV_POP, PERCENT_RANK
 - Live views: `CREATE LIVE VIEW` — incremental, auto-maintained
+- MCP server: `npx arcflow-mcp` — agents query directly
 
 ## API
 

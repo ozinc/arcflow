@@ -1,6 +1,8 @@
 # ArcFlow
 
-The embedded graph database. Like SQLite, but for graphs.
+The embedded graph database. Runs in the browser, Node.js, Python, Rust, and Docker. No server needed.
+
+**[Try it now — arcflow.dev/engine](https://arcflow.dev/engine)** — runs in your browser, zero install.
 
 ```bash
 npm install arcflow
@@ -17,7 +19,7 @@ console.log(result.rows[0].get('age'))   // 30 (typed)
 db.close()
 ```
 
-Two lines to a working graph. No infrastructure to provision.
+Two lines to a working graph. Or zero lines — just open the browser.
 
 ## Why ArcFlow
 
@@ -36,14 +38,17 @@ One in-process library replaces six services:
 
 | | ArcFlow | Neo4j / Memgraph |
 |---|---|---|
+| Try it | **[Browser — zero install](https://arcflow.dev/engine)** | Download + install + configure |
 | Install | `npm install arcflow` | Docker + driver + connection |
 | First query | 2 lines | 10+ lines |
 | Server needed | **No** — in-process | Yes — separate process |
+| Runs in browser | **Yes** (WASM) | No |
 | Testing | `openInMemory()` | Docker container + teardown |
 | Algorithms | `CALL algo.pageRank()` | GDS: project → catalog → run → drop |
 | Vector search | Built-in | Separate service |
 | Window functions | LAG, LEAD, STDDEV_POP, PERCENT_RANK | Not available |
 | Live views | `CREATE LIVE VIEW` — auto-maintained | Not available |
+| MCP server | `npx arcflow-mcp` | None |
 
 ## What you can build
 
@@ -93,14 +98,15 @@ try { db.query("BAD") } catch (e) {
 
 ## Install
 
-| Method | Command |
-|---|---|
-| Binary (recommended) | `curl -fsSL https://github.com/ozinc/arcflow/releases/latest/download/install.sh \| sh` |
-| npm | `npm install arcflow` |
-| Python | `pip install arcflow` |
-| Rust | `cargo add arcflow` |
-| Docker | `docker run ghcr.io/ozinc/arcflow:latest` |
-| MCP (AI agents) | `npx arcflow-mcp` |
+| Method | Command | Friction |
+|---|---|---|
+| Browser | [arcflow.dev/engine](https://arcflow.dev/engine) | Zero — click and go |
+| npm | `npm install arcflow` | One command |
+| Binary | `curl -fsSL https://github.com/ozinc/arcflow/releases/latest/download/install.sh \| sh` | curl + run |
+| Python | `pip install arcflow` | One command |
+| Rust | `cargo add arcflow` | One command |
+| Docker | `docker run ghcr.io/ozinc/arcflow:latest` | Container |
+| MCP (AI agents) | `npx arcflow-mcp` | One command |
 
 ## Documentation
 

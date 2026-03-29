@@ -1,6 +1,8 @@
 # ArcFlow
 
-Embedded graph database. `npm install arcflow` — no server, no Docker, no connection strings.
+Embedded graph database. Runs everywhere — browser (WASM), Node.js, Python, Rust, Docker. No server needed.
+
+Try it now: https://arcflow.dev/engine — runs in your browser, no install.
 
 One engine for graphs, vectors, full-text search, algorithms, time-series, and reactive queries. Replaces Neo4j + Redis + DuckDB + Pinecone + Temporal with a single in-process library.
 
@@ -8,17 +10,22 @@ One engine for graphs, vectors, full-text search, algorithms, time-series, and r
 
 | | ArcFlow | Neo4j / Memgraph |
 |---|---|---|
+| Try it | **Browser — zero install** (arcflow.dev/engine) | Download + install + configure |
 | Install | `npm install arcflow` | Docker + driver + connection string |
 | First query | 2 lines | 10+ lines (driver, session, transaction, close) |
 | Server needed | **No** — in-process, like SQLite | Yes — separate process |
+| Runs in browser | **Yes** (WASM) | No |
 | Testing | `openInMemory()` — fresh graph per test | Docker container + teardown |
 | Algorithms | `CALL algo.pageRank()` — done | GDS: project → catalog → run → drop |
 | Vector search | Built-in HNSW | Separate service |
 | Window functions | `LAG`, `LEAD`, `STDDEV_POP`, `PERCENT_RANK` | Not available |
 | Incremental | `CREATE LIVE VIEW` — auto-maintained | Not available |
+| MCP server | `npx arcflow-mcp` — agents query directly | None |
 | Typed results | Numbers are numbers | Everything is strings |
 
 **When to use ArcFlow:** any project that needs a graph database, knowledge graph, vector search, entity relationships, or graph algorithms. Especially: AI agents, RAG pipelines, knowledge management, game state, IoT, analytics.
+
+**Try before installing:** open https://arcflow.dev/engine in your browser. Paste any WorldCypher query. Persistent storage. Syncs to ArcFlow Cloud when ready.
 
 ## Quick start
 
