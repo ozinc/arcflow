@@ -129,4 +129,13 @@ try { db.query("BAD") } catch (e) {
 
 ## License
 
-MIT
+| Component | License |
+|---|---|
+| SDK wrapper code (this repo) | [MIT](LICENSE) |
+| ArcFlow engine (compiled binary) | [OZ Intent-Source License](legal/ENGINE-LICENSE.md) |
+
+The SDK wrapper is MIT — do whatever you want with it. The compiled ArcFlow
+engine binary shipped inside the npm/pip/cargo package is licensed under the
+[OZ Intent-Source License (OISL)](legal/INTENT-SOURCE-TERM-SHEET.md) — freely
+usable in commercial products, source proprietary, contributions via
+[Intent Relay](legal/ENGINE-LICENSE.md).
