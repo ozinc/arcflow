@@ -62,4 +62,18 @@ export interface ArcflowDB {
 
 	/** Close the database and flush WAL. */
 	close(): void
+
+	/** Number of mutations pending sync push (0 if sync not configured). */
+	syncPending(): number
+
+	/** Graph fingerprint for sync verification. */
+	fingerprint(): string
+}
+
+/** Sync configuration for bidirectional replication. */
+export interface SyncConfig {
+	/** Sync endpoint URL. */
+	url: string
+	/** Authentication token. */
+	token: string
 }

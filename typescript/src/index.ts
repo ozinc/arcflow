@@ -216,8 +216,16 @@ class ArcflowDBImpl implements ArcflowDB {
 
 	close(): void {
 		this.closed = true
-		// Runtime/Session are cleaned up by GC since napi-rs handles Drop.
-		// For persistent databases, the WAL is flushed on drop.
+	}
+
+	syncPending(): number {
+		if (this.closed) return 0
+		return this.session.syncPending()
+	}
+
+	fingerprint(): string {
+		this.ensureOpen()
+		return this.session.fingerprint()
 	}
 
 	private ensureOpen(): void {
