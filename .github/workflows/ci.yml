@@ -76,6 +76,17 @@ jobs:
         env:
           ARCFLOW_METAL_FORCE_UNAVAILABLE: 'true'
 
+  revalidate-docs:
+    name: Revalidate website docs
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger website revalidation
+        run: |
+          curl -s -X POST "${{ secrets.WEBSITE_URL }}/api/revalidate-docs" \
+            -H "x-revalidate-secret: ${{ secrets.REVALIDATE_SECRET }}" \
+            -H "Content-Type: application/json" || true
+
   release:
     name: Release
     needs: [typecheck, lint, build, test]
