@@ -1,0 +1,84 @@
+---
+title: "Graph Model"
+description: "Graph Model"
+section: "concepts"
+status: "stable"
+---
+
+# Graph Model
+
+ArcFlow stores data as a property graph — nodes connected by relationships, each carrying key-value properties.
+
+## Nodes
+
+Nodes represent entities. Each node has:
+
+- **Labels** — categories like `:Person`, `:Company`, `:Fact` (a node can have one label)
+- **Properties** — key-value pairs like `{name: 'Alice', age: 30}`
+
+```typescript
+db.mutate("CREATE (n:Person {name: 'Alice', age: 30, email: 'alice@example.com'})")
+```
+
+## Relationships
+
+Relationships connect two nodes with a direction and type:
+
+```typescript
+// Alice works at Acme
+db.mutate("MATCH (a:Person {name: 'Alice'}) MATCH (c:Company {name: 'Acme'}) MERGE (a)-[:WORKS_AT]->(c)")
+```
+
+Relationships can also carry properties:
+
+```typescript
+db.mutate("MATCH (a:Person {name: 'Alice'}) MATCH (b:Person {name: 'Bob'}) MERGE (a)-[:KNOWS {since: 2020}]->(b)")
+```
+
+## Properties
+
+Property values can be:
+
+| Type | Example | WorldCypher Literal |
+|---|---|---|
+| String | `'Alice'` | `'Alice'` |
+| Integer | `30` | `30` |
+| Float | `3.14` | `3.14` |
+| Boolean | `true` | `true` / `false` |
+| List (string) | `['a','b']` | `'a,b'` (comma-separated) |
+
+## Querying the graph
+
+**Pattern matching** is how you read the graph. You describe the shape you're looking for:
+
+```typescript
+// Find all people
+db.query("MATCH (n:Person) RETURN n.name, n.age")
+
+// Find who works where
+db.query("MATCH (p:Person)-[:WORKS_AT]->(c:Company) RETURN p.name, c.name")
+
+// Traverse 1-3 hops
+db.query("MATCH (a:Person {name: 'Alice'})-[:KNOWS*1..3]->(b) RETURN b.name")
+```
+
+## Schema-optional
+
+ArcFlow doesn't require a schema upfront. Create any node with any properties at any time. Use `CALL db.schema` to inspect the emergent schema:
+
+```typescript
+const schema = db.query("CALL db.schema")
+// Shows which labels exist and what properties they carry
+```
+
+## In-memory vs. persistent
+
+```typescript
+import { open, openInMemory } from 'arcflow'
+
+// In-memory: fast, ephemeral, great for tests
+const mem = openInMemory()
+
+// Persistent: WAL-journaled, survives restarts
+const disk = open('./data/graph')
+```

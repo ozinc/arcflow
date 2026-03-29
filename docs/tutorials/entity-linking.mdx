@@ -1,0 +1,137 @@
+---
+title: "Tutorial: Entity Linking"
+description: "Tutorial: Entity Linking"
+section: "tutorials"
+status: "stable"
+---
+
+# Tutorial: Entity Linking
+
+Link entities across independent datasets — the multi-MATCH pattern used in pipelines that merge data from multiple sources.
+
+## The pattern
+
+Entity linking connects records that refer to the same real-world entity. In a graph, this means:
+1. Find entity A (from source 1)
+2. Find entity B (from source 2)
+3. Create a relationship between them
+
+## Basic entity linking
+
+```typescript
+import { openInMemory } from 'arcflow'
+
+const db = openInMemory()
+
+// Data from source 1
+db.mutate("CREATE (p:Person {id: 'p1', name: 'Alice Chen', source: 'crm'})")
+
+// Data from source 2
+db.mutate("CREATE (p:Person {id: 'p2', name: 'A. Chen', source: 'linkedin'})")
+
+// Link them (multi-MATCH pattern)
+db.mutate(
+  "MATCH (a:Person {id: $id1}) MATCH (b:Person {id: $id2}) MERGE (a)-[:SAME_AS {confidence: $conf}]->(b)",
+  { id1: 'p1', id2: 'p2', conf: 0.92 }
+)
+```
+
+## Parameterized linking function
+
+```typescript
+function linkEntities(
+  db: ArcflowDB,
+  sourceLabel: string, sourceId: string,
+  targetLabel: string, targetId: string,
+  relType: string,
+  confidence: number
+) {
+  db.mutate(
+    `MATCH (a:${sourceLabel} {id: $sid}) MATCH (b:${targetLabel} {id: $tid}) MERGE (a)-[:${relType} {confidence: $conf}]->(b)`,
+    { sid: sourceId, tid: targetId, conf: confidence }
+  )
+}
+
+// Usage
+linkEntities(db, 'Person', 'p1', 'Org', 'o1', 'WORKS_AT', 0.95)
+linkEntities(db, 'Person', 'p1', 'Person', 'p2', 'KNOWS', 0.80)
+```
+
+## Fact-based linking (triple pattern)
+
+For richer semantics, create fact nodes that describe the relationship:
+
+```typescript
+function projectFact(
+  db: ArcflowDB,
+  subjectId: string, subjectLabel: string,
+  objectId: string, objectLabel: string,
+  predicate: string, confidence: number, source: string
+) {
+  const factId = `fact-${subjectId}-${predicate}-${objectId}`
+
+  db.batchMutate([
+    `MERGE (f:Fact {uuid: '${factId}', predicate: '${predicate}', confidence: ${confidence}, source: '${source}'})`,
+    `MATCH (s:${subjectLabel} {id: '${subjectId}'}) MATCH (f:Fact {uuid: '${factId}'}) MERGE (s)-[:SUBJECT_OF]->(f)`,
+    `MATCH (f:Fact {uuid: '${factId}'}) MATCH (o:${objectLabel} {id: '${objectId}'}) MERGE (f)-[:OBJECT_IS]->(o)`,
+  ])
+}
+
+// Usage
+projectFact(db, 'p1', 'Person', 'o1', 'Org', 'employment', 0.95, 'crm-export')
+```
+
+## Querying linked entities
+
+### Find all links for an entity
+
+```typescript
+const links = db.query(
+  "MATCH (a:Person {id: $id})-[r]->(b) RETURN labels(b), b.name, b.id",
+  { id: 'p1' }
+)
+```
+
+### Traverse through facts
+
+```typescript
+const facts = db.query(`
+  MATCH (s:Person {id: $id})-[:SUBJECT_OF]->(f:Fact)-[:OBJECT_IS]->(o)
+  RETURN f.predicate, f.confidence, o.name, labels(o)
+  ORDER BY f.confidence DESC
+`, { id: 'p1' })
+```
+
+### Find entities connected by high-confidence facts
+
+```typescript
+const highConf = db.query(`
+  MATCH (a)-[:SUBJECT_OF]->(f:Fact)-[:OBJECT_IS]->(b)
+  WHERE f.confidence > 0.9
+  RETURN a.name, f.predicate, b.name, f.confidence
+`)
+```
+
+## Batch entity linking (pipeline pattern)
+
+For high-throughput pipelines processing hundreds of entities per batch:
+
+```typescript
+function projectBatch(db: ArcflowDB, entities: EntityRecord[]) {
+  // Phase 1: Create all entity nodes
+  const entityMutations = entities.map(e =>
+    `MERGE (n:${e.label} {id: '${e.id}', name: '${e.name}', workspaceId: '${e.workspaceId}'})`
+  )
+  db.batchMutate(entityMutations)
+
+  // Phase 2: Create all relationships
+  const relMutations = entities
+    .filter(e => e.links)
+    .flatMap(e => e.links!.map(link =>
+      `MATCH (a:${e.label} {id: '${e.id}'}) MATCH (b:${link.targetLabel} {id: '${link.targetId}'}) MERGE (a)-[:${link.relType}]->(b)`
+    ))
+  if (relMutations.length > 0) {
+    db.batchMutate(relMutations)
+  }
+}
+```

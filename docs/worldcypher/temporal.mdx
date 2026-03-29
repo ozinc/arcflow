@@ -1,0 +1,86 @@
+---
+title: "WorldCypher: Temporal Queries"
+description: "WorldCypher: Temporal Queries"
+section: "worldcypher"
+status: "stable"
+---
+
+# WorldCypher: Temporal Queries
+
+ArcFlow natively supports time-aware queries — snapshot the graph at any point in time, track trajectories, and compute temporal metrics.
+
+## AS OF — time travel queries
+
+Query the graph as it existed at a specific Unix timestamp:
+
+```cypher
+-- What did the graph look like at this timestamp?
+MATCH (n:Person) AS OF 1700000000 RETURN n.name, n.age
+```
+
+```typescript
+const snapshot = db.query("MATCH (n:Person) AS OF $ts RETURN n.name", {
+  ts: Math.floor(Date.now() / 1000) - 3600  // 1 hour ago
+})
+```
+
+## Temporal procedures
+
+### temporal.velocity — rate of change
+
+How fast is the graph changing?
+
+```typescript
+const v = db.query("CALL temporal.velocity(7)")  // last 7 days
+console.log(v.rows[0].get('totalNodes'))
+console.log(v.rows[0].get('totalRelationships'))
+```
+
+### temporal.decay — exponential decay
+
+Rank recent data higher with exponential decay:
+
+```typescript
+const decayed = db.query("CALL temporal.decay(7, 0.01)")
+// halfLife=7 days, floor=0.01
+```
+
+### temporal.trajectory — entity history
+
+Track an entity's changes over time:
+
+```typescript
+const trajectory = db.query("CALL temporal.trajectory()")
+```
+
+## Temporal database operations
+
+```cypher
+-- Changes since last checkpoint
+CALL db.changesSince
+
+-- Compare two temporal versions
+CALL db.temporalCompare
+
+-- Replay temporal events
+CALL db.temporalReplay
+
+-- Nodes at a specific point in time
+CALL db.nodesAsOf
+```
+
+## Reactive temporal queries
+
+Combine temporal with reactive for live monitoring:
+
+```cypher
+-- Continuously watch for new high-value nodes
+LIVE MATCH (n:Person) WHERE n.score > 0.9 RETURN n.name, n.score
+```
+
+## Use cases
+
+- **Audit trails** — "What was the state of entity X on March 1st?"
+- **Temporal analytics** — "How has the network evolved over time?"
+- **Event sourcing** — replay graph mutations for debugging
+- **Regulatory compliance** — point-in-time reporting

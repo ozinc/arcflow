@@ -1,63 +1,61 @@
 # ArcFlow Documentation
 
-## Getting Started
+All docs are `.mdx` files with YAML frontmatter. The sidebar and ordering are defined in [`_config.json`](_config.json).
 
-- [Installation](getting-started/installation.md) — npm, Docker, binary, local dev
-- [Quickstart](getting-started/quickstart.md) — first query in 5 minutes
-- [Project Setup](getting-started/project-setup.md) — Express, testing, monorepo, TypeScript config
+The website at `arcflow.dev/docs` fetches these files from GitHub at build time.
 
-## WorldCypher Language
+## Adding or editing docs
 
-- [Overview](worldcypher/overview.md) — clauses, patterns, extensions beyond Cypher
-- [Spatial Queries](worldcypher/spatial.md) — distance, zones, spatial predicates
-- [Temporal Queries](worldcypher/temporal.md) — AS OF, decay, velocity, trajectory
-- [Algorithms](worldcypher/algorithms.md) — 30+ algorithms, centrality, community detection, search
+1. Edit `.mdx` files in this directory
+2. Add frontmatter: `title`, `description`, `section`, `status`
+3. Add to `_config.json` if it's a new page
+4. Push to `main` — website revalidates automatically
 
-## Core Concepts
+## Structure
 
-- [Graph Model](core-concepts/graph-model.md) — nodes, relationships, properties
-- [WorldCypher](core-concepts/worldcypher.md) — query language intro
-- [Parameters](core-concepts/parameters.md) — parameterized queries
-- [Results](core-concepts/results.md) — QueryResult, TypedRow, typed access
-- [Persistence](core-concepts/persistence.md) — WAL, checkpoints, recovery
-- [Error Handling](core-concepts/error-handling.md) — ArcflowError, categories, codes
+```
+docs/
+├── _config.json                 # Sidebar sections + ordering (website consumes this)
+├── get-started.mdx              # Landing page
+├── quickstart.mdx               # 5-minute quickstart
+├── installation.mdx             # All install methods
+├── project-setup.mdx            # Express, testing, monorepo
+├── concepts/                    # Core concepts
+│   ├── graph-model.mdx
+│   ├── worldcypher.mdx
+│   ├── parameters.mdx
+│   ├── results.mdx
+│   ├── persistence.mdx
+│   └── error-handling.mdx
+├── worldcypher/                 # Query language reference
+│   ├── index.mdx                # Overview (renders at /docs/worldcypher)
+│   ├── spatial.mdx
+│   ├── temporal.mdx
+│   └── algorithms.mdx
+├── tutorials/                   # Step-by-step guides
+├── recipes/                     # Copy-paste patterns
+├── use-cases/                   # Real-world applications
+├── reference/                   # API, compatibility, known issues
+│   ├── api.mdx
+│   ├── compatibility.mdx
+│   ├── known-issues.mdx
+│   └── worldcypher.yaml         # Machine-readable compatibility data
+└── deployment/                  # Docker, cloud
+```
 
-## Tutorials
+## Frontmatter format
 
-- [Knowledge Graph](tutorials/knowledge-graph.md) — entities, facts, confidence scores
-- [Entity Linking](tutorials/entity-linking.md) — multi-MATCH patterns, cross-source linking
-- [Vector Search](tutorials/vector-search.md) — embeddings, HNSW index, similarity search
-- [Graph Algorithms](tutorials/graph-algorithms.md) — PageRank, Louvain, betweenness, centrality
+```yaml
+---
+title: "Page Title"
+description: "One-line description"
+section: "get-started"           # Must match a section id in _config.json
+status: "stable"                 # stable | beta | deprecated
+---
+```
 
-## Recipes
+## URL mapping
 
-- [CRUD](recipes/crud.md) — create, read, update, delete
-- [Multi-MATCH](recipes/multi-match.md) — cross-entity joins
-- [MERGE (Upsert)](recipes/merge-upsert.md) — find-or-create patterns
-- [Full-Text Search](recipes/fulltext-search.md) — BM25 indexes
-- [Temporal Queries](recipes/temporal-queries.md) — AS OF, decay, velocity
-- [Batch Projection](recipes/batch-projection.md) — high-throughput pipeline ingestion
-- [GraphRAG](recipes/graph-rag.md) — retrieval-augmented generation
-
-## Reference
-
-- [API](reference/api.md) — complete TypeScript SDK API
-- [Compatibility Matrix](reference/compatibility.md) — all WorldCypher features and procedures
-- [WorldCypher YAML](reference/worldcypher.yaml) — machine-readable compatibility data
-- [Known Issues](reference/known-issues.md) — workarounds and caveats
-
-## Deployment
-
-- [Docker](deployment/docker.md) — docker run, docker-compose, persistence
-
-## Use Cases
-
-- [Knowledge Management](use-cases/knowledge-management.md) — entity extraction, linking, search
-- [RAG Pipeline](use-cases/rag-pipeline.md) — vector + graph + full-text retrieval
-- [Sports Analytics](use-cases/sports-analytics.md) — player tracking, formations, events
-- [Behavior Graphs](use-cases/behavior-graphs.md) — game AI, robotics, autonomous agents
-- [Grounded Neural Objects](use-cases/grounded-neural-objects.md) — real-time object identity, spatial tracking, camera handoff
-
-## Sample Data
-
-- [Fixtures](../fixtures/README.md) — ready-to-load sample datasets
+`docs/{slug}.mdx` → `arcflow.dev/docs/{slug}`
+`docs/concepts/graph-model.mdx` → `arcflow.dev/docs/concepts/graph-model`
+`docs/worldcypher/index.mdx` → `arcflow.dev/docs/worldcypher`

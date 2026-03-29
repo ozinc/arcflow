@@ -1,0 +1,117 @@
+---
+title: "Project Setup"
+description: "Project Setup"
+section: "get-started"
+status: "stable"
+---
+
+# Project Setup
+
+How to integrate ArcFlow into different project types.
+
+## Node.js / Express / Fastify
+
+```typescript
+import { open } from 'arcflow'
+
+// Open once at startup, share across request handlers
+const db = open('./data/graph')
+
+app.get('/api/people', (req, res) => {
+  const result = db.query("MATCH (n:Person) RETURN n.name, n.age")
+  res.json(result.rows.map(r => r.toObject()))
+})
+
+app.post('/api/people', (req, res) => {
+  const { name, age } = req.body
+  db.mutate("CREATE (n:Person {name: $name, age: $age})", { name, age })
+  res.json({ ok: true })
+})
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  db.close()
+  process.exit(0)
+})
+```
+
+## Testing
+
+```typescript
+import { openInMemory } from 'arcflow'
+
+describe('my graph logic', () => {
+  let db
+
+  beforeEach(() => {
+    // Fresh in-memory graph per test — fast, no cleanup needed
+    db = openInMemory()
+  })
+
+  it('creates and queries nodes', () => {
+    db.mutate("CREATE (n:Person {name: 'Alice'})")
+    const result = db.query("MATCH (n:Person) RETURN n.name")
+    expect(result.rows[0].get('name')).toBe('Alice')
+  })
+})
+```
+
+## TypeScript configuration
+
+The SDK ships with full type definitions. No extra `@types/` packages needed.
+
+```json
+// tsconfig.json — no special config required
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "strict": true,
+    "esModuleInterop": true
+  }
+}
+```
+
+## Monorepo setup (pnpm / turborepo)
+
+```json
+// packages/my-app/package.json
+{
+  "dependencies": {
+    "arcflow": "workspace:*"
+  }
+}
+```
+
+If using pnpm with `file:` protocol during local dev, the `.node` binary may not sync on rebuild. Workaround:
+
+```bash
+cp path/to/arcflow/bindings/typescript/arcflow.darwin-arm64.node \
+   node_modules/arcflow-core/arcflow.darwin-arm64.node
+```
+
+## Environment setup
+
+```bash
+# Optional: disable Metal GPU if module load hangs during development
+export ARCFLOW_METAL_FORCE_UNAVAILABLE=true
+```
+
+## Data directory conventions
+
+```
+my-project/
+├── data/
+│   └── graph/                    # ArcFlow data directory
+│       ├── worldcypher.snapshot.json   # Graph snapshot (auto-managed)
+│       └── wal/                  # Write-ahead log (auto-managed)
+├── src/
+│   └── ...
+└── package.json
+```
+
+Add to `.gitignore`:
+
+```
+data/graph/
+```

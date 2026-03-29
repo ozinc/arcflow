@@ -1,0 +1,101 @@
+---
+title: "Recipe: CRUD Operations"
+description: "Recipe: CRUD Operations"
+section: "recipes"
+status: "stable"
+---
+
+# Recipe: CRUD Operations
+
+Copy-paste patterns for create, read, update, delete.
+
+## Create a node
+
+```typescript
+db.mutate("CREATE (n:Person {name: 'Alice', age: 30, email: 'alice@example.com'})")
+```
+
+## Create with parameters
+
+```typescript
+db.mutate("CREATE (n:Person {name: $name, age: $age})", { name: 'Alice', age: 30 })
+```
+
+## Create a relationship
+
+```typescript
+db.mutate("MATCH (a:Person {name: 'Alice'}) MATCH (b:Person {name: 'Bob'}) MERGE (a)-[:KNOWS]->(b)")
+```
+
+## Read all nodes of a label
+
+```typescript
+const result = db.query("MATCH (n:Person) RETURN n.name, n.age ORDER BY n.name")
+const people = result.rows.map(row => row.toObject())
+```
+
+## Read with filter
+
+```typescript
+const result = db.query("MATCH (n:Person) WHERE n.age > $minAge RETURN n.name, n.age", { minAge: 25 })
+```
+
+## Read by ID
+
+```typescript
+const result = db.query("MATCH (n:Person {id: $id}) RETURN n.name, n.age", { id: 'p1' })
+if (result.rowCount === 0) {
+  console.log('Not found')
+}
+```
+
+## Read with string matching
+
+```typescript
+db.query("MATCH (n:Person) WHERE n.name CONTAINS $term RETURN n.name", { term: 'ali' })
+db.query("MATCH (n:Person) WHERE n.name STARTS WITH $prefix RETURN n.name", { prefix: 'A' })
+```
+
+## Update a property
+
+```typescript
+db.mutate("MATCH (n:Person {name: $name}) SET n.age = $age", { name: 'Alice', age: 31 })
+```
+
+## Upsert (MERGE)
+
+```typescript
+// Creates if not found, matches if exists
+db.mutate("MERGE (n:Person {id: $id, name: $name})", { id: 'p1', name: 'Alice' })
+```
+
+## Delete a node
+
+```typescript
+db.mutate("MATCH (n:Person {name: $name}) DELETE n", { name: 'Alice' })
+```
+
+## Delete with relationships
+
+```typescript
+db.mutate("MATCH (n:Person {name: $name}) DETACH DELETE n", { name: 'Alice' })
+```
+
+## Remove a property
+
+```typescript
+db.mutate("MATCH (n:Person {name: 'Alice'}) REMOVE n.email")
+```
+
+## Count nodes
+
+```typescript
+const result = db.query("MATCH (n:Person) RETURN count(*) AS total")
+const total = result.rows[0].get('total')  // number
+```
+
+## Aggregations
+
+```typescript
+const result = db.query("MATCH (n:Person) RETURN avg(n.age) AS avgAge, min(n.age) AS youngest, max(n.age) AS oldest")
+```

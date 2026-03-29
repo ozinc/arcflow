@@ -1,0 +1,84 @@
+---
+title: "Installation"
+description: "Installation"
+section: "get-started"
+status: "stable"
+---
+
+# Installation
+
+## npm (recommended)
+
+```bash
+npm install arcflow
+```
+
+The SDK includes pre-built native binaries for all major platforms:
+
+| Platform | Architecture | Binary |
+|---|---|---|
+| macOS | Apple Silicon (M1/M2/M3/M4) | `arcflow.darwin-arm64.node` |
+| macOS | Intel | `arcflow.darwin-x64.node` |
+| Linux | x64 (glibc) | `arcflow.linux-x64-gnu.node` |
+| Linux | ARM64 (glibc) | `arcflow.linux-arm64-gnu.node` |
+| Windows | x64 | `arcflow.win32-x64-msvc.node` |
+
+## pnpm / yarn
+
+```bash
+pnpm add arcflow
+# or
+yarn add arcflow
+```
+
+## Local development (from source)
+
+If you're working alongside the ArcFlow source:
+
+```json
+// package.json
+{
+  "dependencies": {
+    "arcflow": "file:../arcflow/sdk/typescript"
+  }
+}
+```
+
+Build the native module:
+
+```bash
+cd path/to/arcflow
+cargo build --release -p arcflow-node
+cp target/release/libarcflow_node.dylib bindings/typescript/arcflow.darwin-arm64.node
+```
+
+Then install dependencies in the SDK:
+
+```bash
+cd sdk/typescript
+npm install
+npm run build
+```
+
+## Verify installation
+
+```typescript
+import { openInMemory } from 'arcflow'
+
+const db = openInMemory()
+db.mutate("CREATE (n:Hello {message: 'It works!'})")
+const result = db.query("MATCH (n:Hello) RETURN n.message")
+console.log(result.rows[0].get('message'))  // "It works!"
+db.close()
+```
+
+## Environment variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `ARCFLOW_METAL_FORCE_UNAVAILABLE` | `false` | Set to `true` to disable Metal GPU acceleration (useful if module load hangs) |
+
+## Requirements
+
+- Node.js 18+ (LTS recommended)
+- No native build tools needed — pre-built binaries are included

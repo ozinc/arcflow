@@ -1,0 +1,99 @@
+---
+title: "Error Handling"
+description: "Error Handling"
+section: "concepts"
+status: "stable"
+---
+
+# Error Handling
+
+The SDK provides structured errors with codes, categories, and recovery hints.
+
+## ArcflowError
+
+All errors from the engine are wrapped in `ArcflowError`:
+
+```typescript
+import { ArcflowError } from 'arcflow'
+
+try {
+  db.query("INVALID QUERY")
+} catch (err) {
+  if (err instanceof ArcflowError) {
+    console.log(err.code)        // "EXPECTED_KEYWORD"
+    console.log(err.category)    // "parse"
+    console.log(err.message)     // "Expected MATCH, CREATE, MERGE, ..."
+    console.log(err.suggestion)  // "Expected MATCH or CREATE" (when available)
+  }
+}
+```
+
+## Error categories
+
+| Category | When | Example Codes |
+|---|---|---|
+| `parse` | Query syntax is invalid | `EXPECTED_KEYWORD`, `UNEXPECTED_TOKEN`, `INVALID_SYNTAX` |
+| `validation` | Query is syntactically valid but semantically wrong | `UNKNOWN_FUNCTION`, `TYPE_MISMATCH`, `UNKNOWN_PROCEDURE` |
+| `execution` | Runtime error during query execution | `UNKNOWN`, general execution failures |
+| `integration` | Infrastructure or lifecycle error | `LOCK_POISONED`, `WAL_ERROR`, `DB_CLOSED` |
+
+## Common errors and fixes
+
+### Parse errors
+
+```typescript
+// Wrong:
+db.query("FIND (n:Person)")  // EXPECTED_KEYWORD — "FIND" is not a keyword
+
+// Right:
+db.query("MATCH (n:Person) RETURN n")
+```
+
+### Missing RETURN clause
+
+```typescript
+// Wrong:
+db.query("MATCH (n:Person)")  // Needs a RETURN
+
+// Right:
+db.query("MATCH (n:Person) RETURN n.name")
+```
+
+### Using closed database
+
+```typescript
+db.close()
+db.query("RETURN 1")  // ArcflowError: code=DB_CLOSED, category=integration
+```
+
+## Programmatic error handling
+
+```typescript
+try {
+  db.query(userProvidedQuery)
+} catch (err) {
+  if (err instanceof ArcflowError) {
+    switch (err.category) {
+      case 'parse':
+        return { error: 'Invalid query syntax', detail: err.message }
+      case 'validation':
+        return { error: 'Query validation failed', detail: err.message }
+      case 'execution':
+        return { error: 'Query execution failed', detail: err.message }
+      case 'integration':
+        return { error: 'Database error', detail: err.message }
+    }
+  }
+  throw err  // Re-throw unexpected errors
+}
+```
+
+## Health check
+
+Use `isHealthy()` to check if the database is operational:
+
+```typescript
+if (!db.isHealthy()) {
+  // Reinitialize or alert
+}
+```

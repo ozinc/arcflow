@@ -1,0 +1,86 @@
+{
+  "sections": [
+    {
+      "id": "get-started",
+      "title": "Get Started",
+      "items": [
+        { "slug": "get-started", "title": "Get Started", "order": 1 },
+        { "slug": "quickstart", "title": "Quickstart", "order": 2 },
+        { "slug": "installation", "title": "Installation", "order": 3 },
+        { "slug": "project-setup", "title": "Project Setup", "order": 4 }
+      ]
+    },
+    {
+      "id": "concepts",
+      "title": "Concepts",
+      "items": [
+        { "slug": "concepts/graph-model", "title": "Graph Model", "order": 1 },
+        { "slug": "concepts/worldcypher", "title": "WorldCypher Intro", "order": 2 },
+        { "slug": "concepts/parameters", "title": "Parameters", "order": 3 },
+        { "slug": "concepts/results", "title": "Query Results", "order": 4 },
+        { "slug": "concepts/persistence", "title": "Persistence & WAL", "order": 5 },
+        { "slug": "concepts/error-handling", "title": "Error Handling", "order": 6 }
+      ]
+    },
+    {
+      "id": "worldcypher",
+      "title": "WorldCypher",
+      "items": [
+        { "slug": "worldcypher", "title": "Overview", "order": 1 },
+        { "slug": "worldcypher/spatial", "title": "Spatial Queries", "order": 2 },
+        { "slug": "worldcypher/temporal", "title": "Temporal Queries", "order": 3 },
+        { "slug": "worldcypher/algorithms", "title": "Algorithms", "order": 4 }
+      ]
+    },
+    {
+      "id": "tutorials",
+      "title": "Tutorials",
+      "items": [
+        { "slug": "tutorials/knowledge-graph", "title": "Knowledge Graph", "order": 1 },
+        { "slug": "tutorials/entity-linking", "title": "Entity Linking", "order": 2 },
+        { "slug": "tutorials/vector-search", "title": "Vector Search", "order": 3 },
+        { "slug": "tutorials/graph-algorithms", "title": "Graph Algorithms", "order": 4 }
+      ]
+    },
+    {
+      "id": "recipes",
+      "title": "Recipes",
+      "items": [
+        { "slug": "recipes/crud", "title": "CRUD", "order": 1 },
+        { "slug": "recipes/multi-match", "title": "Multi-MATCH", "order": 2 },
+        { "slug": "recipes/merge-upsert", "title": "MERGE (Upsert)", "order": 3 },
+        { "slug": "recipes/fulltext-search", "title": "Full-Text Search", "order": 4 },
+        { "slug": "recipes/temporal-queries", "title": "Temporal Queries", "order": 5 },
+        { "slug": "recipes/batch-projection", "title": "Batch Projection", "order": 6 },
+        { "slug": "recipes/graph-rag", "title": "GraphRAG", "order": 7 }
+      ]
+    },
+    {
+      "id": "use-cases",
+      "title": "Use Cases",
+      "items": [
+        { "slug": "use-cases/knowledge-management", "title": "Knowledge Management", "order": 1 },
+        { "slug": "use-cases/rag-pipeline", "title": "RAG Pipeline", "order": 2 },
+        { "slug": "use-cases/sports-analytics", "title": "Sports Analytics", "order": 3 },
+        { "slug": "use-cases/grounded-neural-objects", "title": "Grounded Neural Objects", "order": 4 },
+        { "slug": "use-cases/behavior-graphs", "title": "Behavior Graphs", "order": 5 }
+      ]
+    },
+    {
+      "id": "reference",
+      "title": "Reference",
+      "items": [
+        { "slug": "reference/api", "title": "TypeScript API", "order": 1 },
+        { "slug": "reference/compatibility", "title": "Compatibility Matrix", "order": 2 },
+        { "slug": "reference/known-issues", "title": "Known Issues", "order": 3 }
+      ]
+    },
+    {
+      "id": "deployment",
+      "title": "Deployment",
+      "items": [
+        { "slug": "deployment/docker", "title": "Docker", "order": 1 }
+      ]
+    }
+  ]
+}

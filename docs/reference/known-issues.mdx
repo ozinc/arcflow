@@ -1,0 +1,76 @@
+---
+title: "Known Issues"
+description: "Known Issues"
+section: "reference"
+status: "stable"
+---
+
+# Known Issues
+
+## Metal GPU initialization hang
+
+**Symptom:** `require('arcflow-core')` or `new Runtime()` hangs indefinitely on macOS.
+
+**Cause:** Metal GPU kernel compilation can deadlock during module initialization on some systems.
+
+**Fix:**
+
+```bash
+export ARCFLOW_METAL_FORCE_UNAVAILABLE=true
+```
+
+This disables Metal acceleration and falls back to CPU. All queries still work — just without GPU acceleration.
+
+## pnpm file: protocol binary sync
+
+**Symptom:** After rebuilding the native module, pnpm doesn't pick up the new `.node` binary.
+
+**Fix:** Manually copy the binary:
+
+```bash
+cp path/to/arcflow/bindings/typescript/arcflow.darwin-arm64.node \
+   node_modules/arcflow-core/arcflow.darwin-arm64.node
+```
+
+## SET multiple properties in one clause
+
+**Workaround:** Use separate SET clauses instead of comma-separated:
+
+```cypher
+-- Instead of: SET n.a = 1, n.b = 2
+-- Use:
+MATCH (n:Person {id: 'p1'}) SET n.a = 1
+MATCH (n:Person {id: 'p1'}) SET n.b = 2
+```
+
+Or use `batchMutate` for multiple property updates.
+
+## UNWIND limited to literal lists
+
+`UNWIND` currently supports literal arrays only:
+
+```cypher
+-- Works:
+UNWIND [1, 2, 3] AS x RETURN x
+
+-- Does not work yet:
+UNWIND n.aliases AS alias RETURN alias
+```
+
+## Multi-MATCH column name collisions
+
+When returning the same property name from multiple MATCH variables, columns are deduplicated:
+
+```cypher
+-- Both resolve to column "name" — second overwrites first:
+MATCH (a:Person) MATCH (b:Org) RETURN a.name, b.name
+
+-- Fix: use AS aliases
+MATCH (a:Person) MATCH (b:Org) RETURN a.name AS personName, b.name AS orgName
+```
+
+This only affects multi-MATCH with same-named properties. Traversal queries (`MATCH (a)-[:REL]->(b) RETURN a.name, b.name`) work correctly since the engine resolves through the relationship.
+
+## Parameter values are string-coerced
+
+All query parameters are internally converted to strings before substitution. This works transparently for most cases, but be aware when comparing types in WHERE clauses.
