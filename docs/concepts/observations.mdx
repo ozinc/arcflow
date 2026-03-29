@@ -1,0 +1,92 @@
+---
+title: "Observations & Evidence"
+description: "Confidence-scored, provenance-tracked observations with three classes: observed, inferred, predicted"
+section: "concepts"
+status: "stable"
+---
+
+# Observations & Evidence
+
+ArcFlow classifies every piece of knowledge by how it was obtained. This lets you distinguish hard evidence from inference, and inference from prediction.
+
+## Three observation classes
+
+| Class | Meaning | Example |
+|---|---|---|
+| **Observed** | Directly measured from a sensor or data source | "Camera 3 detected person at (52.3, 34.1)" |
+| **Inferred** | Derived from observations via rules or algorithms | "Person is likely Alice based on ReID embedding" |
+| **Predicted** | Forecast from models or extrapolation | "Person will be at (53.0, 34.5) in 2 seconds" |
+
+## Query by observation class
+
+```cypher
+-- All observed nodes (direct evidence)
+CALL db.nodesByObservation.observed
+
+-- All inferred nodes (derived knowledge)
+CALL db.nodesByObservation.inferred
+
+-- All predicted nodes (forecasts)
+CALL db.nodesByObservation.predicted
+
+-- List available observation classes
+CALL db.observationClasses
+```
+
+## SDK usage
+
+```typescript
+import { open } from 'arcflow'
+
+const db = open('./evidence-graph')
+
+// Create an observed entity (from sensor)
+db.mutate("CREATE (p:Person {id: 'det-42', observation: 'observed', confidence: 0.95, source: 'camera-3', x: 52.3, y: 34.1})")
+
+// Create an inferred entity (from algorithm)
+db.mutate("CREATE (id:Identity {id: 'reid-alice', observation: 'inferred', confidence: 0.87, source: 'reid-model', person_id: 'det-42'})")
+
+// Create a predicted entity (from model)
+db.mutate("CREATE (pred:Position {id: 'pred-42-t2', observation: 'predicted', confidence: 0.72, source: 'kalman-filter', x: 53.0, y: 34.5, t_offset: 2})")
+
+// Query only observed data (highest trust)
+const observed = db.query("CALL db.nodesByObservation.observed")
+console.log(`Observed entities: ${observed.rowCount}`)
+
+// Query inferred data
+const inferred = db.query("CALL db.nodesByObservation.inferred")
+```
+
+## Confidence propagation
+
+Every node carries a confidence score. When you traverse relationships, confidence flows through the graph:
+
+```typescript
+// High-confidence facts
+db.query("MATCH (s)-[:SUBJECT_OF]->(f:Fact)-[:OBJECT_IS]->(o) WHERE f.confidence > 0.9 RETURN s.name, f.predicate, o.name")
+
+// Confidence-weighted PageRank
+db.query("CALL algo.confidencePageRank()")
+
+// Confidence-weighted shortest path
+db.query("CALL algo.confidencePath()")
+```
+
+## Provenance
+
+Track where knowledge came from:
+
+```cypher
+-- Query provenance chain
+CALL db.provenance
+
+-- Causal chain (what led to what)
+CALL db.causalChain
+```
+
+## Why this matters
+
+- **Trust hierarchy** — observed > inferred > predicted. Make decisions at the right confidence level.
+- **Debugging** — when a result is wrong, trace back to which observation or inference caused it.
+- **Regulatory** — audit trails showing exactly how a conclusion was reached.
+- **Agent safety** — LLM agents can distinguish hard facts from guesses before acting on them.

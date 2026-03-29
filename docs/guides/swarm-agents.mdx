@@ -1,0 +1,98 @@
+---
+title: "Swarm & Multi-Agent"
+description: "Register, coordinate, and query multiple agents operating on a shared graph"
+section: "guides"
+status: "stable"
+---
+
+# Swarm & Multi-Agent
+
+ArcFlow provides built-in procedures for managing multiple agents that share a graph. Agents register themselves, maintain state as graph nodes, and coordinate through the shared graph structure.
+
+## Register an agent
+
+```cypher
+-- Register a new agent with an ID
+CALL swarm.register('agent-1')
+
+-- List all active agents
+CALL swarm.agents
+
+-- Count active agents
+CALL swarm.agentCount
+```
+
+## SDK usage
+
+```typescript
+import { open } from 'arcflow'
+
+const db = open('./swarm-graph')
+
+// Register agents
+db.query("CALL swarm.register('worker-1')")
+db.query("CALL swarm.register('worker-2')")
+db.query("CALL swarm.register('coordinator')")
+
+// Check agent count
+const count = db.query("CALL swarm.agentCount")
+console.log(`Active agents: ${count.rows[0].get('count')}`)
+
+// List all agents
+const agents = db.query("CALL swarm.agents")
+for (const row of agents.rows) {
+  console.log(`Agent: ${row.get('agent_id')}`)
+}
+```
+
+## Coordination patterns
+
+### Task assignment via graph
+
+```typescript
+// Coordinator creates task nodes
+db.mutate("CREATE (t:Task {id: 'task-1', type: 'process', status: 'pending', data: 'batch-42'})")
+
+// Worker claims a task
+db.mutate("MATCH (t:Task {status: 'pending'}) SET t.status = 'claimed' SET t.worker = 'worker-1'")
+
+// Worker completes task
+db.mutate("MATCH (t:Task {id: 'task-1'}) SET t.status = 'done' SET t.result = 'processed'")
+
+// Coordinator queries progress
+const done = db.query("MATCH (t:Task {status: 'done'}) RETURN count(*) AS completed")
+```
+
+### Shared blackboard
+
+Agents read and write to shared graph nodes — no message bus needed:
+
+```typescript
+// Agent writes observation
+db.mutate("MERGE (obs:Observation {key: 'enemy_pos', x: 52.3, y: 34.1, reporter: 'scout-1', ts: $ts})", {
+  ts: Date.now()
+})
+
+// Other agents read observations
+const obs = db.query("MATCH (o:Observation) WHERE o.ts > $since RETURN o.key, o.x, o.y, o.reporter", {
+  since: Date.now() - 5000  // last 5 seconds
+})
+```
+
+### Live views for coordination
+
+```cypher
+-- Create a live view of pending tasks (auto-maintained)
+CREATE LIVE VIEW pending_tasks AS
+  MATCH (t:Task {status: 'pending'}) RETURN t.id, t.type, t.data
+
+-- Agents poll the live view (zero-cost read)
+MATCH (row) FROM VIEW pending_tasks RETURN row
+```
+
+## Use cases
+
+- **AI agent orchestration** — multiple LLM agents sharing a knowledge graph
+- **Game AI** — NPC teams, squad coordination, shared perception
+- **Robotics** — multi-robot task allocation, shared world model
+- **Distributed processing** — worker pools with graph-based task queues

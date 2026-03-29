@@ -1,0 +1,119 @@
+---
+title: "Behavior Graphs"
+description: "Model behavior trees as graph structures for game AI, robotics, and autonomous agents"
+section: "guides"
+status: "stable"
+---
+
+# Behavior Graphs
+
+ArcFlow models behavior trees as graph subgraphs — nodes are graph nodes, execution order is edge traversal, and the blackboard is node properties. No external BT library needed.
+
+## Why graph-native behavior trees
+
+Traditional BT libraries maintain a separate tree structure disconnected from game/world state. In ArcFlow, the behavior tree IS the world graph:
+
+- **Runtime modification** — add/remove/rewire behaviors with MERGE/DELETE
+- **Shared blackboard** — node properties ARE the state
+- **Persistent** — behavior state survives restarts (WAL-backed)
+- **Algorithms** — use PageRank on behavior nodes, community detection for behavior clustering
+- **Queryable** — MATCH patterns over behavior structure
+
+## Define a behavior tree
+
+```cypher
+-- Sequence: execute children in order, fail on first failure
+CREATE (root:BT_Sequence {name: 'patrol', status: 'idle'})
+
+-- Condition: check a predicate
+CREATE (check:BT_Condition {name: 'is_enemy_visible', status: 'idle'})
+
+-- Actions: perform work
+CREATE (move:BT_Action {name: 'move_to_waypoint', status: 'idle', waypoint: 'wp_3'})
+CREATE (attack:BT_Action {name: 'attack_enemy', status: 'idle'})
+
+-- Wire the tree via CHILD edges with order
+MATCH (root:BT_Sequence {name: 'patrol'})
+MATCH (check:BT_Condition {name: 'is_enemy_visible'})
+MERGE (root)-[:CHILD {order: 0}]->(check)
+
+MATCH (root:BT_Sequence {name: 'patrol'})
+MATCH (move:BT_Action {name: 'move_to_waypoint'})
+MERGE (root)-[:CHILD {order: 1}]->(move)
+
+-- Conditional branch
+MATCH (check:BT_Condition {name: 'is_enemy_visible'})
+MATCH (attack:BT_Action {name: 'attack_enemy'})
+MERGE (check)-[:ON_SUCCESS]->(attack)
+```
+
+## Tick the behavior tree
+
+```cypher
+-- Execute one tick across all behavior trees
+CALL behavior.tick()
+
+-- Check status of all behavior nodes
+CALL behavior.status()
+
+-- List all behavior nodes
+CALL behavior.nodes()
+```
+
+## SDK usage
+
+```typescript
+import { open } from 'arcflow'
+
+const db = open('./game-state')
+
+// Define behavior tree
+db.batchMutate([
+  "CREATE (root:BT_Sequence {name: 'patrol', status: 'idle'})",
+  "CREATE (scan:BT_Condition {name: 'scan_area', status: 'idle'})",
+  "CREATE (move:BT_Action {name: 'move_to_cover', status: 'idle'})",
+])
+
+// Wire tree
+db.batchMutate([
+  "MATCH (r:BT_Sequence {name: 'patrol'}) MATCH (s:BT_Condition {name: 'scan_area'}) MERGE (r)-[:CHILD {order: 0}]->(s)",
+  "MATCH (r:BT_Sequence {name: 'patrol'}) MATCH (m:BT_Action {name: 'move_to_cover'}) MERGE (r)-[:CHILD {order: 1}]->(m)",
+])
+
+// Game loop
+function tick() {
+  db.query("CALL behavior.tick()")
+  const status = db.query("CALL behavior.status()")
+  for (const row of status.rows) {
+    console.log(`${row.get('name')}: ${row.get('status')}`)
+  }
+}
+
+// Dynamic modification at runtime
+db.mutate("CREATE (heal:BT_Action {name: 'heal_self', status: 'idle'})")
+db.mutate("MATCH (r:BT_Sequence {name: 'patrol'}) MATCH (h:BT_Action {name: 'heal_self'}) MERGE (r)-[:CHILD {order: 2}]->(h)")
+```
+
+## Node types
+
+| Type | Purpose | Example |
+|---|---|---|
+| `BT_Sequence` | Execute children left-to-right, fail on first failure | `patrol`, `attack_sequence` |
+| `BT_Selector` | Try children until one succeeds | `find_cover_or_retreat` |
+| `BT_Condition` | Check a predicate | `is_enemy_visible`, `health_low` |
+| `BT_Action` | Perform actual work | `move_to_waypoint`, `fire_weapon` |
+
+## Edge types
+
+| Type | Purpose |
+|---|---|
+| `CHILD` | Parent-to-child with `order` property for execution sequence |
+| `ON_SUCCESS` | Conditional branch on success |
+| `ON_FAILURE` | Conditional branch on failure |
+
+## Use cases
+
+- **Game AI** — NPC decision-making, enemy behavior, companion logic
+- **Robotics** — task planning, sensor-reactive behaviors, recovery sequences
+- **Autonomous agents** — LLM-driven agents with structured decision trees
+- **Simulation** — population behavior modeling, traffic flow, crowd dynamics

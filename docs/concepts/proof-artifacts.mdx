@@ -1,0 +1,98 @@
+---
+title: "Proof Artifacts & Gates"
+description: "Cryptographic proof of graph state for audit, compliance, and trust verification"
+section: "concepts"
+status: "stable"
+---
+
+# Proof Artifacts & Gates
+
+ArcFlow generates cryptographic proof artifacts that verify graph state — what data existed, when, and through what sequence of mutations. This enables audit trails, compliance verification, and trust gates in automated pipelines.
+
+## Proof artifacts
+
+A proof artifact is a signed record of graph state at a point in time:
+
+```cypher
+-- Generate proof artifacts for the current graph state
+CALL db.proofArtifacts
+
+-- Check proof gates (verification points in a pipeline)
+CALL db.proofGates
+```
+
+## Graph fingerprint
+
+Compute a cryptographic hash of the entire graph state:
+
+```cypher
+CALL db.fingerprint
+-- Returns: { fingerprint: "sha256:a1b2c3..." }
+```
+
+Two graphs with the same fingerprint have identical content. Use this to verify replication, detect tampering, or validate batch/delta equivalence.
+
+## SDK usage
+
+```typescript
+import { open } from 'arcflow'
+
+const db = open('./audited-graph')
+
+// Take a fingerprint before processing
+const before = db.query("CALL db.fingerprint")
+console.log(`Before: ${before.rows[0].get('fingerprint')}`)
+
+// Run a pipeline
+db.batchMutate([
+  "MERGE (p:Person {id: 'p1', name: 'Alice'})",
+  "MERGE (f:Fact {uuid: 'f1', predicate: 'employment', confidence: 0.95})",
+])
+
+// Take a fingerprint after
+const after = db.query("CALL db.fingerprint")
+console.log(`After: ${after.rows[0].get('fingerprint')}`)
+
+// Generate proof artifacts
+const proof = db.query("CALL db.proofArtifacts")
+for (const row of proof.rows) {
+  console.log(row.toObject())
+}
+
+// Verify proof gates
+const gates = db.query("CALL db.proofGates")
+```
+
+## The run → score → compare → gate flywheel
+
+Proof artifacts power a quality flywheel for data pipelines:
+
+1. **Run** — execute a pipeline (batch or incremental)
+2. **Score** — generate proof artifacts for the output
+3. **Compare** — verify batch and delta results produce the same fingerprint
+4. **Gate** — only promote results that pass proof verification
+
+```typescript
+// Run batch
+db.batchMutate(batchMutations)
+const batchFingerprint = db.query("CALL db.fingerprint")
+
+// Run delta (same input, incremental path)
+db.batchMutate(deltaMutations)
+const deltaFingerprint = db.query("CALL db.fingerprint")
+
+// Gate: batch/delta must agree
+if (batchFingerprint.rows[0].get('fingerprint') === deltaFingerprint.rows[0].get('fingerprint')) {
+  console.log('PASS — batch/delta equivalence verified')
+} else {
+  console.log('FAIL — results diverged')
+}
+```
+
+## Use cases
+
+- **Financial compliance** — prove what data existed at reporting time
+- **Pipeline quality** — gate promotions on proof verification
+- **Replication verification** — confirm replicas match the source
+- **Audit trails** — immutable record of graph state transitions
+- **AI safety** — verify that agent actions produced expected graph mutations

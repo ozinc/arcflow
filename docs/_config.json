@@ -38,7 +38,9 @@
         { "slug": "concepts/parameters", "title": "Parameters", "order": 5 },
         { "slug": "concepts/results", "title": "Query Results", "order": 6 },
         { "slug": "concepts/persistence", "title": "Persistence & WAL", "order": 7 },
-        { "slug": "concepts/error-handling", "title": "Error Handling", "order": 8 }
+        { "slug": "concepts/error-handling", "title": "Error Handling", "order": 8 },
+        { "slug": "concepts/observations", "title": "Observations & Evidence", "order": 9 },
+        { "slug": "concepts/proof-artifacts", "title": "Proof Artifacts & Gates", "order": 10 }
       ]
     },
     {
@@ -131,8 +133,10 @@
         { "slug": "guides/rag-pipeline", "title": "RAG Pipeline", "order": 3 },
         { "slug": "guides/agent-integration", "title": "Agent Integration", "order": 4 },
         { "slug": "guides/using-constructors", "title": "Using Constructors", "order": 5 },
-        { "slug": "guides/filesystem-workspace", "title": "Filesystem Workspace", "order": 6 },
-        { "slug": "guides/migrating-from-neo4j", "title": "Migrating from Neo4j", "order": 7 }
+        { "slug": "guides/behavior-graphs", "title": "Behavior Graphs", "order": 6 },
+        { "slug": "guides/swarm-agents", "title": "Swarm & Multi-Agent", "order": 7 },
+        { "slug": "guides/filesystem-workspace", "title": "Filesystem Workspace", "order": 8 },
+        { "slug": "guides/migrating-from-neo4j", "title": "Migrating from Neo4j", "order": 9 }
       ]
     },
     {
