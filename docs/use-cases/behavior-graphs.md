@@ -22,7 +22,7 @@ In ArcFlow, the tree IS the graph. Nodes are graph nodes. Execution order is edg
 ## Implementation
 
 ```typescript
-import { open } from '@arcflow/sdk'
+import { open } from 'arcflow'
 
 const db = open('./behavior-graph')
 

@@ -12,7 +12,7 @@ A graph that tracks:
 ## 1. Setup
 
 ```typescript
-import { open } from '@arcflow/sdk'
+import { open } from 'arcflow'
 
 const db = open('./knowledge-graph')
 ```

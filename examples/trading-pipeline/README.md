@@ -78,7 +78,7 @@ The delta path is 12,000x faster than full batch and gives correct results for A
 ## SDK Usage
 
 ```typescript
-import { open } from '@arcflow/sdk'
+import { open } from 'arcflow'
 
 const db = open('./market-data')
 

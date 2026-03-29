@@ -1,7 +1,7 @@
 // ArcFlow SDK — Knowledge Graph Example
 // Models people, organizations, and confidence-scored facts.
 
-import { openInMemory } from '@arcflow/sdk'
+import { openInMemory } from 'arcflow'
 
 const db = openInMemory()
 

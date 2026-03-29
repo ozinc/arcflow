@@ -6,7 +6,7 @@ Ready-to-load sample datasets for examples and testing.
 
 ```typescript
 import { readFileSync } from 'fs'
-import { openInMemory } from '@arcflow/sdk'
+import { openInMemory } from 'arcflow'
 
 const db = openInMemory()
 const fixture = readFileSync('./fixtures/social-network.cypher', 'utf-8')

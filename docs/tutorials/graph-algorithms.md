@@ -18,7 +18,7 @@ const pr = db.query("CALL algo.pageRank()")
 Find the most important nodes in your graph:
 
 ```typescript
-import { openInMemory } from '@arcflow/sdk'
+import { openInMemory } from 'arcflow'
 
 const db = openInMemory()
 

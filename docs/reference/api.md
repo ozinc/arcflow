@@ -5,7 +5,7 @@ Complete TypeScript SDK API.
 ## Module exports
 
 ```typescript
-import { open, openInMemory, ArcflowError } from '@arcflow/sdk'
+import { open, openInMemory, ArcflowError } from 'arcflow'
 ```
 
 ## `open(dataDir: string): ArcflowDB`

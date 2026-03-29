@@ -3,7 +3,7 @@
 ## npm (recommended)
 
 ```bash
-npm install @arcflow/sdk
+npm install arcflow
 ```
 
 The SDK includes pre-built native binaries for all major platforms:
@@ -19,9 +19,9 @@ The SDK includes pre-built native binaries for all major platforms:
 ## pnpm / yarn
 
 ```bash
-pnpm add @arcflow/sdk
+pnpm add arcflow
 # or
-yarn add @arcflow/sdk
+yarn add arcflow
 ```
 
 ## Local development (from source)
@@ -32,7 +32,7 @@ If you're working alongside the ArcFlow source:
 // package.json
 {
   "dependencies": {
-    "@arcflow/sdk": "file:../arcflow/sdk/typescript"
+    "arcflow": "file:../arcflow/sdk/typescript"
   }
 }
 ```
@@ -56,7 +56,7 @@ npm run build
 ## Verify installation
 
 ```typescript
-import { openInMemory } from '@arcflow/sdk'
+import { openInMemory } from 'arcflow'
 
 const db = openInMemory()
 db.mutate("CREATE (n:Hello {message: 'It works!'})")

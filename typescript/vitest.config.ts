@@ -6,5 +6,6 @@ export default defineConfig({
     environment: 'node',
     testTimeout: 10_000,
     reporters: ['verbose'],
+    threads: false,
   },
 })

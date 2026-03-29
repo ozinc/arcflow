@@ -1,5 +1,5 @@
 {
-  "name": "@arcflow/sdk",
+  "name": "arcflow",
   "version": "0.1.0",
   "description": "ArcFlow TypeScript SDK — typed, ergonomic graph database access",
   "type": "module",
@@ -31,7 +31,7 @@
     "release": "changeset publish"
   },
   "dependencies": {
-    "@arcflow/core": "file:../../bindings/typescript"
+    "arcflow-core": "file:../../bindings/typescript"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.0",
@@ -50,11 +50,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ArcFlowLabs/arcflow-sdk"
+    "url": "https://github.com/ozinc/arcflow"
   },
   "homepage": "https://arcflow.dev/docs",
   "bugs": {
-    "url": "https://github.com/ArcFlowLabs/arcflow-sdk/issues"
+    "url": "https://github.com/ozinc/arcflow/issues"
   },
   "keywords": [
     "graph-database",

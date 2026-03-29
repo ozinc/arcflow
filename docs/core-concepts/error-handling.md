@@ -7,7 +7,7 @@ The SDK provides structured errors with codes, categories, and recovery hints.
 All errors from the engine are wrapped in `ArcflowError`:
 
 ```typescript
-import { ArcflowError } from '@arcflow/sdk'
+import { ArcflowError } from 'arcflow'
 
 try {
   db.query("INVALID QUERY")

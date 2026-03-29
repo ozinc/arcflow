@@ -67,7 +67,7 @@ const schema = db.query("CALL db.schema")
 ## In-memory vs. persistent
 
 ```typescript
-import { open, openInMemory } from '@arcflow/sdk'
+import { open, openInMemory } from 'arcflow'
 
 // In-memory: fast, ephemeral, great for tests
 const mem = openInMemory()

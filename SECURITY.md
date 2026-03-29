@@ -21,4 +21,4 @@ The ArcFlow SDK is a TypeScript wrapper that communicates with the ArcFlow engin
 
 - **Query injection** — Always use parameterized queries (`$param`). The SDK substitutes parameters before compilation, preventing injection.
 - **Data directory access** — `open(path)` accesses the filesystem. Validate paths in your application.
-- **Native binary** — The `@arcflow/core` package contains a pre-built native binary. Verify package integrity via npm provenance.
+- **Native binary** — The `arcflow-core` package contains a pre-built native binary. Verify package integrity via npm provenance.

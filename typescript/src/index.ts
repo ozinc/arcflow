@@ -1,8 +1,8 @@
 // ArcFlow TypeScript SDK
-// Ergonomic, typed wrapper over the raw napi-rs @arcflow/core binding.
+// Ergonomic, typed wrapper over the raw napi-rs arcflow-core binding.
 // Replaces direct Runtime/Session usage with a clean db.query()/db.mutate() API.
 
-import { type QueryResult as RawQueryResult, Runtime, type Session } from '@arcflow/core'
+import { type QueryResult as RawQueryResult, Runtime, type Session } from 'arcflow-core'
 import { ArcflowError } from './errors'
 import type {
 	ArcflowDB,

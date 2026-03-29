@@ -2,7 +2,7 @@
 
 ## Metal GPU initialization hang
 
-**Symptom:** `require('@arcflow/core')` or `new Runtime()` hangs indefinitely on macOS.
+**Symptom:** `require('arcflow-core')` or `new Runtime()` hangs indefinitely on macOS.
 
 **Cause:** Metal GPU kernel compilation can deadlock during module initialization on some systems.
 
@@ -22,7 +22,7 @@ This disables Metal acceleration and falls back to CPU. All queries still work â
 
 ```bash
 cp path/to/arcflow/bindings/typescript/arcflow.darwin-arm64.node \
-   node_modules/@arcflow/core/arcflow.darwin-arm64.node
+   node_modules/arcflow-core/arcflow.darwin-arm64.node
 ```
 
 ## SET multiple properties in one clause

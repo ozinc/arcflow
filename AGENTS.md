@@ -6,7 +6,7 @@ This repo contains the TypeScript SDK, documentation, examples, and compatibilit
 ## Quick start
 
 ```typescript
-import { open, openInMemory } from '@arcflow/sdk'
+import { open, openInMemory } from 'arcflow'
 
 const db = openInMemory()  // or open('./data') for persistence
 
@@ -40,7 +40,7 @@ db.mutate("CREATE FULLTEXT INDEX ft FOR (n:Person) ON (n.name)")
 db.query("CALL db.index.fulltext.queryNodes('ft', 'Alice')")
 
 // Error handling
-import { ArcflowError } from '@arcflow/sdk'
+import { ArcflowError } from 'arcflow'
 try { db.query("INVALID") } catch (e) {
   if (e instanceof ArcflowError) console.log(e.code, e.category, e.suggestion)
 }
@@ -216,7 +216,7 @@ examples/                # Runnable example projects
 3. Run: `just test` (or `cd typescript && npm test`)
 4. Build: `just build` (or `cd typescript && npm run build`)
 5. Lint: `just lint` (Biome)
-6. The SDK wraps `@arcflow/core` (the raw napi-rs binding)
+6. The SDK wraps `arcflow-core` (the raw napi-rs binding)
 
 ## Extended reference
 

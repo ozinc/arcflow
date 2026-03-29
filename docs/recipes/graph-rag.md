@@ -12,7 +12,7 @@ Retrieval-augmented generation using graph structure + vector similarity.
 ## Setup
 
 ```typescript
-import { open } from '@arcflow/sdk'
+import { open } from 'arcflow'
 
 const db = open('./rag-graph')
 

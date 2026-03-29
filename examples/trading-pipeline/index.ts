@@ -1,7 +1,7 @@
 // ArcFlow SDK — Trading Pipeline Example
 // Demonstrates batch ingestion, sector aggregation, and live views.
 
-import { openInMemory } from '@arcflow/sdk'
+import { openInMemory } from 'arcflow'
 
 const db = openInMemory()
 

@@ -31,7 +31,7 @@ Data Sources → Extraction Pipeline → ArcFlow Graph → Query API → Applica
 ## Implementation sketch
 
 ```typescript
-import { open } from '@arcflow/sdk'
+import { open } from 'arcflow'
 
 const db = open('./knowledge-graph')
 

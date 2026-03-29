@@ -17,7 +17,7 @@ One engine handles the spatial data, temporal queries, graph algorithms, and rea
 ## Implementation
 
 ```typescript
-import { open } from '@arcflow/sdk'
+import { open } from 'arcflow'
 
 const db = open('./match-data')
 

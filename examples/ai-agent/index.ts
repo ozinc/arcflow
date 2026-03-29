@@ -2,7 +2,7 @@
 // Build a knowledge graph that an LLM can query via the SDK.
 // This pattern is the foundation for MCP integration and GraphRAG.
 
-import { openInMemory } from '@arcflow/sdk'
+import { openInMemory } from 'arcflow'
 
 const db = openInMemory()
 

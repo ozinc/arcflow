@@ -5,7 +5,7 @@ ArcFlow uses a write-ahead log (WAL) for durability. All mutations are journaled
 ## In-memory vs. persistent
 
 ```typescript
-import { open, openInMemory } from '@arcflow/sdk'
+import { open, openInMemory } from 'arcflow'
 
 // In-memory: fast, lost on exit. Great for tests.
 const mem = openInMemory()

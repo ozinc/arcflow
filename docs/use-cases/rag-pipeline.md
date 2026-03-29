@@ -22,7 +22,7 @@ No separate databases. No orchestration layer. One query engine.
 ## Implementation
 
 ```typescript
-import { open } from '@arcflow/sdk'
+import { open } from 'arcflow'
 
 const db = open('./rag-graph')
 

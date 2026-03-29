@@ -1,7 +1,7 @@
 // ArcFlow SDK — Basic CRUD Example
 // Run: npx ts-node index.ts (or compile with tsc first)
 
-import { openInMemory } from '@arcflow/sdk'
+import { openInMemory } from 'arcflow'
 
 const db = openInMemory()
 

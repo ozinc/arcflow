@@ -99,8 +99,8 @@ jobs:
         uses: changesets/action@v1
         with:
           publish: cd typescript && npx changeset publish
-          title: 'chore: release @arcflow/sdk'
-          commit: 'chore: release @arcflow/sdk'
+          title: 'chore: release arcflow'
+          commit: 'chore: release arcflow'
           cwd: typescript
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

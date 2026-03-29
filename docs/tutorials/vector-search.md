@@ -14,7 +14,7 @@ No external vector database needed.
 ## 1. Store embeddings
 
 ```typescript
-import { openInMemory } from '@arcflow/sdk'
+import { openInMemory } from 'arcflow'
 
 const db = openInMemory()
 

@@ -12,7 +12,7 @@ Entity linking connects records that refer to the same real-world entity. In a g
 ## Basic entity linking
 
 ```typescript
-import { openInMemory } from '@arcflow/sdk'
+import { openInMemory } from 'arcflow'
 
 const db = openInMemory()
 

@@ -1,7 +1,7 @@
 // ArcFlow SDK — Vector Search Example
 // Create embeddings, build a vector index, search by similarity.
 
-import { openInMemory } from '@arcflow/sdk'
+import { openInMemory } from 'arcflow'
 
 const db = openInMemory()
 

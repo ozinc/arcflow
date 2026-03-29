@@ -6,13 +6,13 @@ needed to integrate ArcFlow into any TypeScript/Node.js application.
 ## Installation
 
 ```bash
-npm install @arcflow/sdk
+npm install arcflow
 ```
 
 ## Complete API
 
 ```typescript
-import { open, openInMemory, ArcflowError } from '@arcflow/sdk'
+import { open, openInMemory, ArcflowError } from 'arcflow'
 
 // ── Lifecycle ──
 const db = openInMemory()                    // In-memory (testing)
@@ -279,7 +279,7 @@ for (const row of results.rows) {
 
 ### Testing
 ```typescript
-import { openInMemory, ArcflowError } from '@arcflow/sdk'
+import { openInMemory, ArcflowError } from 'arcflow'
 const db = openInMemory()  // Fresh graph per test, no cleanup
 db.mutate("CREATE (n:Test {x: 1})")
 const r = db.query("MATCH (n:Test) RETURN n.x")

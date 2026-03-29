@@ -1,7 +1,7 @@
 // ArcFlow SDK — Batch Ingestion Example
 // Pipeline pattern: ingest entities + facts in bulk using batchMutate.
 
-import { openInMemory } from '@arcflow/sdk'
+import { openInMemory } from 'arcflow'
 
 const db = openInMemory()
 

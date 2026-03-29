@@ -1,7 +1,7 @@
 // ArcFlow SDK — Sports Tracking Example
 // Track players on a pitch, compute distances, find formations.
 
-import { openInMemory } from '@arcflow/sdk'
+import { openInMemory } from 'arcflow'
 
 const db = openInMemory()
 

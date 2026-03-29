@@ -106,7 +106,7 @@ See [examples/trading-pipeline/](../../examples/trading-pipeline/) for the full 
 
 ### TypeScript
 ```typescript
-import { openInMemory } from '@arcflow/sdk'
+import { openInMemory } from 'arcflow'
 
 const db = openInMemory()
 db.mutate("CREATE (n:Person {name: 'Alice', age: 30})")

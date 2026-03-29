@@ -5,7 +5,7 @@ How to integrate ArcFlow into different project types.
 ## Node.js / Express / Fastify
 
 ```typescript
-import { open } from '@arcflow/sdk'
+import { open } from 'arcflow'
 
 // Open once at startup, share across request handlers
 const db = open('./data/graph')
@@ -31,7 +31,7 @@ process.on('SIGTERM', () => {
 ## Testing
 
 ```typescript
-import { openInMemory } from '@arcflow/sdk'
+import { openInMemory } from 'arcflow'
 
 describe('my graph logic', () => {
   let db
@@ -71,7 +71,7 @@ The SDK ships with full type definitions. No extra `@types/` packages needed.
 // packages/my-app/package.json
 {
   "dependencies": {
-    "@arcflow/sdk": "workspace:*"
+    "arcflow": "workspace:*"
   }
 }
 ```
@@ -80,7 +80,7 @@ If using pnpm with `file:` protocol during local dev, the `.node` binary may not
 
 ```bash
 cp path/to/arcflow/bindings/typescript/arcflow.darwin-arm64.node \
-   node_modules/@arcflow/core/arcflow.darwin-arm64.node
+   node_modules/arcflow-core/arcflow.darwin-arm64.node
 ```
 
 ## Environment setup

@@ -34,7 +34,7 @@ docker compose up -d
 ## Connect from SDK
 
 ```typescript
-import { open } from '@arcflow/sdk'
+import { open } from 'arcflow'
 
 // In-process (recommended for same-machine apps)
 const db = open('./data/graph')

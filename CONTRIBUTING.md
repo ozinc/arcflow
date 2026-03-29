@@ -16,7 +16,7 @@ npm test
 
 - Node.js 18+
 - npm 9+
-- A pre-built `@arcflow/core` native binary (or `ARCFLOW_METAL_FORCE_UNAVAILABLE=true` for testing)
+- A pre-built `arcflow-core` native binary (or `ARCFLOW_METAL_FORCE_UNAVAILABLE=true` for testing)
 
 ## Project structure
 
@@ -67,7 +67,7 @@ Docs live in `docs/` as markdown. They are the single source of truth — the we
 ## Adding examples
 
 Examples live in `examples/` as runnable TypeScript files. Every example must:
-- Import from `@arcflow/sdk`
+- Import from `arcflow`
 - Use `openInMemory()` by default (no filesystem dependency)
 - Be self-contained (no external dependencies)
 - Include console output showing expected results

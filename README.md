@@ -5,7 +5,7 @@ The spatial-temporal graph database. One engine for graphs, vectors, time, space
 ## Install
 
 ```bash
-npm install @arcflow/sdk
+npm install arcflow
 ```
 
 Three paths to hello world:
@@ -14,12 +14,12 @@ Three paths to hello world:
 |---|---|---|
 | Docker | 30s | `docker run -p 7687:7687 ghcr.io/oz-global/arcflow:latest` |
 | Binary | 60s | `curl -fsSL https://arcflow.dev/install \| sh && arcflow` |
-| SDK | 2 min | `npm install @arcflow/sdk` then 5 lines of TypeScript |
+| SDK | 2 min | `npm install arcflow` then 5 lines of TypeScript |
 
 ## See it work
 
 ```typescript
-import { openInMemory } from '@arcflow/sdk'
+import { openInMemory } from 'arcflow'
 
 const db = openInMemory()
 
@@ -78,7 +78,7 @@ db.close()
 
 | Language | Package | Status |
 |---|---|---|
-| TypeScript | `npm install @arcflow/sdk` | Stable |
+| TypeScript | `npm install arcflow` | Stable |
 | Python | `pip install arcflow` | Available |
 | Rust | `arcflow = "x.y"` | Available |
 | C/C++ | `libarcflow.h` / `arcflow.hpp` | Available |
@@ -98,7 +98,7 @@ This repo is optimized for agent consumption. All agent context lives in neutral
 ## API at a glance
 
 ```typescript
-import { open, openInMemory, ArcflowError } from '@arcflow/sdk'
+import { open, openInMemory, ArcflowError } from 'arcflow'
 
 const db = openInMemory()                              // or open('./data')
 db.query(cypher, params?)                              // → QueryResult

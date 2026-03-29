@@ -81,7 +81,7 @@ Key rules:
 This is where tracking becomes knowledge:
 
 ```typescript
-import { open } from '@arcflow/sdk'
+import { open } from 'arcflow'
 
 const db = open('./venue-graph')
 

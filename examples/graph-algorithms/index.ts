@@ -1,7 +1,7 @@
 // ArcFlow SDK — Graph Algorithms Example
 // Run algorithms directly — no projection setup needed.
 
-import { openInMemory } from '@arcflow/sdk'
+import { openInMemory } from 'arcflow'
 
 const db = openInMemory()
 
