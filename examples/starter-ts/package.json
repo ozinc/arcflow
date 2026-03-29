@@ -1,0 +1,22 @@
+{
+  "name": "arcflow-starter-ts",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "knowledge-graph": "tsx src/knowledge-graph.ts",
+    "spatial": "tsx src/spatial.ts",
+    "algorithms": "tsx src/algorithms.ts",
+    "test": "vitest run",
+    "dev": "tsx watch src/index.ts"
+  },
+  "dependencies": {
+    "arcflow": "latest"
+  },
+  "devDependencies": {
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^2.0.0"
+  }
+}

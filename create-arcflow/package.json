@@ -1,0 +1,17 @@
+{
+  "name": "create-arcflow",
+  "version": "0.1.0",
+  "description": "Scaffold a new ArcFlow project with CLAUDE.md, examples, and best practices",
+  "type": "module",
+  "bin": {
+    "create-arcflow": "./index.mjs"
+  },
+  "files": ["index.mjs", "templates/"],
+  "engines": { "node": ">=18.0.0" },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ozinc/arcflow"
+  },
+  "keywords": ["arcflow", "graph-database", "create", "scaffold", "template"]
+}
