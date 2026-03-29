@@ -1,0 +1,81 @@
+---
+title: "MCP Server"
+description: "Let AI agents query your graph directly — no code generation needed"
+section: "capabilities"
+status: "stable"
+---
+
+# MCP Server
+
+ArcFlow includes an MCP (Model Context Protocol) server that lets AI agents query your graph directly — no code generation needed.
+
+```bash
+npx arcflow-mcp
+```
+
+## Setup
+
+### Claude Code
+
+```json
+// .claude/settings.json
+{
+  "mcpServers": {
+    "arcflow": {
+      "command": "npx",
+      "args": ["arcflow-mcp"]
+    }
+  }
+}
+```
+
+### Cursor
+
+```json
+// .cursor/mcp.json
+{
+  "mcpServers": {
+    "arcflow": {
+      "command": "npx",
+      "args": ["arcflow-mcp"]
+    }
+  }
+}
+```
+
+## Tools
+
+| Tool | Description | Read/Write |
+|---|---|---|
+| `get_schema` | Labels, relationship types, properties, indexes, stats | Read |
+| `get_capabilities` | Algorithms, procedures, window functions, features | Read |
+| `read_query` | Execute read-only WorldCypher (MATCH, CALL algo.*, CALL db.*) | Read |
+| `write_query` | Execute mutations (CREATE, SET, DELETE, MERGE) | Write |
+| `graph_rag` | Trusted GraphRAG — answer questions from the knowledge graph | Read |
+
+## How it changes the agent experience
+
+| Without MCP | With MCP |
+|---|---|
+| "Write me code that queries the graph" | "Query my graph: who's connected to Alice?" |
+| Agent generates driver code | Agent calls `read_query` directly |
+| User runs code manually | Agent gets results immediately |
+
+## Examples
+
+Agent: "What's in my graph?"
+→ `get_schema` → labels, properties, stats
+
+Agent: "Who are the most important people?"
+→ `read_query("CALL algo.pageRank()")` → ranked results
+
+Agent: "Add Alice to the graph"
+→ `write_query("CREATE (n:Person {name: 'Alice'})")` → done
+
+## With persistent data
+
+```bash
+npx arcflow-mcp --data-dir ./my-graph
+```
+
+Data persists across MCP sessions.

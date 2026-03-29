@@ -16,15 +16,18 @@
       "id": "capabilities",
       "title": "Capabilities",
       "items": [
-        { "slug": "behavior-graph", "title": "Behavior Graph", "order": 1 },
-        { "slug": "trusted-rag", "title": "Trusted RAG", "order": 2 },
-        { "slug": "agent-native", "title": "Agent-Native", "order": 3 },
-        { "slug": "spatial-knowledge", "title": "Spatial Knowledge", "order": 4 },
-        { "slug": "event-sourcing", "title": "Event Sourcing", "order": 5 },
-        { "slug": "vector-search", "title": "Vector Search", "order": 6 },
-        { "slug": "temporal", "title": "Temporal", "order": 7 },
-        { "slug": "reactive", "title": "Reactive & Live Queries", "order": 8 },
-        { "slug": "gpu", "title": "GPU Acceleration", "order": 9 }
+        { "slug": "vector-search", "title": "Vector Search", "order": 1 },
+        { "slug": "algorithms", "title": "Graph Algorithms", "order": 2 },
+        { "slug": "sync", "title": "Sync", "order": 3 },
+        { "slug": "mcp", "title": "MCP Server (AI Agents)", "order": 4 },
+        { "slug": "reactive", "title": "Reactive & Live Queries", "order": 5 },
+        { "slug": "temporal", "title": "Temporal", "order": 6 },
+        { "slug": "spatial-knowledge", "title": "Spatial", "order": 7 },
+        { "slug": "trusted-rag", "title": "Trusted RAG", "order": 8 },
+        { "slug": "behavior-graph", "title": "Behavior Graph", "order": 9 },
+        { "slug": "agent-native", "title": "Agent-Native", "order": 10 },
+        { "slug": "event-sourcing", "title": "Event Sourcing", "order": 11 },
+        { "slug": "gpu", "title": "GPU Acceleration", "order": 12 }
       ]
     },
     {
@@ -32,15 +35,15 @@
       "title": "Concepts",
       "items": [
         { "slug": "concepts/graph-model", "title": "Graph Model", "order": 1 },
-        { "slug": "concepts/constructors", "title": "Constructors", "order": 2 },
-        { "slug": "concepts/confidence-and-provenance", "title": "Confidence & Provenance", "order": 3 },
-        { "slug": "concepts/worldcypher", "title": "WorldCypher Intro", "order": 4 },
-        { "slug": "concepts/parameters", "title": "Parameters", "order": 5 },
-        { "slug": "concepts/results", "title": "Query Results", "order": 6 },
-        { "slug": "concepts/persistence", "title": "Persistence & WAL", "order": 7 },
-        { "slug": "concepts/error-handling", "title": "Error Handling", "order": 8 },
-        { "slug": "concepts/observations", "title": "Observations & Evidence", "order": 9 },
-        { "slug": "concepts/proof-artifacts", "title": "Proof Artifacts & Gates", "order": 10 }
+        { "slug": "concepts/worldcypher", "title": "WorldCypher Intro", "order": 2 },
+        { "slug": "concepts/parameters", "title": "Parameters", "order": 3 },
+        { "slug": "concepts/results", "title": "Query Results", "order": 4 },
+        { "slug": "concepts/persistence", "title": "Persistence & WAL", "order": 5 },
+        { "slug": "concepts/error-handling", "title": "Error Handling", "order": 6 },
+        { "slug": "concepts/observations", "title": "Observations & Evidence", "order": 7 },
+        { "slug": "concepts/confidence-and-provenance", "title": "Confidence & Provenance", "order": 8 },
+        { "slug": "concepts/proof-artifacts", "title": "Proof Artifacts & Gates", "order": 9 },
+        { "slug": "concepts/constructors", "title": "Constructors", "order": 10 }
       ]
     },
     {
@@ -63,7 +66,7 @@
         { "slug": "worldcypher/composition/case", "title": "CASE", "order": 14 },
         { "slug": "worldcypher/spatial", "title": "Spatial Queries", "order": 15 },
         { "slug": "worldcypher/temporal", "title": "Temporal Queries", "order": 16 },
-        { "slug": "worldcypher/algorithms", "title": "Algorithms", "order": 17 }
+        { "slug": "worldcypher/algorithms", "title": "Algorithms Reference", "order": 17 }
       ]
     },
     {
@@ -108,11 +111,25 @@
         { "slug": "server", "title": "Server Modes & PG Wire", "order": 4 },
         { "slug": "server/persistence", "title": "Persistence", "order": 5 },
         { "slug": "server/import-export", "title": "Import & Export", "order": 6 },
-        { "slug": "algorithms", "title": "Algorithms", "order": 7 },
+        { "slug": "deployment/docker", "title": "Docker", "order": 7 },
         { "slug": "architecture", "title": "Architecture", "order": 8 },
         { "slug": "cloud-architecture", "title": "Cloud Architecture", "order": 9 },
-        { "slug": "deployment/docker", "title": "Docker", "order": 10 },
-        { "slug": "architecture/sync", "title": "Sync Architecture", "order": 11 }
+        { "slug": "architecture/sync", "title": "Sync Protocol (Deep Dive)", "order": 10 }
+      ]
+    },
+    {
+      "id": "guides",
+      "title": "Guides",
+      "items": [
+        { "slug": "guides/agent-quickstart", "title": "Agent Integration", "order": 1 },
+        { "slug": "guides/world-model", "title": "World Model", "order": 2 },
+        { "slug": "guides/modeling-a-social-graph", "title": "Social Graph", "order": 3 },
+        { "slug": "guides/rag-pipeline", "title": "RAG Pipeline", "order": 4 },
+        { "slug": "guides/using-constructors", "title": "Using Constructors", "order": 5 },
+        { "slug": "guides/behavior-graphs", "title": "Behavior Graphs", "order": 6 },
+        { "slug": "guides/swarm-agents", "title": "Swarm & Multi-Agent", "order": 7 },
+        { "slug": "guides/migrating-from-neo4j", "title": "Migrating from Neo4j", "order": 8 },
+        { "slug": "guides/filesystem-workspace", "title": "Filesystem Workspace", "order": 9 }
       ]
     },
     {
@@ -123,22 +140,6 @@
         { "slug": "tutorials/entity-linking", "title": "Entity Linking", "order": 2 },
         { "slug": "tutorials/vector-search", "title": "Vector Search", "order": 3 },
         { "slug": "tutorials/graph-algorithms", "title": "Graph Algorithms", "order": 4 }
-      ]
-    },
-    {
-      "id": "guides",
-      "title": "Guides",
-      "items": [
-        { "slug": "guides/agent-quickstart", "title": "Agent Integration Guide", "order": 0 },
-        { "slug": "guides/world-model", "title": "World Model Guide", "order": 1 },
-        { "slug": "guides/modeling-a-social-graph", "title": "Modeling a Social Graph", "order": 2 },
-        { "slug": "guides/rag-pipeline", "title": "RAG Pipeline", "order": 3 },
-        { "slug": "guides/agent-integration", "title": "Agent Integration", "order": 4 },
-        { "slug": "guides/using-constructors", "title": "Using Constructors", "order": 5 },
-        { "slug": "guides/behavior-graphs", "title": "Behavior Graphs", "order": 6 },
-        { "slug": "guides/swarm-agents", "title": "Swarm & Multi-Agent", "order": 7 },
-        { "slug": "guides/filesystem-workspace", "title": "Filesystem Workspace", "order": 8 },
-        { "slug": "guides/migrating-from-neo4j", "title": "Migrating from Neo4j", "order": 9 }
       ]
     },
     {
@@ -158,12 +159,12 @@
       "id": "use-cases",
       "title": "Use Cases",
       "items": [
-        { "slug": "use-cases/knowledge-management", "title": "Knowledge Management", "order": 1 },
-        { "slug": "use-cases/rag-pipeline", "title": "RAG Pipeline", "order": 2 },
-        { "slug": "use-cases/sports-analytics", "title": "Sports Analytics", "order": 3 },
-        { "slug": "use-cases/grounded-neural-objects", "title": "Grounded Neural Objects", "order": 4 },
-        { "slug": "use-cases/behavior-graphs", "title": "Behavior Graphs", "order": 5 },
-        { "slug": "use-cases/agent-tooling", "title": "Agent Tooling", "order": 6 }
+        { "slug": "use-cases/agent-tooling", "title": "Agent Tooling", "order": 1 },
+        { "slug": "use-cases/knowledge-management", "title": "Knowledge Management", "order": 2 },
+        { "slug": "use-cases/rag-pipeline", "title": "RAG Pipeline", "order": 3 },
+        { "slug": "use-cases/sports-analytics", "title": "Sports Analytics", "order": 4 },
+        { "slug": "use-cases/grounded-neural-objects", "title": "Grounded Neural Objects", "order": 5 },
+        { "slug": "use-cases/behavior-graphs", "title": "Behavior Graphs", "order": 6 }
       ]
     },
     {

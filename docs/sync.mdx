@@ -1,0 +1,152 @@
+---
+title: "Sync"
+description: "Local-first sync — mutations replicate to cloud automatically. Browser, Node.js, edge."
+section: "capabilities"
+status: "stable"
+---
+
+# Sync
+
+ArcFlow runs locally and syncs to a cloud graph. Local operations are instant. Sync is eventual, conflict-resolved, and resumable.
+
+```
+Local instance              Cloud
+┌──────────────────┐  HTTPS  ┌──────────────────┐
+│ Browser (WASM)   │────────→│ ArcFlow Cloud    │
+│ Node.js process  │←────────│                  │
+│ Edge device      │  sync   │ Persistent graph │
+└──────────────────┘         └──────────────────┘
+```
+
+## How it works
+
+Every mutation is captured in a sync WAL (write-ahead log). The sync engine pushes WAL entries to the cloud and pulls remote changes back.
+
+```typescript
+import { openInMemory } from 'arcflow'
+
+const db = openInMemory()
+
+// Mutations are automatically captured in the sync WAL
+db.mutate("CREATE (n:Person {name: 'Alice', age: 30})")
+db.mutate("CREATE (n:Person {name: 'Bob', age: 25})")
+
+// Check how many mutations are pending sync
+console.log(db.syncPending())  // 2
+
+// Read queries don't enter the WAL
+db.query("MATCH (n:Person) RETURN n.name")
+console.log(db.syncPending())  // still 2
+
+// Graph fingerprint — hash of current state
+console.log(db.fingerprint())  // "29553633"
+```
+
+## Sync WAL
+
+The sync WAL captures every mutating query automatically. Read queries are never captured.
+
+| Operation | Enters WAL? |
+|---|---|
+| `db.mutate("CREATE ...")` | Yes |
+| `db.mutate("SET ...")` | Yes |
+| `db.mutate("DELETE ...")` | Yes |
+| `db.batchMutate([...])` | Yes (each query) |
+| `db.query("MATCH ...")` | No |
+| `db.query("CALL algo...")` | No |
+| `db.stats()` | No |
+
+## Fingerprint
+
+The graph fingerprint is a hash of the entire graph state — generation, node count, relationship count, mutation sequence. Two instances with the same fingerprint have identical content.
+
+```typescript
+const fp1 = db.fingerprint()
+db.mutate("CREATE (n:Change {v: 1})")
+const fp2 = db.fingerprint()
+// fp1 !== fp2 — fingerprint changes after mutation
+```
+
+Use fingerprints to verify sync consistency: after a sync cycle, both client and cloud should have the same fingerprint.
+
+## Sync protocol
+
+The sync engine uses a push/pull protocol with resume via high-water marks:
+
+1. **Push**: local WAL entries batched into a `SyncPayload` and POST'd to cloud
+2. **Ack**: cloud responds with `acked_seq` + `fingerprint`
+3. **Pull**: client requests changes since its `remote_hwm`
+4. **Apply**: remote queries replayed locally
+5. **Verify**: fingerprints compared — match = consistent
+
+### SyncPayload
+
+```json
+{
+  "peer_id": "node-1",
+  "seq_start": 1,
+  "seq_end": 3,
+  "queries": [
+    "CREATE (n:Person {name: 'Alice'})",
+    "CREATE (n:Person {name: 'Bob'})",
+    "CREATE (a:Person {name: 'Alice'})-[:KNOWS]->(b:Person {name: 'Bob'})"
+  ],
+  "fingerprint": 29553633
+}
+```
+
+Queries are replayed on the receiving end — MERGE for idempotent operations, CREATE for new data.
+
+## Conflict resolution
+
+When two clients mutate concurrently, conflicts are resolved using vector clocks:
+
+| Strategy | Rule | Default |
+|---|---|---|
+| Last-writer-wins | Higher vector clock wins | Yes |
+| First-writer-wins | Earlier clock wins | Optional |
+| Evidence-weighted | Higher confidence wins | For observation data |
+
+## Implementation status
+
+| Wave | Feature | Status |
+|---|---|---|
+| Wave A | WAL capture in mutation path | Done |
+| Wave B | SyncEngine push/pull/cycle | Done (10 tests) |
+| Wave C | TypeScript SDK integration | Done (syncPending, fingerprint) |
+| Wave D | HTTP transport (reqwest) | Planned |
+| Wave E | WASM transport (browser fetch) | Planned |
+| Wave F | Background auto-sync thread | Planned |
+
+## API reference
+
+```typescript
+interface ArcflowDB {
+  // ... existing methods ...
+
+  /** Number of mutations pending sync push (0 if sync not configured). */
+  syncPending(): number
+
+  /** Graph fingerprint for sync verification. */
+  fingerprint(): string
+}
+```
+
+## Engine primitives
+
+The sync protocol composes existing engine building blocks:
+
+| Primitive | Purpose |
+|---|---|
+| Sync WAL | Captures mutating queries with sequence numbers |
+| SyncPayload | Batched queries for transport |
+| SyncEngine | Push/pull orchestration |
+| SyncTransport | Pluggable transport (memory mock, HTTP, WASM fetch) |
+| VectorClock | Causal ordering across peers |
+| ConflictResolver | Conflict detection + resolution |
+| `fingerprint()` | State hash for verification |
+| `apply_sync_queries()` | Replay remote queries locally |
+
+## Architecture deep dive
+
+See [Sync Architecture](/docs/architecture/sync) for the full protocol specification, implementation waves, and engine primitive mapping.
