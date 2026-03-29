@@ -234,11 +234,25 @@ assert(db.query("MATCH (n:Test) RETURN n.x").rows[0].get('x') === 1)
 - Parameters: all values coerced to strings internally
 - Multi-MATCH: use AS aliases when returning same-named properties from different variables
 
+## Error codes
+
+| Code | Category | Fix |
+|---|---|---|
+| `EXPECTED_KEYWORD` | parse | Check MATCH/CREATE/MERGE syntax |
+| `UNKNOWN_FUNCTION` | validation | Run `CALL db.help` |
+| `UNKNOWN_PROCEDURE` | validation | Run `CALL db.procedures` |
+| `DB_CLOSED` | integration | Don't query after `db.close()` |
+
+## Step-by-step integration
+
+See `docs/guides/agent-quickstart.mdx` for the complete 10-step recipe with every pattern.
+
 ## Repo structure
 
 ```
 typescript/src/          # SDK source (index.ts, types.ts, errors.ts)
 typescript/tests/        # SDK tests (Vitest, 22 passing)
+mcp/                     # MCP server (npx arcflow-mcp)
 docs/                    # 100 MDX docs — full reference
 examples/                # 8 runnable examples
 fixtures/                # Sample datasets

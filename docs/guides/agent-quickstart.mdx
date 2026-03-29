@@ -1,0 +1,268 @@
+---
+title: "Agent Integration Guide"
+description: "Step-by-step: add ArcFlow to any project in 60 seconds. For Claude Code, Codex, Cursor, Copilot."
+section: "guides"
+status: "stable"
+---
+
+# Add ArcFlow to a Project
+
+Step-by-step integration. Every code block is copy-pasteable and runnable.
+
+## Step 1: Install
+
+```bash
+npm install arcflow
+```
+
+No other dependencies. No server to start. No Docker. No configuration files.
+
+## Step 2: Create a database
+
+```typescript
+import { openInMemory } from 'arcflow'
+
+// In-memory (for development, testing, prototyping)
+const db = openInMemory()
+
+// Or persistent (for production — data survives restarts)
+// import { open } from 'arcflow'
+// const db = open('./data/graph')
+```
+
+## Step 3: Write data
+
+```typescript
+// Create a node
+db.mutate("CREATE (n:Person {name: 'Alice', age: 30, email: 'alice@example.com'})")
+
+// Create with parameters (always use this for user input)
+db.mutate("CREATE (n:Person {name: $name, age: $age})", { name: 'Bob', age: 35 })
+
+// Create a relationship
+db.mutate("CREATE (a:Person {name: 'Alice'})-[:KNOWS]->(b:Person {name: 'Bob'})")
+
+// Batch create (faster for bulk operations)
+db.batchMutate([
+  "MERGE (a:Person {id: 'p1', name: 'Alice'})",
+  "MERGE (b:Person {id: 'p2', name: 'Bob'})",
+  "MERGE (c:Org {id: 'o1', name: 'Acme'})",
+])
+```
+
+## Step 4: Read data
+
+```typescript
+// Query returns typed results — numbers are numbers, not strings
+const result = db.query("MATCH (n:Person) RETURN n.name, n.age ORDER BY n.name")
+
+// Access by column name
+for (const row of result.rows) {
+  const name: string = row.get('name') as string   // "Alice"
+  const age: number = row.get('age') as number      // 30 (number, not "30")
+}
+
+// Access as objects
+const people = result.rows.map(row => row.toObject())
+// [{ 'n.name': 'Alice', 'n.age': 30 }, { 'n.name': 'Bob', 'n.age': 35 }]
+
+// Result metadata
+result.columns    // ['n.name', 'n.age']
+result.rowCount   // 2
+result.computeMs  // 0.3 (milliseconds)
+```
+
+## Step 5: Query with parameters
+
+```typescript
+// Always use parameters for dynamic values — prevents injection
+const result = db.query(
+  "MATCH (n:Person {name: $name}) RETURN n.age",
+  { name: 'Alice' }
+)
+// result.rows[0].get('age') → 30
+
+// Parameters work with all types
+db.query("MATCH (n) WHERE n.age > $min RETURN n.name", { min: 25 })
+db.query("MATCH (n {active: $active}) RETURN n", { active: true })
+```
+
+## Step 6: Update and delete
+
+```typescript
+// Update a property
+db.mutate("MATCH (n:Person {name: 'Alice'}) SET n.age = 31")
+
+// Upsert (create if not exists, match if exists)
+db.mutate("MERGE (n:Person {id: 'p1'}) SET n.lastSeen = 'today'")
+
+// Delete a node
+db.mutate("MATCH (n:Person {name: 'Bob'}) DELETE n")
+
+// Delete a node and all its relationships
+db.mutate("MATCH (n:Person {name: 'Bob'}) DETACH DELETE n")
+
+// Remove a property
+db.mutate("MATCH (n:Person {name: 'Alice'}) REMOVE n.email")
+```
+
+## Step 7: Run algorithms
+
+```typescript
+// No setup, no projection, no catalog — just call it
+const pr = db.query("CALL algo.pageRank()")
+for (const row of pr.rows) {
+  console.log(row.get('name'), row.get('rank'))
+}
+
+// Community detection
+db.query("CALL algo.louvain()")
+
+// Centrality
+db.query("CALL algo.betweenness()")
+
+// Graph stats
+db.query("CALL db.stats")
+```
+
+## Step 8: Vector search
+
+```typescript
+// Create index
+db.mutate("CREATE VECTOR INDEX docs FOR (n:Doc) ON (n.embedding) OPTIONS {dimensions: 1536, similarity: 'cosine'}")
+
+// Add data with embeddings
+db.mutate("CREATE (d:Doc {title: 'AI Intro', embedding: '[0.1, 0.2, 0.3, ...]'})")
+
+// Search by similarity
+const results = db.query(
+  "CALL algo.vectorSearch('docs', $vec, 10)",
+  { vec: JSON.stringify([0.1, 0.2, 0.3]) }
+)
+```
+
+## Step 9: Handle errors
+
+```typescript
+import { ArcflowError } from 'arcflow'
+
+try {
+  db.query("INVALID SYNTAX")
+} catch (e) {
+  if (e instanceof ArcflowError) {
+    e.code        // "EXPECTED_KEYWORD" — machine-readable
+    e.category    // "parse" | "validation" | "execution" | "integration"
+    e.message     // "Expected MATCH or CREATE, got ..."
+    e.suggestion  // "Expected MATCH or CREATE" — fix hint
+  }
+}
+```
+
+Error codes you'll encounter:
+
+| Code | Category | Meaning | Fix |
+|---|---|---|---|
+| `EXPECTED_KEYWORD` | parse | Query syntax wrong | Check MATCH/CREATE/MERGE spelling |
+| `UNKNOWN_FUNCTION` | validation | Function doesn't exist | Run `CALL db.help` to see available |
+| `UNKNOWN_PROCEDURE` | validation | Procedure doesn't exist | Run `CALL db.procedures` |
+| `DB_CLOSED` | integration | Called after `db.close()` | Don't use db after closing |
+
+## Step 10: Close
+
+```typescript
+db.close()
+// After this, all operations throw ArcflowError with code 'DB_CLOSED'
+```
+
+## Complete example
+
+```typescript
+import { openInMemory, ArcflowError } from 'arcflow'
+
+const db = openInMemory()
+
+try {
+  // Create
+  db.batchMutate([
+    "CREATE (alice:Person {id: 'p1', name: 'Alice', age: 30})",
+    "CREATE (bob:Person {id: 'p2', name: 'Bob', age: 35})",
+    "CREATE (acme:Org {id: 'o1', name: 'Acme', industry: 'tech'})",
+  ])
+  db.mutate("CREATE (a:Person {id: 'p1'})-[:WORKS_AT]->(o:Org {id: 'o1'})")
+
+  // Read
+  const people = db.query("MATCH (n:Person) RETURN n.name, n.age ORDER BY n.name")
+  console.log(`Found ${people.rowCount} people`)
+
+  // Parameterized query
+  const alice = db.query("MATCH (n:Person {name: $name}) RETURN n.age", { name: 'Alice' })
+  console.log(`Alice is ${alice.rows[0].get('age')}`)
+
+  // Algorithm
+  const pr = db.query("CALL algo.pageRank()")
+
+  // Stats
+  const stats = db.stats()
+  console.log(`${stats.nodes} nodes, ${stats.relationships} relationships`)
+
+} catch (e) {
+  if (e instanceof ArcflowError) {
+    console.error(`${e.code}: ${e.message}`)
+  }
+} finally {
+  db.close()
+}
+```
+
+## Testing pattern
+
+```typescript
+import { describe, it, expect } from 'vitest'  // or jest, node:test
+import { openInMemory } from 'arcflow'
+
+describe('my feature', () => {
+  it('does something with a graph', () => {
+    const db = openInMemory()  // fresh graph per test
+
+    db.mutate("CREATE (n:Item {name: 'test', value: 42})")
+    const result = db.query("MATCH (n:Item) RETURN n.value")
+    expect(result.rows[0].get('value')).toBe(42)
+
+    db.close()  // cleanup is optional — GC handles it
+  })
+})
+```
+
+## Express/Fastify pattern
+
+```typescript
+import { open } from 'arcflow'
+import express from 'express'
+
+const db = open('./data/graph')
+const app = express()
+
+app.get('/api/people', (req, res) => {
+  const result = db.query("MATCH (n:Person) RETURN n.name, n.age")
+  res.json(result.rows.map(r => r.toObject()))
+})
+
+app.post('/api/people', express.json(), (req, res) => {
+  const { name, age } = req.body
+  db.mutate("CREATE (n:Person {name: $name, age: $age})", { name, age })
+  res.json({ ok: true })
+})
+
+process.on('SIGTERM', () => { db.close(); process.exit(0) })
+
+app.listen(3000)
+```
+
+## What to remember
+
+1. `openInMemory()` for dev/test, `open(path)` for production
+2. Always use `$params` for user input — prevents injection
+3. `row.get('column')` returns typed values — numbers, booleans, null, not strings
+4. Algorithms: just `CALL algo.pageRank()` — no setup
+5. Errors are structured: `e.code`, `e.category`, `e.suggestion`
+6. No server needed. No Docker. No connection strings.

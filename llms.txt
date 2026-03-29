@@ -73,6 +73,10 @@ LIVE MATCH, LIVE CALL, CREATE LIVE VIEW
 - `UNKNOWN_PROCEDURE` → run `CALL db.procedures` to see available
 - `DB_CLOSED` → called query after db.close()
 
+## Integration recipe
+
+See docs/guides/agent-quickstart.mdx for the 10-step integration guide.
+
 ## Full reference
 
 See AGENTS.md for complete API + WorldCypher syntax.

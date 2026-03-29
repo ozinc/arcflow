@@ -129,6 +129,7 @@
       "id": "guides",
       "title": "Guides",
       "items": [
+        { "slug": "guides/agent-quickstart", "title": "Agent Integration Guide", "order": 0 },
         { "slug": "guides/world-model", "title": "World Model Guide", "order": 1 },
         { "slug": "guides/modeling-a-social-graph", "title": "Modeling a Social Graph", "order": 2 },
         { "slug": "guides/rag-pipeline", "title": "RAG Pipeline", "order": 3 },
