@@ -4,7 +4,7 @@ A single TypeScript file replacing dbt, Great Expectations, Airflow, a lineage t
 drill tool, and snapshot tables — with nothing but an embedded graph database.
 
 ```
-dbt              → batchMutate() + Cypher SET for delta
+dbt              → batchMutate() + GQL SET for delta
 Great Expectations → CREATE LIVE VIEW — fires on every write, zero polling
 Airflow          → Stage nodes + FEEDS edges + PipelineRun ledger
 Lineage tracker  → SOURCED_FROM edges — provenance on every record
@@ -97,7 +97,7 @@ service, a separate schema, a separate team. When a metric looks wrong, you open
 dashboards, fire Slack messages, and eventually someone re-runs a query manually.
 
 ArcFlow stores data, lineage, quality results, and the pipeline DAG itself in the same
-graph. Drill-through from a broken aggregate to its source document is one Cypher query.
+graph. Drill-through from a broken aggregate to its source document is one GQL query.
 There is no separate lineage infrastructure to maintain.
 
 ---
@@ -141,7 +141,7 @@ db.mutate(`CREATE LIVE VIEW dq_zero_price AS
 const violations = db.query("MATCH (row) FROM VIEW dq_zero_price RETURN row").rowCount
 ```
 
-Live views fire on every Cypher write — `CREATE`, `MERGE`, `SET`, `DETACH DELETE`. The
+Live views fire on every GQL write — `CREATE`, `MERGE`, `SET`, `DETACH DELETE`. The
 rowCount is a reliable "any violations exist" signal for new writes. For current violation
 state after `SET` operations, run a direct query (Z-set delta propagates additions; property-
 change-driven removals are tracked as a planned extension).
@@ -239,7 +239,7 @@ ORDER BY failing_records DESC
 
 This was previously "ML-specific" because building this kind of rich diagnostic capability
 required custom Python: pandas groupby, matplotlib, a Jupyter notebook per expectation.
-ArcFlow makes it Cypher — the same language used for everything else.
+ArcFlow makes it GQL — the same language used for everything else.
 
 ### 7. Content-hash dedup — WAL-silent idempotent ingestion
 
@@ -264,9 +264,9 @@ The content hash is a SHA-256 of the record's source bytes (computed by your ing
 not the engine). This makes the ingestion pipeline idempotent: re-running a failed batch
 produces the same graph state.
 
-**Trade-off:** `ingestDelta()` bypasses the Cypher compiler — no CDC, no live view updates.
+**Trade-off:** `ingestDelta()` bypasses the GQL compiler — no CDC, no live view updates.
 Use `batchMutate()` when live DQ views need to fire. Use `ingestDelta()` for maximum
-throughput on content-hash-deduplicated data (53× batch INSERT vs Cypher).
+throughput on content-hash-deduplicated data (53× batch INSERT vs GQL).
 
 ---
 
@@ -286,7 +286,7 @@ Graph algorithms (BFS, PageRank, degree centrality) update incrementally when ed
 - Edge add/remove triggers O(affected-nodes) re-evaluation, not full re-compute
 - Triangle count uses delta: `Δtriangles = |neighbors(u) ∩ neighbors(v)|` on each edge add
 - BFS blast-radius: `cg.impactSubgraph(rootIds, ['CONTAINS'], 3)` is sub-millisecond on
-  1M+ node graphs (one read-lock, in-memory BFS, no Cypher compiler)
+  1M+ node graphs (one read-lock, in-memory BFS, no GQL compiler)
 
 Use this for dependency impact analysis: "if this source document changes, which downstream
 aggregates are affected?"
@@ -377,13 +377,13 @@ analysis without leaving your existing SQL workflow.
 
 | Path | API | CDC fires? | Use when |
 |---|---|---|---|
-| Cypher compiler | `batchMutate()`, `mutate()` | Yes — live views update | DQ monitoring, lineage edges |
+| GQL compiler | `batchMutate()`, `mutate()` | Yes — live views update | DQ monitoring, lineage edges |
 | Direct engine | `cg.ingest()` / `db.ingestDelta()` | No | Content-hash dedup, max throughput |
 
 ### Node ID consistency
 
-Cypher `MERGE`/`CREATE` assigns sequential numeric IDs. `ingestDelta()` maps string IDs via
-FNV hash. If you need to connect ingestDelta-created nodes to Cypher-created nodes with
+GQL `MERGE`/`CREATE` assigns sequential numeric IDs. `ingestDelta()` maps string IDs via
+FNV hash. If you need to connect ingestDelta-created nodes to GQL-created nodes with
 edges, pick one write path for the nodes on both ends of the edge.
 
 ### Live view predicate support
@@ -402,7 +402,7 @@ These operators are planned for the Z-set planner in a future wave.
 | **Great Expectations** | `CREATE LIVE VIEW` | In-process, sub-ms, no Python runtime, no checkpoint runner |
 | **Airflow** | Stage + PipelineRun nodes | DAG is queryable, versioned, co-located with data |
 | **Amundsen / DataHub** | `SOURCED_FROM` edges | Lineage is first-class, not a separate catalog |
-| **Looker drill** | Cypher graph traversal | No LLM, no separate BI tool, one query |
+| **Looker drill** | GQL graph traversal | No LLM, no separate BI tool, one query |
 | **Snapshot tables** | `AS OF seq N` | WAL is the timeline, no ETL to snapshot tables |
 | **NATS / Kafka** | Z-set delta + LIVE VIEW | In-process incremental computation, no broker |
 

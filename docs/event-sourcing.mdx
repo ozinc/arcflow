@@ -143,7 +143,7 @@ The WAL is your event log. `db.mutations()` is your event stream. `AS OF` querie
 Similar concept, but ArcFlow adds graph relationships between temporal entities, confidence scoring on facts, and `db.temporalReplay()` for deterministic replay. Trade-off: relational databases have mature tooling for schema migrations, backups, and replication; ArcFlow's advantage is in-process performance (no client-server round-trip) and graph-native temporal queries.
 
 ### Immutable / Temporal Databases?
-Closest architectural match. ArcFlow adds graph-native queries (Cypher vs Datalog), GPU acceleration (154M PageRank nodes/sec), vector search, and spatial primitives. Trade-off: immutable databases support distributed clusters and have battle-tested production deployments at scale; ArcFlow is single-process with higher single-machine throughput.
+Closest architectural match. ArcFlow adds graph-native queries (GQL vs Datalog), GPU acceleration (154M PageRank nodes/sec), vector search, and spatial primitives. Trade-off: immutable databases support distributed clusters and have battle-tested production deployments at scale; ArcFlow is single-process with higher single-machine throughput.
 
 ---
 

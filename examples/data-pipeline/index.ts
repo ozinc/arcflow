@@ -9,7 +9,7 @@
 //   Snapshot tables  → AS OF timestamp — WAL is the timeline
 //
 // Live view design: register BEFORE ingesting data. The view fires incrementally
-// on every Cypher write — no polling, no re-scan. rowCount > 0 = violation exists;
+// on every GQL write — no polling, no re-scan. rowCount > 0 = violation exists;
 // a follow-up query gives the details. This mirrors the Great Expectations pattern:
 // "define the expectation once, evaluate on every run."
 //
@@ -24,7 +24,7 @@ const db = openInMemory()
 // 0. PIPELINE DAG
 //    Stage nodes + FEEDS edges. No separate orchestration tool — the graph IS
 //    the DAG. Critical-path analysis, documentation, and run history are all
-//    Cypher queries.
+//    GQL queries.
 // ─────────────────────────────────────────────────────────────────────────────
 
 console.log('── 0. Pipeline DAG ───────────────────────────────────────────────')
@@ -144,7 +144,7 @@ console.log()
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 3. DELTA LOAD — only changed records
-//    Cypher SET for targeted updates — CDC fires, live views auto-update.
+//    GQL SET for targeted updates — CDC fires, live views auto-update.
 //    For content-hash dedup (skip unchanged records at the WAL level), use
 //    CodeGraph.ingest() which calls apply_node_edge_delta() directly.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -172,9 +172,9 @@ console.log(`DQ zero-price after delta: view=${zpAfter} (stale after SET), direc
 
 // Content-hash dedup via ingestDelta: same hash → WAL silent (zero bytes written)
 // Note: uses label 'DemoRecord' to isolate from main pipeline data.
-// ingestDelta() bypasses the Cypher compiler entirely — one write-lock + WAL flush.
+// ingestDelta() bypasses the GQL compiler entirely — one write-lock + WAL flush.
 // CDC does NOT fire on ingestDelta, so DQ live views are not updated. This is the
-// intended trade-off: maximum throughput (53× batch INSERT vs Cypher), zero dedup
+// intended trade-off: maximum throughput (53× batch INSERT vs GQL), zero dedup
 // overhead, at the cost of CDC integration. Use batchMutate() when live views matter.
 const cg = new CodeGraph(db)
 const dedup = cg.ingest({
@@ -354,7 +354,7 @@ console.log('── Summary ─────────────────�
 console.log(`Graph: ${final.nodes} nodes, ${final.relationships} relationships`)
 console.log()
 console.log('What ArcFlow replaced:')
-console.log('  dbt              → batchMutate() + Cypher SET for delta')
+console.log('  dbt              → batchMutate() + GQL SET for delta')
 console.log('  Great Expectations → DQ live views — fire on every write, zero polling')
 console.log('  Airflow          → Stage nodes + FEEDS edges + PipelineRun ledger')
 console.log('  Lineage tracker  → SOURCED_FROM edges — provenance on every record')
