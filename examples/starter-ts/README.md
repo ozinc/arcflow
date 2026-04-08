@@ -33,7 +33,11 @@ db.close()                                    // Done
 ## AI Agent Integration
 
 ```bash
-npx arcflow-mcp           # Start MCP server for Claude Code
+# Coding agents (Claude Code, Codex, Gemini CLI) — use the CLI binary
+arcflow query 'MATCH (n) RETURN count(*)'
+
+# Cloud chat UIs (ChatGPT, Claude.ai) — use the MCP server
+npx arcflow-mcp
 ```
 
 ## Docs

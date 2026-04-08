@@ -1,6 +1,6 @@
 ---
 title: "Procedures"
-description: "All 83 CALL procedures — database introspection, graph algorithms, temporal, reactive, system, health, extensions, behavior"
+description: "100+ CALL procedures — database introspection, graph algorithms, embedding, knowledge graph, temporal, reactive, system, auth, extensions, behavior"
 section: "Reference"
 order: 5
 since: "0.19.0"
@@ -11,7 +11,7 @@ status: "stable"
 
 > This reference is designed for both human developers and AI coding agents. Every entry includes complete CALL syntax and return columns that can be used directly in queries.
 
-83 CALL procedures: Database Introspection (20), Graph Algorithms (24), Temporal (9), Reactive (5), System (14), Health (3), Extensions (5), and Behavior Graph (3). All return tabular results.
+100+ CALL procedures: Database Introspection (20), Graph Algorithms (27), Embedding (5), Knowledge Graph (6), Temporal (9), Reactive (5), System (14), Auth (7), Health (3), Extensions (5), and Behavior Graph (3). All return tabular results.
 
 ```sql
 CALL db.procedures()
@@ -109,12 +109,14 @@ CALL algo.triangleCount()
 
 Returns a single row with the total number of triangles.
 
-### Path Analysis (2)
+### Path Analysis (4)
 
 | Procedure | Return Columns | Description | Since |
 |---|---|---|---|
 | `CALL algo.allPairsShortestPath()` | `source`, `target`, `distance` | Shortest path distances between all node pairs (capped at 100 rows). GPU-accelerated when available. | 3.0.0 |
 | `CALL algo.confidencePath(startId, endId)` | `path`, `cost`, `length` | Shortest path between two nodes weighted by confidence | 5.0.0 |
+| `CALL algo.dijkstra(startId, endId, 'weight')` | `path`, `distance` | Weighted shortest path using 4-ary min-heap | 10.0.0 |
+| `CALL algo.astar(startId, endId, 'weight', 'heuristic')` | `path`, `distance` | Heuristic-guided shortest path (A\*) | 10.0.0 |
 
 ```sql
 -- Find confidence-weighted shortest path between node 1 and node 5
@@ -154,6 +156,58 @@ CALL algo.graphRAGTrusted()
 ```
 
 Returns nodes with trusted_score, observation class (observed > inferred > predicted), filtering low-trust paths.
+
+## Embedding Algorithms (5)
+
+Generate node embeddings for downstream vector search, classification, and similarity tasks.
+
+| Procedure | Return Columns | Description | Since |
+|---|---|---|---|
+| `CALL algo.node2vec(dims, walkLen, walks)` | _(sets node.embedding)_ | Random walk + skip-gram embeddings | 10.0.0 |
+| `CALL algo.struc2vec(dims)` | _(sets node.embedding)_ | Structural equivalence embeddings | 10.0.0 |
+| `CALL algo.graphSAGE(dims)` | _(sets node.embedding)_ | Inductive neighborhood aggregation embeddings | 10.0.0 |
+| `CALL algo.staleEmbeddings()` | `nodeId`, `name` | Nodes whose embeddings are outdated (property changed after last embed) | 10.0.0 |
+| `CALL algo.classify($vec, 'indexName', {k: 10})` | `nodeId`, `label`, `confidence` | Classify by similarity to labeled examples in a vector index | 10.0.0 |
+
+```sql
+-- Embed all nodes with 128-dimensional Node2Vec vectors
+CALL algo.node2vec(128, 80, 10)
+
+-- Find stale embeddings after property updates
+CALL algo.staleEmbeddings()
+```
+
+## Knowledge Graph Algorithms (6)
+
+Algorithms for reasoning over facts, confidence, and semantic relationships.
+
+| Procedure | Return Columns | Description | Since |
+|---|---|---|---|
+| `CALL algo.entityResolution()` | `nodeId1`, `nodeId2`, `similarity` | Find nodes referring to the same real-world entity | 10.0.0 |
+| `CALL algo.factContradiction()` | `nodeId1`, `nodeId2`, `contradiction_type`, `confidence` | Detect contradictory facts in the graph | 10.0.0 |
+| `CALL algo.relationshipStrength()` | `fromId`, `toId`, `strength` | Score relationship strength by frequency, recency, mutual links | 10.0.0 |
+| `CALL algo.compoundingScore()` | `nodeId`, `score` | Composite confidence propagated through fact chains | 10.0.0 |
+| `CALL algo.entityFreshness()` | `nodeId`, `name`, `freshness`, `last_observed_at` | Freshness of each entity based on last observation | 10.0.0 |
+| `CALL algo.semanticDedup()` | `nodeId1`, `nodeId2`, `similarity` | Near-duplicate nodes via embedding similarity | 10.0.0 |
+
+```sql
+-- Find entities that may refer to the same person
+CALL algo.entityResolution()
+```
+
+## Auth & Governance (7)
+
+API key management and audit log procedures.
+
+| Procedure | Return Columns | Description | Since |
+|---|---|---|---|
+| `CALL db.auth.whoami()` | `identity`, `role`, `scopes` | Current authenticated identity | 9.0.0 |
+| `CALL db.auth.policies()` | `resource`, `action`, `allowed` | ACL policy definitions | 9.0.0 |
+| `CALL db.auth.check('resource', 'action')` | `allowed`, `reason` | Check if current identity has permission | 9.0.0 |
+| `CALL db.auth.createApiKey('name')` | `key`, `created_at` | Create a new API key (write) | 9.0.0 |
+| `CALL db.auth.revokeApiKey('key')` | `revoked` | Revoke an API key (write) | 9.0.0 |
+| `CALL db.auth.listApiKeys()` | `name`, `created_at`, `last_used` | List all API keys | 9.0.0 |
+| `CALL db.auth.auditLog()` | `timestamp`, `identity`, `action`, `resource` | Recent auth audit events | 9.0.0 |
 
 ## Temporal (9)
 
@@ -292,7 +346,7 @@ CALL behavior.nodes()
 
 ## See Also
 
-- [Built-in Functions](/worldcypher/functions/built-in) -- 81 scalar functions
+- [Built-in Functions](/worldcypher/functions/built-in) -- 83 scalar functions (17 math, 11 aggregation, 23 string, ...)
 - [EXPLAIN](/worldcypher/functions/explain) -- query plan introspection
 - [PROFILE](/worldcypher/functions/profile) -- query execution profiling
 - [RAG Pipeline Guide](/guides/rag-pipeline) -- building RAG with ArcFlow

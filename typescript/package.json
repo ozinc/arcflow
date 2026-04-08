@@ -31,6 +31,7 @@
     "release": "changeset publish"
   },
   "dependencies": {
+    "@arcflow/core": "file:../../arcflow/bindings/typescript",
     "arcflow-core": "file:../../bindings/typescript"
   },
   "devDependencies": {

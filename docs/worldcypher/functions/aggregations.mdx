@@ -1,33 +1,167 @@
 ---
-title: "Aggregations"
-description: "COUNT, SUM, AVG, COLLECT — aggregate query results"
+title: "Aggregations & Window Functions"
+description: "11 aggregation functions + 7 window functions — GROUP BY, LAG, LEAD, ROW_NUMBER, PERCENT_RANK, STDDEV_POP"
 section: "worldcypher/functions"
 order: 9
 since: "0.4.0"
 status: "stable"
 ---
 
-# Aggregations
+# Aggregations & Window Functions
 
-```sql
-MATCH (n:Person) RETURN count(n), sum(n.age), avg(n.age), collect(n.name)
-```
+## Aggregation Functions (11)
 
-Four aggregation functions: COUNT, SUM, AVG, COLLECT.
+Aggregate functions collapse multiple rows to a single value. Use inside `RETURN` or `WITH` — ArcFlow infers implicit GROUP BY from the surrounding non-aggregated columns.
 
-## Functions
-
-| Function | Description | Example |
+| Function | Syntax | Description |
 |---|---|---|
-| `count(expr)` | Count matching rows | `count(n)` -> `3` |
-| `sum(expr)` | Sum numeric values | `sum(n.age)` -> `90` |
-| `avg(expr)` | Average numeric values | `avg(n.age)` -> `30.0` |
-| `collect(expr)` | Collect into a list | `collect(n.name)` -> `["Alice","Bob","Carol"]` |
+| `count` | `count(expr)` | Number of non-null values |
+| `count(DISTINCT)` | `count(DISTINCT expr)` | Distinct non-null values |
+| `sum` | `sum(expr)` | Sum of numeric values |
+| `avg` | `avg(expr)` | Arithmetic mean |
+| `min` | `min(expr)` | Minimum value |
+| `max` | `max(expr)` | Maximum value |
+| `collect` | `collect(expr)` | Collect values into a list |
+| `percentile` | `percentile(expr, p)` | Percentile (p: 0.0–1.0) |
+| `stdev` | `stdev(expr)` | Sample standard deviation |
+| `variance` | `variance(expr)` | Sample variance |
+| `median` | `median(expr)` | Median (50th percentile) |
 
-```json
-[{"count(n)": 3, "avg(n.age)": 30.0, "collect(n.name)": ["Alice", "Bob", "Carol"]}]
+```cypher
+MATCH (n:Person)
+RETURN n.department AS dept,
+       count(n) AS headcount,
+       avg(n.salary) AS avg_salary,
+       percentile(n.salary, 0.95) AS p95_salary,
+       stdev(n.salary) AS salary_std
 ```
+
+```cypher
+-- Collect names per city
+MATCH (n:Person)
+RETURN n.city, collect(n.name) AS residents
+```
+
+```cypher
+-- Count distinct values
+MATCH (n:Transaction)
+RETURN count(DISTINCT n.account_id) AS unique_accounts
+```
+
+---
+
+## Window Functions (7)
+
+Window functions compute a value over a moving window of rows. Unlike aggregation functions, they **do not collapse rows** — each row gets its own computed value.
+
+Syntax:
+```cypher
+function() OVER (
+  [PARTITION BY column, ...]
+  [ORDER BY column [ASC|DESC], ...]
+  [ROWS BETWEEN N PRECEDING AND CURRENT ROW]
+)
+```
+
+| Function | Description |
+|---|---|
+| `lag(expr, N)` | Value from N rows before the current row within the partition |
+| `lead(expr, N)` | Value from N rows after the current row within the partition |
+| `row_number()` | Sequential integer position within each partition (1-based) |
+| `percent_rank()` | Relative rank as a fraction (0.0–1.0) |
+| `stddev_pop(expr)` | Population standard deviation over the window frame |
+| `dense_rank()` | Rank without gaps (tied rows share a rank) |
+
+### LAG — look back
+
+```cypher
+MATCH (n:DailyBar)
+RETURN n.symbol, n.date, n.close,
+  lag(n.close, 1) OVER (PARTITION BY n.symbol ORDER BY n.date) AS prev_close
+```
+
+Previous day's price, grouped per symbol and ordered by date.
+
+### LEAD — look forward
+
+```cypher
+MATCH (n:DailyBar)
+RETURN n.symbol, n.date, n.close,
+  lead(n.close, 5) OVER (PARTITION BY n.symbol ORDER BY n.date) AS next_5d_close
+```
+
+### Rolling statistics
+
+```cypher
+MATCH (n:DailyBar)
+RETURN n.symbol, n.date, n.close,
+  avg(n.close) OVER (
+    PARTITION BY n.symbol ORDER BY n.date
+    ROWS BETWEEN 199 PRECEDING AND CURRENT ROW
+  ) AS sma_200,
+  stddev_pop(n.close) OVER (
+    PARTITION BY n.symbol ORDER BY n.date
+    ROWS BETWEEN 59 PRECEDING AND CURRENT ROW
+  ) AS vol_60d
+```
+
+200-day simple moving average and 60-day volatility, per symbol.
+
+### ROW_NUMBER — position within partition
+
+```cypher
+MATCH (n:Product)
+RETURN n.category, n.name, n.revenue,
+  row_number() OVER (PARTITION BY n.category ORDER BY n.revenue DESC) AS rank_in_category
+```
+
+Rank products within each category by revenue.
+
+### PERCENT_RANK — cross-sectional ranking
+
+```cypher
+MATCH (n:DailyBar)
+RETURN n.symbol, n.date,
+  percent_rank() OVER (PARTITION BY n.date ORDER BY n.close) AS cross_sectional_rank
+```
+
+Rank each symbol by its closing price on each date. Returns 0.0 (lowest) to 1.0 (highest).
+
+---
+
+## Live Window Views
+
+Window functions work inside `CREATE LIVE VIEW`:
+
+```cypher
+-- Maintained incrementally as new bars arrive
+CREATE LIVE VIEW rolling_volatility AS
+  MATCH (n:DailyBar)
+  RETURN n.symbol, n.date,
+    stddev_pop(n.close) OVER (
+      PARTITION BY n.symbol ORDER BY n.date
+      ROWS BETWEEN 59 PRECEDING AND CURRENT ROW
+    ) AS vol_60d
+```
+
+Each new `DailyBar` triggers a delta update — only the affected partition is recomputed, not the full result set.
+
+---
+
+## HAVING — post-aggregation filter
+
+`HAVING` filters after aggregation completes, unlike `WHERE` which filters before:
+
+```cypher
+MATCH (n:Person)
+WITH n.department AS dept, count(n) AS headcount, avg(n.salary) AS avg_sal
+HAVING headcount > 5 AND avg_sal > 80000
+RETURN dept, headcount, avg_sal
+```
+
+---
 
 ## See Also
 
-- [RETURN](/worldcypher/return) — projection and ordering
+- [Window Functions in Live Views](/docs/reactive) — incremental maintenance
+- [Algorithms](/docs/algorithms) — graph algorithms (PageRank, Louvain, etc.)

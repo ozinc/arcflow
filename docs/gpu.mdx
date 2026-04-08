@@ -158,6 +158,39 @@ The result: ArcFlow runs the same algorithms as separate graph analytics librari
 
 ---
 
+## CUDA Library Integrations
+
+For graphs and vectors above certain size thresholds, ArcFlow routes to dedicated NVIDIA CUDA libraries rather than its own kernels. These are battle-tested implementations from the RAPIDS ecosystem that outperform custom kernels on large-scale workloads:
+
+| Library | What it powers | Threshold |
+|---|---|---|
+| **cuGraph** | Louvain, Leiden, PageRank, BFS, triangle count, connected components | 10K+ nodes |
+| **cuSPARSE** | SpMV, SpGEMM, CSR matrix operations | 500K+ non-zeros |
+| **cuVS (CAGRA)** | GPU-accelerated HNSW approximate nearest neighbor search | 10K+ vectors |
+
+### cuGraph
+
+cuGraph is NVIDIA's GPU-accelerated graph analytics library. At scale (10K+ node graphs on CUDA hardware), ArcFlow delegates Louvain, Leiden, and several centrality algorithms to cuGraph rather than its own kernels. The same GQL query — `CALL algo.louvain()` — automatically uses cuGraph when the graph exceeds the threshold and CUDA is available.
+
+Leiden additionally requires CUDA compute capability 9.0+ (H100 and later hardware). On older CUDA hardware it falls back to ArcFlow's own CPU implementation.
+
+### cuSPARSE
+
+cuSPARSE handles large sparse matrix operations. When the CSR representation exceeds 500K non-zeros on CUDA hardware, SpMV and SpGEMM operations route to cuSPARSE rather than ArcFlow's own CUDA kernels. Same result, better throughput at scale.
+
+### cuVS / CAGRA
+
+cuVS (CUDA Vector Search) with the CAGRA (CUDA Approximate Graph-based Retrieval Algorithm) index accelerates nearest-neighbor vector search on CUDA hardware. Standard HNSW vector search gets 4.2x GPU speedup; CAGRA on large collections (10K+ vectors) can achieve higher throughput through GPU-native graph traversal.
+
+```sql
+-- Same query — routes to CAGRA on CUDA hardware when index size warrants
+CALL algo.vectorSearch('my_index', $vector, 10)
+```
+
+All routing is automatic. The developer writes one query; the engine picks the fastest available backend based on hardware and data size.
+
+---
+
 ## Vision
 
 ArcFlow provides a complete GraphBLAS runtime where the entire algorithm suite runs on sparse linear algebra primitives. Every graph operation — from simple traversal to complex analytics — expressed as matrix operations, automatically dispatched to the best available hardware.

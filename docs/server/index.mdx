@@ -16,7 +16,7 @@ arcflow                              # In-process REPL (default)
 arcflow --pg 5432                    # PostgreSQL wire protocol
 arcflow --http 8080                  # HTTP API
 arcflow --serve 7687                 # TCP server
-arcflow-mcp --data-dir ./graph       # MCP server for AI agents
+arcflow-mcp --data-dir ./graph       # MCP server for cloud chat UIs (ChatGPT, Claude.ai)
 ```
 
 Run multiple servers concurrently on the same graph store:
@@ -130,6 +130,8 @@ Logs every query to stderr with the client's address, useful for debugging and a
 ### Compatible Clients
 
 Tested with: psql, pgAdmin, Grafana, Python psycopg2, Go pgx, Node.js node-postgres, Rust sqlx. Any client that speaks PostgreSQL wire protocol v3 should work.
+
+The queries sent over this connection are WorldCypher (ISO GQL), not SQL. See [From SQL to GQL](/guides/sql-to-gql) for the full adoption path — from psql connection to native SDK to full GQL features.
 
 ## HTTP API
 
@@ -337,9 +339,9 @@ Each TCP client gets its own thread. Multiple clients can connect simultaneously
 
 ## MCP Server
 
-The MCP (Model Context Protocol) server provides structured tool access for AI agents over stdio JSON-RPC. This is the fallback for environments without filesystem access (cloud IDEs, sandboxed agents).
+The MCP (Model Context Protocol) server is the bridge for cloud chat interfaces — ChatGPT, Claude.ai, Gemini web, and other environments with no local shell or filesystem access. These interfaces cannot run `arcflow query` as a binary, so MCP is the only way to give them graph tool access.
 
-For environments with filesystem access, prefer `arcflow query "..." --json` instead — it is simpler and faster.
+For local environments (CLI agents, application code), use `arcflow query "..." --json` instead — it is faster and requires no protocol overhead.
 
 ```bash
 arcflow-mcp                        # in-memory

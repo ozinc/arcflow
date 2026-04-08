@@ -21,7 +21,7 @@ This guide covers what stays the same, what's different, and how to move your da
 | **Runtime** | JVM (Neo4j, TigerGraph), C/C++ (Memgraph, FalkorDB), .NET (Cosmos DB) | Native binary, no runtime dependency |
 | **Memory model** | Off-heap page cache or shared memory | In-process shared memory (SoC architecture) |
 | **Serialization** | Wire protocol (Bolt, Gremlin, GSQL) | None (in-process) or TCP/HTTP |
-| **Query language** | Cypher, Gremlin, GSQL, openCypher | WorldCypher (Cypher-inspired with spatial/temporal primitives) |
+| **Query language** | Cypher, Gremlin, GSQL, GQL | WorldCypher (ArcFlow's GQL dialect with spatial/temporal/reactive extensions) |
 | **Indexes** | B-tree, full-text, vector (varies by vendor) | Property index, HNSW vector index |
 | **Transactions** | Full ACID (most vendors) | WAL-based journaling |
 | **Clustering** | Causal clustering, replication (varies) | Single-node (replication planned) |
@@ -32,11 +32,11 @@ This guide covers what stays the same, what's different, and how to move your da
 
 ArcFlow can run as an in-process engine with zero network overhead, or as a standalone server. The in-process mode eliminates serialization and connection management entirely.
 
-## Cypher Dialect Compatibility
+## GQL Compatibility
 
-If you're coming from Neo4j, Memgraph, or FalkorDB (all openCypher-family), most of your queries port directly. Coming from TigerGraph (GSQL) or Cosmos DB (Gremlin) requires a query rewrite, but the graph modeling concepts transfer.
+If you're coming from Neo4j, Memgraph, or FalkorDB (all GQL-family), most of your queries port directly. Coming from TigerGraph (GSQL) or Cosmos DB (Gremlin) requires a query rewrite, but the graph modeling concepts transfer.
 
-### Fully Compatible (openCypher family)
+### Fully Compatible (GQL family)
 
 These Cypher features work identically in WorldCypher:
 
@@ -52,7 +52,7 @@ These Cypher features work identically in WorldCypher:
 
 ### WorldCypher Extensions
 
-Features in WorldCypher that don't exist in standard Cypher or other graph query languages:
+Features in WorldCypher that go beyond standard GQL — ArcFlow-specific capabilities:
 
 | Feature | Syntax | Purpose |
 |---|---|---|
@@ -73,7 +73,7 @@ Features in WorldCypher that don't exist in standard Cypher or other graph query
 
 ### Not Yet Supported
 
-Features in standard Cypher or other vendors not available in WorldCypher:
+Standard GQL features or vendor-specific extensions not yet available in WorldCypher:
 
 | Feature | Status | Alternative |
 |---|---|---|
@@ -116,7 +116,7 @@ Export your data as Cypher statements or CSV. The method varies by vendor:
 - **Cosmos DB**: Export via Gremlin queries to JSON, then convert to Cypher
 
 ```sql
--- Most openCypher databases support exporting as CREATE statements
+-- Most GQL-compatible databases support exporting as CREATE statements
 -- Adapt vendor-specific export commands to your setup
 ```
 

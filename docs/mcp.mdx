@@ -1,38 +1,70 @@
 ---
 title: "MCP Server"
-description: "Let AI agents query your graph directly — no code generation needed"
+description: "Cloud-to-local bridge for chat UIs — ChatGPT, Claude.ai, Gemini web. Not for CLI agents or application code."
 section: "capabilities"
 status: "stable"
 ---
 
 # MCP Server
 
-ArcFlow includes an MCP (Model Context Protocol) server that lets AI agents query your graph directly — no code generation needed.
+## Three surfaces — no overlap
+
+| Consumer | Integration | Why |
+|---|---|---|
+| **BASAL broker, watcher daemon** | napi-rs in-process | Microseconds, same memory |
+| **Claude Code, Codex, Gemini CLI** | `arcflow` CLI binary | Shell-native, composable, &lt;10ms, no config |
+| **ChatGPT, Claude.ai, Gemini web** | MCP server | No local shell — MCP is the only bridge |
+| **Python / shell pipelines** | `arcflow` CLI binary | Same as CLI agents |
+
+**napi-rs** is the in-process interface. **CLI** is the local-to-local interface. **MCP** is the cloud-to-local bridge for chat UIs with no shell access. These don't overlap — pick the one that matches your execution context.
+
+## MCP — for cloud chat interfaces
+
+ChatGPT, Claude.ai, Gemini web, Copilot Chat — these run in a browser or cloud sandbox. They have no shell, no filesystem, no way to run `arcflow symbol login`. MCP's stdio-over-process model is the only way to give them tool access, and the latency doesn't matter because the user is already waiting for a chat response.
+
+That's the correct scope for MCP. It's a cloud-to-local bridge. Nothing else.
+
+## CLI binary — for shell-capable agents
+
+Claude Code, Codex CLI, Gemini CLI already have a shell tool. They call `arcflow` exactly like `grep` or `ls`:
 
 ```bash
-npx arcflow-mcp
+arcflow query "MATCH (f:Function {name: 'login'}) RETURN f.file_path, f.line_start"
+arcflow impact fn_login --depth 4   # → affected symbols, hop distance
+arcflow slice src/auth.ts 12 35     # → exact source lines
+arcflow symbol login                # → file_path, line_start, line_end
+arcflow query "CALL algo.pageRank()" --json | jq '.rows'
 ```
+
+Each command exits in under 10ms. No registration. No daemon. No config file. Fully composable with `grep`, `jq`, `git`.
+
+## napi-rs binding — for application code
+
+For any code you control that runs in Node.js alongside ArcFlow:
+
+```typescript
+import { openInMemory } from 'arcflow'
+import { CodeGraph } from 'arcflow'
+
+const db = openInMemory()
+const cg = new CodeGraph(db)
+
+// Microseconds. Same memory. No process boundary.
+const impact = cg.impactSubgraph(['fn-abc'], ['Calls', 'Imports'], 3)
+```
+
+---
 
 ## Setup
 
-### Claude Code
-
-```json
-// .claude/settings.json
-{
-  "mcpServers": {
-    "arcflow": {
-      "command": "npx",
-      "args": ["arcflow-mcp"]
-    }
-  }
-}
+```bash
+npx arcflow-mcp
+npx arcflow-mcp --data-dir ./my-graph   # Persistent data
 ```
 
-### Cursor
+### Claude.ai / ChatGPT plugin config
 
 ```json
-// .cursor/mcp.json
 {
   "mcpServers": {
     "arcflow": {
@@ -52,30 +84,37 @@ npx arcflow-mcp
 | `read_query` | Execute read-only WorldCypher (MATCH, CALL algo.*, CALL db.*) | Read |
 | `write_query` | Execute mutations (CREATE, SET, DELETE, MERGE) | Write |
 | `graph_rag` | Trusted GraphRAG — answer questions from the knowledge graph | Read |
+| `ingest_nodes` | Push node/edge batches with idempotent dedup (content-hash aware) | Write |
+| `create_live_view` | Register a standing query as a named live view for change tracking | Write |
+| `live_view_status` | Poll a live view's current result set, frontier, and query text | Read |
 
-## How it changes the agent experience
+### ingest_nodes
 
-| Without MCP | With MCP |
-|---|---|
-| "Write me code that queries the graph" | "Query my graph: who's connected to Alice?" |
-| Agent generates driver code | Agent calls `read_query` directly |
-| User runs code manually | Agent gets results immediately |
+Push structured node/edge deltas. Content-hash dedup means calling the same delta twice is safe — already-ingested nodes are silently skipped.
 
-## Examples
-
-Agent: "What's in my graph?"
-→ `get_schema` → labels, properties, stats
-
-Agent: "Who are the most important people?"
-→ `read_query("CALL algo.pageRank()")` → ranked results
-
-Agent: "Add Alice to the graph"
-→ `write_query("CREATE (n:Person {name: 'Alice'})")` → done
-
-## With persistent data
-
-```bash
-npx arcflow-mcp --data-dir ./my-graph
+```json
+{
+  "added_nodes": [
+    { "label": "Person", "id": "alice", "content_hash": "abc123", "properties": { "name": "Alice" } }
+  ],
+  "removed_node_ids": ["old-node-id"],
+  "updated_nodes": [{ "id": "alice", "properties": { "age": 31 } }],
+  "added_edges": [
+    { "kind": "KNOWS", "from_id": "alice", "to_id": "bob" }
+  ],
+  "removed_edge_ids": []
+}
 ```
 
-Data persists across MCP sessions.
+Returns `{ nodes_added, nodes_removed, nodes_updated, edges_added, edges_removed, wal_bytes_written }`.
+
+### create_live_view + live_view_status
+
+Register a view once, poll repeatedly:
+
+```
+create_live_view("high_risk", "MATCH (n) WHERE n.risk > 0.8 RETURN n.name, n.risk ORDER BY n.risk DESC")
+live_view_status("high_risk")  // → { frontier: 47, row_count: 3, query_text: "..." }
+```
+
+The `frontier` is a monotonically increasing mutation sequence number. If it hasn't changed, the result set hasn't changed.

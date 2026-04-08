@@ -11,7 +11,7 @@ status: "stable"
 
 **GPU-accelerated spatial KNN at 0.3ms — native spatial predicates built into the graph, not bolted on as an afterthought.**
 
-ArcFlow treats spatial coordinates as a first-class query dimension alongside entity relationships. KNN, radius queries, raycasts, and frustum culling run on GPU (CUDA/Metal) with automatic dispatch, delivering 2.7x speedup over CPU. Combined with USD scene loading, zone membership, and multi-clock sensor fusion, you query spatial and graph structure in a single Cypher statement — no join against a separate spatial extension, no separate spatial index.
+ArcFlow treats spatial coordinates as a first-class query dimension alongside entity relationships. KNN, radius queries, raycasts, and frustum culling run on GPU (CUDA/Metal) with automatic dispatch, delivering 2.7x speedup over CPU. Combined with USD scene loading, zone membership, and multi-clock sensor fusion, you query spatial and graph structure in a single GQL statement — no join against a separate spatial extension, no separate spatial index.
 
 ```cypher
 -- 5 nearest sensors to a position, GPU-accelerated
@@ -205,10 +205,10 @@ RETURN d.position
 ArcFlow adds graph relationships on top of spatial data. Instead of points in a table, you have entities connected by relationships — with spatial predicates operating across the graph. Trade-off: relational spatial extensions have richer geometry types (LineString, Polygon, MultiPolygon) and mature GIS tooling; ArcFlow currently supports Point with KNN, bbox, and raycast. If you need complex polygon operations, a relational database with spatial extensions is the better choice. If you need spatial queries combined with graph traversal and temporal reasoning, ArcFlow avoids the join between two systems.
 
 ### 3D Simulation Platforms / USD?
-ArcFlow loads USD scene manifests and makes them queryable with Cypher — a spatial query engine for your digital twin without running a full 3D simulation deployment. Trade-off: simulation platforms provide real-time rendering and physics simulation; ArcFlow provides the queryable data layer underneath.
+ArcFlow loads USD scene manifests and makes them queryable with GQL — a spatial query engine for your digital twin without running a full 3D simulation deployment. Trade-off: simulation platforms provide real-time rendering and physics simulation; ArcFlow provides the queryable data layer underneath.
 
 ### ROS2 / Nav2?
-The multi-clock domain system maps directly to ROS2's multi-rate sensor model. ArcFlow adds persistent spatial state, graph relationships between spatial entities, and Cypher queries for mission planning — complementing Nav2's real-time navigation with higher-level spatial reasoning. Trade-off: Nav2 handles real-time path planning with hard latency guarantees; ArcFlow operates at the mission-planning and spatial-knowledge layer, not the control loop.
+The multi-clock domain system maps directly to ROS2's multi-rate sensor model. ArcFlow adds persistent spatial state, graph relationships between spatial entities, and GQL queries for mission planning — complementing Nav2's real-time navigation with higher-level spatial reasoning. Trade-off: Nav2 handles real-time path planning with hard latency guarantees; ArcFlow operates at the mission-planning and spatial-knowledge layer, not the control loop.
 
 ---
 
@@ -216,9 +216,9 @@ The multi-clock domain system maps directly to ROS2's multi-rate sensor model. A
 
 ArcFlow treats spatial intelligence as a first-class query dimension, not an afterthought bolted onto tabular storage.
 
-**Real-time perception pipelines.** Spatial state updates via Cypher mutations, and the architecture supports streaming spatial ingestion — camera feeds, LiDAR point clouds, and GPS tracks flowing directly into the graph with sub-second latency, each tagged with clock domain and confidence scores.
+**Real-time perception pipelines.** Spatial state updates via GQL mutations, and the architecture supports streaming spatial ingestion — camera feeds, LiDAR point clouds, and GPS tracks flowing directly into the graph with sub-second latency, each tagged with clock domain and confidence scores.
 
-**Venue-scale digital twins.** Combining USD scene loading, zone membership, multi-clock sensor fusion, and temporal queries into a unified query surface for building-scale and venue-scale digital twins. Query "which cameras had line-of-sight to zone B at 14:32?" in a single Cypher statement.
+**Venue-scale digital twins.** Combining USD scene loading, zone membership, multi-clock sensor fusion, and temporal queries into a unified query surface for building-scale and venue-scale digital twins. Query "which cameras had line-of-sight to zone B at 14:32?" in a single GQL statement.
 
 **Spatial-temporal reasoning for robotics and AV.** Fusing spatial KNN (0.3ms GPU) with temporal `AS OF` queries to answer questions like "what was within 5 meters of the robot 10 seconds before the collision?" This is the foundation for post-incident analysis, mission replay, and training data extraction from real-world robot operations.
 

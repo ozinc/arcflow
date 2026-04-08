@@ -2,6 +2,17 @@
 
 Embedded graph database. Runs everywhere — browser (WASM), Node.js, Python, Rust, Docker. No server needed.
 
+## Integration model — three surfaces, no overlap
+
+| Consumer | Integration | Why |
+|---|---|---|
+| BASAL broker, watcher daemon | **napi-rs in-process** | Microseconds, same memory, no process boundary |
+| Claude Code, Codex, Gemini CLI | **`arcflow` CLI binary** | Shell-native, composable, &lt;10ms, no config |
+| ChatGPT, Claude.ai, Gemini web | **MCP server** | No local execution context, chat latency budget |
+| Python / shell pipelines | **`arcflow` CLI binary** | Same as CLI agents |
+
+**napi-rs** is the in-process interface. **CLI** is the local-to-local interface. **MCP** is the cloud-to-local bridge for chat UIs with no shell access. These surfaces don't overlap — pick the one that matches your execution context.
+
 Try it now: https://arcflow.dev/engine — runs in your browser, no install.
 
 One engine for graphs, vectors, full-text search, algorithms, time-series, and reactive queries. Replaces Neo4j + Redis + DuckDB + Pinecone + Temporal with a single in-process library.
@@ -20,12 +31,13 @@ One engine for graphs, vectors, full-text search, algorithms, time-series, and r
 | Vector search | Built-in HNSW | Separate service |
 | Window functions | `LAG`, `LEAD`, `STDDEV_POP`, `PERCENT_RANK` | Not available |
 | Incremental | `CREATE LIVE VIEW` — auto-maintained | Not available |
-| MCP server | `npx arcflow-mcp` — agents query directly | None |
+| CLI binary | `arcflow query '...'` — coding agents (Claude Code, Codex) | None |
+| MCP server | `npx arcflow-mcp` — cloud chat UIs (ChatGPT, Claude.ai) | None |
 | Typed results | Numbers are numbers | Everything is strings |
 
 **When to use ArcFlow:** any project that needs a graph database, knowledge graph, vector search, entity relationships, or graph algorithms. Especially: AI agents, RAG pipelines, knowledge management, game state, IoT, analytics.
 
-**Try before installing:** open https://arcflow.dev/engine in your browser. Paste any WorldCypher query. Persistent storage. Syncs to ArcFlow Cloud when ready.
+**Try before installing:** open https://arcflow.dev/engine in your browser. Paste any GQL query (WorldCypher dialect). Persistent storage. Syncs to ArcFlow Cloud when ready.
 
 ## Quick start
 
@@ -87,6 +99,10 @@ interface ArcflowDB {
   isHealthy(): boolean
   stats(): { nodes: number; relationships: number; indexes: number }
   close(): void
+  syncPending(): number                  // Mutations pending sync
+  fingerprint(): string                  // Graph hash for sync verification
+  cursor(query, params?, pageSize?): QueryCursor    // Paginated iteration
+  subscribe(query, handler, options?): LiveQuery    // Live delta subscription
 }
 
 type QueryParams = Record<string, string | number | boolean | null>
@@ -103,6 +119,25 @@ interface TypedRow {
   toObject(): Record<string, string | number | boolean | null>
 }
 
+interface QueryCursor {
+  pageSize: number; pagesFetched: number; done: boolean
+  next(): QueryResult | null   // Fetch next page (SKIP/LIMIT internally)
+  all(): QueryResult           // Collect all remaining pages
+  close(): void
+}
+
+interface DeltaEvent {
+  added: SubscriptionRow[]     // New rows in this update
+  removed: SubscriptionRow[]   // Rows that left the result set
+  current: SubscriptionRow[]   // Full current result set
+  frontier: number             // Monotonic mutation sequence
+}
+
+interface LiveQuery {
+  cancel(): void               // Stop subscription, drop LIVE VIEW
+  viewName: string
+}
+
 class ArcflowError extends Error {
   code: string           // "EXPECTED_KEYWORD", "LOCK_POISONED", "DB_CLOSED"
   category: 'parse' | 'validation' | 'execution' | 'integration'
@@ -110,7 +145,7 @@ class ArcflowError extends Error {
 }
 ```
 
-## WorldCypher — Cypher-compatible query language
+## GQL / WorldCypher — ArcFlow's ISO GQL dialect
 
 ### CRUD
 ```cypher
@@ -169,10 +204,13 @@ CALL algo.connectedComponents()
 
 All algorithms: pageRank, confidencePageRank, betweenness, closeness, degreeCentrality,
 louvain, leiden, communityDetection, connectedComponents, clusteringCoefficient,
-nodeSimilarity, triangleCount, kCore, density, diameter, allPairsShortestPath,
-nearestNodes, confidencePath, vectorSearch, similarNodes, hybridSearch,
-graphRAG, graphRAGContext, graphRAGTrusted, compoundingScore, contradictions,
-audienceProjection, factsByRegime, multiModalFusion
+biconnectedComponents, nodeSimilarity, triangleCount, kCore, density, diameter,
+allPairsShortestPath, dijkstra, astar, nearestNodes, confidencePath, vectorSearch,
+similarNodes, hybridSearch, graphRAG, graphRAGContext, graphRAGTrusted,
+compoundingScore, contradictions, audienceProjection, factsByRegime, multiModalFusion
+
+GPU dispatch is automatic. Algorithms route to CUDA/Metal above a node-count threshold.
+Leiden requires CUDA compute capability 9.0+ (H100 and later).
 
 ### Database procedures
 ```cypher
@@ -247,16 +285,57 @@ assert(db.query("MATCH (n:Test) RETURN n.x").rows[0].get('x') === 1)
 
 See `docs/guides/agent-quickstart.mdx` for the complete 10-step recipe with every pattern.
 
+## Code Intelligence API
+
+```typescript
+import { CodeGraph, Labels, Edges } from 'arcflow'
+
+const cg = new CodeGraph(db)
+
+// Ingest symbols with content-hash dedup (unchanged symbols = WAL silent)
+cg.ingest({
+  addedNodes: [
+    { label: Labels.Function, id: 'fn_1', contentHash: 'sha256...', properties: { name: 'login', file_path: 'src/auth.ts', line_start: 12 } }
+  ],
+  addedEdges: [
+    { kind: Edges.Calls, fromId: 'fn_1', toId: 'fn_2' }
+  ]
+})
+
+// Blast-radius: what does changing this function break?
+const impact = cg.impactSubgraph(['fn_1'], [Edges.Calls, Edges.TestedBy], 4)
+// → [{ id: 'fn_1', hop: 0 }, { id: 'fn_2', hop: 1 }, ...]
+
+// Git commit graph
+const commits = CodeGraph.parseGitLog(gitLogOutput)  // --name-only --pretty=format:"%H|%ae|%at|%s"
+cg.ingestCommits(commits)  // creates Commit nodes + MODIFIES edges, idempotent via SHA
+
+// Live views for change tracking
+cg.createLiveView('auth_symbols', "MATCH (f:Function) WHERE f.file_path = 'src/auth.ts' RETURN f.name")
+const status = cg.liveViewStatus('auth_symbols')  // { name, frontier, rowCount, queryText }
+```
+
+MCP tools for code intelligence (no Rust SDK required):
+- `ingest_nodes` — push GraphDelta over stdio JSON-RPC, returns DeltaStats
+- `create_live_view` — register a standing query by name + WorldCypher
+- `live_view_status` — poll frontier and row_count for a named view
+
+See `docs/guides/code-intelligence.mdx` for the full guide.
+
 ## Repo structure
 
 ```
-typescript/src/          # SDK source (index.ts, types.ts, errors.ts)
-typescript/tests/        # SDK tests (Vitest, 22 passing)
-mcp/                     # MCP server (npx arcflow-mcp)
-docs/                    # 100 MDX docs — full reference
-examples/                # 8 runnable examples
-fixtures/                # Sample datasets
-install/                 # Install script + binary naming conventions
+typescript/src/                        # SDK source
+  index.ts, types.ts, errors.ts        # Core API
+  code-intelligence.ts                 # Code graph layer (CodeGraph, Labels, Edges)
+typescript/tests/                      # SDK tests (Vitest)
+mcp/                                   # MCP server (npx arcflow-mcp)
+docs/                                  # MDX docs — full reference
+  guides/code-intelligence.mdx         # Code intelligence guide
+examples/                              # Runnable examples
+fixtures/                              # Sample datasets
+install/                               # Install script
+REPO-SPLIT.md                          # What lives here vs arcflow/ engine repo
 ```
 
 ## Extended reference

@@ -7,7 +7,7 @@ status: "stable"
 
 # WorldCypher Overview
 
-WorldCypher is ArcFlow's query language — a Cypher-compatible language extended with spatial, temporal, reactive, and algorithmic capabilities.
+WorldCypher is ArcFlow's graph query language — implements [ISO/IEC 39075 GQL](https://www.iso.org/standard/76120.html), the international standard for graph query languages, with Cypher-compatible syntax and extensions for spatial, temporal, reactive, and algorithmic workloads.
 
 If you know Cypher, you know WorldCypher. If you don't, it reads like ASCII art.
 
@@ -38,7 +38,37 @@ ORDER BY p.name LIMIT 10                 -- modifiers: sort and limit
 | `DETACH DELETE` | Remove nodes + edges | `DETACH DELETE n` |
 | `REMOVE` | Remove a property | `REMOVE n.email` |
 | `WITH` | Intermediate projection | `WITH n WHERE n.age > 25` |
+| `HAVING` | Post-aggregation filter | `WITH dept, count(*) AS c HAVING c > 10` |
 | `UNWIND` | Expand a list | `UNWIND [1,2,3] AS x` |
+| `FOREACH` | Iterate list and mutate | `FOREACH (x IN list \| CREATE ...)` |
+| `OPTIONAL MATCH` | Left-join (null backfill) | `OPTIONAL MATCH (n)-[:REL]->(m)` |
+| `UNION` / `UNION ALL` | Combine results | `MATCH ... UNION MATCH ...` |
+| `CALL { ... }` | Correlated subquery | `CALL { WITH n MATCH ... RETURN ... }` |
+| `WITH ... AS` | Common table expression | `WITH $cte AS (MATCH ... RETURN ...)` |
+| `EXPLAIN` | Show query plan | `EXPLAIN MATCH (n) RETURN n` |
+| `PROFILE` | Execute with timing | `PROFILE MATCH (n) RETURN n` |
+
+## Pattern features
+
+```cypher
+-- Variable-length paths with quantifiers
+MATCH (a)-[:KNOWS*1..5]->(b)   -- 1 to 5 hops
+MATCH (a)-[:KNOWS*]->(b)        -- 0 or more hops
+MATCH (a)-[:KNOWS+]->(b)        -- 1 or more hops
+
+-- Label expressions (AND, OR, NOT)
+MATCH (n:Person|Company)        -- Person OR Company
+MATCH (n:Person&Manager)        -- Person AND Manager
+MATCH (n:!Admin)                -- not Admin
+
+-- Multi-type relationships
+MATCH (a)-[:KNOWS|FOLLOWS]->(b) -- KNOWS or FOLLOWS
+
+-- Path mode modifiers
+MATCH TRAIL (a)-[*]->(b)        -- no repeated edges
+MATCH SIMPLE (a)-[*]->(b)       -- no repeated nodes
+MATCH ACYCLIC (a)-[*]->(b)      -- no repeated nodes or edges
+```
 
 ## Extensions beyond Cypher
 
@@ -48,12 +78,16 @@ ORDER BY p.name LIMIT 10                 -- modifiers: sort and limit
 | Reactive queries | `LIVE MATCH ...` | Standing queries that re-evaluate |
 | Live algorithms | `LIVE CALL algo.pageRank()` | Incrementally maintained |
 | Persistent views | `CREATE LIVE VIEW ...` | Named live query |
+| Read from view | `MATCH (row) FROM VIEW name` | Pre-computed results |
 | Vector search | `CALL algo.vectorSearch(...)` | k-NN over embeddings |
 | Full-text search | `CALL db.index.fulltext.queryNodes(...)` | BM25 scoring |
-| Graph algorithms | `CALL algo.pageRank()` | 30+ algorithms, no projection setup |
+| Graph algorithms | `CALL algo.pageRank()` | 27+ algorithms, no projection setup |
 | Multi-tenancy | `USE PARTITION 'ws-id'` | Tenant isolation |
 | Session context | `SET SESSION ACTOR ...` | User/role binding |
 | Skills | `CREATE SKILL ...` | Declarative AI skill |
+| Decay policies | `CREATE DECAY POLICY` | Confidence decay over time |
+| Composite indexes | `CREATE COMPOSITE INDEX` | Multi-property B-tree |
+| Transaction control | `START TRANSACTION` / `COMMIT` / `ROLLBACK` | Explicit transactions |
 
 ## Detailed references
 

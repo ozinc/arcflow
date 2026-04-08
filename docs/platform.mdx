@@ -28,7 +28,7 @@ arcflow --data-dir ./my-graph
 | **Performance** | 154M PageRank nodes/sec, 9.3M node creates/sec, 100M edge traversals/sec (MacBook Air M4) |
 | **GPU** | Auto-detects CUDA (Linux/Windows) and Metal (macOS/iOS). Zero configuration. |
 | **Persistence** | WAL (write-ahead log) + DiskWal for durable storage |
-| **Serving** | Add `--serve 7687` for TCP, `--http 8080` for REST, `arcflow-mcp` for AI agents |
+| **Serving** | Add `--serve 7687` for TCP, `--http 8080` for REST, `arcflow-mcp` for cloud chat UIs |
 | **Scale** | Single process handles millions of nodes. For larger workloads, deploy as a mesh. |
 
 ArcFlow auto-detects available hardware and adapts. Same query, different execution paths:
@@ -89,7 +89,7 @@ arcflow --data-dir ./graph --serve 7687
 
 Line-delimited JSON protocol. For SDK drivers and lightweight clients.
 
-### MCP Server (AI Agents)
+### MCP Server (Cloud Chat Interfaces)
 
 ```bash
 arcflow-mcp --data-dir ./graph

@@ -1,0 +1,268 @@
+---
+title: Code Intelligence
+description: Build a persistent, queryable, incrementally-maintained graph of your codebase with ArcFlow.
+---
+
+# Code Intelligence
+
+ArcFlow turns your codebase into a live knowledge graph. Parse once, query forever. Every symbol, call, import, and commit is a node you can traverse in GQL — no LLM calls required for navigation or impact analysis.
+
+**What this unlocks:**
+- "What does changing `authenticate()` break?" — answered in microseconds via blast-radius traversal
+- "Who last touched this function?" — GQL query over git history, no `git log` parsing at query time
+- Live views on active files — agents get proactive conflict warnings without polling
+
+## Core concepts
+
+### The schema
+
+Code intelligence nodes use a fixed set of labels and edge kinds. These are conventions enforced by the SDK, not the engine — the engine accepts any string.
+
+| Label | Meaning |
+|---|---|
+| `File` | A source file |
+| `Function` | A function or arrow function |
+| `Class` | A class declaration |
+| `Method` | A method on a class |
+| `Interface` | A TypeScript interface or Rust trait |
+| `Module` | A module or package |
+| `Commit` | A git commit |
+| `Test` | A test function |
+
+| Edge kind | Meaning |
+|---|---|
+| `CALLS` | `A` calls `B` |
+| `IMPORTS` | `A` imports from `B` |
+| `CONTAINS` | `File` contains `Symbol` |
+| `MODIFIES` | `Commit` modifies `File` |
+| `EXTENDS` | Class extends another |
+| `TESTED_BY` | Symbol tested by Test |
+
+### Content-hash dedup
+
+Every symbol node can carry a `contentHash`. When you re-ingest a file after a save, nodes whose hash hasn't changed are **skipped entirely** — the WAL stays silent. Only changed symbols touch disk. A full-repo re-index costs the same as a single changed file for unchanged code.
+
+```typescript
+{
+  label: 'Function',
+  id: '42',          // stable across ingests
+  contentHash: 'sha256_of_source_text',
+  properties: { name: 'login', file_path: 'src/auth.ts', line_start: 12, line_end: 30 }
+}
+```
+
+### Stable IDs
+
+Assign a deterministic ID to each symbol — derived from `(file_path, name, kind)`. This makes ingestion idempotent: ingesting the same repo twice produces the same graph.
+
+The Rust SDK provides `symbol_node_id()` for this. In TypeScript, derive the ID from a stable hash of the triple before calling `ingest()`.
+
+## Quick start
+
+```typescript
+import { openInMemory } from 'arcflow'
+import { CodeGraph, Labels, Edges } from 'arcflow'
+
+const db = openInMemory()
+const cg = new CodeGraph(db)
+
+// Ingest a file's symbols
+cg.ingest({
+  addedNodes: [
+    {
+      label: Labels.File,
+      id: 'file_src_auth',
+      properties: { file_path: 'src/auth.ts', language: 'typescript' },
+    },
+    {
+      label: Labels.Function,
+      id: 'fn_login',
+      contentHash: 'abc123',   // SHA-256 of source text
+      properties: { name: 'login', file_path: 'src/auth.ts', line_start: 12, line_end: 30 },
+    },
+    {
+      label: Labels.Function,
+      id: 'fn_verify_token',
+      contentHash: 'def456',
+      properties: { name: 'verifyToken', file_path: 'src/auth.ts', line_start: 32, line_end: 45 },
+    },
+  ],
+  addedEdges: [
+    { kind: Edges.Contains, fromId: 'file_src_auth', toId: 'fn_login' },
+    { kind: Edges.Contains, fromId: 'file_src_auth', toId: 'fn_verify_token' },
+    { kind: Edges.Calls, fromId: 'fn_login', toId: 'fn_verify_token' },
+  ],
+})
+
+// Query like any graph
+const result = db.query("MATCH (f:Function) RETURN f.name, f.line_start ORDER BY f.name")
+```
+
+## Blast-radius traversal
+
+"What does changing this function break?" — without a single LLM call.
+
+```typescript
+// What is affected if login() changes?
+const impact = cg.impactSubgraph(
+  ['fn_login'],                           // root nodes
+  [Edges.Calls, 'TESTED_BY', 'TRIGGERS'], // edge kinds to follow
+  4                                       // max hop depth
+)
+
+for (const node of impact.nodes) {
+  console.log(`hop ${node.hop}: ${node.id}`)
+}
+// hop 0: fn_login
+// hop 1: fn_verify_token
+// hop 2: (anything that calls verify_token)
+```
+
+This uses ArcFlow's engine-native BFS primitive — runs against the in-memory graph in microseconds on graphs with hundreds of thousands of nodes.
+
+## Git commit graph
+
+Connect code history to your symbol graph. Once commits are ingested, queries like "who last touched this function?" are GQL, not `git log` commands.
+
+```typescript
+// Parse git log output
+const gitLog = `abc123|alice@company.com|1700000000|feat: add login
+src/auth.ts
+src/utils.ts
+
+def456|bob@company.com|1700001000|fix: token expiry
+src/auth.ts
+`
+
+const commits = CodeGraph.parseGitLog(gitLog)
+cg.ingestCommits(commits)
+
+// Query: who last touched login.ts?
+const result = db.query(`
+  MATCH (c:Commit)-[:MODIFIES]->(f:File {file_path: 'src/auth.ts'})
+  RETURN c.author, c.message, c.timestamp
+  ORDER BY c.timestamp DESC
+  LIMIT 5
+`)
+
+// Query: what changed in the last 24 hours?
+const recent = db.query(`
+  MATCH (c:Commit)-[:MODIFIES]->(f:File)
+  WHERE c.timestamp > ${Math.floor(Date.now() / 1000) - 86400}
+  RETURN DISTINCT f.file_path, c.author
+  ORDER BY f.file_path
+`)
+```
+
+Commit nodes are idempotent — the SHA is the content hash, so re-ingesting history is free.
+
+## Live views for change tracking
+
+Register a standing query before agents start working on a file. When any teammate's commit touches those symbols, the live view updates — agents get proactive conflict warnings without polling.
+
+```typescript
+// Register before agents start working on auth.ts
+cg.createLiveView(
+  'active_auth_symbols',
+  "MATCH (f:Function) WHERE f.file_path = 'src/auth.ts' RETURN f.name, f.line_start, f.line_end"
+)
+
+// After ingesting new data:
+const status = cg.liveViewStatus('active_auth_symbols')
+if (status) {
+  console.log(`${status.rowCount} symbols tracked, frontier: ${status.frontier}`)
+}
+```
+
+The engine's delta engine fires incrementally — no re-running the full query on each mutation. Only changed rows are recomputed.
+
+## Using via CLI binary
+
+Claude Code, Codex CLI, and other shell-native agents use the `arcflow` binary directly — no MCP, no session, no protocol. Each command exits in <10ms:
+
+```bash
+# Look up a symbol
+arcflow symbol login
+
+# Blast-radius traversal — what does changing login() affect?
+arcflow impact fn_login --depth 4
+
+# Source slice at line range
+arcflow slice src/auth.ts 12 35
+
+# Run a GQL query
+arcflow query 'MATCH (f:Function) WHERE f.file_path = "src/auth.ts" RETURN f.name, f.line_start'
+
+# Git blame via the code graph
+arcflow git-blame src/auth.ts
+```
+
+The agent calls these exactly like `grep` or `git log` — composable, no daemon to manage.
+
+## Using via MCP (cloud chat UIs only)
+
+If the agent runs in a browser or cloud sandbox with no local shell (ChatGPT, Claude.ai, Gemini web), the same operations are available as MCP tools:
+
+```json
+// Register a live view
+{
+  "tool": "create_live_view",
+  "arguments": {
+    "name": "active_auth_symbols",
+    "query": "MATCH (f:Function) WHERE f.file_path = 'src/auth.ts' RETURN f.name"
+  }
+}
+
+// Ingest a delta
+{
+  "tool": "ingest_nodes",
+  "arguments": {
+    "delta": {
+      "added_nodes": [
+        {
+          "label": "Function",
+          "id": "fn_login",
+          "content_hash": "abc123",
+          "properties": { "name": "login", "file_path": "src/auth.ts" }
+        }
+      ]
+    }
+  }
+}
+
+// Poll live view
+{
+  "tool": "live_view_status",
+  "arguments": { "name": "active_auth_symbols" }
+}
+```
+
+## Rust SDK
+
+The Rust layer lives in `arcflow/sdk/code-intelligence/`. It provides:
+
+- `schema.rs` — same label/edge constants as the TypeScript layer (single source of truth)
+- `extractor.rs` — `AstNode` → `CodeDelta` (tree-sitter entry point)
+- `ingester.rs` — `CodeIngester` wraps `GraphStore::apply_node_edge_delta()`
+- `slicer.rs` — file + line range → source text + SHA-256 hash for `contentHash`
+- `git.rs` — `CommitGraph::parse_git_log()` + `build_delta()`
+
+```rust
+use arcflow_code_intelligence::{CodeIngester, Slicer, extractor::{extract_file, AstNode, AstSpan}};
+use wc_core::GraphStore;
+
+let mut store = GraphStore::new();
+let mut ingester = CodeIngester::new(&mut store);
+
+let nodes = vec![AstNode {
+    kind: "Function".into(),
+    name: "login".into(),
+    file_path: "src/auth.rs".into(),
+    span: AstSpan { line_start: 12, line_end: 30 },
+    references: vec!["verify_token".into()],
+    content_hash: Some(Slicer::content_hash(path, 12, 30)?),
+}];
+
+let delta = extract_file("src/auth.rs", "rust", &nodes);
+ingester.ingest_code_delta(delta)?;
+```

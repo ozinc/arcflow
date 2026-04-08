@@ -11,7 +11,7 @@ status: "stable"
 
 **What normally requires an external message broker + event store + a projection layer + a query database runs in one process with zero external dependencies.**
 
-ArcFlow's WAL automatically records every mutation as a temporal fact. You get point-in-time `AS OF` queries, deterministic replay, change data capture, and Cypher over the full event history — no event bus, no projection rebuilds, no separate read model. One binary, one process, four infrastructure systems eliminated.
+ArcFlow's WAL automatically records every mutation as a temporal fact. You get point-in-time `AS OF` queries, deterministic replay, change data capture, and GQL over the full event history — no event bus, no projection rebuilds, no separate read model. One binary, one process, four infrastructure systems eliminated.
 
 ```cypher
 -- Current state
@@ -28,9 +28,9 @@ MATCH (o:Order {id: 'ORD-001'}) AS OF (timestamp() - 3600000) RETURN o.status  -
 | Event Sourcing Concept | ArcFlow Equivalent | What ArcFlow Adds |
 |---|---|---|
 | Event Stream | WAL (write-ahead log) | Graph-structured events, not flat records |
-| Event Store | `db.mutations()` + CDC log | Queryable with Cypher, not just sequential replay |
+| Event Store | `db.mutations()` + CDC log | Queryable with GQL, not just sequential replay |
 | Aggregate | Graph subgraph | Relationships between entities, not isolated aggregates |
-| Projection | `MATCH ... RETURN` | Real-time Cypher queries, no projection rebuild |
+| Projection | `MATCH ... RETURN` | Real-time GQL queries, no projection rebuild |
 | Snapshot | `AS OF` temporal queries | Point-in-time snapshot of any entity |
 | Replay | `db.temporalReplay()` | Deterministic replay with seeded randomness |
 | Saga / Process Manager | Workflow steps | WAL-durable, retry policies, dead letter queues |
@@ -137,7 +137,7 @@ RETURN p.price AS previous_price
 ## Compared to Traditional Approaches
 
 ### Distributed Streaming Platforms + Event Stores?
-The WAL is your event log. `db.mutations()` is your event stream. `AS OF` queries replace projections. Trade-off: you lose distributed horizontal partitioning and multi-consumer fan-out. You gain: graph-structured events with relationships between them, Cypher queries over history, and zero infrastructure — one process, one binary, no JVM.
+The WAL is your event log. `db.mutations()` is your event stream. `AS OF` queries replace projections. Trade-off: you lose distributed horizontal partitioning and multi-consumer fan-out. You gain: graph-structured events with relationships between them, GQL queries over history, and zero infrastructure — one process, one binary, no JVM.
 
 ### Relational Databases + Temporal Tables?
 Similar concept, but ArcFlow adds graph relationships between temporal entities, confidence scoring on facts, and `db.temporalReplay()` for deterministic replay. Trade-off: relational databases have mature tooling for schema migrations, backups, and replication; ArcFlow's advantage is in-process performance (no client-server round-trip) and graph-native temporal queries.

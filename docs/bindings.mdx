@@ -106,40 +106,56 @@ print(ArcFlow.version())  # "1.5.0"
 
 ## TypeScript / Node.js
 
-napi-rs native addon. Full-speed graph operations from JavaScript/TypeScript with no HTTP layer.
+napi-rs native addon. The Rust engine runs in-process inside Node.js — function calls, not HTTP, no serialization, microsecond latency.
 
 ```typescript
-import { Runtime } from 'arcflow';
+import { open, openInMemory, ArcflowError } from 'arcflow'
 
-// In-memory
-const rt = new Runtime();
+// In-memory (testing, short-lived)
+const db = openInMemory()
 
-// Or persistent
-const rt = new Runtime('/tmp/mydb');
+// Persistent (WAL-journaled, survives crashes)
+const db = open('./data/graph')
 
-// Open a session
-const session = rt.session();
+// Queries return typed values — numbers are numbers, not strings
+db.mutate("CREATE (n:Person {name: 'Alice', age: 30})")
+const result = db.query("MATCH (n:Person) RETURN n.name, n.age")
+result.rows[0].get('name')  // "Alice"
+result.rows[0].get('age')   // 30 (number, not "30")
 
-// Execute queries
-session.execute("CREATE (n:Person {name: 'Alice', age: 30})");
-const result = session.execute("MATCH (n:Person) RETURN n.name, n.age");
+// Parameters (prevent injection)
+db.query("MATCH (n:Person {name: $name}) RETURN n", { name: 'Alice' })
 
-console.log(result.columns);    // ['name', 'age']
-console.log(result.rowCount);   // 1
-console.log(result.get(0, 0));  // 'Alice'
+// Atomic batch mutations
+db.batchMutate([
+  "MERGE (a:Person {id: 'p1', name: 'Alice'})",
+  "MERGE (b:Org {id: 'o1', name: 'Acme'})",
+])
 
-// Iterate rows as objects
-for (const row of result.toArray()) {
-    console.log(row);  // { name: 'Alice', age: '30' }
+// Paginated cursor for large result sets
+const cursor = db.cursor('MATCH (n:Log) RETURN n.ts ORDER BY n.ts', undefined, 500)
+let page
+while ((page = cursor.next()) !== null) process(page.rows)
+cursor.close()
+
+// Live subscriptions (Z-set deltas, in-process polling)
+const sub = db.subscribe(
+  'MATCH (n:Alert) WHERE n.level = "critical" RETURN n.id, n.message',
+  ({ added, removed }) => console.log('new alerts', added)
+)
+// later:
+sub.cancel()
+
+// Sync
+db.syncPending()    // 0 if up to date
+db.fingerprint()    // hash of current state
+
+// Error handling
+try { db.query("INVALID") } catch (e) {
+  if (e instanceof ArcflowError) console.log(e.code, e.category, e.suggestion)
 }
 
-// Async execution (non-blocking on event loop)
-const asyncResult = await session.executeAsync(
-    "CALL algo.pageRank()"
-);
-
-// Version
-console.log(rt.version());  // "1.5.0"
+db.close()
 ```
 
 ### Install
@@ -147,6 +163,42 @@ console.log(rt.version());  // "1.5.0"
 ```bash
 npm install arcflow
 ```
+
+## React
+
+React hooks for live graph data in components.
+
+```bash
+npm install arcflow @arcflow/react
+```
+
+```tsx
+import { openInMemory } from 'arcflow'
+import { useQuery, useLiveQuery } from '@arcflow/react'
+
+const db = openInMemory()
+db.mutate("CREATE (n:Alert {level: 'critical', message: 'Disk 95%'})")
+
+function AlertPanel() {
+  // One-time query
+  const { data, loading, error } = useQuery(db, 'MATCH (n:Alert) RETURN n.level, n.message')
+
+  // Live subscription — re-renders on every graph mutation that affects results
+  const { rows } = useLiveQuery(db, 'MATCH (n:Alert) WHERE n.level = "critical" RETURN n.message')
+
+  if (loading) return <div>Loading...</div>
+  return (
+    <ul>
+      {rows?.map((row, i) => <li key={i}>{String(row.message)}</li>)}
+    </ul>
+  )
+}
+```
+
+| Hook | Returns | Notes |
+|------|---------|-------|
+| `useQuery(db, query, params?, deps?)` | `{ data, loading, error }` | Runs once, re-runs when deps change |
+| `useLiveQuery(db, query, deps?, pollIntervalMs?)` | `{ rows, loading, error }` | Subscribes to live view, re-renders on changes |
 
 ## C ABI
 
@@ -261,11 +313,11 @@ Volume-mount your data directory. The binary is fully static (musl libc). No dep
 
 ## MCP Server
 
-Model Context Protocol server for Claude integration. 5 tools over stdio JSON-RPC.
+Model Context Protocol server — for frontier LLMs (Claude Code, Codex, Gemini CLI) that need to query ArcFlow over stdio JSON-RPC. **Not the right integration for application code** — use the napi-rs binding instead (see TypeScript section above).
 
 ```bash
-# Start the MCP server
-arcflow-mcp
+npx arcflow-mcp
+npx arcflow-mcp --data-dir ./my-graph
 ```
 
 ### Tools
@@ -277,8 +329,11 @@ arcflow-mcp
 | `read_query` | Execute read-only WorldCypher (MATCH, CALL, EXPLAIN) | Read |
 | `write_query` | Execute mutating WorldCypher (CREATE, SET, DELETE, MERGE) | Write |
 | `graph_rag` | Trusted GraphRAG pipeline with confidence scoring | Read |
+| `ingest_nodes` | Push node/edge deltas with content-hash dedup | Write |
+| `create_live_view` | Register a named standing query | Write |
+| `live_view_status` | Poll a live view's frontier and result count | Read |
 
-`read_query` rejects all mutations — CREATE, SET, DELETE, MERGE, REMOVE are refused. Use `write_query` for explicit write operations. This separation prevents accidental data modification by AI agents.
+`read_query` rejects all mutations — CREATE, SET, DELETE, MERGE, REMOVE are refused. Use `write_query` for explicit write operations.
 
 ### Claude Desktop Configuration
 
@@ -295,17 +350,20 @@ arcflow-mcp
 
 ## Architecture
 
-All bindings follow PAT-0014 (Native FFI Bindings Over Protocol Adapters):
+All bindings target one engine. Pick the layer that matches your use case:
 
 ```
-                    libarcflow.so (C ABI)
-                          │
-              ┌───────────┼───────────┐
-              │           │           │
-          Python      TypeScript     C++
-        (ctypes)     (napi-rs)   (arcflow.hpp)
+                     Rust engine (wc-core / wc-sdk)
+                               │
+                    C ABI  (libarcflow.so)
+                               │
+           ┌───────────────────┼──────────────────────┐
+           │                   │                       │
+       Python              TypeScript / React        C++
+     (ctypes)        (napi-rs — in-process)       (arcflow.hpp)
+                                │
+                              WASM
+                      (browser / edge — zero-copy)
 ```
 
-One shared library. Thin language-specific wrappers. No protocol translation. Function calls go directly into the Rust engine. Result memory is owned by the FFI layer and freed explicitly -- no garbage collector pressure on hot paths.
-
-**Vision:** Every language, every platform, same API. The C ABI is stable and portable. Adding a new language binding means writing a thin wrapper over 12 functions -- the engine does the rest.
+One engine. No protocol translation. Function calls go directly into the Rust engine. For the browser, the WASM build runs the same engine with zero serialization via the WASM memory model.

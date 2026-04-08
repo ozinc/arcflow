@@ -7,7 +7,7 @@ status: "stable"
 
 # WorldCypher Query Language
 
-WorldCypher is ArcFlow's query language. It's compatible with Cypher (Neo4j) and extends it with temporal queries, reactive programming, vector search, and graph algorithms.
+WorldCypher is ArcFlow's GQL dialect — an implementation of [ISO/IEC 39075 GQL](https://www.iso.org/standard/76120.html), the international standard for graph query languages. The syntax is compatible with Cypher, so existing Cypher queries run without modification. WorldCypher extends GQL with temporal queries (`AS OF`), reactive queries (`LIVE MATCH`, `CREATE LIVE VIEW`), vector search, graph algorithms, and confidence/provenance semantics.
 
 If you know Cypher, you know WorldCypher. If you don't, it reads like ASCII art.
 
@@ -148,4 +148,4 @@ LIVE CALL algo.pageRank()
 CREATE LIVE VIEW top_people AS MATCH (n:Person) WHERE n.score > 0.9 RETURN n.name
 ```
 
-See the [Compatibility Matrix](../reference/compatibility.md) for the complete feature table.
+See the [GQL & WorldCypher Reference](../reference/compatibility.md) for the complete feature table.

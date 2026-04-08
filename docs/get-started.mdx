@@ -11,7 +11,7 @@ ArcFlow is an embedded graph database. It runs in the browser, Node.js, Python, 
 
 ## Try instantly — zero install
 
-Open **[ArcFlow Engine](https://arcflow.dev/engine)** in your browser. Paste any WorldCypher query. Persistent storage. No install, no signup.
+Open **[ArcFlow Engine](https://arcflow.dev/engine)** in your browser. Paste any GQL query (WorldCypher dialect). Persistent storage. No install, no signup.
 
 ```cypher
 CREATE (alice:Person {name: 'Alice', age: 30})
@@ -41,7 +41,8 @@ arcflow --playground
 | Binary | 60s | `curl ... \| sh && arcflow` |
 | npm | 2 min | `npm install arcflow` |
 | Docker | 30s | `docker run ghcr.io/ozinc/arcflow:latest` |
-| MCP (AI agents) | 1 min | `npx arcflow-mcp` |
+| CLI (coding agents) | instant | `arcflow query '...'` |
+| MCP (cloud chat UIs) | 1 min | `npx arcflow-mcp` |
 
 ## Next
 

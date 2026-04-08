@@ -9,11 +9,66 @@ status: "stable"
 
 # Agent-Native Database
 
-**The fastest way for an AI agent to use a graph database is the filesystem.**
+Three surfaces, no overlap:
 
-MCP tool calls are JSON-RPC round-trips. Each one costs tokens, serialization, and latency. An agent calling `arcflow_read_query` 50 times burns thousands of tokens on protocol overhead alone.
+| Consumer | Integration | Why |
+|---|---|---|
+| **BASAL broker, watcher daemon** | napi-rs in-process | Microseconds, same memory |
+| **Claude Code, Codex, Gemini CLI** | `arcflow` CLI binary | Shell-native, composable, &lt;10ms |
+| **ChatGPT, Claude.ai, Gemini web** | MCP server | No local shell — MCP is the only bridge |
+| **Python / shell pipelines** | `arcflow` CLI binary | Same as CLI agents |
 
-ArcFlow's agent interface is the filesystem. The agent writes a `.cypher` file. The CLI executes it. Results appear as a `.json` file. No protocol. No serialization overhead. No token waste. The agent already knows how to read and write files — that's what it does all day.
+## napi-rs binding — for application code
+
+If your software runs in Node.js alongside ArcFlow, the napi-rs binding is zero-overhead: the Rust engine runs in-process, operations are function calls, no process boundary, no serialization.
+
+```typescript
+import { openInMemory } from 'arcflow'
+import { CodeGraph } from 'arcflow'
+
+const db = openInMemory()
+const cg = new CodeGraph(db)
+
+// Microseconds. Same memory. No pipes.
+const impact = cg.impactSubgraph(['fn-abc'], ['Calls', 'Imports'], 3)
+db.mutate("CREATE (n:Symbol {id: 'fn-xyz', kind: 'function'})")
+const result = db.query("CALL algo.pageRank()")
+```
+
+Use this for: broker daemons, watcher processes, ingestion pipelines, session caches, any code you control running in Node.js or Rust.
+
+## CLI binary — for AI coding agents
+
+CLI-native agents already have a tool for running shell commands. They call `arcflow` exactly like `grep` or `ls` — no protocol, no handshake, no daemon, no config:
+
+```bash
+# Symbol lookup
+arcflow query "MATCH (f:Function {name: 'login'}) RETURN f.file_path, f.line_start, f.line_end"
+
+# Blast radius: what does changing login() break?
+arcflow impact fn_login --depth 4
+
+# Slice exact source lines from the graph
+arcflow slice src/auth.ts 12 35
+
+# Full WorldCypher query
+arcflow query "CALL algo.pageRank()" --json
+
+# Composable with standard tools
+arcflow query "MATCH (f:Function) RETURN f.file_path" --json | jq '.rows[].file_path' | sort -u
+```
+
+Each command exits in under 10ms. The agent calls it, reads stdout, moves on.
+
+**Why CLI beats MCP for these agents:**
+- **Composable** — pipe into `grep`, `jq`, `git`, `awk`
+- **Inspectable** — agent sees raw output, no abstraction layer
+- **Zero config** — no MCP registration, no `claude_desktop_config.json`
+- **~2ms startup** — linked Rust binary, not a Node.js daemon
+
+### File-based batch workflows
+
+For processing many queries at once:
 
 ```bash
 # The agent writes a query file
@@ -178,24 +233,17 @@ The filesystem approach means:
 
 ---
 
-## MCP Server (Fallback)
+## MCP Server (cloud chat UIs only)
 
-For agents that require MCP (some environments don't have filesystem access), ArcFlow provides a standard MCP server:
+MCP is for ChatGPT, Claude.ai, Gemini web, and other cloud chat interfaces that have no local shell. In those environments, MCP is the only available bridge. Latency doesn't matter — the user is waiting for a chat response anyway.
 
-```json
-{
-  "mcpServers": {
-    "arcflow": {
-      "command": "arcflow-bridge",
-      "args": ["--data-dir", "~/.arcflow"]
-    }
-  }
-}
+For Claude Code, Codex CLI, and Gemini CLI: use the `arcflow` binary directly. They have shell tools. MCP would be slower and requires configuration.
+
+```bash
+npx arcflow-mcp --data-dir ./my-graph
 ```
 
-Tools: `arcflow_read_query`, `arcflow_write_query`, `arcflow_get_schema`, `arcflow_stats`, `arcflow_graph_rag`.
-
-This works. It's just slower and more expensive than the filesystem approach.
+See [MCP Server](/docs/mcp) for setup and tool reference.
 
 ---
 

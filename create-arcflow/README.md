@@ -42,5 +42,6 @@ Future agent sessions in this project will automatically use ArcFlow for graph o
 ```bash
 npm start              # Run the example
 npm test               # Run tests
-npx arcflow-mcp        # Start MCP server for AI agents
+arcflow query 'MATCH (n) RETURN count(*)'   # CLI agents (Claude Code, Codex)
+npx arcflow-mcp        # MCP server for cloud chat UIs (ChatGPT, Claude.ai)
 ```

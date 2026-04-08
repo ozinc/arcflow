@@ -32,7 +32,7 @@ User Query
 [5. LLM generation] --> Response with citations
 ```
 
-ArcFlow handles steps 2 and 3. The embedding model and LLM are external. The MCP server can connect ArcFlow directly to LLM agents.
+ArcFlow handles steps 2 and 3. The embedding model and LLM are external. CLI agents use `arcflow query`; cloud chat UIs connect via the MCP server.
 
 ## Step 1: Store Documents as Nodes
 
@@ -159,50 +159,53 @@ RETURN n.claim, confidence(n) AS trust
 ORDER BY trust DESC
 ```
 
-## Step 6: Connect via MCP Server
+## Step 6: Connect to AI Agents
 
-ArcFlow includes an MCP (Model Context Protocol) server that connects directly to LLM agents. The MCP server exposes 5 tools:
+Three integration surfaces — pick the one that matches your execution context:
 
-| Tool | Purpose |
-|---|---|
-| `get_schema` | Describe the graph structure to the LLM |
-| `get_capabilities` | Report available functions and procedures |
-| `read_query` | Execute read-only WorldCypher queries |
-| `write_query` | Execute write WorldCypher queries |
-| `graph_rag` | Run the full GraphRAG pipeline |
+### napi-rs (Node.js application code)
 
-Start the MCP server:
+The fastest path. ArcFlow runs in-process inside your Node.js app — no process boundary, no serialization:
+
+```typescript
+import { open } from 'arcflow'
+
+const db = open('./my-graph')
+const result = db.query("CALL algo.graphRAGTrusted('Rust ownership concepts')")
+// result is in-process — microseconds, no network
+```
+
+### CLI binary (coding agents — Claude Code, Codex, Gemini CLI)
+
+Coding agents already have a shell tool. Give them the `arcflow` binary and they call it like `grep` — each command exits in <10ms:
 
 ```bash
-arcflow-mcp
+# Run the full GraphRAG pipeline from the shell
+arcflow query "CALL algo.graphRAGTrusted('Rust ownership concepts')"
+
+# Query the graph directly
+arcflow query "MATCH (n:Concept) RETURN n.name, confidence(n) AS trust ORDER BY trust DESC"
+
+# Get schema for agent orientation
+arcflow query "CALL db.schema()"
 ```
 
-The server communicates via stdio JSON-RPC. Configure it in your LLM agent's MCP settings:
+The agent reads stdout and acts on structured JSON results. No daemon, no session, no protocol.
 
-```json
-{
-  "mcpServers": {
-    "arcflow": {
-      "command": "arcflow-mcp",
-      "args": ["--data-dir", "./my-graph"]
-    }
-  }
-}
+### MCP server (cloud chat interfaces — ChatGPT, Claude.ai, Gemini web)
+
+For LLMs running in cloud chat interfaces that have no local shell, MCP is the bridge. The MCP server exposes 8 tools including `get_schema`, `read_query`, `write_query`, and `graph_rag`:
+
+```bash
+npx arcflow-mcp --data-dir ./my-graph
 ```
 
-The LLM can then query the graph directly:
+Configure in your cloud chat UI's plugin or tool settings. The LLM then queries the graph directly without generating code.
 
 ```
 Agent: "What are the key concepts related to Rust ownership?"
-
-[MCP tool call: graph_rag]
-  query: "Rust ownership concepts"
-
-[ArcFlow returns graph context with confidence scores]
-
-Agent: "Based on the knowledge graph (confidence: 0.95), Rust ownership
-has three key rules: each value has one owner, ownership can be
-transferred (moved), and when the owner goes out of scope..."
+[MCP: graph_rag → ArcFlow returns context with confidence scores]
+Agent: "Based on the knowledge graph (confidence: 0.95)..."
 ```
 
 ## Complete Pipeline Example

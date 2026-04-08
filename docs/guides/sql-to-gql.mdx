@@ -1,0 +1,198 @@
+---
+title: "From SQL to GQL"
+description: "Connect ArcFlow with any PostgreSQL client using familiar SQL tooling. Understand how the PostgreSQL wire protocol works as a bridge into WorldCypher and the ISO GQL standard."
+section: "Guides"
+order: 11
+since: "4.0.0"
+status: "stable"
+---
+
+# From SQL to GQL
+
+ArcFlow implements the PostgreSQL wire protocol v3. Any tool that speaks PostgreSQL — psql, pgAdmin, Grafana, DBeaver, psycopg2, pgx, node-postgres, sqlx — connects without modification.
+
+The queries running underneath are WorldCypher, ArcFlow's graph query language aligned with the ISO/IEC 39075 GQL standard. The PostgreSQL wire is a connection bridge, not a SQL execution layer.
+
+This guide explains how the two fit together and how to move from familiar SQL tooling into GQL queries when you're ready.
+
+## Connect with your existing tools
+
+Start ArcFlow with the `--pg` flag:
+
+```bash
+arcflow --pg 5432
+arcflow --pg 5432 --data-dir ./mydb
+arcflow --pg 5432 --pg-password my-secret --pg-log-queries
+```
+
+Connect with any PostgreSQL client:
+
+```bash
+psql -h localhost -p 5432
+```
+
+```sql
+-- Run WorldCypher queries over a standard psql connection
+MATCH (u:User)-[:FOLLOWS]->(u2:User)
+WHERE u.name = 'Alice'
+RETURN u2.name, u2.followers
+ORDER BY u2.followers DESC
+LIMIT 10;
+```
+
+Tested clients: psql, pgAdmin, Grafana, DBeaver, Python psycopg2, Go pgx, Node.js node-postgres, Rust sqlx, PgBouncer. Any client that speaks PG wire protocol v3 works.
+
+## How it works
+
+The PostgreSQL wire protocol handles the transport layer: startup handshake, authentication, query framing, result serialization. ArcFlow speaks this protocol fluently.
+
+The query string itself is passed through to the WorldCypher engine. You are already running GQL queries — the psql prompt is just the terminal.
+
+```
+psql client
+    │
+    │  PG wire protocol v3
+    │  (startup, auth, query framing, result rows)
+    ▼
+ArcFlow PG listener
+    │
+    │  WorldCypher / ISO GQL
+    │
+    ▼
+ArcFlow graph engine
+```
+
+### SQL shims
+
+Common SQL statements that ORMs, connection poolers, and BI tools send automatically are acknowledged silently:
+
+| Statement | ArcFlow behavior |
+|---|---|
+| `SET search_path = ...` | Acknowledged |
+| `BEGIN` / `COMMIT` / `ROLLBACK` | Acknowledged |
+| `SHOW SERVER_VERSION` | Returns ArcFlow version |
+| `SELECT VERSION()` | Returns ArcFlow build info |
+| `SELECT CURRENT_SCHEMA()` | Returns `"public"` |
+| `DISCARD ALL` | Acknowledged |
+| `pg_catalog` / `information_schema` queries | Empty result set |
+
+This means Grafana datasources, SQLAlchemy connections, and PgBouncer pools connect without configuration changes.
+
+## SQL is not the query language — GQL is
+
+ArcFlow does not parse SQL `SELECT` statements. The wire protocol compatibility is transport-level; the query language is WorldCypher, aligned with ISO/IEC 39075 GQL.
+
+If you send a SQL `SELECT` over the psql connection, ArcFlow will return an error. Send a WorldCypher `MATCH` instead.
+
+```sql
+-- ❌ SQL — not supported
+SELECT name, age FROM users WHERE age > 30;
+
+-- ✅ WorldCypher / GQL — runs over the same psql connection
+MATCH (u:User) WHERE u.age > 30 RETURN u.name, u.age;
+```
+
+The practical implication: use the PG wire protocol to connect the tools you already have. Write WorldCypher queries inside those tools.
+
+## Why PG wire, not a SQL parser?
+
+The graph query model and the relational model are fundamentally different. SQL operates on tables with schemas defined upfront. GQL operates on labeled property graphs where schema is optional and relationships are first-class.
+
+Translating SQL to graph queries introduces ambiguity at the data model level — a JOIN in SQL does not map cleanly to a graph traversal without knowing the intended semantics. Rather than add a leaky translation layer, ArcFlow:
+
+1. Speaks the transport protocol (PG wire) so your existing tools connect
+2. Keeps the query language honest (WorldCypher/GQL) so graph semantics are preserved
+
+The result: zero-friction connectivity for the tools that dominate the industry, zero compromise on the query model.
+
+## The adoption path
+
+The PostgreSQL wire protocol is designed as an on-ramp. Once you are connected and running WorldCypher queries, moving to the native SDK is a one-line change that removes the network layer entirely.
+
+**Stage 1 — Connect with familiar tools**
+
+```bash
+arcflow --pg 5432
+```
+
+```python
+# psycopg2 — your existing database code, unchanged
+conn = psycopg2.connect(host="localhost", port=5432, dbname="arcflow")
+cur = conn.cursor()
+cur.execute("MATCH (u:User) RETURN u.name, u.age")
+rows = cur.fetchall()
+```
+
+**Stage 2 — Native SDK (same queries, no network)**
+
+```python
+from arcflow import ArcFlow
+
+db = ArcFlow(data_dir="./mydb")
+result = db.query("MATCH (u:User) RETURN u.name, u.age")
+```
+
+The queries are identical. The difference: in-process execution eliminates the network hop, connection pool, and serialization overhead.
+
+**Stage 3 — Full GQL features**
+
+The native SDK unlocks ArcFlow-only features that have no equivalent in the SQL world:
+
+- `LIVE MATCH` — reactive queries that push updates when the graph changes
+- Evidence algebra — confidence-weighted traversals and proof artifacts
+- `CALL algo.*` — 27 built-in graph algorithms (PageRank, Louvain, Leiden, HNSW vector search)
+- `AS OF` — point-in-time temporal queries
+- GPU acceleration — CUDA/Metal dispatch for large graphs
+
+```sql
+-- Live query: re-runs automatically when matching nodes change
+LIVE MATCH (u:User)-[:FOLLOWS]->(influencer:User)
+WHERE influencer.followers > 10000
+RETURN influencer.name, count(u) AS reach
+
+-- Point-in-time query
+MATCH (u:User) AS OF 1700000000000 RETURN u.name, u.followers
+
+-- Graph algorithm
+CALL algo.pageRank() YIELD nodeId, score
+MATCH (u:User) WHERE id(u) = nodeId RETURN u.name, score ORDER BY score DESC
+```
+
+None of these are expressible in SQL. They are native to the graph model.
+
+## Grafana and BI tools
+
+ArcFlow works as a PostgreSQL datasource in Grafana, Metabase, Tableau, and similar tools. Write WorldCypher queries in the query editor.
+
+```bash
+arcflow --pg 5432 --data-dir ./production
+```
+
+In Grafana:
+- Add a PostgreSQL datasource pointing to `localhost:5432`
+- Write WorldCypher in the query panel
+- Results render as tables, time series, or graphs depending on the query shape
+
+Example dashboard query:
+
+```sql
+MATCH (e:Event)
+WHERE e.timestamp > $__timeFrom() AND e.timestamp < $__timeTo()
+RETURN e.timestamp AS time, e.value AS metric, e.category AS label
+ORDER BY e.timestamp
+```
+
+## GQL and the ISO standard
+
+WorldCypher is aligned with ISO/IEC 39075 GQL, the international standard for graph query languages (published 2024). GQL is designed to be to graph databases what SQL is to relational databases — a standard interface that works across implementations.
+
+The PostgreSQL wire protocol gives you a familiar connection model. GQL gives you a query language with a standards body behind it.
+
+For the full WorldCypher / GQL reference, see [WorldCypher Reference](/worldcypher).
+
+## See Also
+
+- [Server Modes & PG Wire](/server) — full protocol details and authentication options
+- [WorldCypher Reference](/worldcypher) — complete query language reference
+- [Quickstart](/quickstart) — get running in 5 minutes
+- [Migration Guide](/guides/migrating-from-neo4j) — coming from Neo4j or another graph database

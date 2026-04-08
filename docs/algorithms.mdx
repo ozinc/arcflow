@@ -208,6 +208,34 @@ MATCH (a:Person {name: 'Alice'})-[:KNOWS*1..5]->(b)
 RETURN b.name
 ```
 
+### Dijkstra Shortest Path
+
+Weighted shortest path. Uses a 4-ary min-heap with thread-local buffer reuse. Pass the property key to use as edge weight.
+
+```sql
+CALL algo.dijkstra(startNodeId, endNodeId, 'weight')
+```
+
+| Column | Type | Description |
+|--------|------|-------------|
+| path | string | Ordered node IDs along the shortest path |
+| distance | float | Total weighted path cost |
+
+### A\* Pathfinding
+
+Heuristic-guided shortest path. Faster than Dijkstra when a distance estimate is available — the heuristic guides search toward the goal. Pass a node property to use as the heuristic estimate.
+
+```sql
+CALL algo.astar(startNodeId, endNodeId, 'travel_time', 'estimated_distance')
+```
+
+| Parameter | Description |
+|-----------|-------------|
+| start | Source node ID |
+| end | Target node ID |
+| weight_key | Edge property to use as cost |
+| heuristic_key | Node property to use as heuristic estimate |
+
 ### Confidence-Weighted Shortest Path
 
 Shortest path weighted by edge confidence. Finds the most trusted route between two nodes.
@@ -302,10 +330,137 @@ CALL algo.diameter()
 | Column | Type | Description |
 |--------|------|-------------|
 | diameter | integer | Graph diameter |
+| source_id | integer | Source node of the longest path |
+| target_id | integer | Target node of the longest path |
+
+### Biconnected Components
+
+Tarjan's algorithm for biconnected components — maximal subgraphs with no articulation points. O(V+E) iterative stack-based implementation.
+
+```sql
+CALL algo.biconnectedComponents()
+```
+
+| Column | Type | Description |
+|--------|------|-------------|
+| nodeId | integer | Internal node ID |
+| component_id | integer | Biconnected component assignment |
+
+## Embedding Algorithms
+
+### Node2Vec
+
+Generate node embeddings via random walk + skip-gram. Captures structural position in the graph.
+
+```sql
+CALL algo.node2vec(128, 80, 10)
+```
+
+| Parameter | Description |
+|-----------|-------------|
+| dimensions | Embedding size (e.g., 128) |
+| walk_length | Steps per random walk (e.g., 80) |
+| num_walks | Walks per node (e.g., 10) |
+
+Sets `node.embedding` on every node. Use with vector search for structural similarity.
+
+### Struct2Vec
+
+Structural equivalence embeddings — nodes with similar local structure get similar vectors, regardless of where they are in the graph.
+
+```sql
+CALL algo.struc2vec(64)
+```
+
+### GraphSAGE
+
+Inductive node embedding via neighborhood aggregation. Handles unseen nodes (no retraining needed).
+
+```sql
+CALL algo.graphSAGE(128)
+```
+
+### Stale Embedding Detection
+
+Find nodes whose embeddings are out of date (property changed after last embedding).
+
+```sql
+CALL algo.staleEmbeddings()
+```
+
+Returns `(nodeId, name)` for nodes needing re-embedding.
+
+### Embedding Classification
+
+Classify nodes by similarity to labeled examples using a vector index.
+
+```sql
+CALL algo.classify($embedding, 'index_name', {k: 10})
+```
+
+Returns `(nodeId, label, confidence)`.
+
+## Knowledge Graph Algorithms
+
+### Entity Resolution
+
+Find nodes that refer to the same real-world entity despite different IDs or properties.
+
+```sql
+CALL algo.entityResolution()
+```
+
+Returns `(nodeId1, nodeId2, similarity)` pairs above the resolution threshold.
+
+### Fact Contradiction Detection
+
+Find pairs of facts in the graph that contradict each other based on predicates and confidence.
+
+```sql
+CALL algo.factContradiction()
+```
+
+Returns `(nodeId1, nodeId2, contradiction_type, confidence)`.
+
+### Relationship Strength
+
+Score how strong a relationship is based on frequency, recency, and mutual connections.
+
+```sql
+CALL algo.relationshipStrength()
+```
+
+Returns `(fromId, toId, strength)` for all relationships.
+
+### Compounding Score
+
+Composite confidence score that propagates through chains of facts.
+
+```sql
+CALL algo.compoundingScore()
+```
+
+### Entity Freshness
+
+How recently each entity was observed or corroborated. Low freshness = stale facts.
+
+```sql
+CALL algo.entityFreshness()
+```
+
+Returns `(nodeId, name, freshness, last_observed_at)`.
+
+### Semantic Deduplication
+
+Find and score near-duplicate nodes using embedding similarity.
+
+```sql
+CALL algo.semanticDedup()
+```
 
 ## GraphRAG Pipeline
 
-### Trusted GraphRAG
+### GraphRAG
 
 Full retrieval-augmented generation pipeline: query decomposition, graph traversal, evidence collection with confidence scoring.
 
@@ -315,7 +470,7 @@ CALL algo.graphRAG('What connections exist between Alice and the project?')
 
 ### GraphRAG Context
 
-Retrieves structured context from the graph for a natural language query.
+Retrieves structured context from the graph for a natural language query, with token budgeting for LLM context windows.
 
 ```sql
 CALL algo.graphRAGContext('Tell me about Alice')
@@ -323,7 +478,7 @@ CALL algo.graphRAGContext('Tell me about Alice')
 
 ### Trusted GraphRAG
 
-Confidence-filtered GraphRAG — only returns evidence above the trust threshold.
+Confidence-filtered GraphRAG — only returns evidence above the trust threshold. Facts outrank inferences outrank predictions.
 
 ```sql
 CALL algo.graphRAGTrusted('high-confidence relationships for Alice')
@@ -363,17 +518,19 @@ Built on the [Live Delta Stack](/docs/reactive) and Z-set algebra. Every mutatio
 
 Benchmarked on a MacBook Air M4 (10-core, 24GB) with 10K-node graphs, single-threaded CPU baseline. GPU speedups measured with CUDA on equivalent hardware. These are laptop numbers — server hardware with more cores and memory will scale further.
 
-| Algorithm | CPU Throughput | GPU Speedup |
-|-----------|---------------|-------------|
-| PageRank | 154M nodes/sec | 2.4x |
-| BFS Shortest Path | 6.3M edges/sec | 3.5x |
-| Triangle Count | — | 19.8x |
-| Community Detection | — | 29.6x |
-| Louvain | — | 29.6x |
-| Vector Search | 25K queries/sec | 4.2x |
-| All-Pairs Shortest Path | — | GPU-accelerated |
-| Clustering Coefficient | — | GPU-accelerated |
+| Algorithm | CPU Throughput | GPU Speedup | GPU Dispatch Threshold |
+|-----------|---------------|-------------|----------------------|
+| PageRank | 154M nodes/sec | 2.4x | 500 nodes |
+| BFS Shortest Path | 6.3M edges/sec | 3.5x | 100 nodes |
+| Triangle Count | 943K nodes/sec | 19.8x | 100 nodes |
+| Community Detection | 185K nodes/sec | 29.6x | 200 nodes |
+| Louvain | — | 29.6x | 200 nodes |
+| Vector Search | 25K queries/sec @ 128d | 4.2x | 100 vectors |
+| All-Pairs Shortest Path | — | GPU-accelerated | 500 nodes |
+| Clustering Coefficient | — | GPU-accelerated | 100 nodes |
+| Node Similarity | — | GPU-accelerated | 100 nodes |
+| Leiden | — | CUDA 9.0+ (H100+) only | 10M nodes |
 
-All algorithms are available as `CALL` procedures with identical syntax on CPU and GPU. No configuration, no warm-up, no separate analytics service. The engine dispatches to the fastest available backend automatically.
+GPU dispatch is automatic — the engine measures graph size at query time and routes to the fastest available backend. No configuration required.
 
 Six algorithms also support `LIVE CALL` for incremental maintenance -- see the Incremental Algorithms section above.

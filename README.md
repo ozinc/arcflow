@@ -27,7 +27,7 @@ One in-process library replaces six services:
 
 | You'd otherwise need | ArcFlow has it built in |
 |---|---|
-| Neo4j (graph DB) | Cypher-compatible graph store |
+| Neo4j (graph DB) | GQL graph store (ISO/IEC 39075, Cypher-compatible) |
 | Redis (cache) | In-memory, zero-copy |
 | DuckDB (analytics) | Window functions, aggregations |
 | Pinecone (vector DB) | HNSW vector index |
@@ -106,7 +106,8 @@ try { db.query("BAD") } catch (e) {
 | Python | `pip install arcflow` | One command |
 | Rust | `cargo add arcflow` | One command |
 | Docker | `docker run ghcr.io/ozinc/arcflow:latest` | Container |
-| MCP (AI agents) | `npx arcflow-mcp` | One command |
+| CLI (coding agents) | `arcflow query '...'` | Shell-native, <10ms |
+| MCP (cloud chat UIs) | `npx arcflow-mcp` | ChatGPT, Claude.ai, Gemini web |
 
 ## Documentation
 

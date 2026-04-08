@@ -1,6 +1,6 @@
 ---
 title: "Built-in Functions"
-description: "All 81 built-in functions — aggregation, string, math, type conversion, graph, metadata, date/time, utility, predicates"
+description: "All 83 built-in functions — aggregation, string, math, type conversion, graph, metadata, date/time, utility, predicates"
 section: "Reference"
 order: 4
 since: "0.8.0"
@@ -11,7 +11,7 @@ status: "stable"
 
 > This reference is designed for both human developers and AI coding agents. Every entry includes complete syntax that can be used directly in queries.
 
-81 built-in functions across 9 categories: Aggregation (11), String (23), Math (15), Type Conversion (5), Graph Introspection (6), Node Metadata (5), Map and List (4), Date/Time (4), Utility (4), and Predicates (4).
+83 built-in functions across 9 categories: Aggregation (11), String (23), Math (17), Type Conversion (5), Graph Introspection (6), Node Metadata (5), Map and List (4), Date/Time (4), Utility (4), and Predicates (4).
 
 ## Aggregation (11)
 
@@ -86,7 +86,7 @@ MATCH (n:Person)
 RETURN lpad(toString(n.id), 6, '0') AS paddedId, repeat('*', n.rating) AS stars
 ```
 
-## Math (15)
+## Math (17)
 
 | Function | Syntax | Description | Return Type | Since |
 |---|---|---|---|---|
@@ -98,6 +98,8 @@ RETURN lpad(toString(n.id), 6, '0') AS paddedId, repeat('*', n.rating) AS stars
 | `sign` | `sign(expr)` | Signum: -1, 0, or 1 | Float | 4.0.0 |
 | `exp` | `exp(expr)` | e raised to the power of the value | Float | 4.0.0 |
 | `log` | `log(expr)` | Natural logarithm (ln) | Float | 4.0.0 |
+| `log10` | `log10(expr)` | Base-10 logarithm | Float | 10.0.0 |
+| `log2` | `log2(expr)` | Base-2 logarithm | Float | 10.0.0 |
 | `power` | `power(base, exp)` | Raise base to exponent | Float | 4.0.0 |
 | `sin` | `sin(expr)` | Sine (radians) | Float | 4.0.0 |
 | `cos` | `cos(expr)` | Cosine (radians) | Float | 4.0.0 |
@@ -248,8 +250,60 @@ WHERE n.deletedAt IS NULL
 RETURN n.name
 ```
 
+## Path Functions (3)
+
+Functions for operating on path values bound with `MATCH p = ...`.
+
+| Function | Syntax | Description | Return Type |
+|---|---|---|---|
+| `nodes` | `nodes(path)` | Ordered list of nodes along the path | List\<Node\> |
+| `relationships` | `relationships(path)` | Ordered list of relationships along the path | List\<Rel\> |
+| `length` | `length(path)` | Number of relationships in the path | Integer |
+
+```cypher
+MATCH p = (a:Person {name: 'Alice'})-[*..5]->(b:Person {name: 'Dave'})
+RETURN length(p) AS hops, [n IN nodes(p) | n.name] AS names
+```
+
+## List Operations
+
+### List subscript and slice
+
+```cypher
+-- Access by index (0-based)
+RETURN n.tags[0]          -- first element
+RETURN n.tags[$idx]       -- dynamic index via parameter
+
+-- Slice
+RETURN n.tags[1..3]       -- elements at index 1 and 2
+RETURN n.tags[..3]        -- first 3 elements
+RETURN n.tags[-2..]       -- last 2 elements
+```
+
+### List comprehension
+
+```cypher
+-- [variable IN list WHERE filter | transform]
+MATCH (n:Person)
+RETURN [x IN n.scores WHERE x > 80 | x * 1.1] AS bonus_scores
+
+-- filter only
+RETURN [x IN n.tags WHERE x <> 'archived'] AS active_tags
+
+-- transform only
+RETURN [x IN range(1, 10) | x * x] AS squares
+```
+
+### List quantifiers
+
+```cypher
+WHERE ALL(x IN n.scores WHERE x > 60)     -- all elements match
+WHERE ANY(x IN n.tags WHERE x = 'urgent') -- at least one matches
+WHERE NONE(x IN n.tags WHERE x = 'spam')  -- none match
+```
+
 ## See Also
 
-- [Aggregations](/worldcypher/functions/aggregations) -- detailed aggregation examples
+- [Aggregations & Window Functions](/worldcypher/functions/aggregations) -- GROUP BY, LAG, LEAD, PERCENT_RANK
 - [Procedures](/worldcypher/functions/procedures) -- CALL db.* and algo.* procedures
 - [Operators](/reference/operators) -- comparison and logical operators

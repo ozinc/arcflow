@@ -107,6 +107,25 @@ When two clients mutate concurrently, conflicts are resolved using vector clocks
 | First-writer-wins | Earlier clock wins | Optional |
 | Evidence-weighted | Higher confidence wins | For observation data |
 
+## LAN Discovery
+
+ArcFlow instances on the same network discover each other automatically via UDP multicast. No configuration needed — peers announce themselves and sync propagates across the mesh.
+
+```
+Group:    239.255.0.1:7947
+Announce: every 5 seconds
+Stale:    60 seconds (peer removed if no heartbeat)
+Protocol: {"op":"announce","peer_id":"af-abc123","data_port":7948}
+```
+
+CLI commands for mesh status:
+
+```bash
+arcflow sync health   # Show discovered peers
+arcflow sync scopes   # List registered sync scopes
+arcflow sync announce # Print this node's announcement JSON
+```
+
 ## Implementation status
 
 | Wave | Feature | Status |
@@ -114,9 +133,11 @@ When two clients mutate concurrently, conflicts are resolved using vector clocks
 | Wave A | WAL capture in mutation path | Done |
 | Wave B | SyncEngine push/pull/cycle | Done (10 tests) |
 | Wave C | TypeScript SDK integration | Done (syncPending, fingerprint) |
-| Wave D | HTTP transport (reqwest) | Planned |
-| Wave E | WASM transport (browser fetch) | Planned |
-| Wave F | Background auto-sync thread | Planned |
+| Wave D | HTTP transport (reqwest) | Done |
+| Wave E | Background auto-sync daemon | Done |
+| Wave F | LAN peer discovery (UDP multicast) | Done |
+| Wave G | WebSocket delta-push | Done |
+| Wave H | WASM transport (browser fetch) | Planned |
 
 ## API reference
 

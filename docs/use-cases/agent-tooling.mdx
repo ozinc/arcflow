@@ -157,12 +157,35 @@ arcflow.dev/engine?sync=af_xxxxxxxxxxxx
 
 The agent builds a graph in the browser, the user reviews it visually, then the same graph syncs to the application backend.
 
-## MCP — agents query directly
+## CLI binary — shell-native agents
 
-With the MCP server, agents don't generate code at all — they interact with the graph directly:
+Claude Code, Codex CLI, Gemini CLI, and similar tools already have a shell tool. Give them the `arcflow` binary and they call it exactly like `grep` or `git` — no protocol, no handshake, no session:
+
+```bash
+# Symbol lookup — exits in <10ms
+arcflow symbol login
+
+# Impact traversal — what breaks if login() changes?
+arcflow impact fn_login --depth 4
+
+# Slice source at line range
+arcflow slice src/auth.ts 12 35
+
+# Run a GQL query directly
+arcflow query 'MATCH (n:Function) RETURN n.name, n.line_start ORDER BY n.name'
+
+# Git blame via the code graph
+arcflow git-blame src/auth.ts
+```
+
+The agent calls these commands, reads stdout, and acts on structured results. No daemon to manage, no session state to track.
+
+## MCP — cloud chat interfaces only
+
+MCP is the right integration when the agent runs in a browser or cloud sandbox with no local shell — ChatGPT, Claude.ai, Gemini web. These interfaces cannot run `arcflow` as a binary, so MCP is the only way to give them graph tool access:
 
 ```json
-// .claude/settings.json
+// Claude.ai / ChatGPT plugin configuration — NOT for Claude Code
 {
   "mcpServers": {
     "arcflow": {
@@ -173,13 +196,7 @@ With the MCP server, agents don't generate code at all — they interact with th
 }
 ```
 
-Now the agent can:
-- `get_schema` — understand the data model
-- `read_query` — run any WorldCypher query
-- `write_query` — create/modify data
-- `graph_rag` — answer questions from the graph
-
-No code generation. Direct interaction.
+Available tools: `get_schema`, `read_query`, `write_query`, `graph_rag`. Latency is fine here — the user is already waiting for a chat response.
 
 ## Why this matters for agent adoption
 
@@ -188,7 +205,8 @@ No code generation. Direct interaction.
 | `openInMemory()` | Agent can use a graph DB without asking user to start a server |
 | Zero cleanup | Graph disappears on `close()` — no Docker containers to stop |
 | Browser WASM | Agent can verify queries in a live playground |
-| MCP server | Agent queries the graph directly, no code needed |
+| CLI binary | CLI agents query the graph directly via shell — `arcflow query`, `arcflow impact` |
+| MCP server | Cloud chat UIs (ChatGPT, Claude.ai) that have no local shell |
 | Sync | Ephemeral graph can optionally persist to cloud |
 | Typed results | Agent doesn't have to parse strings — numbers are numbers |
 | Structured errors | Agent can pattern-match on error codes and self-correct |

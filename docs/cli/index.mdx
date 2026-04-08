@@ -115,7 +115,8 @@ Add a flag to serve the same engine over the network:
 arcflow --data-dir ./graph --pg 5432       # PostgreSQL wire protocol
 arcflow --data-dir ./graph --serve 7687    # TCP
 arcflow --data-dir ./graph --http 8080     # REST API
-arcflow-mcp --data-dir ./graph             # MCP (AI agents)
+arcflow --data-dir ./graph --ws 7688       # WebSocket subscriptions
+arcflow-mcp --data-dir ./graph             # MCP (cloud chat UIs)
 ```
 
 Run all servers concurrently on the same graph store:
@@ -125,6 +126,116 @@ arcflow --pg 5432 --serve 7687 --http 8080 --data-dir ./graph
 ```
 
 Same engine. Same queries. Same data. The CLI is the primary interface; server modes are for when you need network access. The `--pg` flag lets any PostgreSQL client (psql, pgAdmin, Grafana, psycopg2, node-postgres) connect and run WorldCypher queries transparently.
+
+### Authentication
+
+The HTTP and WebSocket servers support JWT authentication:
+
+```bash
+arcflow --http 8080 --auth jwt --jwt-secret my-secret --jwt-issuer https://auth.example.com
+```
+
+API key auth for simple cases:
+
+```bash
+arcflow --http 8080 --api-key my-api-key
+```
+
+### Multi-Workspace Tenancy
+
+Serve isolated graph stores for multiple tenants in one process:
+
+```bash
+arcflow --http 8080 --multi-workspace 50
+```
+
+Each tenant gets their own graph store, WAL, and standing queries at `/workspaces/{id}/`. Zero data leakage between tenants. Create workspaces via the HTTP API or the `--multi-workspace` flag to pre-allocate slots.
+
+---
+
+## Validation
+
+Dry-run query validation without executing mutations:
+
+```bash
+arcflow --validate "MATCH (n:Person) RETURN n.name"
+# → {"ok": true, "plan": "NodeScan > Filter > Return"}
+
+arcflow --validate "METCH (n) RETURN n"
+# → {"ok": false, "code": "PARSE_FAILED", "suggestion": "Did you mean MATCH?"}
+```
+
+Useful in CI to validate query files before deployment.
+
+---
+
+## Flywheel Suite
+
+Evidence-based scoring and gating for agent workflows:
+
+```bash
+# Execute queries and collect timing + evidence artifacts
+arcflow run queries/pagerank.cypher queries/community.cypher
+
+# Score results with percentile analysis
+arcflow score queries/pagerank.cypher
+
+# Gate with pass/fail verdict (use in CI)
+arcflow gate queries/critical.cypher
+# Exit code 0 = pass, 1 = fail
+
+# Compare against a baseline
+arcflow compare queries/pagerank.cypher --baseline results/baseline.json
+```
+
+The flywheel suite is designed for AI agents that need to verify their own outputs — run a query, score it against historical evidence, gate on quality thresholds.
+
+---
+
+## GPU Commands
+
+```bash
+arcflow gpu status     # Show available GPU backends (CUDA, Metal, cuGraph, cuVS)
+arcflow gpu install    # Download GPU acceleration libraries
+```
+
+---
+
+## Sync Commands
+
+```bash
+arcflow sync status    # Pending mutations and high-water mark
+arcflow sync push      # Export pending mutations as JSON to stdout
+arcflow sync pull      # Import mutations from stdin JSON
+arcflow sync snapshot  # Export full graph snapshot to stdout
+arcflow sync restore   # Import snapshot from stdin
+arcflow sync health    # Mesh node status
+arcflow sync cloud     # Push + pull via ArcFlow Cloud (requires login)
+```
+
+---
+
+## Agent Context Introspection
+
+Full engine state dump for AI agents:
+
+```bash
+arcflow agent-context synth --json
+```
+
+Returns all labels, relationship types, algorithm capabilities, observation classes, clock domains, and available procedures in a single structured JSON. Agents use this to understand the schema and available operations without running individual `CALL db.*` queries.
+
+---
+
+## Authentication
+
+```bash
+arcflow login                    # Authenticate with oz.com/world
+arcflow login --token TOKEN      # Headless / CI login
+arcflow logout                   # Clear stored credentials
+arcflow whoami                   # Show current identity
+arcflow status                   # Account + engine status
+```
 
 ---
 

@@ -149,13 +149,20 @@ curl -X POST http://localhost:8080/query \
   -d '{"query": "MATCH (n) RETURN count(*)"}'
 ```
 
-## 6. MCP Server — For AI Agents
+## 6. Agent Integration
+
+**Coding agents** (Claude Code, Cursor, Codex, Gemini CLI) use the CLI binary — each call exits in <10ms, composable like `grep`:
+
+```bash
+arcflow query 'MATCH (n:Person) RETURN n.name, n.age'
+arcflow query 'CALL algo.pageRank()'
+```
+
+**Cloud chat interfaces** (ChatGPT, Claude.ai, Gemini web) use the MCP server — these have no local shell, so MCP is the bridge:
 
 ```bash
 arcflow-mcp
 ```
-
-Claude, Cursor, and other AI agents can query your graph directly via the Model Context Protocol.
 
 ## 7. Architecture — What ArcFlow Replaces
 
@@ -174,7 +181,7 @@ All modules share one `GraphStore` in unified memory. No serialization. No netwo
 
 - `CALL db.help` — full procedure reference in the REPL
 - `CALL db.tutorial` — interactive 6-step walkthrough
-- [Core Concepts](../core-concepts/graph-model.md) — graph model, WorldCypher, parameters
+- [WorldCypher / GQL](/worldcypher) — the query language (implements ISO/IEC 39075 GQL)
 - [Tutorials](../tutorials/knowledge-graph.md) — build a knowledge graph
 - [Recipes](../recipes/crud.md) — copy-paste patterns
 - [API Reference](../reference/api.md) — TypeScript SDK API

@@ -15,7 +15,7 @@ npm run dev        # Watch mode
 - ArcFlow is an embedded graph database — no server needed
 - Use `openInMemory()` for development and testing
 - Use `open('./data')` for persistent storage
-- Query language: WorldCypher (Cypher-compatible with spatial/temporal extensions)
+- Query language: WorldCypher (ArcFlow's GQL dialect — ISO/IEC 39075 + spatial/temporal/reactive extensions)
 
 ## API
 
@@ -32,7 +32,7 @@ db.stats()                             // { nodes, relationships, indexes }
 db.close()                             // Flush and close
 ```
 
-## WorldCypher Quick Reference
+## GQL / WorldCypher Quick Reference
 
 ```cypher
 // Create nodes and relationships
@@ -57,5 +57,6 @@ CALL vector.search('embeddings', [0.1, 0.2, ...], 10) YIELD node, distance
 ## Docs
 
 - Full docs: https://oz.com/docs
-- WorldCypher reference: https://oz.com/docs/worldcypher
-- MCP server for AI agents: `npx arcflow-mcp`
+- GQL / WorldCypher reference: https://oz.com/docs/worldcypher
+- Coding agents (Claude Code, Codex): use `arcflow query '...'` CLI binary — exits in <10ms
+- Cloud chat UIs (ChatGPT, Claude.ai): `npx arcflow-mcp`

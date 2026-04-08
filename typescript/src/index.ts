@@ -2,14 +2,20 @@
 // Ergonomic, typed wrapper over the raw napi-rs arcflow-core binding.
 // Replaces direct Runtime/Session usage with a clean db.query()/db.mutate() API.
 
-import { type QueryResult as RawQueryResult, Runtime, type Session } from 'arcflow-core'
+import { type QueryResult as RawQueryResult, Runtime, type Session } from '@arcflow/core'
 import { ArcflowError } from './errors'
 import type {
 	ArcflowDB,
+	DeltaEvent,
 	GraphStats,
+	LiveQuery,
 	MutationResult,
+	QueryCursor,
 	QueryParams,
 	QueryResult,
+	SubscribeOptions,
+	SubscriptionHandler,
+	SubscriptionRow,
 	TypedRow,
 } from './types'
 
@@ -22,6 +28,12 @@ export type {
 	MutationResult,
 	TypedRow,
 	GraphStats,
+	QueryCursor,
+	LiveQuery,
+	DeltaEvent,
+	SubscriptionRow,
+	SubscribeOptions,
+	SubscriptionHandler,
 } from './types'
 
 /** Open a persistent graph database at the given directory. */
@@ -228,9 +240,144 @@ class ArcflowDBImpl implements ArcflowDB {
 		return this.session.fingerprint()
 	}
 
+	ingestDelta(deltaJson: string): string {
+		this.ensureOpen()
+		try {
+			return this.session.ingestDelta(deltaJson)
+		} catch (err) {
+			throw ArcflowError.fromNapiError(err)
+		}
+	}
+
+	impactSubgraph(rootIdsJson: string, edgeKindsJson: string, maxDepth: number): string {
+		this.ensureOpen()
+		try {
+			return this.session.impactSubgraph(rootIdsJson, edgeKindsJson, maxDepth)
+		} catch (err) {
+			throw ArcflowError.fromNapiError(err)
+		}
+	}
+
+	cursor(query: string, params?: QueryParams, pageSize = 100): QueryCursor {
+		this.ensureOpen()
+		const size = Math.max(1, pageSize)
+		return new QueryCursorImpl(this.session, query, params ? coerceParams(params) : undefined, size)
+	}
+
+	subscribe(query: string, handler: SubscriptionHandler, options?: SubscribeOptions): LiveQuery {
+		this.ensureOpen()
+		const pollMs = Math.max(10, options?.pollIntervalMs ?? 50)
+		const viewName = `__sub_${Date.now()}_${Math.random().toString(36).slice(2)}`
+		// Register a LIVE VIEW for this query
+		this.session.execute(`CREATE LIVE VIEW ${viewName} AS ${query}`)
+		let frontier = -1
+		let current: SubscriptionRow[] = []
+		let cancelled = false
+
+		const tick = () => {
+			if (cancelled) return
+			try {
+				const statusRaw = this.session.execute(`CALL db.liveViewStatus('${viewName}')`)
+				if (statusRaw.rowCount > 0) {
+					const cols = statusRaw.columnsList
+					const frontierIdx = cols.indexOf('frontier')
+					const newFrontier = frontierIdx >= 0 ? Number(statusRaw.get(0, frontierIdx)) : 0
+					if (newFrontier !== frontier) {
+						// Fetch current rows
+						const rowsRaw = this.session.execute(`MATCH (row) FROM VIEW ${viewName} RETURN row`)
+						const newRows: SubscriptionRow[] = []
+						for (let r = 0; r < rowsRaw.rowCount; r++) {
+							const obj: SubscriptionRow = {}
+							for (let c = 0; c < rowsRaw.columnCount; c++) {
+								const val = rowsRaw.get(r, c) ?? ''
+								obj[rowsRaw.columnsList[c]] = parseTypedValue(val)
+							}
+							newRows.push(obj)
+						}
+						const prev = current
+						current = newRows
+						frontier = newFrontier
+						const prevSet = new Set(prev.map(r => JSON.stringify(r)))
+						const newSet = new Set(newRows.map(r => JSON.stringify(r)))
+						const added = newRows.filter(r => !prevSet.has(JSON.stringify(r)))
+						const removed = prev.filter(r => !newSet.has(JSON.stringify(r)))
+						handler({ added, removed, current: newRows, frontier: newFrontier })
+					}
+				}
+			} catch {
+				// ignore transient errors
+			}
+			if (!cancelled) setTimeout(tick, pollMs)
+		}
+		setTimeout(tick, 0)
+
+		return {
+			cancel: () => {
+				cancelled = true
+				try { this.session.execute(`DROP LIVE VIEW ${viewName}`) } catch { /* ok */ }
+			},
+			viewName,
+		}
+	}
+
 	private ensureOpen(): void {
 		if (this.closed) {
 			throw new ArcflowError('DB_CLOSED', 'Database has been closed')
 		}
 	}
 }
+
+// ---------------------------------------------------------------------------
+// QueryCursor implementation
+// ---------------------------------------------------------------------------
+
+class QueryCursorImpl implements QueryCursor {
+	private offset = 0
+	private _pagesFetched = 0
+	private _done = false
+	private _closed = false
+
+	constructor(
+		private readonly session: Session,
+		private readonly query: string,
+		private readonly params: Record<string, string> | undefined,
+		readonly pageSize: number,
+	) {}
+
+	get pagesFetched() { return this._pagesFetched }
+	get done() { return this._done }
+
+	next(): QueryResult | null {
+		if (this._done || this._closed) return null
+		const start = Date.now()
+		const paged = `${this.query} SKIP ${this.offset} LIMIT ${this.pageSize}`
+		const raw = this.params
+			? this.session.executeWithParams(paged, this.params)
+			: this.session.execute(paged)
+		const result = buildQueryResult(raw, start)
+		this._pagesFetched++
+		this.offset += result.rowCount
+		if (result.rowCount < this.pageSize) this._done = true
+		return result
+	}
+
+	all(): QueryResult {
+		const pages: TypedRow[][] = []
+		let columns: string[] = []
+		let totalMs = 0
+		let page = this.next()
+		while (page !== null) {
+			columns = page.columns
+			totalMs += page.computeMs
+			pages.push(page.rows)
+			page = this.next()
+		}
+		return { columns, rows: pages.flat(), rowCount: pages.flat().length, computeMs: totalMs }
+	}
+
+	close(): void { this._closed = true; this._done = true }
+}
+
+// Code intelligence layer — re-exported for 'arcflow/code-intelligence' consumers
+export { CodeGraph, Labels, Edges } from './code-intelligence'
+export type { GraphDelta, NodeSpec, EdgeSpec, DeltaStats, ImpactSubgraph, ImpactNode, CommitRef, LiveViewStatus } from './code-intelligence'

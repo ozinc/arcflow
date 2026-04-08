@@ -1,13 +1,15 @@
 ---
-title: "WorldCypher Compatibility Matrix"
-description: "WorldCypher Compatibility Matrix"
+title: "GQL & WorldCypher Reference"
+description: "Complete GQL compatibility matrix — supported syntax, ArcFlow extensions, and implementation status"
 section: "reference"
 status: "stable"
 ---
 
-# WorldCypher Compatibility Matrix
+# GQL & WorldCypher Reference
 
-Complete reference of supported WorldCypher features, syntax, and current status.
+ArcFlow implements [ISO/IEC 39075 GQL](https://www.iso.org/standard/76120.html) as **WorldCypher** — its native query dialect. All standard GQL syntax works as specified. WorldCypher adds extensions for temporal snapshots, reactive queries, confidence scoring, and graph algorithms that GQL leaves to implementations.
+
+Complete reference of supported features, syntax, and current implementation status.
 
 ## Query Clauses
 
@@ -195,7 +197,7 @@ Run directly — no projection lifecycle needed.
 |---|---|---|---|
 | HTTP API | ✅ | `arcflow --http 8080` | REST query endpoint |
 | PostgreSQL Wire | ✅ | `arcflow --pg 5432` | Connect with psql, DBeaver, Grafana |
-| MCP Server | ✅ | `arcflow-mcp` | AI agent integration via Model Context Protocol |
+| MCP Server | ✅ | `arcflow-mcp` | Cloud chat interface integration (ChatGPT, Claude.ai, Gemini web) |
 
 ## Observation & Evidence
 

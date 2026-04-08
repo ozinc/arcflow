@@ -45,7 +45,8 @@ const persistent = open('./data/graph')
 - Vector search built in — no separate Pinecone/Qdrant
 - Window functions: LAG, LEAD, STDDEV_POP, PERCENT_RANK
 - Live views: `CREATE LIVE VIEW` — incremental, auto-maintained
-- MCP server: `npx arcflow-mcp` — agents query directly
+- CLI binary: `arcflow query '...'` — shell-native agents (Claude Code, Codex, Gemini CLI) use this
+- MCP server: `npx arcflow-mcp` — cloud chat UIs only (ChatGPT, Claude.ai, Gemini web)
 
 ## API
 
@@ -57,7 +58,7 @@ const persistent = open('./data/graph')
 - `row.get('column')` → string | number | boolean | null (typed)
 - `ArcflowError` → { code, category, suggestion }
 
-## WorldCypher (Cypher-compatible)
+## GQL / WorldCypher (ISO/IEC 39075 GQL)
 
 CREATE, MATCH, MERGE, SET, DELETE, DETACH DELETE, REMOVE,
 WITH, UNWIND, WHERE, RETURN, ORDER BY, LIMIT,

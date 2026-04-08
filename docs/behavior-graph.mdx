@@ -11,9 +11,9 @@ status: "preview"
 
 <img src="/diagrams/behavior-graph.svg" alt="Behavior Graph Tick Evaluation Cycle" style={{width:"100%",margin:"1.5rem 0",borderRadius:"8px"}} />
 
-**Behavior trees that persist across restarts, remember their history, and query their own state with Cypher.**
+**Behavior trees that persist across restarts, remember their history, and query their own state with GQL.**
 
-Standard behavior tree engines (UE5, BT.CPP) lose all state when the process exits, limit their blackboard to key-value lookup, and can't answer "what was the agent doing 5 minutes ago?" ArcFlow's Behavior Graph stores tree structure and blackboard state in a WAL-backed knowledge graph. You get `AS OF` temporal queries on any agent, full Cypher over the blackboard, and thousands of concurrent trees sharing a single graph — with zero external infrastructure.
+Standard behavior tree engines (UE5, BT.CPP) lose all state when the process exits, limit their blackboard to key-value lookup, and can't answer "what was the agent doing 5 minutes ago?" ArcFlow's Behavior Graph stores tree structure and blackboard state in a WAL-backed knowledge graph. You get `AS OF` temporal queries on any agent, full GQL over the blackboard, and thousands of concurrent trees sharing a single graph — with zero external infrastructure.
 
 ```cypher
 -- One call ticks the tree; state persists across restarts
@@ -32,14 +32,14 @@ If you've used behavior trees before, everything maps directly:
 | Concept You Know | ArcFlow Equivalent | What ArcFlow Adds |
 |---|---|---|
 | Behavior Tree | Workflow subgraph | Persistent, queryable, versioned |
-| Blackboard | GraphStore (knowledge graph) | Full Cypher queries, not just key-value |
+| Blackboard | GraphStore (knowledge graph) | Full GQL queries, not just key-value |
 | Tick | `TemporalClock.tick()` | Multi-clock domains, temporal history |
 | Node Status (SUCCESS/FAILURE/RUNNING) | FactLifecycle (8 states) | Decay, supersession, dispute resolution |
 | Sequence Node | Workflow steps (sequential) | WAL-durability, retry policies |
 | Selector / Fallback | `StepKind::Conditional` | Graph-pattern predicates, not just booleans |
 | Parallel Node | `StepKind::Parallel` with barriers | All/Any/N completion modes |
 | Decorator (Retry, Timeout) | RetryPolicy, throttle config | Rate limiting, dead letter queues |
-| Reactive Sequence | Live queries + subscriptions | Cypher-based reactivity |
+| Reactive Sequence | Live queries + subscriptions | GQL-based reactivity |
 | Subtree | Nested `WorkflowDef` | Partition-isolated scope |
 
 ---
@@ -73,7 +73,7 @@ CALL behavior.tick('PatrolAndEngage')
 
 ## Query the Blackboard
 
-The blackboard isn't a separate key-value store. It's the **entire graph**. Query it with full Cypher:
+The blackboard isn't a separate key-value store. It's the **entire graph**. Query it with full GQL:
 
 ```cypher
 -- What enemies are targeted?
@@ -112,7 +112,7 @@ Standard behavior tree node types, stored as graph nodes:
 
 ### Action Nodes
 
-Execute a Cypher query against the knowledge graph:
+Execute a GQL query against the knowledge graph:
 
 ```cypher
 CREATE (n:BehaviorNode {
@@ -125,7 +125,7 @@ CREATE (n:BehaviorNode {
 
 ### Condition Nodes
 
-Evaluate a Cypher query — SUCCESS if rows returned, FAILURE if empty:
+Evaluate a GQL query — SUCCESS if rows returned, FAILURE if empty:
 
 ```cypher
 CREATE (n:BehaviorNode {
@@ -262,7 +262,7 @@ ArcFlow Behavior Graph combines the BT mental model with graph-native infrastruc
 
 - **WAL-backed persistence** — trees and state survive process restart
 - **Temporal reasoning** — query any agent's state at any past timestamp via `AS OF`
-- **Graph-queryable blackboard** — full Cypher over the knowledge graph, not key-value lookup
+- **Graph-queryable blackboard** — full GQL over the knowledge graph, not key-value lookup
 - **Multi-clock domains** — sensors tick at independent rates, ArcFlow reconciles across domains
 - **Confidence scoring** — edges carry provenance and trust weights (0.0-1.0)
 - **GPU acceleration** — PageRank at 154M nodes/sec, vector search at 25K queries/sec (CUDA/Metal)
@@ -272,10 +272,10 @@ ArcFlow Behavior Graph combines the BT mental model with graph-native infrastruc
 ## Compared to Other Approaches
 
 ### Game Engine Behavior Trees?
-Your BT Blueprint nodes map to `:BehaviorNode` graph nodes. The Blackboard becomes the full graph. Environment queries become Cypher patterns. The difference: ArcFlow trees persist across restarts, carry temporal history, and scale to thousands of concurrent agents sharing a single knowledge graph. Trade-off: ArcFlow runs outside the game engine process, so you need FFI or MCP integration for tight game-loop coupling.
+Your BT Blueprint nodes map to `:BehaviorNode` graph nodes. The Blackboard becomes the full graph. Environment queries become GQL patterns. The difference: ArcFlow trees persist across restarts, carry temporal history, and scale to thousands of concurrent agents sharing a single knowledge graph. Trade-off: ArcFlow runs outside the game engine process, so you need FFI or MCP integration for tight game-loop coupling.
 
 ### C++ Behavior Tree Libraries / ROS2?
-Same tick-based evaluation model. ArcFlow adds WAL-durable persistence, Cypher queries as conditions/actions, multi-robot coordination via partitioned workspaces, and temporal sensor fusion across clock domains. Trade-off: dedicated BT libraries have lower per-tick overhead for pure in-memory evaluation; ArcFlow's advantage is queryable persistent state and multi-agent coordination.
+Same tick-based evaluation model. ArcFlow adds WAL-durable persistence, GQL queries as conditions/actions, multi-robot coordination via partitioned workspaces, and temporal sensor fusion across clock domains. Trade-off: dedicated BT libraries have lower per-tick overhead for pure in-memory evaluation; ArcFlow's advantage is queryable persistent state and multi-agent coordination.
 
 ### LLM Orchestration Frameworks?
 Replace your agent's ad-hoc state dict with a knowledge graph. Behavior trees give your agent structured decision-making instead of prompt chains. `algo.graphRAG()` + behavior tree ticking = agents with persistent memory and traceable reasoning. Trade-off: higher initial setup than a state dict, but the graph pays for itself when you need to debug agent decisions or coordinate multiple agents.
@@ -313,8 +313,8 @@ This isn't a new engine — it's a thin orchestration layer over existing ArcFlo
 | Tick clock | `TemporalClock` |
 | State persistence | WAL (write-ahead log) |
 | Blackboard | `GraphStore` |
-| Conditions | Cypher queries (row count > 0 = SUCCESS) |
-| Actions | Cypher mutations |
+| Conditions | GQL queries (row count > 0 = SUCCESS) |
+| Actions | GQL mutations |
 | Reactivity | Live queries + subscriptions |
 | Memory | Temporal `AS OF` queries |
 | Trust | Confidence scores + provenance |

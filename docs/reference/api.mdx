@@ -84,6 +84,68 @@ console.log(s.nodes, s.relationships, s.indexes)
 
 Close the database and flush WAL. All subsequent operations throw `ArcflowError`.
 
+### `db.cursor(query: string, params?: QueryParams, pageSize?: number): QueryCursor`
+
+Return a paginated cursor over a query. Useful for large result sets that shouldn't all be loaded into memory at once.
+
+```typescript
+const cursor = db.cursor("MATCH (n:Person) RETURN n.name, n.age", {}, 100)
+while (!cursor.done) {
+  const page = cursor.next()
+  for (const row of page!.rows) { ... }
+}
+cursor.close()
+```
+
+### `db.subscribe(query: string, handler: SubscriptionHandler, options?: SubscribeOptions): LiveQuery`
+
+Subscribe to a live delta stream for a query. The handler fires on every change with the added rows, removed rows, and full current result set. Uses a `CREATE LIVE VIEW` under the hood.
+
+```typescript
+const sub = db.subscribe(
+  "MATCH (n:Alert) WHERE n.severity = 'critical' RETURN n.id, n.message",
+  (event) => {
+    console.log('new alerts:', event.added)
+    console.log('resolved:', event.removed)
+  }
+)
+
+// Stop when done
+sub.cancel()
+```
+
+### `db.syncPending(): number`
+
+Returns the number of mutations pending sync to the cloud. Returns 0 if sync is disabled or fully caught up.
+
+### `db.fingerprint(): string`
+
+Returns the SHA-256 hash of the current full graph state. Two graphs with identical content produce identical fingerprints regardless of insertion order. Useful for sync verification and integrity checking.
+
+```typescript
+const hash = db.fingerprint()
+// "sha256:a1b2c3d4..."
+```
+
+### `db.ingestDelta(delta: NodeEdgeDelta): void`
+
+Apply a structured delta (added nodes, removed nodes, added edges, removed edges) in a single atomic batch. Preferred for ingestion pipelines that track changes as deltas rather than full state.
+
+### `db.impactSubgraph(rootIds: string[], edgeKinds: string[], maxDepth: number): ImpactResult`
+
+Traverse the graph from root nodes following specified edge kinds up to `maxDepth` hops. Returns all affected nodes with their hop distance. Used for blast-radius analysis — "what does changing this symbol break?"
+
+```typescript
+const impact = db.impactSubgraph(
+  ['fn_login'],
+  ['CALLS', 'TESTED_BY'],
+  4
+)
+for (const node of impact.nodes) {
+  console.log(`hop ${node.hop}: ${node.id}`)
+}
+```
+
 ## `QueryParams`
 
 ```typescript
@@ -132,6 +194,50 @@ interface GraphStats {
   nodes: number
   relationships: number
   indexes: number
+}
+```
+
+## `QueryCursor`
+
+```typescript
+interface QueryCursor {
+  pageSize: number        // Rows per page
+  pagesFetched: number    // How many pages retrieved so far
+  done: boolean           // True when all pages exhausted
+  next(): QueryResult | null   // Fetch next page (null if done)
+  all(): QueryResult           // Collect all remaining pages into one result
+  close(): void                // Release the cursor
+}
+```
+
+## `LiveQuery`
+
+```typescript
+interface LiveQuery {
+  viewName: string   // Internal live view name
+  cancel(): void     // Stop the subscription and drop the live view
+}
+```
+
+## `DeltaEvent`
+
+```typescript
+interface DeltaEvent {
+  added: SubscriptionRow[]     // Rows newly entering the result set
+  removed: SubscriptionRow[]   // Rows leaving the result set
+  current: SubscriptionRow[]   // Full current result set
+  frontier: number             // Monotonic mutation sequence number
+}
+
+type SubscriptionRow = Record<string, string | number | boolean | null>
+type SubscriptionHandler = (event: DeltaEvent) => void
+```
+
+## `SubscribeOptions`
+
+```typescript
+interface SubscribeOptions {
+  pollIntervalMs?: number   // How often to check for updates (default: 100ms)
 }
 ```
 
