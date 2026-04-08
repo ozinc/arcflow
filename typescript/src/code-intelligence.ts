@@ -135,7 +135,7 @@ export class CodeGraph {
 
   /**
    * Apply a GraphDelta to the graph — calls the engine's `apply_node_edge_delta()`
-   * primitive directly via napi-rs. No Cypher compiler, no query plan: one
+   * primitive directly via napi-rs. No GQL compiler, no query plan: one
    * write-lock acquisition + WAL flush. Content-hash dedup is engine-native.
    *
    * Idempotent when nodes supply stable IDs and contentHash: nodes whose hash
@@ -185,7 +185,7 @@ export class CodeGraph {
 
   /**
    * BFS blast-radius traversal — calls the engine's `compute_impact_subgraph()`
-   * primitive directly via napi-rs. No Cypher compiler, no query plan: one
+   * primitive directly via napi-rs. No GQL compiler, no query plan: one
    * read-lock acquisition + in-memory BFS. Sub-millisecond on graphs with 1M+ nodes.
    *
    * "What does changing this function break?" — without a single LLM call.

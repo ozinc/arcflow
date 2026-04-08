@@ -71,7 +71,7 @@ export interface ArcflowDB {
 
 	/**
 	 * Apply a batch node/edge delta directly to the engine — bypasses the
-	 * Cypher compiler entirely. One write-lock + WAL flush. Sub-millisecond
+	 * GQL compiler entirely. One write-lock + WAL flush. Sub-millisecond
 	 * for typical code intelligence ingestion batches.
 	 *
 	 * `delta` must be a JSON string with shape documented in the napi binding.
@@ -82,7 +82,7 @@ export interface ArcflowDB {
 	ingestDelta(deltaJson: string): string
 
 	/**
-	 * BFS blast-radius traversal — bypasses the Cypher compiler.
+	 * BFS blast-radius traversal — bypasses the GQL compiler.
 	 * Returns a JSON string `{ nodes: [{ id, hop }] }`.
 	 *
 	 * Prefer `CodeGraph.impactSubgraph()` over calling this directly.
