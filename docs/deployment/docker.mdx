@@ -43,10 +43,15 @@ docker compose up -d
 ```typescript
 import { open } from 'arcflow'
 
-// In-process (recommended for same-machine apps)
+// In-process: embed ArcFlow directly (same machine, no Docker needed)
 const db = open('./data/graph')
+```
 
-// Or connect to Docker instance via HTTP (coming soon)
+Or query the Docker container over HTTP:
+
+```bash
+curl -X POST http://localhost:8080/query \
+  -d "MATCH (n:Person) RETURN n.name"
 ```
 
 ## Data persistence

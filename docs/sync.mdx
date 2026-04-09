@@ -126,18 +126,15 @@ arcflow sync scopes   # List registered sync scopes
 arcflow sync announce # Print this node's announcement JSON
 ```
 
-## Implementation status
+## Supported transports
 
-| Wave | Feature | Status |
-|---|---|---|
-| Wave A | WAL capture in mutation path | Done |
-| Wave B | SyncEngine push/pull/cycle | Done (10 tests) |
-| Wave C | TypeScript SDK integration | Done (syncPending, fingerprint) |
-| Wave D | HTTP transport (reqwest) | Done |
-| Wave E | Background auto-sync daemon | Done |
-| Wave F | LAN peer discovery (UDP multicast) | Done |
-| Wave G | WebSocket delta-push | Done |
-| Wave H | WASM transport (browser fetch) | Planned |
+| Transport | How |
+|---|---|
+| HTTP push/pull | `arcflow sync push/pull` via reqwest |
+| Background auto-sync | `arcflow sync start` daemon |
+| LAN peer discovery | UDP multicast announce |
+| WebSocket delta-push | Live delta stream over WS |
+| WASM (browser) | Not yet supported |
 
 ## API reference
 
