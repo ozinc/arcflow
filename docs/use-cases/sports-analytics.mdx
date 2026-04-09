@@ -30,24 +30,56 @@ const db = open('./match-data')
 
 // Create players with positions
 db.batchMutate([
-  "CREATE (p:Player {id: 'p1', name: 'Alice', team: 'home', number: 10, x: 52.3, y: 34.1, speed: 7.2})",
-  "CREATE (p:Player {id: 'p2', name: 'Bob', team: 'home', number: 7, x: 65.0, y: 20.5, speed: 4.1})",
-  "CREATE (ball:Ball {x: 50.0, y: 33.5, speed: 12.4})",
+  "CREATE (p:Player {id: 'p1', name: 'Alice', team: 'home', number: 10, position: point({x: 52.3, y: 34.1}), speed: 7.2})",
+  "CREATE (p:Player {id: 'p2', name: 'Bob', team: 'home', number: 7, position: point({x: 65.0, y: 20.5}), speed: 4.1})",
+  "CREATE (ball:Ball {id: 'ball', position: point({x: 50.0, y: 33.5}), speed: 12.4})",
 ])
 
-// Query: fast players
-const fast = db.query("MATCH (p:Player) WHERE p.speed > 5.0 RETURN p.name, p.speed ORDER BY p.speed DESC")
+// Spatial: nearest players to ball (R*-tree, ≥ 2000/s at 22 entities)
+db.query("CALL algo.nearestNodes(ball.position, 'Player', 5) YIELD node, distance RETURN node.name, distance")
 
-// Query: team formations
-const home = db.query("MATCH (p:Player) WHERE p.team = 'home' RETURN p.name, p.x, p.y ORDER BY p.x")
+// Spatial: offside check — attacking players ahead of last defender
+db.query(`
+  CALL algo.nearestNodes(ball.position, 'Player', 22) YIELD node AS player, distance
+  MATCH (player)-[:PLAYS_FOR]->(team:Team {side: 'attacking'})
+  WHERE player.position.x > last_defender.position.x
+  RETURN player.name, player.position
+`)
+
+// Live geofence: fires within 20ms when a player enters the penalty area
+db.subscribe(
+  `MATCH (p:Player)
+   WHERE p.position.x >= 83 AND p.position.x <= 105
+     AND p.position.y >= 13 AND p.position.y <= 55
+   RETURN p.name, p.team`,
+  (event) => {
+    for (const row of event.added)   console.log(`${row.name} entered penalty area`)
+    for (const row of event.removed) console.log(`${row.name} left penalty area`)
+  },
+  { pollIntervalMs: 20 }
+)
 
 // Algorithms: passing network centrality
-const centrality = db.query("CALL algo.pageRank()")
+db.query("CALL algo.pageRank()")
 
-// Algorithms: player clusters (formations)
-const formations = db.query("CALL algo.louvain()")
+// Algorithms: player clusters (formation detection)
+db.query("CALL algo.louvain()")
+```
+
+## 50fps Tracking Loop
+
+```typescript
+// Update position each frame — spatial index auto-updates in O(log N)
+function onPositionUpdate(playerId: string, x: number, y: number) {
+  db.mutate(
+    "MATCH (p:Player {id: $id}) SET p.position = point({x: $x, y: $y})",
+    { id: playerId, x, y }
+  )
+  // Live geofences fire automatically — no polling needed
+}
 ```
 
 ## See also
 
+- [Spatial Knowledge Graph](/spatial-knowledge) — full spatial primitives reference
 - [examples/sports-tracking/](../../examples/sports-tracking/) — runnable example

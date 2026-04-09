@@ -125,13 +125,16 @@ CALL algo.confidencePath(1, 5)
 
 Returns the path as "id1 -> id2 -> id3", total cost, and hop count.
 
-### Similarity and Spatial (3)
+### Similarity and Spatial (6)
 
 | Procedure | Return Columns | Description | Since |
 |---|---|---|---|
 | `CALL algo.nodeSimilarity()` | `node1`, `node2`, `similarity` | Pairs of nodes with Jaccard similarity scores (top 20) | 4.0.0 |
 | `CALL algo.similarNodes()` | `nodeId`, `score` | Nodes similar to the first vector-bearing node (cosine similarity) | 5.0.0 |
-| `CALL algo.nearestNodes()` | `nodeId`, `name`, `distance` | K nearest nodes by spatial distance. GPU-accelerated when available. | 5.0.0 |
+| `CALL algo.nearestNodes(point, label, k)` | `node`, `distance` | K nearest nodes by exact spatial distance (R\*-tree, ≥ 2000/s at 11K entities) | 5.0.0 |
+| `CALL algo.objectsInFrustum($frustum)` | `node`, `distance` | Entities within a camera frustum (6-plane containment, < 2ms for 50 entities) | 10.0.0 |
+| `CALL algo.nearestVisible($pos, label, k)` | `node`, `distance` | Nearest entities with direct line-of-sight from a point | 10.0.0 |
+| `CALL spatial.raycast(origin, direction, maxDist)` | `hit`, `distance` | First node along a ray within max distance | 10.0.0 |
 
 ### Vector Search and RAG (5)
 
@@ -292,6 +295,24 @@ CALL db.nodesByObservation.observed()
 ```
 
 Returns all nodes classified as "observed" with their confidence scores.
+
+## Spatial System (3)
+
+Coordinate frame management and spatial query observability.
+
+| Procedure | Return Columns | Description | Since |
+|---|---|---|---|
+| `CALL db.spatialMetadata()` | `crs`, `meters_per_unit`, `up_axis`, `handedness`, `calibration_version` | Current coordinate frame settings. Hard error raised on mismatch at ingest. | 10.0.0 |
+| `CALL arcflow.spatial.dispatch_stats()` | `lane_chosen`, `estimated_candidates`, `actual_candidates`, `prefilter_us`, `rtree_us`, `gpu_transfer_us`, `kernel_us`, `total_us` | Last spatial query execution metrics. `lane_chosen`: CpuLive, CpuBatch, GpuLocal, GpuMulti. | 10.0.0 |
+| `CALL arcflow.spatial.trigger_stats()` | `query_name`, `node_id`, `predicate_type`, `evaluation_us`, `fired` | Live geofence trigger metrics — one row per predicate evaluation since last reset. | 10.0.0 |
+
+```sql
+-- Inspect current coordinate frame
+CALL db.spatialMetadata()
+
+-- Check dispatch lane after a spatial query
+CALL arcflow.spatial.dispatch_stats()
+```
 
 ## Health (3)
 

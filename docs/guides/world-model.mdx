@@ -100,27 +100,32 @@ Note the confidence score on the `:DETECTS` edge: 0.35. The unknown contact was 
 Query the world model spatially — find entities near a point, within a radius, or closest to each other.
 
 ```cypher
--- What's within 30 units of position (40, 60)?
+-- K-nearest: 5 entities closest to a point (R*-tree backed, ≥ 2000/s at 11K entities)
+CALL algo.nearestNodes(point({x: 40.0, y: 60.0}), 'Entity', 5)
+  YIELD node, distance
+  RETURN node.name, node.type, distance
+
+-- Radius: all entities within 30 units (compiler pushes distance() into R*-tree)
 MATCH (e:Entity)
-WHERE (e.x - 40) * (e.x - 40) + (e.y - 60) * (e.y - 60) < 900
+WHERE distance(e.position, point({x: 40.0, y: 60.0})) < 30.0
 RETURN e.name, e.type, e.x, e.y
 
--- Which entities are closest to Drone-Alpha?
-MATCH (d:Entity {name: 'Drone-Alpha'}), (other:Entity)
-WHERE d <> other
-RETURN other.name,
-       ((d.x - other.x) * (d.x - other.x) +
-        (d.y - other.y) * (d.y - other.y)) AS dist_squared
-ORDER BY dist_squared ASC
-LIMIT 3
+-- Bounding box: entities in a rectangular zone
+MATCH (e:Entity)
+WHERE e.x >= 20 AND e.x <= 60
+  AND e.y >= 40 AND e.y <= 80
+RETURN e.name, e.type
 ```
 
-For larger scenes, use the built-in spatial KNN algorithm:
+Spatial predicates compose with graph traversal — no need to join two systems:
 
 ```cypher
-CALL algo.nearestNodes(point({x: 40.0, y: 60.0}), 'Entity', 5)
-YIELD node, distance
-RETURN node.name, distance
+-- Entities within 50 units of the origin AND in the Alpha-Squad formation
+CALL algo.nearestNodes(point({x: 0, y: 0}), 'Entity', 20)
+  YIELD node AS e, distance
+WHERE distance < 50
+MATCH (e)-[:MEMBER_OF]->(f:Formation {name: 'Alpha-Squad'})
+RETURN e.name, distance
 ```
 
 ## Step 4: Temporal Memory
@@ -128,16 +133,16 @@ RETURN node.name, distance
 Update entity positions as time progresses. ArcFlow records every mutation with a timestamp — you can query any previous state.
 
 ```cypher
--- Time step: update positions based on velocity
+-- Time step: update positions based on velocity (one property per SET clause)
 MATCH (e:Entity)
-SET e.x = e.x + e.vx,
-    e.y = e.y + e.vy,
-    e.z = e.z + e.vz
+SET e.x = e.x + e.vx
+SET e.y = e.y + e.vy
+SET e.z = e.z + e.vz
 
 -- 10 ticks later, update again
 MATCH (e:Entity)
-SET e.x = e.x + e.vx * 10,
-    e.y = e.y + e.vy * 10
+SET e.x = e.x + e.vx * 10
+SET e.y = e.y + e.vy * 10
 ```
 
 Now query the past:
