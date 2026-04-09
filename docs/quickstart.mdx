@@ -132,7 +132,9 @@ result = db.execute("MATCH (n:Person) RETURN n.name, n.age")
 
 ### Rust
 ```rust
-let store = wc_sdk::open_concurrent();
+use arcflow::GraphStore;
+
+let store = GraphStore::open_concurrent()?;
 store.execute("CREATE (n:Person {name: 'Alice'})")?;
 let result = store.execute("MATCH (n) RETURN n.name")?;
 ```

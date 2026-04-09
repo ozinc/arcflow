@@ -286,6 +286,35 @@ const r = db.query("MATCH (n:Test) RETURN n.x")
 assert(r.rows[0].get('x') === 1)
 ```
 
+## PostgreSQL wire protocol
+
+Connect any PostgreSQL-compatible client to ArcFlow's GQL engine:
+
+```bash
+arcflow --pg 5432                              # start PG wire listener
+arcflow --pg 5432 --pg-password my-secret     # with auth
+arcflow --pg 5432 --pg-log-queries            # log every query to stderr
+```
+
+```bash
+psql -h localhost -p 5432                     # connect with psql
+```
+
+Queries sent over the wire are WorldCypher (GQL) — not SQL. SQL `SELECT` statements are not supported; send `MATCH` instead.
+
+SQL shims (acknowledged silently): `SET`, `BEGIN/COMMIT/ROLLBACK`, `SHOW SERVER_VERSION`, `SELECT VERSION()`, `DISCARD ALL`, `pg_catalog` queries.
+
+Tested clients: psql, pgAdmin, Grafana, DBeaver, Python psycopg2, Go pgx, Node.js node-postgres, Rust sqlx, PgBouncer.
+
+The PG wire protocol is an adoption on-ramp. When ready, switch to `open()` / `openInMemory()` for in-process execution with no network overhead and access to LIVE queries, graph algorithms, and full GQL features.
+
+## Integration guides
+
+- **data-quality.mdx** — batch==delta equivalence (Z-set algebra), CREATE LIVE VIEW for always-on DQ, pipeline prune (DECAY POLICY, DETACH DELETE), drill-through via SOURCED_FROM edges + AS OF, BI vs ML infrastructure gap
+- **code-intelligence.mdx** — codebase as a live graph: ingest symbols/calls/imports/commits via CodeGraph.ingest(), blast-radius with impactSubgraph(), live views for stale embedding detection, CLI binary commands (arcflow symbol, arcflow impact, arcflow slice, arcflow git-blame)
+- **sql-to-gql.mdx** — PostgreSQL wire protocol adoption path: connect any PG-compatible client, send WorldCypher over the PG wire, migrate to in-process open() for zero-latency
+- **filesystem-workspace.mdx** — persistent workspace (arcflow workspace init → auto-discovery via .arcflow/config.yaml), three persistence modes, multi-agent shared graph, HTTP server for concurrent writes
+
 ## Caveats
 
 - SET: one property per clause (no comma-separated SET n.a=1, n.b=2)

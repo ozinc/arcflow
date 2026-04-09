@@ -29,10 +29,10 @@ All access layers share the same engine, the same query compiler, the same stora
 
 ## In-Process (default)
 
-No flags needed. When used as a Rust library, import `wc-sdk` and call functions directly. Zero serialization. Zero network latency. This is the fastest path.
+No flags needed. When used as a Rust library, import `arcflow` and call functions directly. Zero serialization. Zero network latency. This is the fastest path.
 
 ```rust
-use wc_sdk::GraphStore;
+use arcflow::GraphStore;
 
 let mut store = GraphStore::new();
 // Direct function calls — no serialization, no network

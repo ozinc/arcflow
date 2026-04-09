@@ -68,6 +68,15 @@ CALL algo.pageRank(), CALL algo.louvain(), CALL algo.vectorSearch(),
 CALL db.stats, CALL db.schema, CALL db.help,
 LIVE MATCH, LIVE CALL, CREATE LIVE VIEW
 
+## PostgreSQL wire protocol (SQL tooling bridge)
+
+```bash
+arcflow --pg 5432          # connect psql, Grafana, DBeaver, pgAdmin, ORMs
+```
+
+Queries are WorldCypher (GQL), not SQL. The wire protocol is transport-level only.
+See docs/guides/sql-to-gql.mdx for the full adoption path.
+
 ## Common errors
 
 - `EXPECTED_KEYWORD` → query syntax wrong, check MATCH/CREATE/MERGE
@@ -77,6 +86,13 @@ LIVE MATCH, LIVE CALL, CREATE LIVE VIEW
 ## Integration recipe
 
 See docs/guides/agent-quickstart.mdx for the 10-step integration guide.
+
+## Guides (stable)
+
+- docs/guides/data-quality.mdx — live DQ with CREATE LIVE VIEW, batch==delta equivalence (Z-set algebra), pipeline prune, drill-through, BI vs ML infrastructure gap
+- docs/guides/code-intelligence.mdx — codebase as a live graph: symbols, calls, imports, git commits, blast-radius analysis via impactSubgraph()
+- docs/guides/sql-to-gql.mdx — PostgreSQL wire protocol adoption path: connect psql/DBeaver/Grafana, then migrate to native GQL
+- docs/guides/filesystem-workspace.mdx — persistent workspace for multi-session and multi-agent workflows
 
 ## Full reference
 

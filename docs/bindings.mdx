@@ -71,7 +71,7 @@ assert!(result.rows.len() > 0);
 
 ## Python
 
-ctypes bindings wrapping `libwc_ffi`. No PyO3 compile step needed — loads the shared library at runtime.
+ctypes bindings over the native C ABI. No PyO3 compile step needed — loads the shared library at runtime.
 
 ```python
 from arcflow import ArcFlow
