@@ -1,6 +1,6 @@
 ---
 title: "Spatial Knowledge Graph"
-description: "Exact spatial queries backed by a dynamic R*-tree — KNN, radius, bbox, raycast, and graph traversal in one GQL statement"
+description: "Exact spatial queries backed by a dynamic R*-tree — KNN, radius, bbox, frustum, live geofencing, and graph traversal in one GQL statement"
 section: "spatial-knowledge"
 order: 1
 since: "4.0.0"
@@ -11,7 +11,7 @@ status: "stable"
 
 **Exact spatial queries backed by a dynamic R\*-tree — no approximation, no separate spatial index service, no join between two systems.**
 
-ArcFlow treats spatial coordinates as a first-class query dimension alongside graph relationships. K-nearest, radius, and bounding-box queries run against the R\*-tree index directly. Spatial filter and graph traversal compose in a single GQL statement — "find the 5 nearest warehouses that have inventory for SKU X" is one query, not two.
+ArcFlow treats spatial coordinates as a first-class query dimension alongside graph relationships. K-nearest, radius, bounding-box, and frustum queries run against the R\*-tree directly. Spatial predicates and graph traversal compose in a single GQL statement — "find the 5 nearest warehouses that have inventory for SKU X" is one query, not two. Position updates trigger live geofence queries within 20ms.
 
 ```cypher
 -- Supply chain: spatial filter → graph traversal → property filter — one query
@@ -57,7 +57,7 @@ CREATE (r:Robot {name: 'AGV-7', position: point({x: 12.5, y: 8.3, z: 0.0})})
 CREATE (s:Sensor {name: 'Cam-01', location: point({latitude: 51.5074, longitude: -0.1278})})
 ```
 
-Flat coordinate properties (`x`, `y`, `z`) are also indexed automatically.
+Flat coordinate properties (`x`, `y`, `z`) are also indexed automatically. Point and Point3d values are stored in a SIMD-optimized columnar layout — axes are contiguous in memory, enabling AVX2 to evaluate 4 distance comparisons per instruction. This eliminates the ~6.9× cache-miss penalty of pointer-chasing through heap-allocated node structs.
 
 ### K-Nearest Neighbor
 
@@ -78,7 +78,7 @@ WHERE distance(p.position, point({x: 10.0, y: 10.0})) < 20.0
 RETURN p.name, p.position
 ```
 
-The query compiler detects `distance()` predicates and pushes them into the R\*-tree rather than scanning all nodes.
+The query compiler detects `distance()` predicates and pushes them into the R\*-tree (SpatialIndexScan plan node) rather than scanning all nodes. A coarse grid pre-filter reduces R\*-tree candidate sets by ~95% on typical datasets.
 
 ### Bounding Box
 
@@ -90,10 +90,23 @@ WHERE e.position.x >= 0.0 AND e.position.x <= 50.0
 RETURN e.name
 ```
 
-### Raycast
+### Frustum / Visibility Queries
+
+Objects within a camera or sensor frustum use 6-plane containment:
 
 ```cypher
--- What lies along a camera's line of sight?
+-- Entities visible from a camera frustum
+CALL algo.objectsInFrustum($frustum)
+  YIELD node, distance
+  RETURN node.name, distance
+ORDER BY distance
+
+-- Nearest object visible to any of N cameras
+CALL algo.nearestVisible($position, 'Camera', 10)
+  YIELD node, distance
+  RETURN node.name, distance
+
+-- Line-of-sight raycast
 CALL spatial.raycast(
   point({x: 0, y: 0, z: 2}),   -- origin
   point({x: 1, y: 0, z: 0}),   -- direction
@@ -102,11 +115,13 @@ CALL spatial.raycast(
 RETURN hit.name, distance
 ```
 
+Performance: `objectsInFrustum` over 50 entities, 10 frusta: < 2ms.
+
 ---
 
 ## Spatial + Graph in One Query
 
-The R\*-tree and the graph share unified in-process memory. No serialization. No network hop between a spatial service and a graph database.
+The R\*-tree and the graph share unified in-process memory. No serialization. No network hop between a spatial service and a graph database. Fused spatial+graph query plans execute as a DAG — the spatial prefilter and CSR traversal run concurrently, and the result merge fires as soon as both branches complete. No intermediate materialization.
 
 ### Supply Chain
 ```cypher
@@ -155,6 +170,54 @@ RETURN contact.name, length(path) AS degrees, distance
 
 ---
 
+## Live Geofencing
+
+Spatial standing queries fire within 20ms of a position update. The engine uses BFS propagation seeded only from nodes whose spatial properties changed — it does not recompute all standing queries on every mutation.
+
+```cypher
+-- Named geofence: tracks all players entering zone alpha
+CREATE LIVE VIEW zone_alpha_occupants AS
+  MATCH (p:Player)
+  WHERE p.position.x >= 30 AND p.position.x <= 70
+    AND p.position.y >= 30 AND p.position.y <= 70
+  RETURN p.name, p.position
+
+-- Read current occupants
+MATCH (row) FROM VIEW zone_alpha_occupants RETURN row.name
+
+-- Anonymous live geofence: radius-based
+LIVE MATCH (p:Player)
+WHERE distance(p.position, point({x: 50, y: 50})) < 25.0
+RETURN p.name, p.position
+```
+
+In TypeScript, subscribe to geofence enter/exit events via the reactive API:
+
+```typescript
+const lq = db.subscribe(
+  "MATCH (p:Player) WHERE distance(p.position, $center) < $radius RETURN p.name, p.position",
+  (event) => {
+    for (const row of event.added)   console.log('entered:', row.name)
+    for (const row of event.removed) console.log('left:',    row.name)
+  },
+  { pollIntervalMs: 20 }
+)
+// Stop when done
+lq.cancel()
+```
+
+`event.added` contains entities that entered the zone since the last tick. `event.removed` contains entities that left. GeofenceEnter and GeofenceExit transitions are edge-triggered — a query that stays inside the zone does not fire on every tick, only on the boundary crossing.
+
+Three trigger priorities control batching latency:
+
+| Priority | Latency | Use case |
+|---|---|---|
+| `Immediate` | 1-tick (< 20ms) | Offside detection, goal-line technology |
+| `Fast` | 2–3 ticks | Zone entry/exit alerts |
+| `Background` | 10+ ticks | Heatmaps, session analytics |
+
+---
+
 ## Coordinate Frame Validation
 
 ArcFlow validates coordinate system metadata at ingest. Mixing coordinate frames — WGS84 positions in a Z-up cartesian graph — raises a hard error rather than silently producing wrong results.
@@ -172,16 +235,81 @@ CALL db.spatialMetadata()
 | `handedness` | `"right"` | `"right"` or `"left"` |
 | `calibration_version` | `0` | Increment on venue re-calibration to invalidate stale queries |
 
+Errors raised on mismatch:
+- `CrsMismatch` — inserting WGS84 point into a Cartesian graph
+- `UpAxisMismatch` — Y-up data into a Z-up store
+- `UnitScaleMismatch` — centimeter data into a meter-unit store
+- `StaleCalibration` — data carries an older calibration version than the store
+
+---
+
+## USD World Model
+
+ArcFlow ingests USD stage geometry in bulk and makes it immediately queryable via GQL. 500K prims load in under 1 second using Sort-Tile-Recursive spatial packing.
+
+```typescript
+import { open } from 'arcflow'
+
+const db = open('./scene')
+
+// Ingest USD prim hierarchy — creates graph nodes with spatial index
+db.ingestUsdPrims(primRecords)
+
+// Query the ingested geometry via GQL
+const nearby = db.query(
+  "MATCH (p:Mesh) WHERE distance(p.position, $cam) < 500 RETURN p.name, p.position",
+  { cam: JSON.stringify([120.0, 45.0, 30.0]) }
+)
+```
+
+Coordinate frame (metersPerUnit, upAxis, CRS) is validated against the store's `SpatialMetadata` before the first insert. A mismatch on any field raises a hard error — no partial ingestion.
+
+**Instanced geometry** (chairs, seats, sensors in stadium models) shares a single spatial index in memory. 10,000 instances of the same prim geometry consume one index allocation, not 10,000. Queries into instanced geometry transform the query coordinates into prim-local space rather than rebuilding or copying the shared index.
+
+---
+
+## Multi-GPU Dispatch
+
+Spatial queries are automatically routed to the appropriate execution lane based on a cost model that accounts for query shape, candidate count, and GPU transfer overhead:
+
+| Lane | When | Candidates |
+|---|---|---|
+| `CpuLive` | Live queries, time-critical | ≤ 500 |
+| `CpuBatch` | Analytics, replay, background | > 500 (CPU faster than GPU transfer) |
+| `GpuLocal` | High-density spatial | > 50K, fits single GPU |
+| `GpuMulti` | Large-scale spatial | Doesn't fit one GPU |
+
+For multi-GPU setups, nodes are partitioned across GPUs by a stable hash of `node_id`. Queries spanning GPU boundaries fan out to all relevant GPUs and merge results. GPUs connected via NVLink or Infinity Fabric form peer islands that share work without PCIe transfer cost.
+
+The GPU-uploadable spatial index (`FlatSpatialIndex`) uses flat arrays of pointer-free BVH nodes — `#[repr(C)]` structs uploaded directly to GPU VRAM without transformation. Pointer-based tree structures cannot cross the CPU→GPU boundary.
+
 ---
 
 ## Observability
 
 ```cypher
 CALL arcflow.spatial.dispatch_stats()
-  YIELD query_id, index_path, candidates_filtered, result_count, latency_us
+  YIELD lane_chosen, estimated_candidates, actual_candidates,
+        prefilter_us, rtree_us, gpu_transfer_us, kernel_us, total_us
 ```
 
-`index_path` is one of: `rtree`, `coarse_grid`, or `scan`. The coarse grid provides an O(1) pre-filter that reduces R\*-tree candidate sets by ~95% on typical datasets.
+| Field | Description |
+|---|---|
+| `lane_chosen` | Execution lane: `CpuLive`, `CpuBatch`, `GpuLocal`, `GpuMulti` |
+| `estimated_candidates` | Candidates estimated by coarse grid prefilter |
+| `actual_candidates` | Candidates after R\*-tree filtering |
+| `prefilter_us` | Coarse grid filter time (μs) |
+| `rtree_us` | R\*-tree traversal time (μs) |
+| `gpu_transfer_us` | Host→device transfer time (μs; 0 for CPU lanes) |
+| `kernel_us` | GPU kernel execution time (μs; 0 for CPU lanes) |
+| `total_us` | End-to-end query latency (μs) |
+
+For reactive spatial trigger metrics:
+
+```cypher
+CALL arcflow.spatial.trigger_stats()
+  YIELD query_name, node_id, predicate_type, evaluation_us, fired
+```
 
 ---
 
@@ -236,10 +364,15 @@ RETURN a.name, b.name, distance(a.position, b.position)
 
 ## Performance Reference
 
-| Operation | Entities | Throughput |
+| Operation | Entities | Result |
 |---|---|---|
 | K-nearest (k=10) | 11K | ≥ 2,000/s |
 | Radius search | 11K | ≥ 2,000/s |
+| Frustum query (10 frusta) | 50 | < 2ms |
+| Line crossing check | 50 tracks | < 0.5ms |
+| Zone occupancy (50fps, 500 entities) | 500 | < 50ms per 10s window |
+| Live geofence trigger latency | — | < 20ms |
+| USD bulk ingest | 500K prims | < 1 second |
 | Spatial join (5-NN + 2-hop graph) | 11K | ≥ 500/s |
 
 ---

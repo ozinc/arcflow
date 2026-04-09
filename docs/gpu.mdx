@@ -191,6 +191,59 @@ All routing is automatic. The developer writes one query; the engine picks the f
 
 ---
 
+## GPU Spatial Queries
+
+Spatial queries follow a separate dispatch path from graph algorithms. The cost model accounts for query shape, candidate count, and GPU transfer overhead to choose the right lane automatically:
+
+| Lane | When | Typical use |
+|---|---|---|
+| `CpuLive` | ≤ 500 candidates | LIVE queries, real-time tracking |
+| `CpuBatch` | > 500 candidates (CPU faster than transfer) | Analytics, replay |
+| `GpuLocal` | > 50K candidates, fits single GPU | High-density spatial |
+| `GpuMulti` | Exceeds single GPU memory | Stadium-scale entity tracking |
+
+The routing decision is cost-based — kernel launch overhead and PCIe bandwidth are measured per device and factored into the estimate. There are no hardcoded size thresholds.
+
+### GPU-Uploadable Spatial Index
+
+The R\*-tree index that runs on CPU cannot cross the CPU→GPU memory boundary — pointer-based trees contain virtual addresses that are meaningless to GPU threads. ArcFlow maintains a parallel flat BVH representation for GPU upload:
+
+```
+FlatSpatialIndex:
+  nodes[]   — flat array of BVH nodes (#[repr(C)], child references are array indices)
+  entries[] — leaf data (SpatialEntry)
+
+GPU upload: wgpu::Buffer::new(device, bytemuck::cast_slice(&flat_index.nodes))
+Buffer sizes: nodes_byte_size() + entries_byte_size() — deterministic, no runtime sizing
+```
+
+No pointer fixup required on upload. The same `FlatSpatialIndex` is uploaded to GPU and traversed by a compute shader without transformation.
+
+### Multi-GPU Spatial Partitioning
+
+Spatial data is partitioned across GPU devices by a stable hash of `node_id`. Queries that span partition boundaries fan out to all relevant GPUs and merge results. GPUs connected via NVLink, NVSwitch, or Infinity Fabric form peer islands — within an island, work-stealing happens without PCIe transfer cost.
+
+```cypher
+-- Same spatial query — routes to GpuMulti automatically when warranted
+CALL algo.nearestNodes($center, 'Entity', 100) YIELD node, distance RETURN node.name
+```
+
+### Instanced Geometry Sharing
+
+For USD stages with thousands of identical geometry instances (seats, sensors, obstacles), the GPU spatial index is shared. 10,000 instances of the same prim geometry use one GPU buffer allocation. Queries into an instanced prim transform the query coordinates into prim-local space — no copy, no rebuild.
+
+### Observability
+
+```cypher
+CALL arcflow.spatial.dispatch_stats()
+  YIELD lane_chosen, estimated_candidates, actual_candidates,
+        prefilter_us, rtree_us, gpu_transfer_us, kernel_us, total_us
+```
+
+`gpu_transfer_us` and `kernel_us` are non-zero only when a GPU lane was chosen. Use these to validate that the cost model is routing as expected.
+
+---
+
 ## Vision
 
 ArcFlow provides a complete GraphBLAS runtime where the entire algorithm suite runs on sparse linear algebra primitives. Every graph operation — from simple traversal to complex analytics — expressed as matrix operations, automatically dispatched to the best available hardware.

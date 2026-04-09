@@ -1,6 +1,6 @@
 ---
 title: "WorldCypher: Spatial Queries"
-description: "Exact spatial predicates and KNN backed by a dynamic R*-tree — no approximate indexing"
+description: "Exact spatial predicates, KNN, frustum, live geofencing — backed by a dynamic R*-tree, no approximate indexing"
 section: "worldcypher"
 status: "stable"
 ---
@@ -22,7 +22,7 @@ CREATE (r:Robot {name: 'AGV-7', position: point({x: 12.5, y: 8.3, z: 0.0})})
 CREATE (s:Sensor {name: 'Cam-01', location: point({latitude: 51.5074, longitude: -0.1278})})
 ```
 
-Flat coordinate properties (`x`, `y`, `z`) are also indexed automatically.
+Flat coordinate properties (`x`, `y`, `z`) are also indexed automatically. Point and Point3d values use SIMD-optimized columnar storage — each axis is a contiguous array, enabling AVX2 to evaluate 4 distance comparisons per instruction.
 
 ## K-Nearest Neighbor
 
@@ -42,7 +42,7 @@ WHERE distance(r.position, point({x: 10.0, y: 10.0})) < 20.0
 RETURN r.name, r.position
 ```
 
-The query compiler detects `distance()` predicates and pushes them into the R\*-tree index.
+The query compiler detects `distance()` predicates and pushes them into the R\*-tree index (SpatialIndexScan plan node). A coarse grid prefilter reduces candidate sets by ~95% before R\*-tree evaluation.
 
 ## Bounding Box
 
@@ -53,9 +53,20 @@ WHERE e.position.x >= 0.0 AND e.position.x <= 50.0
 RETURN e.name, e.position
 ```
 
-## Raycast
+## Frustum / Visibility Queries
 
 ```cypher
+-- Entities within a camera frustum (6-plane containment, < 2ms for 50 entities / 10 frusta)
+CALL algo.objectsInFrustum($frustum)
+  YIELD node, distance
+  RETURN node.name, distance
+
+-- Nearest entity visible to any of N cameras
+CALL algo.nearestVisible($position, 'Camera', 10)
+  YIELD node, distance
+  RETURN node.name, distance
+
+-- Line-of-sight raycast
 CALL spatial.raycast(
   point({x: 0, y: 0, z: 2}),   -- origin
   point({x: 1, y: 0, z: 0}),   -- direction vector
@@ -66,7 +77,7 @@ RETURN hit.name, distance
 
 ## Spatial Join
 
-Spatial filter and graph traversal compose in a single query:
+Spatial filter and graph traversal compose in a single query. The engine executes them as a fused DAG — spatial prefilter and CSR graph traversal run concurrently, merge fires when both branches complete:
 
 ```cypher
 -- 5 nearest warehouses → traverse SUPPLIES edges → check inventory
@@ -77,6 +88,29 @@ WHERE item.stock > 0
 RETURN wh.name, distance, item.stock
 ORDER BY distance
 ```
+
+## Live Geofencing
+
+Spatial standing queries fire within 20ms of a position update. Only nodes whose spatial properties changed are re-evaluated — the engine does not recompute all standing queries on every mutation.
+
+```cypher
+-- Named geofence: tracks zone entry/exit by name
+CREATE LIVE VIEW zone_alpha AS
+  MATCH (p:Player)
+  WHERE p.position.x >= 30 AND p.position.x <= 70
+    AND p.position.y >= 30 AND p.position.y <= 70
+  RETURN p.name, p.position
+
+-- Read current occupants
+MATCH (row) FROM VIEW zone_alpha RETURN row.name
+
+-- Anonymous radius geofence
+LIVE MATCH (p:Player)
+WHERE distance(p.position, point({x: 50, y: 50})) < 25.0
+RETURN p.name, p.position
+```
+
+GeofenceEnter and GeofenceExit are edge-triggered — a query that stays inside the zone does not fire on every tick, only on the boundary crossing. In the TypeScript SDK, `event.added` contains new entrants and `event.removed` contains exits.
 
 ## Coordinate Frame Validation
 
@@ -99,15 +133,33 @@ CALL db.spatialMetadata()
 
 ```cypher
 CALL arcflow.spatial.dispatch_stats()
-  YIELD query_id, index_path, candidates_filtered, result_count, latency_us
+  YIELD lane_chosen, estimated_candidates, actual_candidates,
+        prefilter_us, rtree_us, gpu_transfer_us, kernel_us, total_us
 ```
 
-`index_path`: `rtree`, `coarse_grid`, or `scan`. The coarse grid pre-filter reduces R\*-tree candidate sets by ~95% on typical datasets.
+| Field | Description |
+|---|---|
+| `lane_chosen` | `CpuLive`, `CpuBatch`, `GpuLocal`, or `GpuMulti` |
+| `estimated_candidates` | Candidates estimated by coarse grid prefilter |
+| `actual_candidates` | Candidates after R\*-tree filtering |
+| `prefilter_us` | Coarse grid filter time (μs) |
+| `rtree_us` | R\*-tree traversal time (μs) |
+| `gpu_transfer_us` | Host→device transfer time (μs; 0 for CPU lanes) |
+| `kernel_us` | GPU kernel execution (μs; 0 for CPU lanes) |
+| `total_us` | End-to-end query latency (μs) |
+
+For reactive geofence trigger metrics:
+
+```cypher
+CALL arcflow.spatial.trigger_stats()
+  YIELD query_name, node_id, predicate_type, evaluation_us, fired
+```
 
 ## Index Behavior
 
 - **Insert:** node with spatial property → R\*-tree entry added in O(log N)
 - **Update:** position changes → old entry removed, new entry inserted
 - **Delete:** node deleted → entry retracted
+- **Bulk ingest:** Sort-Tile-Recursive packing via `ingestUsdPrims()` — 500K prims in under 1 second, 5–10× faster than incremental insert
 
 The index is dynamic. No rebuild required on updates.

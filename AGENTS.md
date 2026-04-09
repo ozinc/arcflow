@@ -227,7 +227,7 @@ CALL db.demo         -- load sample graph
 CALL algo.nearestNodes(point({x: 10.0, y: 10.0}), 'Player', 5)
   YIELD node, distance RETURN node.name, distance
 
--- Radius search (compiler pushes distance() into the R*-tree)
+-- Radius search (compiler pushes distance() into R*-tree via SpatialIndexScan)
 MATCH (r:Robot) WHERE distance(r.position, point({x: 0, y: 0})) < 50.0 RETURN r.name
 
 -- Bounding box
@@ -236,14 +236,43 @@ WHERE e.position.x >= 0 AND e.position.x <= 100
   AND e.position.y >= 0 AND e.position.y <= 50
 RETURN e.name
 
--- Coordinate frame metadata
-CALL db.spatialMetadata() YIELD crs, meters_per_unit, up_axis, handedness
+-- Frustum / visibility (6-plane containment, < 2ms for 50 entities / 10 frusta)
+CALL algo.objectsInFrustum($frustum) YIELD node, distance RETURN node.name, distance
 
--- Dispatch observability
-CALL arcflow.spatial.dispatch_stats() YIELD query_id, index_path, latency_us
+-- Raycast (line-of-sight)
+CALL spatial.raycast(point({x: 0, y: 0, z: 2}), point({x: 1, y: 0, z: 0}), 100.0)
+  YIELD hit, distance RETURN hit.name, distance
+
+-- Live geofencing (fires within 20ms of position update — edge-triggered, not level-triggered)
+CREATE LIVE VIEW zone_alpha AS
+  MATCH (p:Player)
+  WHERE p.position.x >= 30 AND p.position.x <= 70
+    AND p.position.y >= 30 AND p.position.y <= 70
+  RETURN p.name, p.position
+
+LIVE MATCH (p:Player)
+WHERE distance(p.position, point({x: 50, y: 50})) < 25.0
+RETURN p.name, p.position
+
+-- Spatial + graph fused (DAG: spatial prefilter and CSR traversal run concurrently)
+CALL algo.nearestNodes(order.location, 'Warehouse', 5) YIELD node AS wh, distance
+MATCH (wh)-[:SUPPLIES]->(item:Item {sku: $sku}) WHERE item.stock > 0
+RETURN wh.name, distance, item.stock ORDER BY distance
+
+-- Coordinate frame metadata
+CALL db.spatialMetadata() YIELD crs, meters_per_unit, up_axis, handedness, calibration_version
+
+-- Dispatch observability (lane_chosen: CpuLive | CpuBatch | GpuLocal | GpuMulti)
+CALL arcflow.spatial.dispatch_stats()
+  YIELD lane_chosen, estimated_candidates, actual_candidates,
+        prefilter_us, rtree_us, gpu_transfer_us, kernel_us, total_us
+
+-- Reactive trigger metrics
+CALL arcflow.spatial.trigger_stats()
+  YIELD query_name, node_id, predicate_type, evaluation_us, fired
 ```
 
-Index is dynamic — inserts/updates/deletes are O(log N), no rebuild. Coarse grid pre-filter reduces candidate set ~95% before R*-tree evaluation.
+Index is dynamic — inserts/updates/deletes are O(log N), no rebuild. Coarse grid pre-filter reduces candidate set ~95% before R*-tree evaluation. Bulk ingest (USD prims) uses Sort-Tile-Recursive packing — 500K prims in under 1 second.
 
 ### Reactive
 ```cypher
