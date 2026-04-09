@@ -1,6 +1,6 @@
 ---
 title: "Spatial Knowledge Graph"
-description: "Exact spatial queries backed by a dynamic R*-tree — KNN, radius, bbox, raycast, frustum, and graph traversal in one GQL statement"
+description: "Exact spatial queries backed by a dynamic R*-tree — KNN, radius, bbox, raycast, and graph traversal in one GQL statement"
 section: "spatial-knowledge"
 order: 1
 since: "4.0.0"
@@ -25,20 +25,20 @@ ORDER BY distance
 
 ---
 
-## Why R*-tree, Not HNSW or Random-Walk
+## Why R*-tree
 
 Most graph databases use the wrong spatial index:
 
-| System | Index | Type | Exact? |
-|---|---|---|---|
-| Memgraph | USearch (HNSW) | Approximate ANN | No — tuned for embedding similarity |
-| Neo4j GDS | Random-walk sampling | Approximate | No — controlled by `sampleRate`, `maxIterations` |
-| PostGIS | GIST R-tree | Exact | Yes |
-| **ArcFlow** | **R\*-tree** | **Exact** | **Yes** |
+| System | Index | Exact? |
+|---|---|---|
+| Memgraph | USearch (HNSW) | No — approximate, tuned for embedding similarity |
+| Neo4j GDS | Random-walk sampling | No — misses answers, controlled by `sampleRate` |
+| PostGIS | GIST R-tree | Yes |
+| **ArcFlow** | **R\*-tree** | **Yes** |
 
-HNSW is optimised for high-dimensional semantic vectors — it finds "approximately similar" embeddings. For exact containment, bounding-box overlap, and dynamic 2D/3D boundaries it adds false positives and has no structural advantage. Random-walk sampling is explicitly approximate: it will miss answers.
+HNSW finds "approximately similar" embeddings. For exact containment, bounding-box overlap, and dynamic 2D/3D boundaries it adds false positives and has no structural advantage. Random-walk sampling is explicitly approximate.
 
-The **R\*-tree** is the correct structure for exact 2D/3D geometric queries. Its key advantage over a basic R-tree: **forced reinsertion on node overflow**. Instead of immediately splitting a full node (which creates poor bounding boxes), R\*-tree removes ~30% of entries and reinserts them. This stochastic restructuring minimises both bounding-box overlap and dead space in MBRs — 2–5× faster queries than R-tree on clustered data.
+The R\*-tree uses **forced reinsertion on node overflow** — instead of immediately splitting a full node, it removes ~30% of entries and reinserts them. This stochastic restructuring minimises bounding-box overlap and dead space, giving 2–5× faster queries than a basic R-tree on clustered data.
 
 ---
 
@@ -67,7 +67,7 @@ CALL algo.nearestNodes(point({x: 10.0, y: 10.0}), 'Sensor', 5)
   RETURN node.name, distance
 ```
 
-At 11K live entities: ≥ 2,000 queries/sec on CPU (R\*-tree path). The index is dynamic — inserts, updates, and deletes are O(log N) with no rebuild.
+Throughput: ≥ 2,000 queries/sec at 11K live entities. The index is dynamic — inserts, updates, and deletes are O(log N) with no rebuild.
 
 ### Radius Search
 
@@ -106,11 +106,11 @@ RETURN hit.name, distance
 
 ## Spatial + Graph in One Query
 
-The reason spatial and graph coexist in one query is that the engine is in-process — the R\*-tree and the graph share unified memory. No serialization. No network hop between a spatial service and a graph database.
+The R\*-tree and the graph share unified in-process memory. No serialization. No network hop between a spatial service and a graph database.
 
 ### Supply Chain
 ```cypher
--- Nearest warehouses with inventory → compute delivery via road graph
+-- Nearest warehouses with inventory → shortest delivery route
 CALL algo.nearestNodes(order.location, 'Warehouse', 5)
   YIELD node AS wh, distance AS crow_flies
 MATCH (wh)-[:SUPPLIES]->(item:Item {sku: $sku})
@@ -134,7 +134,7 @@ RETURN v.plate, d.name, distance
 
 ### Live Production (50fps)
 ```cypher
--- Who's offside? Spatial filter → graph → rule check
+-- Offside detection: spatial filter → graph → rule check
 CALL algo.nearestNodes(ball.position, 'Player', 22)
   YIELD node AS player, distance
 MATCH (player)-[:PLAYS_FOR]->(team:Team {side: 'attacking'})
@@ -142,11 +142,22 @@ WHERE player.position.x > last_defender.position.x
 RETURN player.name, player.position
 ```
 
+### Epidemiology
+```cypher
+-- People within 10m of patient zero → contact graph → 48h temporal filter
+CALL algo.nearestNodes(patient_zero.location, 'Person', 1000)
+  YIELD node AS contact, distance
+WHERE distance < 10.0
+MATCH path = (patient_zero)-[:CONTACT*1..3]->(contact)
+WHERE ALL(r IN relationships(path) WHERE r.timestamp > timestamp() - 172800000)
+RETURN contact.name, length(path) AS degrees, distance
+```
+
 ---
 
 ## Coordinate Frame Validation
 
-ArcFlow validates coordinate system metadata at ingest. Mixing coordinate frames — WGS84 positions in a Z-up cartesian graph — raises a **hard error** rather than silently producing wrong results. This is the "silent killer" class of spatial bug.
+ArcFlow validates coordinate system metadata at ingest. Mixing coordinate frames — WGS84 positions in a Z-up cartesian graph — raises a hard error rather than silently producing wrong results.
 
 ```cypher
 CALL db.spatialMetadata()
@@ -157,25 +168,20 @@ CALL db.spatialMetadata()
 |---|---|---|
 | `crs` | `"cartesian"` | Coordinate reference system (`"cartesian"`, `"WGS84"`) |
 | `meters_per_unit` | `1.0` | Scale — 1.0 for meters, 0.01 for centimeters |
-| `up_axis` | `"Z"` | Z-up (venue/robotics world default) or Y-up (DCC/game engines) |
+| `up_axis` | `"Z"` | Z-up (venue/robotics default) or Y-up (DCC/game engines) |
 | `handedness` | `"right"` | `"right"` or `"left"` |
 | `calibration_version` | `0` | Increment on venue re-calibration to invalidate stale queries |
-
-The default Z-up matches OZ venue world convention (football pitch, arena, warehouse floor plan).
 
 ---
 
 ## Observability
 
 ```cypher
--- Which index path was taken for recent spatial queries?
 CALL arcflow.spatial.dispatch_stats()
   YIELD query_id, index_path, candidates_filtered, result_count, latency_us
 ```
 
-`index_path` will be one of: `rtree` (R\*-tree), `coarse_grid` (pre-filter only), or `scan` (fallback for small datasets below the dispatch threshold).
-
-The coarse grid provides an O(1) pre-filter that reduces R\*-tree candidate sets by ~95% on typical datasets (e.g. 8m cells over a 100m × 70m pitch with 50 entities → 156 cells, ~5 entities/cell).
+`index_path` is one of: `rtree`, `coarse_grid`, or `scan`. The coarse grid provides an O(1) pre-filter that reduces R\*-tree candidate sets by ~95% on typical datasets.
 
 ---
 
@@ -184,12 +190,10 @@ The coarse grid provides an O(1) pre-filter that reduces R\*-tree candidate sets
 Different sensors report at different rates. ArcFlow's temporal clock system handles this natively:
 
 ```cypher
--- Register sensor clocks
 CALL db.clock('camera_01', 'sensor', 33)   -- 30fps
 CALL db.clock('lidar_01', 'sensor', 100)   -- 10Hz
 CALL db.clock('gps_01', 'sensor', 1000)    -- 1Hz
 
--- Query fused state across clock domains
 MATCH (r:Robot) RETURN r.position, r.orientation, r._clock_domain
 ```
 
@@ -208,7 +212,7 @@ CREATE (z:Zone {name: 'Pitch'})
 MATCH (p:Player {jersey: 7})
 SET p.position = point({x: 34.2, y: 67.1, z: 0.0})
 
--- Spatial query: who's near the ball?
+-- Who's near the ball?
 CALL algo.nearestNodes(ball.position, 'Player', 5)
   YIELD node, distance
 RETURN node.name, distance
@@ -218,7 +222,6 @@ RETURN node.name, distance
 
 ```cypher
 -- Assign nearest idle robot to a pick location
-MATCH (r:Robot) WHERE r.status = 'idle'
 CALL algo.nearestNodes($pick_location, 'Robot', 1)
   YIELD node AS nearest
 SET nearest.task = 'pick', nearest.target = $pick_location
@@ -229,64 +232,25 @@ WHERE a <> b AND distance(a.position, b.position) < 2.0
 RETURN a.name, b.name, distance(a.position, b.position)
 ```
 
-### Epidemiology
-
-```cypher
--- People within 10m of patient zero → BFS contacts → temporal filter
-CALL algo.nearestNodes(patient_zero.location, 'Person', 1000)
-  YIELD node AS contact, distance
-WHERE distance < 10.0
-MATCH path = (patient_zero)-[:CONTACT*1..3]->(contact)
-WHERE ALL(r IN relationships(path) WHERE r.timestamp > timestamp() - 172800000)
-RETURN contact.name, length(path) AS degrees, distance
-```
-
 ---
 
 ## Performance Reference
 
-| Operation | Entities | Throughput | Index path |
-|---|---|---|---|
-| K-nearest (k=10) | 11K | ≥ 2,000/s | R\*-tree |
-| Radius search | 11K | ≥ 2,000/s | R\*-tree + coarse grid |
-| Spatial join (5-NN + 2-hop) | 11K | ≥ 500/s | R\*-tree → CSR |
-| Spatial join at 7.9M/s | 1M (Phase 4) | GPU FlatBVH | — |
-
-Phase 4 adds GPU acceleration (FlatBVH `wgpu` compute shader) with automatic dispatch above the GPU cost threshold.
-
----
-
-## Roadmap
-
-| Feature | Phase | Status |
+| Operation | Entities | Throughput |
 |---|---|---|
-| Dynamic R\*-tree KNN / radius / bbox | Phase 1 | ✅ Shipped |
-| Coordinate frame validation | Phase 1 | ✅ Shipped |
-| SpatialQueryStats / dispatch observability | Phase 1 | ✅ Shipped |
-| SpatialColumn (SIMD columnar coordinates) | Phase 2 | 🔲 Next |
-| Frustum / visibility queries | Phase 2 | 🔲 Next |
-| `CALL arcflow.spatial.dispatch_stats()` | Phase 2 | 🔲 Next |
-| Reactive spatial predicates (LIVE geofence) | Phase 3 | 🔲 Planned |
-| Fused spatial+graph DAG scheduler | Phase 3 | 🔲 Planned |
-| Predictive sidecar (velocity-based) | Phase 3 | 🔲 Planned |
-| GPU FlatBVH (`wgpu` compute shader) | Phase 4 | 🔲 Planned |
-| cuSpatial analytics FFI | Phase 4 | 🔲 Planned |
-| Multi-GPU spatial partitioning | Phase 4 | 🔲 Planned |
-| USD world model ingest | Phase 5 | 🔲 Planned |
-| Arrow/GeoArrow zero-copy export | Phase 5 | 🔲 Planned |
+| K-nearest (k=10) | 11K | ≥ 2,000/s |
+| Radius search | 11K | ≥ 2,000/s |
+| Spatial join (5-NN + 2-hop graph) | 11K | ≥ 500/s |
 
 ---
 
 ## Compared to Other Approaches
 
 ### PostGIS / Relational Spatial Extensions
-PostGIS has richer geometry types (LineString, Polygon, MultiPolygon) and mature GIS tooling. ArcFlow's advantage: spatial predicates compose directly with graph traversal — no join between a PostGIS table and a graph database. If you need complex polygon operations without graph structure, PostGIS is the better tool. If you need "find entities near X, then traverse their relationships," ArcFlow avoids the two-system join.
+PostGIS has richer geometry types (LineString, Polygon, MultiPolygon) and mature GIS tooling. ArcFlow's advantage: spatial predicates compose directly with graph traversal — no join between a spatial table and a graph database. If you need complex polygon operations without graph structure, PostGIS is the better choice. If you need "find entities near X, then traverse their relationships," ArcFlow eliminates the two-system join.
 
 ### Memgraph / Neo4j Spatial
-Memgraph uses HNSW (approximate ANN — tuned for embeddings, not exact geometry). Neo4j GDS uses random-walk sampling (approximate, misses answers). ArcFlow uses R\*-tree (exact). For containment queries, bounding-box overlap, and correctness-critical applications (offside detection, collision avoidance, delivery routing), approximation is not acceptable.
-
-### cuSpatial / GPU-native Spatial
-cuSpatial uses a quadtree, which has higher false-positive rates for complex overlapping geometries than R\*-tree and cannot be uploaded to GPU memory as a flat array. ArcFlow uses cuSpatial in Phase 4 for analytics-class workloads (trajectory analytics, point-in-polygon at millions of entities) while keeping the R\*-tree as the primary query index. The GPU index (Phase 4) is a custom FlatBVH — contiguous array, GPU-uploadable, wgpu compute shader.
+Memgraph uses HNSW (approximate — tuned for embeddings, not exact geometry). Neo4j GDS uses random-walk sampling (approximate, misses answers). For containment queries, bounding-box overlap, and correctness-critical applications — offside detection, collision avoidance, delivery routing — approximation is not acceptable.
 
 ### ROS2 / Nav2
 ArcFlow complements Nav2: Nav2 handles real-time path planning with hard latency guarantees; ArcFlow provides the persistent spatial knowledge layer — mission planning, post-incident replay, spatial-temporal reasoning. The multi-clock domain system maps directly to ROS2's multi-rate sensor model.

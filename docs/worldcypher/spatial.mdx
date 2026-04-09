@@ -7,55 +7,46 @@ status: "stable"
 
 # WorldCypher: Spatial Queries
 
-ArcFlow extends GQL with exact spatial predicates and functions backed by a **dynamic R\*-tree index**. Queries run against the R*-tree directly — no O(N) scan, no approximation.
+ArcFlow extends GQL with exact spatial predicates backed by a **dynamic R\*-tree index**. Spatial queries run against the index directly — no full-node scan, no approximation.
 
 ## Storing Spatial Properties
 
-Store 2D or 3D coordinates as typed `point` values:
-
 ```cypher
--- 2D cartesian (local coordinate system, e.g. pitch, factory floor)
+-- 2D cartesian
 CREATE (p:Player {name: 'Alice', position: point({x: 34.2, y: 67.1})})
 
 -- 3D cartesian
 CREATE (r:Robot {name: 'AGV-7', position: point({x: 12.5, y: 8.3, z: 0.0})})
 
--- Geographic coordinates (WGS84)
+-- Geographic (WGS84)
 CREATE (s:Sensor {name: 'Cam-01', location: point({latitude: 51.5074, longitude: -0.1278})})
 ```
 
-Flat coordinate properties also work and are automatically indexed:
+Flat coordinate properties (`x`, `y`, `z`) are also indexed automatically.
 
-```typescript
-db.mutate("CREATE (p:Player {name: 'Alice', x: 34.2, y: 67.1})")
-```
-
-## K-Nearest Neighbor Search
+## K-Nearest Neighbor
 
 ```cypher
--- 5 nearest players to a point
 CALL algo.nearestNodes(point({x: 10.0, y: 10.0}), 'Player', 5)
   YIELD node, distance
   RETURN node.name, distance
 ```
 
-The R\*-tree answers KNN queries without scanning every node. At 11K live entities, throughput is ≥ 2,000 queries/sec.
+Throughput: ≥ 2,000 queries/sec at 11K live entities. Inserts, updates, and deletes are O(log N) — no index rebuild required.
 
 ## Radius Queries
 
 ```cypher
--- All robots within 20 meters of a location
 MATCH (r:Robot)
 WHERE distance(r.position, point({x: 10.0, y: 10.0})) < 20.0
 RETURN r.name, r.position
 ```
 
-The query compiler detects `distance()` predicates and pushes them into the R\*-tree index rather than scanning all nodes.
+The query compiler detects `distance()` predicates and pushes them into the R\*-tree index.
 
 ## Bounding Box
 
 ```cypher
--- Entities in a rectangular zone
 MATCH (e:Entity)
 WHERE e.position.x >= 0.0 AND e.position.x <= 50.0
   AND e.position.y >= 0.0 AND e.position.y <= 30.0
@@ -65,7 +56,6 @@ RETURN e.name, e.position
 ## Raycast
 
 ```cypher
--- What lies along a camera's viewing direction?
 CALL spatial.raycast(
   point({x: 0, y: 0, z: 2}),   -- origin
   point({x: 1, y: 0, z: 0}),   -- direction vector
@@ -76,8 +66,10 @@ RETURN hit.name, distance
 
 ## Spatial Join
 
+Spatial filter and graph traversal compose in a single query:
+
 ```cypher
--- Supply chain: 5 nearest warehouses → traverse SUPPLIES edges → check inventory
+-- 5 nearest warehouses → traverse SUPPLIES edges → check inventory
 CALL algo.nearestNodes(order.location, 'Warehouse', 5)
   YIELD node AS wh, distance
 MATCH (wh)-[:SUPPLIES]->(item:Item {sku: $sku})
@@ -86,54 +78,36 @@ RETURN wh.name, distance, item.stock
 ORDER BY distance
 ```
 
-This is a single query — spatial filter then graph traversal — without joining two separate systems.
-
 ## Coordinate Frame Validation
 
-ArcFlow validates coordinate system metadata at ingest. Mixing coordinate frames (e.g. WGS84 positions in a Z-up cartesian graph) raises a hard error rather than silently producing wrong results.
+Mixing coordinate frames raises a hard error rather than silently producing wrong results.
 
 ```cypher
--- Inspect the graph's spatial metadata
 CALL db.spatialMetadata()
-YIELD crs, meters_per_unit, up_axis, handedness, calibration_version
+  YIELD crs, meters_per_unit, up_axis, handedness, calibration_version
 ```
 
-| Field | Description |
-|---|---|
-| `crs` | Coordinate reference system (e.g. `"cartesian"`, `"WGS84"`) |
-| `meters_per_unit` | Scale factor — 1.0 for meters, 0.01 for centimeters |
-| `up_axis` | `"Z"` (default for venue/robotics) or `"Y"` (DCC/game engines) |
-| `handedness` | `"right"` or `"left"` |
-| `calibration_version` | Incremented on venue re-calibration |
+| Field | Default | Description |
+|---|---|---|
+| `crs` | `"cartesian"` | `"cartesian"` or `"WGS84"` |
+| `meters_per_unit` | `1.0` | 1.0 for meters, 0.01 for centimeters |
+| `up_axis` | `"Z"` | Z-up (venue/robotics) or Y-up (DCC/game engines) |
+| `handedness` | `"right"` | `"right"` or `"left"` |
+| `calibration_version` | `0` | Increment on venue re-calibration |
 
 ## Observability
 
 ```cypher
--- Which spatial index path was taken for recent queries?
 CALL arcflow.spatial.dispatch_stats()
   YIELD query_id, index_path, candidates_filtered, result_count, latency_us
 ```
 
-Returns per-query stats: whether the R\*-tree, coarse grid, or scan path was used, and how many candidates were filtered.
+`index_path`: `rtree`, `coarse_grid`, or `scan`. The coarse grid pre-filter reduces R\*-tree candidate sets by ~95% on typical datasets.
 
 ## Index Behavior
 
-The R\*-tree is automatically maintained:
-
-- **Insert:** node created with spatial property → added to R\*-tree in O(log N)
+- **Insert:** node with spatial property → R\*-tree entry added in O(log N)
 - **Update:** position changes → old entry removed, new entry inserted
-- **Delete:** node deleted → entry retracted from index
+- **Delete:** node deleted → entry retracted
 
-The index is dynamic — no rebuild required on updates. The coarse grid provides an O(1) pre-filter that reduces R\*-tree candidate sets by ~95% on typical datasets.
-
-## Coming Soon
-
-| Feature | Phase | What it enables |
-|---|---|---|
-| Frustum / visibility queries | Phase 2 | `objects_in_frustum`, line-of-sight |
-| Reactive spatial predicates | Phase 3 | LIVE geofence triggers within 20ms of position update |
-| Fused spatial+graph plans | Phase 3 | DAG scheduler: spatial filter and CSR traversal run concurrently |
-| Predictive sidecar | Phase 3 | Velocity-based "who enters this zone in next 200ms?" |
-| GPU spatial index (FlatBVH) | Phase 4 | `wgpu` compute shader, 50K+ KNN/s |
-| cuSpatial analytics | Phase 4 | Point-in-polygon and trajectory analytics at GPU scale |
-| USD world model ingest | Phase 5 | 500K-prim USD stage spatially queryable in < 1s |
+The index is dynamic. No rebuild required on updates.
