@@ -19,17 +19,17 @@ Initialize a workspace in your project, and every command in that tree automatic
 
 ```bash
 cd my-project
-wc-cli workspace init
+arcflow workspace init
 # => Initialized workspace at my-project/.arcflow
 
 # Now every query auto-persists. No --data-dir flag needed.
-wc-cli query "CREATE (n:Person {name: 'Alice', age: 30})" --json
-wc-cli query "MATCH (n:Person) RETURN n.name, n.age" --json
+arcflow query "CREATE (n:Person {name: 'Alice', age: 30})" --json
+arcflow query "MATCH (n:Person) RETURN n.name, n.age" --json
 # => {"rows":[{"name":"Alice","age":"30"}],"count":1}
 
 # Works from subdirectories too — ArcFlow walks up to find .arcflow/
 cd src
-wc-cli query "MATCH (n) RETURN count(n)" --json
+arcflow query "MATCH (n) RETURN count(n)" --json
 # => {"rows":[{"count(n)":"1"}],"count":1}
 ```
 
@@ -39,9 +39,9 @@ ArcFlow finds `.arcflow/config.yaml` by walking up the directory tree (like `git
 
 | Mode | How | When to use |
 |------|-----|-------------|
-| **Auto-discover** | `wc-cli workspace init` once, then just `wc-cli query "..."` | Projects. Recommended. |
-| **Explicit directory** | `wc-cli query "..." --data-dir ./mydata` | Scripts, CI/CD, one-off analysis |
-| **In-memory** | `wc-cli query "..."` (no init, no flag) | Experimentation. Nothing persists. |
+| **Auto-discover** | `arcflow workspace init` once, then just `arcflow query "..."` | Projects. Recommended. |
+| **Explicit directory** | `arcflow query "..." --data-dir ./mydata` | Scripts, CI/CD, one-off analysis |
+| **In-memory** | `arcflow query "..."` (no init, no flag) | Experimentation. Nothing persists. |
 
 `--data-dir` always takes priority over auto-discovery. If neither is set and no `.arcflow/` is found, the graph is in-memory only.
 
@@ -110,7 +110,7 @@ backend: cpu
 data_dir: .arcflow/data
 ```
 
-The `data_dir` setting tells ArcFlow where to persist. When you run any `wc-cli` command anywhere inside the project tree, ArcFlow walks up from the current directory looking for `.arcflow/config.yaml` (like `git` finds `.git/`), reads `data_dir`, and persists there.
+The `data_dir` setting tells ArcFlow where to persist. When you run any `arcflow` command anywhere inside the project tree, ArcFlow walks up from the current directory looking for `.arcflow/config.yaml` (like `git` finds `.git/`), reads `data_dir`, and persists there.
 
 **Version control:** Add `.arcflow/data/` to `.gitignore`. Keep `.arcflow/config.yaml` tracked so collaborators and agents auto-discover the workspace.
 
@@ -120,9 +120,9 @@ The `data_dir` setting tells ArcFlow where to persist. When you run any `wc-cli`
 
 | Mode | Setup | Persistence | Use case |
 |------|-------|-------------|----------|
-| **Workspace (recommended)** | `wc-cli workspace init` once | Auto-discovers `.arcflow/` from any subdirectory | Projects, teams, agents |
+| **Workspace (recommended)** | `arcflow workspace init` once | Auto-discovers `.arcflow/` from any subdirectory | Projects, teams, agents |
 | **Explicit directory** | `--data-dir ./mydata` on every command | Saves to that directory | Scripts, CI/CD |
-| **Interactive REPL** | `wc-cli` (auto-discovers) or `wc-cli --data-dir ./mydata` | On exit + every 50 writes | Exploration, debugging |
+| **Interactive REPL** | `arcflow` (auto-discovers) or `arcflow --data-dir ./mydata` | On exit + every 50 writes | Exploration, debugging |
 | **In-memory** | No init, no flag, no `.arcflow/` in tree | None | One-off queries |
 
 The REPL supports additional persistence commands:
@@ -143,17 +143,17 @@ Claude Code can interact with ArcFlow in three ways, from fastest to most compat
 
 ### Method 1: CLI commands (fastest)
 
-Claude Code already has Bash access. Once you `wc-cli workspace init` in your project, Claude Code can run queries with no extra flags:
+Claude Code already has Bash access. Once you `arcflow workspace init` in your project, Claude Code can run queries with no extra flags:
 
 ```bash
 # Create data (auto-discovers .arcflow/ in project tree)
-wc-cli query "CREATE (f:File {path: 'src/lib.rs', loc: 500})" --json
+arcflow query "CREATE (f:File {path: 'src/lib.rs', loc: 500})" --json
 
 # Query data
-wc-cli query "MATCH (n:File) RETURN n.path, n.loc ORDER BY n.loc DESC" --json
+arcflow query "MATCH (n:File) RETURN n.path, n.loc ORDER BY n.loc DESC" --json
 
 # Run algorithms
-wc-cli query "CALL algo.pageRank()" --json
+arcflow query "CALL algo.pageRank()" --json
 ```
 
 Every command returns structured JSON:
@@ -168,16 +168,16 @@ Claude Code reads the JSON directly. No tool calls. No protocol overhead.
 
 ```bash
 # What labels and relationship types exist?
-wc-cli query "CALL db.schema()" --json
+arcflow query "CALL db.schema()" --json
 
 # Full engine context (capabilities, algorithms, observation classes)
-wc-cli agent-context synth --json
+arcflow agent-context synth --json
 ```
 
 **Query with parameters (safe from injection):**
 
 ```bash
-wc-cli query "MATCH (n:Person {name: \$name}) RETURN n" --param name=Alice --data-dir .arcflow/data --json
+arcflow query "MATCH (n:Person {name: \$name}) RETURN n" --param name=Alice --data-dir .arcflow/data --json
 ```
 
 ### Method 2: MCP server (cloud chat interfaces only)
@@ -204,7 +204,7 @@ Exposes 8 tools including `get_schema`, `read_query`, `write_query`, and `graph_
 Start ArcFlow as an HTTP server:
 
 ```bash
-wc-cli --http 8080 --data-dir .arcflow/data --api-key my-secret-key
+arcflow --http 8080 --data-dir .arcflow/data --api-key my-secret-key
 ```
 
 Then query from any HTTP client:
@@ -234,33 +234,33 @@ Here's how Claude Code would build and query a knowledge graph of your codebase:
 ### Step 1: Initialize
 
 ```bash
-wc-cli workspace init
+arcflow workspace init
 ```
 
 ### Step 2: Build the graph
 
 ```bash
 # Create crate nodes (no --data-dir needed — .arcflow/ auto-discovered)
-wc-cli query "CREATE (c:Crate {name: 'wc-core', loc: 5500, tests: 120})" --json
-wc-cli query "CREATE (c:Crate {name: 'wc-runtime', loc: 17000, tests: 467})" --json
-wc-cli query "CREATE (c:Crate {name: 'wc-storage', loc: 2200, tests: 32})" --json
+arcflow query "CREATE (c:Crate {name: 'wc-core', loc: 5500, tests: 120})" --json
+arcflow query "CREATE (c:Crate {name: 'wc-runtime', loc: 17000, tests: 467})" --json
+arcflow query "CREATE (c:Crate {name: 'wc-storage', loc: 2200, tests: 32})" --json
 
 # Create dependency relationships
-wc-cli query "MATCH (a:Crate {name: 'wc-runtime'}), (b:Crate {name: 'wc-core'}) CREATE (a)-[:DEPENDS_ON]->(b)" --json
-wc-cli query "MATCH (a:Crate {name: 'wc-runtime'}), (b:Crate {name: 'wc-storage'}) CREATE (a)-[:DEPENDS_ON]->(b)" --json
+arcflow query "MATCH (a:Crate {name: 'wc-runtime'}), (b:Crate {name: 'wc-core'}) CREATE (a)-[:DEPENDS_ON]->(b)" --json
+arcflow query "MATCH (a:Crate {name: 'wc-runtime'}), (b:Crate {name: 'wc-storage'}) CREATE (a)-[:DEPENDS_ON]->(b)" --json
 ```
 
 ### Step 3: Query and analyze
 
 ```bash
 # Which crate has the most code?
-wc-cli query "MATCH (c:Crate) RETURN c.name, c.loc ORDER BY c.loc DESC" --json
+arcflow query "MATCH (c:Crate) RETURN c.name, c.loc ORDER BY c.loc DESC" --json
 
 # What depends on wc-core?
-wc-cli query "MATCH (a:Crate)-[:DEPENDS_ON]->(b:Crate {name: 'wc-core'}) RETURN a.name" --json
+arcflow query "MATCH (a:Crate)-[:DEPENDS_ON]->(b:Crate {name: 'wc-core'}) RETURN a.name" --json
 
 # PageRank — which crate is most central?
-wc-cli query "CALL algo.pageRank()" --json
+arcflow query "CALL algo.pageRank()" --json
 ```
 
 ### Step 4: Persist across sessions
@@ -268,7 +268,7 @@ wc-cli query "CALL algo.pageRank()" --json
 The graph survives CLI restarts. Next time Claude Code opens your project, the knowledge graph is already there:
 
 ```bash
-wc-cli query "MATCH (c:Crate) RETURN count(c)" --json
+arcflow query "MATCH (c:Crate) RETURN count(c)" --json
 # => {"rows":[{"count(c)":"3"}],"count":1}
 ```
 
@@ -276,7 +276,7 @@ wc-cli query "MATCH (c:Crate) RETURN count(c)" --json
 
 ## REPL Commands Reference
 
-Start the REPL with `wc-cli --data-dir .arcflow/data`. Available commands:
+Start the REPL with `arcflow --data-dir .arcflow/data`. Available commands:
 
 | Command | Description |
 |---------|-------------|
@@ -303,13 +303,13 @@ Start the REPL with `wc-cli --data-dir .arcflow/data`. Available commands:
 
 ```bash
 # Where does ArcFlow store data?
-wc-cli paths --json
+arcflow paths --json
 
 # Is the workspace healthy?
-wc-cli doctor --json
+arcflow doctor --json
 
 # What can the engine do? (for AI agents)
-wc-cli agent-context synth --json
+arcflow agent-context synth --json
 ```
 
 ---
@@ -330,7 +330,7 @@ Agent A creates nodes. Agent B queries them. Agent C runs algorithms. The snapsh
 For concurrent writes, start the HTTP server and have agents query through it -- the server handles serialization:
 
 ```bash
-wc-cli --http 8080 --data-dir .arcflow/data
+arcflow --http 8080 --data-dir .arcflow/data
 ```
 
 ---
