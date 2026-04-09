@@ -1,6 +1,6 @@
 ---
 title: "Spatial Knowledge Graph"
-description: "Spatial-first graph database — native spatial predicates, GPU-accelerated KNN, scene graphs"
+description: "Exact spatial queries backed by a dynamic R*-tree — KNN, radius, bbox, raycast, frustum, and graph traversal in one GQL statement"
 section: "spatial-knowledge"
 order: 1
 since: "4.0.0"
@@ -9,59 +9,76 @@ status: "stable"
 
 # Spatial Knowledge Graph
 
-**GPU-accelerated spatial KNN at 0.3ms — native spatial predicates built into the graph, not bolted on as an afterthought.**
+**Exact spatial queries backed by a dynamic R\*-tree — no approximation, no separate spatial index service, no join between two systems.**
 
-ArcFlow treats spatial coordinates as a first-class query dimension alongside entity relationships. KNN, radius queries, raycasts, and frustum culling run on GPU (CUDA/Metal) with automatic dispatch, delivering 2.7x speedup over CPU. Combined with USD scene loading, zone membership, and multi-clock sensor fusion, you query spatial and graph structure in a single GQL statement — no join against a separate spatial extension, no separate spatial index.
+ArcFlow treats spatial coordinates as a first-class query dimension alongside graph relationships. K-nearest, radius, and bounding-box queries run against the R\*-tree index directly. Spatial filter and graph traversal compose in a single GQL statement — "find the 5 nearest warehouses that have inventory for SKU X" is one query, not two.
 
 ```cypher
--- 5 nearest sensors to a position, GPU-accelerated
-CALL algo.nearestNodes(point({x: 10.0, y: 10.0}), 'Sensor', 5)
-  YIELD node, distance
-  RETURN node.name, distance  -- 0.3ms at 1K entities
+-- Supply chain: spatial filter → graph traversal → property filter — one query
+CALL algo.nearestNodes(order.location, 'Warehouse', 5)
+  YIELD node AS wh, distance
+MATCH (wh)-[:SUPPLIES]->(item:Item {sku: $sku})
+WHERE item.stock > 0
+RETURN wh.name, distance, item.stock
+ORDER BY distance
 ```
+
+---
+
+## Why R*-tree, Not HNSW or Random-Walk
+
+Most graph databases use the wrong spatial index:
+
+| System | Index | Type | Exact? |
+|---|---|---|---|
+| Memgraph | USearch (HNSW) | Approximate ANN | No — tuned for embedding similarity |
+| Neo4j GDS | Random-walk sampling | Approximate | No — controlled by `sampleRate`, `maxIterations` |
+| PostGIS | GIST R-tree | Exact | Yes |
+| **ArcFlow** | **R\*-tree** | **Exact** | **Yes** |
+
+HNSW is optimised for high-dimensional semantic vectors — it finds "approximately similar" embeddings. For exact containment, bounding-box overlap, and dynamic 2D/3D boundaries it adds false positives and has no structural advantage. Random-walk sampling is explicitly approximate: it will miss answers.
+
+The **R\*-tree** is the correct structure for exact 2D/3D geometric queries. Its key advantage over a basic R-tree: **forced reinsertion on node overflow**. Instead of immediately splitting a full node (which creates poor bounding boxes), R\*-tree removes ~30% of entries and reinserts them. This stochastic restructuring minimises both bounding-box overlap and dead space in MBRs — 2–5× faster queries than R-tree on clustered data.
 
 ---
 
 ## Spatial Primitives
 
-### Point Type with CRS
+### Point Types
 
 ```cypher
--- WGS84 (geographic coordinates)
-CREATE (s:Sensor {
-  name: 'Camera-01',
-  location: point({latitude: 51.5074, longitude: -0.1278})
-})
+-- 2D cartesian (pitch, factory floor, map tile)
+CREATE (p:Player {name: 'Alice', position: point({x: 34.2, y: 67.1})})
 
--- Cartesian (local coordinate system)
-CREATE (r:Robot {
-  name: 'AGV-7',
-  position: point({x: 12.5, y: 8.3, z: 0.0})
-})
+-- 3D cartesian (venue world space, robot arm, drone)
+CREATE (r:Robot {name: 'AGV-7', position: point({x: 12.5, y: 8.3, z: 0.0})})
+
+-- Geographic (WGS84)
+CREATE (s:Sensor {name: 'Cam-01', location: point({latitude: 51.5074, longitude: -0.1278})})
 ```
 
-### Spatial KNN — Find Nearest
+Flat coordinate properties (`x`, `y`, `z`) are also indexed automatically.
+
+### K-Nearest Neighbor
 
 ```cypher
--- 5 nearest sensors to a position
-CALL algo.nearestNodes(
-  point({x: 10.0, y: 10.0}),
-  'Sensor',
-  5
-) YIELD node, distance
-RETURN node.name, distance
+CALL algo.nearestNodes(point({x: 10.0, y: 10.0}), 'Sensor', 5)
+  YIELD node, distance
+  RETURN node.name, distance
 ```
 
-Performance: 0.3ms at 1,000 entities with GPU acceleration (2.7x over CPU). See [GPU benchmarks](/gpu) for full numbers.
+At 11K live entities: ≥ 2,000 queries/sec on CPU (R\*-tree path). The index is dynamic — inserts, updates, and deletes are O(log N) with no rebuild.
 
-### Radius Queries
+### Radius Search
 
 ```cypher
--- All robots within 20 meters
-MATCH (r:Robot)
-WHERE distance(r.position, point({x: 10.0, y: 10.0})) < 20.0
-RETURN r.name, r.position
+-- All players within 20 meters
+MATCH (p:Player)
+WHERE distance(p.position, point({x: 10.0, y: 10.0})) < 20.0
+RETURN p.name, p.position
 ```
+
+The query compiler detects `distance()` predicates and pushes them into the R\*-tree rather than scanning all nodes.
 
 ### Bounding Box
 
@@ -73,46 +90,92 @@ WHERE e.position.x >= 0.0 AND e.position.x <= 50.0
 RETURN e.name
 ```
 
-### Raycast Queries
+### Raycast
 
 ```cypher
--- What does a camera see along its viewing direction?
+-- What lies along a camera's line of sight?
 CALL spatial.raycast(
-  point({x: 0, y: 0, z: 2}),    -- origin
-  point({x: 1, y: 0, z: 0}),    -- direction
-  100.0                           -- max distance
+  point({x: 0, y: 0, z: 2}),   -- origin
+  point({x: 1, y: 0, z: 0}),   -- direction
+  100.0                          -- max distance
 ) YIELD hit, distance
 RETURN hit.name, distance
 ```
 
 ---
 
-## Scene Graphs (USD / 3D)
+## Spatial + Graph in One Query
 
-ArcFlow can load USD (Universal Scene Description) scene manifests — the standard format for 3D scenes used by Pixar, NVIDIA Omniverse, and Apple Vision Pro:
+The reason spatial and graph coexist in one query is that the engine is in-process — the R\*-tree and the graph share unified memory. No serialization. No network hop between a spatial service and a graph database.
 
+### Supply Chain
 ```cypher
--- Load scene manifest
-CALL scene.load('venue_layout.usd')
-
--- Query zones
-MATCH (z:Zone {name: 'PitchArea'})
-RETURN z.bounds, z.cameras
-
--- Frustum query — what's visible from Camera-03?
-CALL scene.frustum('Camera-03')
-YIELD visible
-RETURN visible.name, visible.type
+-- Nearest warehouses with inventory → compute delivery via road graph
+CALL algo.nearestNodes(order.location, 'Warehouse', 5)
+  YIELD node AS wh, distance AS crow_flies
+MATCH (wh)-[:SUPPLIES]->(item:Item {sku: $sku})
+WHERE item.stock > 0
+MATCH path = shortestPath((wh)-[:ROAD*]->(dest:Depot {id: $depot}))
+RETURN wh.name, item.stock, length(path) AS road_hops
+ORDER BY road_hops
 ```
 
-### Zone Membership
+### IoT / Fleet
+```cypher
+-- Vehicles within 500m, with valid license, maintained within 30 days
+CALL algo.nearestNodes($zone_center, 'Vehicle', 50)
+  YIELD node AS v, distance
+WHERE distance < 500
+MATCH (v)-[:DRIVEN_BY]->(d:Driver)-[:HOLDS]->(l:License)
+WHERE l.expires > timestamp()
+  AND v.last_service_date > timestamp() - 2592000000
+RETURN v.plate, d.name, distance
+```
 
-Assign entities to spatial zones and query membership:
+### Live Production (50fps)
+```cypher
+-- Who's offside? Spatial filter → graph → rule check
+CALL algo.nearestNodes(ball.position, 'Player', 22)
+  YIELD node AS player, distance
+MATCH (player)-[:PLAYS_FOR]->(team:Team {side: 'attacking'})
+WHERE player.position.x > last_defender.position.x
+RETURN player.name, player.position
+```
+
+---
+
+## Coordinate Frame Validation
+
+ArcFlow validates coordinate system metadata at ingest. Mixing coordinate frames — WGS84 positions in a Z-up cartesian graph — raises a **hard error** rather than silently producing wrong results. This is the "silent killer" class of spatial bug.
 
 ```cypher
-MATCH (p:Player)-[:IN_ZONE]->(z:Zone {name: 'RedZone'})
-RETURN p.name, p.position
+CALL db.spatialMetadata()
+  YIELD crs, meters_per_unit, up_axis, handedness, calibration_version
 ```
+
+| Field | Default | Description |
+|---|---|---|
+| `crs` | `"cartesian"` | Coordinate reference system (`"cartesian"`, `"WGS84"`) |
+| `meters_per_unit` | `1.0` | Scale — 1.0 for meters, 0.01 for centimeters |
+| `up_axis` | `"Z"` | Z-up (venue/robotics world default) or Y-up (DCC/game engines) |
+| `handedness` | `"right"` | `"right"` or `"left"` |
+| `calibration_version` | `0` | Increment on venue re-calibration to invalidate stale queries |
+
+The default Z-up matches OZ venue world convention (football pitch, arena, warehouse floor plan).
+
+---
+
+## Observability
+
+```cypher
+-- Which index path was taken for recent spatial queries?
+CALL arcflow.spatial.dispatch_stats()
+  YIELD query_id, index_path, candidates_filtered, result_count, latency_us
+```
+
+`index_path` will be one of: `rtree` (R\*-tree), `coarse_grid` (pre-filter only), or `scan` (fallback for small datasets below the dispatch threshold).
+
+The coarse grid provides an O(1) pre-filter that reduces R\*-tree candidate sets by ~95% on typical datasets (e.g. 8m cells over a 100m × 70m pitch with 50 entities → 156 cells, ~5 entities/cell).
 
 ---
 
@@ -121,32 +184,14 @@ RETURN p.name, p.position
 Different sensors report at different rates. ArcFlow's temporal clock system handles this natively:
 
 ```cypher
--- Camera at 30 fps
-CALL db.clock('camera_01', 'sensor', 33)  -- 33ms tick
+-- Register sensor clocks
+CALL db.clock('camera_01', 'sensor', 33)   -- 30fps
+CALL db.clock('lidar_01', 'sensor', 100)   -- 10Hz
+CALL db.clock('gps_01', 'sensor', 1000)    -- 1Hz
 
--- LiDAR at 10 Hz
-CALL db.clock('lidar_01', 'sensor', 100)  -- 100ms tick
-
--- GPS at 1 Hz
-CALL db.clock('gps_01', 'sensor', 1000)   -- 1000ms tick
-
--- Query fused state: ArcFlow reconciles across clock domains
+-- Query fused state across clock domains
 MATCH (r:Robot) RETURN r.position, r.orientation, r._clock_domain
 ```
-
----
-
-## GPU-Accelerated Spatial
-
-Spatial computations are automatically routed to GPU when beneficial:
-
-| Operation | CPU | GPU | Speedup |
-|---|---|---|---|
-| Spatial KNN (1K entities) | 0.8ms | 0.3ms | 2.7x |
-| Distance matrix (10K pairs) | 45ms | 3ms | 15x |
-| Raycast (1K targets) | 12ms | 1.2ms | 10x |
-
-Zero configuration — the lane dispatch system detects available GPU (CUDA or Metal) and routes automatically.
 
 ---
 
@@ -155,71 +200,93 @@ Zero configuration — the lane dispatch system detects available GPU (CUDA or M
 ### Digital Twin (Venue / Building / Factory)
 
 ```cypher
--- Model the venue
-CREATE (v:Venue {name: 'Stadium', capacity: 60000})
-CREATE (c1:Camera {name: 'Cam-01', position: point({x: 0, y: 50, z: 15})})
-CREATE (c2:Camera {name: 'Cam-02', position: point({x: 100, y: 50, z: 15})})
-CREATE (p:Zone {name: 'Pitch', bounds: 'polygon(...)'})
+CREATE (v:Venue {name: 'Stadium'})
+CREATE (c:Camera {name: 'Cam-01', position: point({x: 0, y: 50, z: 15})})
+CREATE (z:Zone {name: 'Pitch'})
 
--- Track entities in real-time
-MATCH (player:Player {jersey: 7})
-SET player.position = point({x: 34.2, y: 67.1, z: 0.0})
+-- Real-time tracking
+MATCH (p:Player {jersey: 7})
+SET p.position = point({x: 34.2, y: 67.1, z: 0.0})
 
 -- Spatial query: who's near the ball?
 CALL algo.nearestNodes(ball.position, 'Player', 5)
+  YIELD node, distance
+RETURN node.name, distance
 ```
 
 ### Warehouse Robotics
 
 ```cypher
--- Multi-robot coordination
+-- Assign nearest idle robot to a pick location
 MATCH (r:Robot) WHERE r.status = 'idle'
-CALL algo.nearestNodes(pickLocation, 'Robot', 1)
-YIELD node AS nearest
-SET nearest.task = 'pick', nearest.target = pickLocation
+CALL algo.nearestNodes($pick_location, 'Robot', 1)
+  YIELD node AS nearest
+SET nearest.task = 'pick', nearest.target = $pick_location
 
--- Collision avoidance: any robots within 2m of each other?
+-- Collision avoidance
 MATCH (a:Robot), (b:Robot)
 WHERE a <> b AND distance(a.position, b.position) < 2.0
 RETURN a.name, b.name, distance(a.position, b.position)
 ```
 
-### Game World
+### Epidemiology
 
 ```cypher
--- Persistent game world with spatial queries
-MATCH (npc:NPC)
-WHERE distance(npc.position, player.position) < 50
-RETURN npc.name, npc.faction, npc.hostility
-
--- Temporal: where was the dragon 5 minutes ago?
-MATCH (d:Dragon {name: 'Smaug'}) AS OF (timestamp() - 300000)
-RETURN d.position
+-- People within 10m of patient zero → BFS contacts → temporal filter
+CALL algo.nearestNodes(patient_zero.location, 'Person', 1000)
+  YIELD node AS contact, distance
+WHERE distance < 10.0
+MATCH path = (patient_zero)-[:CONTACT*1..3]->(contact)
+WHERE ALL(r IN relationships(path) WHERE r.timestamp > timestamp() - 172800000)
+RETURN contact.name, length(path) AS degrees, distance
 ```
+
+---
+
+## Performance Reference
+
+| Operation | Entities | Throughput | Index path |
+|---|---|---|---|
+| K-nearest (k=10) | 11K | ≥ 2,000/s | R\*-tree |
+| Radius search | 11K | ≥ 2,000/s | R\*-tree + coarse grid |
+| Spatial join (5-NN + 2-hop) | 11K | ≥ 500/s | R\*-tree → CSR |
+| Spatial join at 7.9M/s | 1M (Phase 4) | GPU FlatBVH | — |
+
+Phase 4 adds GPU acceleration (FlatBVH `wgpu` compute shader) with automatic dispatch above the GPU cost threshold.
+
+---
+
+## Roadmap
+
+| Feature | Phase | Status |
+|---|---|---|
+| Dynamic R\*-tree KNN / radius / bbox | Phase 1 | ✅ Shipped |
+| Coordinate frame validation | Phase 1 | ✅ Shipped |
+| SpatialQueryStats / dispatch observability | Phase 1 | ✅ Shipped |
+| SpatialColumn (SIMD columnar coordinates) | Phase 2 | 🔲 Next |
+| Frustum / visibility queries | Phase 2 | 🔲 Next |
+| `CALL arcflow.spatial.dispatch_stats()` | Phase 2 | 🔲 Next |
+| Reactive spatial predicates (LIVE geofence) | Phase 3 | 🔲 Planned |
+| Fused spatial+graph DAG scheduler | Phase 3 | 🔲 Planned |
+| Predictive sidecar (velocity-based) | Phase 3 | 🔲 Planned |
+| GPU FlatBVH (`wgpu` compute shader) | Phase 4 | 🔲 Planned |
+| cuSpatial analytics FFI | Phase 4 | 🔲 Planned |
+| Multi-GPU spatial partitioning | Phase 4 | 🔲 Planned |
+| USD world model ingest | Phase 5 | 🔲 Planned |
+| Arrow/GeoArrow zero-copy export | Phase 5 | 🔲 Planned |
 
 ---
 
 ## Compared to Other Approaches
 
-### Relational Databases with Spatial Extensions?
-ArcFlow adds graph relationships on top of spatial data. Instead of points in a table, you have entities connected by relationships — with spatial predicates operating across the graph. Trade-off: relational spatial extensions have richer geometry types (LineString, Polygon, MultiPolygon) and mature GIS tooling; ArcFlow currently supports Point with KNN, bbox, and raycast. If you need complex polygon operations, a relational database with spatial extensions is the better choice. If you need spatial queries combined with graph traversal and temporal reasoning, ArcFlow avoids the join between two systems.
+### PostGIS / Relational Spatial Extensions
+PostGIS has richer geometry types (LineString, Polygon, MultiPolygon) and mature GIS tooling. ArcFlow's advantage: spatial predicates compose directly with graph traversal — no join between a PostGIS table and a graph database. If you need complex polygon operations without graph structure, PostGIS is the better tool. If you need "find entities near X, then traverse their relationships," ArcFlow avoids the two-system join.
 
-### 3D Simulation Platforms / USD?
-ArcFlow loads USD scene manifests and makes them queryable with GQL — a spatial query engine for your digital twin without running a full 3D simulation deployment. Trade-off: simulation platforms provide real-time rendering and physics simulation; ArcFlow provides the queryable data layer underneath.
+### Memgraph / Neo4j Spatial
+Memgraph uses HNSW (approximate ANN — tuned for embeddings, not exact geometry). Neo4j GDS uses random-walk sampling (approximate, misses answers). ArcFlow uses R\*-tree (exact). For containment queries, bounding-box overlap, and correctness-critical applications (offside detection, collision avoidance, delivery routing), approximation is not acceptable.
 
-### ROS2 / Nav2?
-The multi-clock domain system maps directly to ROS2's multi-rate sensor model. ArcFlow adds persistent spatial state, graph relationships between spatial entities, and GQL queries for mission planning — complementing Nav2's real-time navigation with higher-level spatial reasoning. Trade-off: Nav2 handles real-time path planning with hard latency guarantees; ArcFlow operates at the mission-planning and spatial-knowledge layer, not the control loop.
+### cuSpatial / GPU-native Spatial
+cuSpatial uses a quadtree, which has higher false-positive rates for complex overlapping geometries than R\*-tree and cannot be uploaded to GPU memory as a flat array. ArcFlow uses cuSpatial in Phase 4 for analytics-class workloads (trajectory analytics, point-in-polygon at millions of entities) while keeping the R\*-tree as the primary query index. The GPU index (Phase 4) is a custom FlatBVH — contiguous array, GPU-uploadable, wgpu compute shader.
 
----
-
-## Vision
-
-ArcFlow treats spatial intelligence as a first-class query dimension, not an afterthought bolted onto tabular storage.
-
-**Real-time perception pipelines.** Spatial state updates via GQL mutations, and the architecture supports streaming spatial ingestion — camera feeds, LiDAR point clouds, and GPS tracks flowing directly into the graph with sub-second latency, each tagged with clock domain and confidence scores.
-
-**Venue-scale digital twins.** Combining USD scene loading, zone membership, multi-clock sensor fusion, and temporal queries into a unified query surface for building-scale and venue-scale digital twins. Query "which cameras had line-of-sight to zone B at 14:32?" in a single GQL statement.
-
-**Spatial-temporal reasoning for robotics and AV.** Fusing spatial KNN (0.3ms GPU) with temporal `AS OF` queries to answer questions like "what was within 5 meters of the robot 10 seconds before the collision?" This is the foundation for post-incident analysis, mission replay, and training data extraction from real-world robot operations.
-
-**Richer geometry types.** Extending beyond Point to support LineString, Polygon, and 3D mesh bounding volumes — closing the gap with relational spatial extensions for GIS workloads while maintaining graph-native spatial-temporal queries.
+### ROS2 / Nav2
+ArcFlow complements Nav2: Nav2 handles real-time path planning with hard latency guarantees; ArcFlow provides the persistent spatial knowledge layer — mission planning, post-incident replay, spatial-temporal reasoning. The multi-clock domain system maps directly to ROS2's multi-rate sensor model.
