@@ -330,8 +330,8 @@ assert(db.query("MATCH (n:Test) RETURN n.x").rows[0].get('x') === 1)
 | Code | Category | Fix |
 |---|---|---|
 | `EXPECTED_KEYWORD` | parse | Check MATCH/CREATE/MERGE syntax |
-| `UNKNOWN_FUNCTION` | validation | Run `CALL db.help` |
-| `UNKNOWN_PROCEDURE` | validation | Run `CALL db.procedures` |
+| `UNKNOWN_FUNCTION` | validation | Run `CALL db.help()` |
+| `UNKNOWN_PROCEDURE` | validation | Run `CALL db.procedures()` |
 | `DB_CLOSED` | integration | Don't query after `db.close()` |
 
 ## Step-by-step integration

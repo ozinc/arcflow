@@ -163,7 +163,7 @@ Error codes you'll encounter:
 | Code | Category | Meaning | Fix |
 |---|---|---|---|
 | `EXPECTED_KEYWORD` | parse | Query syntax wrong | Check MATCH/CREATE/MERGE spelling |
-| `UNKNOWN_FUNCTION` | validation | Function doesn't exist | Run `CALL db.help` to see available |
+| `UNKNOWN_FUNCTION` | validation | Function doesn't exist | Run `CALL db.help()` to see available |
 | `UNKNOWN_PROCEDURE` | validation | Procedure doesn't exist | Run `CALL db.procedures` |
 | `DB_CLOSED` | integration | Called after `db.close()` | Don't use db after closing |
 
