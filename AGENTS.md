@@ -221,6 +221,30 @@ CALL db.procedures   -- list all procedures
 CALL db.demo         -- load sample graph
 ```
 
+### Spatial (R*-tree, exact)
+```cypher
+-- K-nearest neighbor
+CALL algo.nearestNodes(point({x: 10.0, y: 10.0}), 'Player', 5)
+  YIELD node, distance RETURN node.name, distance
+
+-- Radius search (compiler pushes distance() into the R*-tree)
+MATCH (r:Robot) WHERE distance(r.position, point({x: 0, y: 0})) < 50.0 RETURN r.name
+
+-- Bounding box
+MATCH (e:Entity)
+WHERE e.position.x >= 0 AND e.position.x <= 100
+  AND e.position.y >= 0 AND e.position.y <= 50
+RETURN e.name
+
+-- Coordinate frame metadata
+CALL db.spatialMetadata() YIELD crs, meters_per_unit, up_axis, handedness
+
+-- Dispatch observability
+CALL arcflow.spatial.dispatch_stats() YIELD query_id, index_path, latency_us
+```
+
+Index is dynamic — inserts/updates/deletes are O(log N), no rebuild. Coarse grid pre-filter reduces candidate set ~95% before R*-tree evaluation.
+
 ### Reactive
 ```cypher
 LIVE MATCH (n:Person) WHERE n.score > 0.9 RETURN n

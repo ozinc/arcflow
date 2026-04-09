@@ -30,9 +30,27 @@ TypedError {
 | `Architecture` | Architectural constraint violation | Design |
 | `Timeout` | Operation timed out | Environment |
 
+## Error Codes
+
+| Code | Category | Cause | Fix |
+|---|---|---|---|
+| `EXPECTED_KEYWORD` | parse | Query syntax error | Check MATCH / CREATE / MERGE syntax |
+| `UNEXPECTED_TOKEN` | parse | Unexpected token in query | Check clause order and punctuation |
+| `UNKNOWN_FUNCTION` | validation | Function name not recognised | Run `CALL db.help` for full list |
+| `UNKNOWN_PROCEDURE` | validation | CALL target not found | Run `CALL db.procedures` |
+| `UNKNOWN_LABEL` | validation | Label doesn't exist in schema | Check `CALL db.schema` |
+| `INVALID_PARAMETER` | validation | Parameter type mismatch | Ensure param types match `QueryParams` |
+| `MISSING_PARAMETER` | validation | `$param` used but not supplied | Pass all parameters in the params object |
+| `DB_CLOSED` | integration | Query after `db.close()` | Don't query a closed database |
+| `LOCK_POISONED` | integration | Write lock poisoned by panic | Restart the database process |
+| `COMPILE_ERR` | parse | Query failed to compile | Check query against GQL reference |
+| `VECTOR_DIM_MISMATCH` | validation | Query vector ≠ index dimensions | Match vector length to `OPTIONS {dimensions}` |
+| `INDEX_NOT_FOUND` | validation | Named index doesn't exist | Check `CALL db.indexes` |
+| `CONSTRAINT_VIOLATION` | validation | Unique constraint failed | Use MERGE instead of CREATE |
+
 ## Design Principle
 
-Every error is fail-fast (PAT-0005) and typed. No generic "something went wrong."
+Every error is fail-fast and typed. No generic "something went wrong."
 Agents can parse `class` + `code` to decide recovery strategy without reading
 the `message` field.
 

@@ -113,6 +113,8 @@ MATCH (w:Warranty) AS OF (timestamp() - 15552000000)
   RETURN w.duration
 ```
 
+See [Temporal Queries](/temporal) for full `AS OF` syntax, temporal comparison, and WAL-based time travel.
+
 ---
 
 ## Observation Classes

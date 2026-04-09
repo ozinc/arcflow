@@ -118,9 +118,11 @@ CALL db.views()
 
 Views are automatically invalidated when underlying data changes. Query a view for instant results without re-executing the source query.
 
-## Live Delta Stack (v1.5)
+## Live Delta Stack
 
 The Live Delta Stack unifies batch and streaming into one query definition. Write a query once with the `LIVE` prefix, and the engine maintains it incrementally via Z-set algebra. Results are mathematically identical whether recomputed from scratch or updated via deltas.
+
+For data quality pipelines, pipeline prune, and drill-through patterns built on live views, see [Data Quality & Pipeline Integrity](/guides/data-quality).
 
 ### CREATE LIVE VIEW
 

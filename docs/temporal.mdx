@@ -81,13 +81,12 @@ CALL db.nodesAsOf()
 
 Insert nodes with explicit timestamps, independent of the current clock:
 
-```rust
-// Rust SDK: ingest a historical fact
-store.temporal_ingest(
-    vec![Label::new("Event")],
-    props! { "name" => "Launch" },
-    1609459200, // 2021-01-01 00:00:00 UTC
-);
+```typescript
+// Ingest a historical fact with an explicit timestamp
+db.mutate(
+  "CREATE (e:Event {name: $name}) AS OF $ts",
+  { name: 'Launch', ts: 1609459200 }  // 2021-01-01 00:00:00 UTC
+)
 ```
 
 Temporal ingest is used for backfilling historical data, replaying event streams, and merging data from external systems with their original timestamps.

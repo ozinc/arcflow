@@ -59,3 +59,100 @@ enum PropertyValue {
 |---|---|
 | `ErrorClass` | `Validation`, `Integration`, `Architecture`, `Timeout` |
 | `TypedError` | `{ class, code, message, failing_field, recovery_suggestion }` |
+
+## TypeScript SDK Types
+
+### `QueryCursor`
+
+Paginated iteration over large result sets. See `db.cursor()`.
+
+```typescript
+interface QueryCursor {
+  pageSize: number        // Rows per page
+  pagesFetched: number    // Pages retrieved so far
+  done: boolean           // True when all pages exhausted
+  next(): QueryResult | null   // Fetch next page
+  all(): QueryResult           // Collect all remaining pages
+  close(): void                // Release the cursor
+}
+```
+
+### `LiveQuery`
+
+Handle returned by `db.subscribe()`. Tracks a live view subscription.
+
+```typescript
+interface LiveQuery {
+  viewName: string   // Internal live view name
+  cancel(): void     // Stop the subscription and drop the live view
+}
+```
+
+### `DeltaEvent`
+
+Delivered to the `SubscriptionHandler` on every change.
+
+```typescript
+interface DeltaEvent {
+  added: SubscriptionRow[]     // Rows newly entering the result set
+  removed: SubscriptionRow[]   // Rows leaving the result set
+  current: SubscriptionRow[]   // Full current result set
+  frontier: number             // Monotonic mutation sequence number
+}
+
+type SubscriptionRow = Record<string, string | number | boolean | null>
+type SubscriptionHandler = (event: DeltaEvent) => void
+```
+
+### `SubscribeOptions`
+
+```typescript
+interface SubscribeOptions {
+  pollIntervalMs?: number   // How often to check for updates (default: 100ms)
+}
+```
+
+### Code Intelligence Types
+
+Used by `CodeGraph` — see [Code Intelligence Guide](/guides/code-intelligence).
+
+```typescript
+interface NodeSpec {
+  label: string
+  id: string
+  contentHash?: string
+  properties?: Record<string, string | number | boolean | null>
+}
+
+interface EdgeSpec {
+  fromId: string
+  toId: string
+  edgeType: string
+  properties?: Record<string, string | number | boolean | null>
+}
+
+interface GraphDelta {
+  addedNodes?: NodeSpec[]
+  removedNodeIds?: string[]
+  addedEdges?: EdgeSpec[]
+  removedEdges?: Array<{ fromId: string; toId: string; edgeType: string }>
+}
+
+interface DeltaStats {
+  nodesAdded: number
+  nodesUpdated: number
+  nodesSkippedByHash: number
+  nodesRemoved: number
+  edgesAdded: number
+  edgesRemoved: number
+}
+
+interface ImpactNode {
+  id: string
+  hop: number
+}
+
+interface ImpactSubgraph {
+  nodes: ImpactNode[]
+}
+```
