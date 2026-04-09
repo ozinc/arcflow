@@ -352,7 +352,8 @@ RETURN node.name, distance
 -- Assign nearest idle robot to a pick location
 CALL algo.nearestNodes($pick_location, 'Robot', 1)
   YIELD node AS nearest
-SET nearest.task = 'pick', nearest.target = $pick_location
+SET nearest.task = 'pick'
+SET nearest.target = $pick_location
 
 -- Collision avoidance
 MATCH (a:Robot), (b:Robot)

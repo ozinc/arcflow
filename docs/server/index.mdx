@@ -547,7 +547,7 @@ Choose the access layer based on your environment:
 | Existing PostgreSQL tooling        | `arcflow --pg 5432` + psql/pgAdmin/Grafana       |
 | Long-running session, many queries | `arcflow --http 8080` + curl                     |
 | Cloud IDE, no filesystem           | `arcflow-mcp --data-dir ./graph`                     |
-| Rust application                   | `wc-sdk` crate, direct function calls                |
+| Rust application                   | `arcflow` crate (napi-rs for Node.js, or Rust crate direct)                |
 
 For single queries, always prefer `arcflow query "..." --json`. It starts, executes, prints JSON, and exits. No server process to manage.
 

@@ -172,10 +172,12 @@ const db = open('./venue-graph')
 function ingestDetection(det: Detection) {
   db.mutate(`
     MERGE (obj:${det.class} {gnoId: $gnoId})
-    SET obj.x = $x, obj.y = $y, obj.z = $z,
-        obj.speed = $speed,
-        obj.confidence_position = $confPos,
-        obj.occlusionState = $occState
+    SET obj.x = $x
+    SET obj.y = $y
+    SET obj.z = $z
+    SET obj.speed = $speed
+    SET obj.confidence_position = $confPos
+    SET obj.occlusionState = $occState
   `, {
     gnoId: det.gnoId,
     x: det.x, y: det.y, z: det.z,
