@@ -214,11 +214,11 @@ Leiden requires CUDA compute capability 9.0+ (H100 and later).
 
 ### Database procedures
 ```cypher
-CALL db.stats        -- node/rel/index counts
-CALL db.schema       -- labels, properties, relationships
-CALL db.help         -- full procedure guide
-CALL db.procedures   -- list all procedures
-CALL db.demo         -- load sample graph
+CALL db.stats()       -- node/rel/index counts
+CALL db.schema()      -- labels, properties, relationships
+CALL db.help()        -- full procedure guide
+CALL db.procedures()  -- list all procedures
+CALL db.demo()        -- load sample graph
 ```
 
 ### Spatial (R*-tree, exact)

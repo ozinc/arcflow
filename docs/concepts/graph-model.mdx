@@ -67,7 +67,7 @@ db.query("MATCH (a:Person {name: 'Alice'})-[:KNOWS*1..3]->(b) RETURN b.name")
 ArcFlow doesn't require a schema upfront. Create any node with any properties at any time. Use `CALL db.schema` to inspect the emergent schema:
 
 ```typescript
-const schema = db.query("CALL db.schema")
+const schema = db.query("CALL db.schema()")
 // Shows which labels exist and what properties they carry
 ```
 

@@ -65,7 +65,7 @@ WITH, UNWIND, WHERE, RETURN, ORDER BY, LIMIT,
 OPTIONAL MATCH, AS OF, CONTAINS, STARTS WITH,
 CREATE VECTOR INDEX, CREATE FULLTEXT INDEX,
 CALL algo.pageRank(), CALL algo.louvain(), CALL algo.vectorSearch(),
-CALL db.stats, CALL db.schema, CALL db.help,
+CALL db.stats(), CALL db.schema, CALL db.help,
 LIVE MATCH, LIVE CALL, CREATE LIVE VIEW
 
 ## PostgreSQL wire protocol (SQL tooling bridge)

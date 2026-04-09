@@ -186,8 +186,8 @@ CALL algo.multiModalFusion()
 
 ### Database procedures
 ```cypher
-CALL db.stats
-CALL db.schema
+CALL db.stats()
+CALL db.schema()
 CALL db.labels
 CALL db.types
 CALL db.propertyKeys
@@ -203,9 +203,9 @@ CALL db.export
 CALL db.import
 CALL db.import.csv
 CALL db.clear
-CALL db.demo
-CALL db.help
-CALL db.procedures
+CALL db.demo()
+CALL db.help()
+CALL db.procedures()
 CALL db.tutorial
 CALL db.index.fulltext.queryNodes('index_name', 'search query')
 CALL db.checkpointMeta

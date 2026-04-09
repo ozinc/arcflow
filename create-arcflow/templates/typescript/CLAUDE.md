@@ -34,7 +34,7 @@ MATCH (a)-[:REL]->(b) RETURN a.name, b.name
 MERGE (n:Label {id: 'unique'})
 CALL algo.pageRank()
 CALL algo.vectorSearch('index', $vector, 10)
-CALL db.stats
+CALL db.stats()
 ```
 
 ## Docs
