@@ -65,7 +65,8 @@ WITH, UNWIND, WHERE, RETURN, ORDER BY, LIMIT,
 OPTIONAL MATCH, AS OF, CONTAINS, STARTS WITH,
 CREATE VECTOR INDEX, CREATE FULLTEXT INDEX,
 CALL algo.pageRank(), CALL algo.louvain(), CALL algo.vectorSearch(),
-CALL db.stats(), CALL db.schema, CALL db.help,
+CALL algo.nearestNodes(), CALL algo.objectsInFrustum(), CALL spatial.raycast(),
+CALL db.stats(), CALL db.schema(), CALL db.help(), CALL db.spatialMetadata(),
 LIVE MATCH, LIVE CALL, CREATE LIVE VIEW
 
 ## PostgreSQL wire protocol (SQL tooling bridge)
@@ -80,7 +81,7 @@ See docs/guides/sql-to-gql.mdx for the full adoption path.
 ## Common errors
 
 - `EXPECTED_KEYWORD` → query syntax wrong, check MATCH/CREATE/MERGE
-- `UNKNOWN_PROCEDURE` → run `CALL db.procedures` to see available
+- `UNKNOWN_PROCEDURE` → run `CALL db.procedures()` to see available
 - `DB_CLOSED` → called query after db.close()
 
 ## Integration recipe

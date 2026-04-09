@@ -177,7 +177,7 @@ CALL algo.similarNodes()
 CALL algo.hybridSearch()
 CALL algo.graphRAG()
 CALL algo.graphRAGTrusted()
-CALL algo.compoundingScore
+CALL algo.compoundingScore()
 CALL algo.contradictions()
 CALL algo.audienceProjection('Person=0.9,Company=0.5')
 CALL algo.factsByRegime('2024')
@@ -188,27 +188,27 @@ CALL algo.multiModalFusion()
 ```cypher
 CALL db.stats()
 CALL db.schema()
-CALL db.labels
-CALL db.types
-CALL db.propertyKeys
-CALL db.indexes
-CALL db.nodeCount
-CALL db.relationshipCount
-CALL db.version
-CALL db.capabilities
-CALL db.doctor
-CALL db.fingerprint
+CALL db.labels()
+CALL db.types()
+CALL db.propertyKeys()
+CALL db.indexes()
+CALL db.nodeCount()
+CALL db.relationshipCount()
+CALL db.version()
+CALL db.capabilities()
+CALL db.doctor()
+CALL db.fingerprint()
 CALL db.validateQuery('MATCH (n) RETURN n')
-CALL db.export
-CALL db.import
-CALL db.import.csv
-CALL db.clear
+CALL db.export()
+CALL db.import()
+CALL db.import.csv()
+CALL db.clear()
 CALL db.demo()
 CALL db.help()
 CALL db.procedures()
-CALL db.tutorial
+CALL db.tutorial()
 CALL db.index.fulltext.queryNodes('index_name', 'search query')
-CALL db.checkpointMeta
+CALL db.checkpointMeta()
 ```
 
 ### Temporal procedures
@@ -217,6 +217,60 @@ CALL temporal.decay(7, 0.01)
 CALL temporal.trajectory()
 CALL temporal.velocity(7)
 ```
+
+### Spatial (R*-tree, exact — no approximation)
+```cypher
+-- K-nearest neighbor (≥ 2000/s at 11K entities)
+CALL algo.nearestNodes(point({x: 10.0, y: 10.0}), 'Player', 5)
+  YIELD node, distance RETURN node.name, distance
+
+-- Radius search (distance() pushed into R*-tree by compiler)
+MATCH (r:Robot) WHERE distance(r.position, point({x: 0, y: 0})) < 50.0 RETURN r.name
+
+-- Bounding box
+MATCH (e:Entity)
+WHERE e.position.x >= 0 AND e.position.x <= 100
+  AND e.position.y >= 0 AND e.position.y <= 50
+RETURN e.name
+
+-- Frustum / visibility (< 2ms for 50 entities, 10 frusta)
+CALL algo.objectsInFrustum($frustum) YIELD node, distance RETURN node.name
+CALL algo.nearestVisible($position, 'Camera', 10) YIELD node, distance RETURN node.name
+CALL spatial.raycast(point({x: 0, y: 0, z: 2}), point({x: 1, y: 0, z: 0}), 100.0)
+  YIELD hit, distance RETURN hit.name, distance
+
+-- Live geofencing (fires within 20ms of position update — edge-triggered)
+CREATE LIVE VIEW zone_alpha AS
+  MATCH (p:Player)
+  WHERE p.position.x >= 30 AND p.position.x <= 70
+    AND p.position.y >= 30 AND p.position.y <= 70
+  RETURN p.name, p.position
+LIVE MATCH (p:Player)
+  WHERE distance(p.position, point({x: 50, y: 50})) < 25.0
+  RETURN p.name
+
+-- Spatial + graph fused (DAG: spatial and CSR run concurrently)
+CALL algo.nearestNodes(order.location, 'Warehouse', 5) YIELD node AS wh, distance
+MATCH (wh)-[:SUPPLIES]->(item:Item {sku: $sku}) WHERE item.stock > 0
+RETURN wh.name, distance, item.stock ORDER BY distance
+
+-- Coordinate frame metadata (hard error on mismatch at ingest)
+CALL db.spatialMetadata()
+  YIELD crs, meters_per_unit, up_axis, handedness, calibration_version
+
+-- Dispatch observability (lane_chosen: CpuLive | CpuBatch | GpuLocal | GpuMulti)
+CALL arcflow.spatial.dispatch_stats()
+  YIELD lane_chosen, estimated_candidates, actual_candidates,
+        prefilter_us, rtree_us, gpu_transfer_us, kernel_us, total_us
+
+-- Reactive trigger metrics
+CALL arcflow.spatial.trigger_stats()
+  YIELD query_name, node_id, predicate_type, evaluation_us, fired
+```
+
+Point types: `point({x, y})` (2D), `point({x, y, z})` (3D), `point({latitude, longitude})` (WGS84).
+Inserts/updates/deletes: O(log N), no rebuild. Bulk ingest (USD prims): 500K in < 1s via Sort-Tile-Recursive.
+GPU dispatch automatic above candidate thresholds; FlatSpatialIndex used for GPU path.
 
 ### Reactive
 ```cypher

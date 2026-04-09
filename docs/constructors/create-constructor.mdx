@@ -29,9 +29,9 @@ CREATE SKILL <name>
 
 ## Notes
 
-- `CREATE SKILL` is the current WorldCypher syntax (will migrate to `CREATE CONSTRUCTOR`)
+- `CREATE SKILL` is the GQL statement for registering a constructor
 - Constructor is stored in the graph store with a `ConstructorId`
-- `TIER` determines execution strategy (SYMBOLIC is the only active tier currently)
+- `TIER SYMBOLIC` is the active execution tier; `WASM` and `LLM` are not yet implemented
 
 ## See Also
 
