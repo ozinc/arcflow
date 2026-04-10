@@ -11,9 +11,9 @@ status: "preview"
 
 <img src="/diagrams/behavior-graph.svg" alt="Behavior Graph Tick Evaluation Cycle" style={{width:"100%",margin:"1.5rem 0",borderRadius:"8px"}} />
 
-**Behavior trees that persist across restarts, remember their history, and query their own state with GQL.**
+**Behavior trees embedded in a persistent world model — they tick against live spatial-temporal state, persist across restarts, and remember their full history.**
 
-Standard behavior tree engines (UE5, BT.CPP) lose all state when the process exits, limit their blackboard to key-value lookup, and can't answer "what was the agent doing 5 minutes ago?" ArcFlow's Behavior Graph stores tree structure and blackboard state in a WAL-backed knowledge graph. You get `AS OF` temporal queries on any agent, full GQL over the blackboard, and thousands of concurrent trees sharing a single graph — with zero external infrastructure.
+Standard behavior tree engines (UE5, BT.CPP) operate in isolation from the world model: they lose all state when the process exits, limit their blackboard to key-value lookup, and can't answer "what was the agent doing 5 minutes ago?" ArcFlow's Behavior Graph stores tree structure and blackboard state inside the same WAL-backed world model as your entities, positions, and relationships. Trees tick against live graph state, carry full temporal history with `AS OF` queries, and thousands of concurrent agents share a single world model — with zero external infrastructure.
 
 ```cypher
 -- One call ticks the tree; state persists across restarts

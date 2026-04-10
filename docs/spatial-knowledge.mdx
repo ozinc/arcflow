@@ -1,17 +1,17 @@
 ---
-title: "Spatial Knowledge Graph"
-description: "Exact spatial queries backed by a dynamic R*-tree — KNN, radius, bbox, frustum, live geofencing, and graph traversal in one GQL statement"
+title: "Spatial Queries"
+description: "Space as a first-class dimension of the world model — R*-tree indexed KNN, radius, frustum, and geofencing composing with graph traversal in one GQL statement"
 section: "spatial-knowledge"
 order: 1
 since: "4.0.0"
 status: "stable"
 ---
 
-# Spatial Knowledge Graph
+# Spatial Queries
 
-**Exact spatial queries backed by a dynamic R\*-tree — no approximation, no separate spatial index service, no join between two systems.**
+**Space is a first-class dimension of the world model — not a numeric column, not a PostGIS extension, not a join between two systems.**
 
-ArcFlow treats spatial coordinates as a first-class query dimension alongside graph relationships. K-nearest, radius, bounding-box, and frustum queries run against the R\*-tree directly. Spatial predicates and graph traversal compose in a single GQL statement — "find the 5 nearest warehouses that have inventory for SKU X" is one query, not two. Position updates trigger live geofence queries within 20ms.
+ArcFlow's R\*-tree index makes spatial position a native query axis alongside graph relationships and temporal state. K-nearest, radius, bounding-box, and frustum queries compose with graph traversal in a single GQL statement — "find the 5 nearest warehouses that have inventory for SKU X" is one query, not two. Position updates trigger live geofence queries within 20ms. No approximation, no separate spatial service, no infrastructure gap between where things are and what they connect to.
 
 ```cypher
 -- Supply chain: spatial filter → graph traversal → property filter — one query

@@ -122,6 +122,14 @@ const monitor = db.subscribe(
 )
 ```
 
+## ArcFlow in the AI infrastructure stack
+
+The current AI infrastructure stack has a gap. Foundation models handle language and perception. Vector databases handle similarity search. But no standard infrastructure layer handles the problem of **representing what the world is, was, and will be** — with spatial precision, temporal fidelity, and epistemic honesty about what is known versus inferred.
+
+That gap is where world models live. An autonomous vehicle fleet needs to know where every vehicle is, where it was, and what confidence level its sensor data carries — not retrieved from a language model, not approximated by vector similarity, but tracked precisely in a spatial-temporal graph. A multi-agent AI system needs persistent shared state that every agent reads from and writes to, with full provenance of who changed what and when. A physical AI deployment needs a live replica of its environment that can be queried, replayed, and reasoned over.
+
+ArcFlow is the database layer for this part of the AI stack: the World Model infrastructure that foundation models, agent frameworks, and reasoning systems build on top of.
+
 ## Why OZ built ArcFlow
 
 OZ builds operational AI infrastructure for physical environments — sports venues, industrial facilities, autonomous fleets. Every system OZ runs needs the same thing at its core: a continuous, spatial-temporal representation of what is happening, where, and how reliably we know it.
@@ -134,9 +142,9 @@ That representation did not exist as a database product. The landscape had two f
 
 The world model era is real. AI systems that navigate physical environments, coordinate autonomous fleets, or make decisions with real consequences all require the same infrastructure: a database where space and time are first-class dimensions from first principles — not extensions, not add-ons, not workarounds.
 
-OZ built ArcFlow because that infrastructure did not exist. It runs in-process (no server, no round-trip), in the browser (any device, zero install), or as a lightweight server — with the same query language, the same temporal guarantees, the same confidence model everywhere. The intention is to give every team building world-aware systems the same foundation that OZ's own physical infrastructure runs on.
+OZ built ArcFlow because that infrastructure did not exist. It runs in-process (no server, no round-trip), in the browser (any device, zero install), or as a lightweight server — with the same query language, the same temporal guarantees, the same confidence model everywhere. The intention is to give every team building world-aware systems the same foundation that OZ's own physical AI infrastructure runs on.
 
-Every match day. Every shift. Every season. Not a demo — infrastructure.
+Not a research prototype. Production infrastructure — deployed, operating, and under continuous load.
 
 ## See Also
 

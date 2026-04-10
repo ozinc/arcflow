@@ -1,25 +1,26 @@
 ---
 title: "Use Case: Sports Analytics"
-description: "Use Case: Sports Analytics"
+description: "Sports analytics as a world model problem — spatial-temporal player tracking, confidence-scored events, formation algorithms, and real-time queries in one engine"
 section: "use-cases"
 status: "stable"
 ---
 
 # Use Case: Sports Analytics
 
-Track players in real time, compute formations, detect events, and analyze match patterns.
+Sports analytics is fundamentally a world model problem. 22 players tracked at 50Hz. Formations that emerge from spatial relationships. Events detected from position history. Historical queries at any moment in the match.
 
 ## The problem
 
-Sports analytics requires:
+A sports world model requires all of these simultaneously:
 - **Spatial tracking** — player positions at 50Hz (22 players, 90 minutes = 5.94M data points)
-- **Temporal queries** — "Where was player X at minute 35?"
+- **Temporal queries** — "Where was player X at minute 35?" — `AS OF seq N` on the world model
 - **Graph relationships** — team membership, passing networks, marking assignments
 - **Real-time algorithms** — nearest player to ball, formation detection, offside detection
+- **Confidence scoring** — distinguishing high-accuracy optical tracking from radar estimates
 
 ## Why ArcFlow
 
-One engine handles the spatial data, temporal queries, graph algorithms, and real-time computation. No separate databases for positions, events, and relationships.
+One world model engine handles spatial, temporal, graph, and real-time computation. No separate databases for positions, events, and relationships. The spatial-temporal graph is the single source of truth.
 
 ## Implementation
 

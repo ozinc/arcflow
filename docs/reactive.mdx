@@ -1,17 +1,17 @@
 ---
-title: "Messaging & Events"
-description: "Built-in pub/sub, live queries, change data capture — no external broker needed"
+title: "Reactive Queries & Events"
+description: "A continuous world model reacts to change — built-in pub/sub, live queries, and CDC eliminate polling and external brokers"
 section: "reactive"
 order: 1
 since: "1.5.0"
 status: "stable"
 ---
 
-# Messaging & Events
+# Reactive Queries & Events
 
-**Built-in pub/sub, CDC, and live queries eliminate external message brokers for applications that embed ArcFlow — zero network hops, zero serialization overhead.**
+**A continuous world model is a living system — state changes in real time, and downstream systems must react immediately, not on the next poll cycle.**
 
-Topics, stored subscriptions, change data capture, and materialized views run in the same process as your graph queries. When a mutation matches a subscription pattern, the handler fires immediately — no external cache, no message broker, no streaming platform. For in-process event routing, this replaces three infrastructure dependencies with zero.
+ArcFlow's reactive layer means the world model notifies subscribers the moment a relevant mutation occurs. Topics, stored subscriptions, change data capture, and live materialized views run in the same process as your graph queries — zero network hops, zero serialization overhead, zero external broker. For in-process event routing, this replaces three infrastructure dependencies with zero.
 
 ```sql
 -- Publish an event; matching subscriptions fire automatically, in-process

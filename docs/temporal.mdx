@@ -1,17 +1,17 @@
 ---
-title: "Temporal Features"
-description: "Time-travel queries, temporal ingest, clock domains, and monotonic validation"
+title: "Temporal Queries"
+description: "Time as a first-class dimension of the world model — every mutation versioned, every past state queryable with AS OF seq N"
 section: "temporal"
 order: 1
 since: "7.0.0"
 status: "stable"
 ---
 
-# Temporal Features
+# Temporal Queries
 
-**"What was the state of this entity 5 minutes ago?" — one `AS OF` clause answers it, on any node, with no schema changes.**
+**Time is a first-class dimension of the world model — not a log, not an audit table, not a framework to integrate. Every state the graph has ever been in is directly queryable.**
 
-Every mutation in ArcFlow is timestamped and preserved. Point-in-time queries, deterministic replay, temporal comparison, and clock domain merging are built into the query language. No temporal tables to configure, no event-sourcing framework to integrate — add `AS OF <timestamp>` to any `MATCH` and you see the graph as it existed at that moment.
+Every mutation in ArcFlow is versioned and preserved. The world model at any previous moment is accessible with a single `AS OF seq N` clause on any `MATCH` — no schema changes, no separate tables, no event-sourcing pipeline. Point-in-time queries, deterministic replay, temporal comparison, and clock domain merging are built into the query language itself.
 
 ```sql
 -- Current state
