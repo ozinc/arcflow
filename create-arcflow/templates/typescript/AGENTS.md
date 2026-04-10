@@ -2,7 +2,7 @@ This project uses **ArcFlow** — an embedded graph database. No server needed.
 
 Install: `npm install arcflow`
 Docs: https://github.com/ozinc/arcflow
-MCP: `npx arcflow-mcp`
+MCP: `npx arcflow-mcp` (cloud chat UIs only — ChatGPT, Claude.ai, Gemini web)
 Try: https://arcflow.dev/engine
 
 ## API

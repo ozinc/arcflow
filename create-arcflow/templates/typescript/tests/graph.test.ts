@@ -7,12 +7,12 @@ describe('graph operations', () => {
 
     db.mutate("CREATE (a:Person {name: 'Alice'})")
     db.mutate("CREATE (b:Person {name: 'Bob'})")
-    db.mutate("CREATE (a:Person {name: 'Alice'})-[:KNOWS]->(b:Person {name: 'Bob'})")
+    db.mutate("MATCH (a:Person {name: 'Alice'}) MATCH (b:Person {name: 'Bob'}) CREATE (a)-[:KNOWS]->(b)")
 
     const result = db.query("MATCH (p:Person) RETURN p.name ORDER BY p.name")
     expect(result.rowCount).toBe(2)
-    expect(result.rows[0].get('name')).toBe('Alice')
-    expect(result.rows[1].get('name')).toBe('Bob')
+    expect(result.rows[0].get('p.name')).toBe('Alice')
+    expect(result.rows[1].get('p.name')).toBe('Bob')
 
     db.close()
   })
@@ -21,12 +21,14 @@ describe('graph operations', () => {
     const db = openInMemory()
 
     db.batchMutate([
-      "CREATE (a:Node {name: 'A'})",
-      "CREATE (b:Node {name: 'B'})",
-      "CREATE (c:Node {name: 'C'})",
-      "CREATE (a:Node {name: 'A'})-[:LINK]->(b:Node {name: 'B'})",
-      "CREATE (b:Node {name: 'B'})-[:LINK]->(c:Node {name: 'C'})",
-      "CREATE (c:Node {name: 'C'})-[:LINK]->(a:Node {name: 'A'})",
+      "MERGE (n:Node {name: 'A'})",
+      "MERGE (n:Node {name: 'B'})",
+      "MERGE (n:Node {name: 'C'})",
+    ])
+    db.batchMutate([
+      "MATCH (a:Node {name: 'A'}) MATCH (b:Node {name: 'B'}) MERGE (a)-[:LINK]->(b)",
+      "MATCH (a:Node {name: 'B'}) MATCH (b:Node {name: 'C'}) MERGE (a)-[:LINK]->(b)",
+      "MATCH (a:Node {name: 'C'}) MATCH (b:Node {name: 'A'}) MERGE (a)-[:LINK]->(b)",
     ])
 
     const result = db.query("CALL algo.pageRank()")

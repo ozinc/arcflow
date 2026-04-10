@@ -2,14 +2,18 @@ import { openInMemory } from 'arcflow'
 
 const db = openInMemory()
 
-// Create nodes
+// Create nodes — MERGE is idempotent; use name as the unique key
 db.batchMutate([
-  "CREATE (alice:Person {name: 'Alice', age: 30})",
-  "CREATE (bob:Person {name: 'Bob', age: 25})",
-  "CREATE (charlie:Person {name: 'Charlie', age: 35})",
-  "CREATE (alice:Person {name: 'Alice'})-[:KNOWS {since: 2020}]->(bob:Person {name: 'Bob'})",
-  "CREATE (bob:Person {name: 'Bob'})-[:KNOWS {since: 2021}]->(charlie:Person {name: 'Charlie'})",
-  "CREATE (alice:Person {name: 'Alice'})-[:KNOWS {since: 2019}]->(charlie:Person {name: 'Charlie'})",
+  "MERGE (n:Person {name: 'Alice'}) ON CREATE SET n.age = 30",
+  "MERGE (n:Person {name: 'Bob'}) ON CREATE SET n.age = 25",
+  "MERGE (n:Person {name: 'Charlie'}) ON CREATE SET n.age = 35",
+])
+
+// Create relationships — MATCH the existing nodes, then MERGE the edge
+db.batchMutate([
+  "MATCH (a:Person {name: 'Alice'}) MATCH (b:Person {name: 'Bob'}) MERGE (a)-[:KNOWS {since: 2020}]->(b)",
+  "MATCH (a:Person {name: 'Bob'}) MATCH (b:Person {name: 'Charlie'}) MERGE (a)-[:KNOWS {since: 2021}]->(b)",
+  "MATCH (a:Person {name: 'Alice'}) MATCH (b:Person {name: 'Charlie'}) MERGE (a)-[:KNOWS {since: 2019}]->(b)",
 ])
 
 // Query the graph

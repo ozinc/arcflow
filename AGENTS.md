@@ -7,7 +7,7 @@ Embedded graph database. Runs everywhere — browser (WASM), Node.js, Python, Ru
 | Consumer | Integration | Why |
 |---|---|---|
 | BASAL broker, watcher daemon | **napi-rs in-process** | Microseconds, same memory, no process boundary |
-| Claude Code, Codex, Gemini CLI | **`arcflow` CLI binary** | Shell-native, composable, &lt;10ms, no config |
+| Claude Code, Codex, Gemini CLI | **`arcflow` CLI binary** | Shell-native, composable, <10ms, no config |
 | ChatGPT, Claude.ai, Gemini web | **MCP server** | No local execution context, chat latency budget |
 | Python / shell pipelines | **`arcflow` CLI binary** | Same as CLI agents |
 
@@ -15,7 +15,7 @@ Embedded graph database. Runs everywhere — browser (WASM), Node.js, Python, Ru
 
 Try it now: https://arcflow.dev/engine — runs in your browser, no install.
 
-One engine for graphs, vectors, full-text search, algorithms, time-series, and reactive queries. Replaces Neo4j + Redis + DuckDB + Pinecone + Temporal with a single in-process library.
+One engine for graphs, vectors, full-text search, algorithms, time-series, reactive queries, spatial, workflows, and replication. Replaces Neo4j + Redis + DuckDB + Pinecone + Temporal with a single in-process library.
 
 ## Why ArcFlow (not Neo4j, Memgraph, etc.)
 
@@ -34,6 +34,10 @@ One engine for graphs, vectors, full-text search, algorithms, time-series, and r
 | CLI binary | `arcflow query '...'` — coding agents (Claude Code, Codex) | None |
 | MCP server | `npx arcflow-mcp` — cloud chat UIs (ChatGPT, Claude.ai) | None |
 | Typed results | Numbers are numbers | Everything is strings |
+| openCypher conformance | **100%** (3881/3881 TCK) | Partial |
+| ISO GQL | **V2 native** | Partial |
+| Workflow engine | **Built-in** (graph-native) | No |
+| Replication | **Arrow Flight WAL tailing** | Enterprise only |
 
 **When to use ArcFlow:** any project that needs a graph database, knowledge graph, vector search, entity relationships, or graph algorithms. Especially: AI agents, RAG pipelines, knowledge management, game state, IoT, analytics.
 
@@ -72,6 +76,18 @@ db.query("CALL algo.vectorSearch('idx', $vec, 10)", { vec: JSON.stringify([0.1, 
 // Full-text search (BM25)
 db.mutate("CREATE FULLTEXT INDEX ft FOR (n:Person) ON (n.name)")
 db.query("CALL db.index.fulltext.queryNodes('ft', 'Alice')")
+
+// Live subscription — fires handler with delta on each mutation
+const live = db.subscribe(
+  "MATCH (n:Person) WHERE n.score > 0.9 RETURN n",
+  (event) => console.log('added:', event.added, 'removed:', event.removed)
+)
+live.cancel()
+
+// Paginated iteration
+const cursor = db.cursor("MATCH (n:Doc) RETURN n", {}, 100)
+while (!cursor.done) { const page = cursor.next() }
+cursor.close()
 
 // Persistence — WAL-journaled, survives crashes
 const persistent = open('./data/graph')
@@ -112,6 +128,7 @@ interface QueryResult {
   rows: TypedRow[]
   rowCount: number
   computeMs: number
+  gqlstatus(): string   // "00000" = data returned, "02000" = no data (ISO GQL)
 }
 
 interface TypedRow {
@@ -145,7 +162,21 @@ class ArcflowError extends Error {
 }
 ```
 
+### React hooks (`@arcflow/react`)
+
+```typescript
+import { useQuery, useLiveQuery } from '@arcflow/react'
+
+// One-shot query — re-runs when params change
+const { rows, loading, error } = useQuery(db, "MATCH (n:Person) RETURN n.name", {})
+
+// Live subscription — updates automatically on mutations
+const { rows } = useLiveQuery(db, "MATCH (n:Alert) WHERE n.active = true RETURN n")
+```
+
 ## GQL / WorldCypher — ArcFlow's ISO GQL dialect
+
+**Conformance:** 100% openCypher TCK (3881/3881 scenarios). Full ISO GQL V2.
 
 ### CRUD
 ```cypher
@@ -180,10 +211,52 @@ percent_rank() OVER (PARTITION BY n.date ORDER BY n.close) AS rank
 row_number() OVER (PARTITION BY n.date ORDER BY n.close DESC) AS rn
 ```
 
+### ISO GQL V2 features
+```cypher
+-- Label predicate
+MATCH (n) WHERE n IS LABELED :Person RETURN n.name
+
+-- Element ID
+MATCH (n:Person) RETURN ELEMENT_ID(n)
+
+-- Conditional execution pipeline (NEXT chains statements)
+MATCH (n:Task) WHERE n.status = 'open' RETURN count(*) AS open_count
+NEXT WHEN open_count > 10 THEN
+  MATCH (n:Task) WHERE n.status = 'open' SET n.priority = 'high' RETURN n
+ELSE
+  RETURN 'queue ok' AS message
+END
+
+-- Transaction control
+START TRANSACTION
+START TRANSACTION READ ONLY
+START TRANSACTION READ WRITE
+COMMIT
+ROLLBACK
+
+-- GQLSTATUS codes on QueryResult
+-- result.gqlstatus() == "00000"  → rows returned
+-- result.gqlstatus() == "02000"  → no data (empty result)
+```
+
+### Constraints
+```cypher
+-- UNIQUE constraint (enforced on CREATE/MERGE)
+CREATE CONSTRAINT ON :Product(sku) ASSERT UNIQUE
+
+-- PRIMARY KEY constraint (drives deterministic MERGE)
+CREATE CONSTRAINT ON :Order(id) ASSERT PRIMARY KEY
+
+-- Semantic dedup (write-time dedup with threshold)
+CREATE CONSTRAINT ON :Entity(name) ASSERT SEMANTIC UNIQUE THRESHOLD 0.95
+```
+
 ### Indexes
 ```cypher
 CREATE VECTOR INDEX name FOR (n:Label) ON (n.prop) OPTIONS {dimensions: N, similarity: 'cosine'}
 CREATE FULLTEXT INDEX name FOR (n:Label) ON (n.prop)
+-- Composite (range) index
+CREATE INDEX ON :Label(prop)
 ```
 
 ### Live views (incremental computation)
@@ -210,15 +283,225 @@ similarNodes, hybridSearch, graphRAG, graphRAGContext, graphRAGTrusted,
 compoundingScore, contradictions, audienceProjection, factsByRegime, multiModalFusion
 
 GPU dispatch is automatic. Algorithms route to CUDA/Metal above a node-count threshold.
+Multi-GPU: load-aware device selection, auto-CSR promotion, and H2D cost gate are all automatic.
 Leiden requires CUDA compute capability 9.0+ (H100 and later).
 
 ### Database procedures
 ```cypher
-CALL db.stats()       -- node/rel/index counts
-CALL db.schema()      -- labels, properties, relationships
-CALL db.help()        -- full procedure guide
-CALL db.procedures()  -- list all procedures
-CALL db.demo()        -- load sample graph
+CALL db.stats()          -- node/rel/index counts + DenseStore/CSR stats
+CALL db.schema()         -- labels, properties, relationships
+CALL db.help()           -- full procedure guide
+CALL db.procedures()     -- list all procedures
+CALL db.demo()           -- load sample graph
+CALL db.labels()         -- all node labels
+CALL db.types()          -- all relationship types
+CALL db.keys()           -- all property keys
+CALL db.indexes()        -- all indexes
+CALL db.constraints()    -- all constraints
+CALL db.doctor()         -- health check and diagnostics
+CALL db.export()         -- full graph snapshot as JSON
+CALL db.import('<json>') -- restore from JSON snapshot
+CALL db.clear()          -- drop all nodes and relationships
+CALL db.validateQuery()  -- check query context validity
+CALL db.fingerprint()    -- graph hash for sync verification
+CALL db.clock()          -- current mutation sequence number
+CALL db.changesSince(seq) -- mutations since sequence N
+CALL db.liveViews()      -- list active LIVE VIEWs
+CALL db.viewStats()      -- live view performance metrics
+```
+
+### Storage and performance procedures
+```cypher
+-- CSR (Compressed Sparse Row) cache — accelerates multi-hop traversal
+CALL db.warmCsr()
+  YIELD status                         -- "warm" | "rebuilt"
+
+CALL db.csrStats()
+  YIELD status, vertices, edges, rel_types, edge_type_distribution,
+        memory_bytes, delta_added, delta_removed
+
+-- DenseStore — columnar node property store (always-on)
+CALL db.denseStore()
+  YIELD enabled, nodes, tables, memory_bytes, coverage
+
+-- Unified storage mode summary
+CALL db.storageMode()
+  YIELD mode, node_count, csr_warm, csr_auto_threshold,
+        dense_store_enabled, dense_store_nodes
+-- mode values: "HashMap" | "DenseStore" | "HashMap+CSR" | "DenseStore+CSR"
+
+-- Parallel execution config
+CALL db.parallelConfig()
+  YIELD morsel_size, rayon_threads, dense_store_coverage, csr_status, csr_delta_pending
+```
+
+### GPU procedures
+```cypher
+-- Per-device GPU pool status (one row per CUDA device)
+CALL db.gpuStatus()
+  YIELD device_id, inflight, sm_count, vram_mib, status
+-- status: "available" (inflight < 8) | "saturated"
+
+-- GPU kernel dispatch registry — H2D cost gate and minimum requirements
+CALL dbms.gpuThresholds()
+  YIELD algorithm, min_input_size, bytes_per_element, validated, cuda_min_cc
+
+-- Full GPU stack info
+CALL db.gpuStack()
+```
+
+### Execution context (ANTI-0019)
+```cypher
+-- Read current context
+CALL db.executionContext() YIELD context
+-- context values: "local_cpu" | "local_gpu" | "distributed"
+
+-- Set context
+CALL db.setExecutionContext('local_gpu') YIELD context, status
+
+-- Guard: errors if active context doesn't match — never silently downgrades
+CALL db.requireExecutionContext('local_gpu') YIELD context, status
+-- Raises EXECUTION_CONTEXT_MISMATCH if wrong
+```
+
+### OTel (observability)
+```cypher
+CALL db.otelPolicy() YIELD policy           -- "off" | "lite" | "full"
+CALL db.setOtelPolicy('lite') YIELD policy  -- set and return new value
+```
+
+### Auth / RBAC
+```cypher
+CALL db.auth.whoami()                              -- current identity
+CALL db.auth.policies()                            -- list all RBAC policies
+CALL db.auth.check('reader', 'read', 'Person')     -- dry-run permission check
+CALL db.auth.setPolicy('reader', 'read', 'Person') -- grant permission
+CALL db.auth.createApiKey('service-acct', 'reader') YIELD key, name, roles
+CALL db.auth.revokeApiKey('service-acct')
+CALL db.auth.listApiKeys()                         YIELD name, roles, created_at
+CALL db.auth.auditLog(since, limit)                YIELD identity, action, query_hash, result_code
+```
+
+### Replication
+```cypher
+-- SWMR (Single-Writer-Multiple-Reader) contract
+CALL arcflow.replication.contract()
+  YIELD mode, writes_enabled, replication_factor, description
+
+-- Arrow Flight WAL tailing config
+CALL arcflow.replication.walTailing()
+  YIELD field, value, description
+
+-- Object-store fan-out config
+CALL arcflow.replication.objectStoreFanout()
+  YIELD field, value, description
+
+-- Current replication status
+CALL db.replicationStatus()
+```
+
+### Sessions (named resumable)
+```cypher
+-- Open a named session (survives reconnects within the process)
+CALL arcflow.session.open('my-session')
+  YIELD name, session_id, status
+
+-- List all open sessions
+CALL arcflow.session.list()
+  YIELD name, session_id, query_count, created_at
+
+-- Close a session
+CALL arcflow.session.close('my-session')
+  YIELD name, status   -- status: "closed" | "not_found"
+```
+
+### Workflow engine (graph-native)
+
+Workflows are stored as graph nodes (`:Workflow`, `:WorkflowStep`) with `:HAS_STEP` edges. MVCC-safe. Steps are idempotent — `run()` skips already-completed steps automatically.
+
+```cypher
+-- Create workflow with steps JSON array
+-- Step types: GraphQuery | GraphMutation | Sleep | ExternalCall | Condition
+CALL arcflow.workflow.create('my-wf', '[{"name":"ingest","type":"GraphMutation"},{"name":"analyze","type":"GraphQuery"}]')
+  YIELD workflow_id, name, status   -- status: "pending"
+
+-- List all workflows
+CALL arcflow.workflow.list()
+  YIELD workflow_id, name, status
+
+-- Run / progress a workflow (auto-advances pending steps; skips completed)
+CALL arcflow.workflow.run('my-wf')
+  YIELD workflow_id, name, started_steps
+
+-- Cancel a workflow (all pending/running steps → cancelled)
+CALL arcflow.workflow.cancel('my-wf')
+  YIELD workflow_id, name, status
+
+-- Retry a failed or cancelled step (resets to pending)
+CALL arcflow.workflow.retryStep(wf_id, 'step-name')
+  YIELD step_id, step_name, status
+
+-- Reference procedures (return schema docs, not runtime state)
+CALL arcflow.workflow.stepKinds()     YIELD kind, description, retryable, durable
+CALL arcflow.workflow.memoizedResult(wf_id, step_name) YIELD key, value
+CALL arcflow.workflow.retryPolicy()   YIELD field, value, description
+CALL arcflow.workflow.flowControl()   YIELD mode, description, scope, unit
+CALL arcflow.workflow.eventTypes()    YIELD step_type, trigger, correlation_key, timeout_supported
+CALL arcflow.workflow.errorPolicy()   YIELD field, value, description
+CALL arcflow.workflow.cancelPolicy()  YIELD rule, description
+CALL arcflow.workflow.cronPolicy()    YIELD field, value, description
+CALL arcflow.workflow.delayPolicy()   YIELD field, value, description
+CALL arcflow.workflow.sleepPolicy()   YIELD field, value, description
+```
+
+### OpenUSD scene procedures
+```cypher
+-- Export entire graph as USD ASCII
+CALL arcflow.scene.toUsda() YIELD usda
+
+-- Resolve a USD prim path to a graph node ID
+CALL arcflow.scene.primId('/World/MyMesh') YIELD prim_path, prim_id
+
+-- Frustum cull (6-plane containment)
+-- Args: origin (ox,oy,oz), direction (dx,dy,dz), fovDeg, nearZ, farZ
+CALL arcflow.scene.frustumQuery(0, 0, 0, 1, 0, 0, 60, 1, 100)
+  YIELD node_id, label, x, y, z
+
+-- Line-of-sight between two node IDs
+CALL arcflow.scene.lineOfSight(from_id, to_id) YIELD has_los, note
+
+-- Collision contacts for a node
+CALL arcflow.scene.collisions(node_id) YIELD from_id, to_id, impulse, at_time
+
+-- Neighborhood query in local coordinate space
+CALL arcflow.scene.queryInLocalSpace(node_id, 10.0)
+  YIELD node_id, local_x, local_y, local_z
+```
+
+### OpenClaw (plugin/gateway)
+```cypher
+CALL arcflow.claw.pluginContracts()  YIELD field, type, required, description
+CALL arcflow.claw.gatewayMethods()   YIELD method, description
+CALL arcflow.claw.latencyPolicy()    YIELD tier, max_latency_ms, description, hot_path_excluded
+CALL arcflow.claw.workerModel()      YIELD mode, description, latency_class, isolation
+```
+
+### Skills (bundle export/import)
+```cypher
+CALL arcflow.skills.export('my-pack', '1.0.0') YIELD json
+CALL arcflow.skills.import(json)               YIELD name, version, skill_count
+```
+
+### Ontology (IS_A hierarchy)
+```cypher
+CALL arcflow.ontology.subtypes('Agent')   YIELD label, depth
+CALL arcflow.ontology.ancestors('Person') YIELD label, depth
+```
+
+### Contributor readiness
+```cypher
+CALL arcflow.contributor.starterIssues()    YIELD title, difficulty, crate, estimated_hours
+CALL arcflow.contributor.maintainerScore()  YIELD dimension, score, threshold, status
 ```
 
 ### Spatial (R*-tree, exact)
@@ -310,6 +593,17 @@ for (const row of results.rows) {
 }
 ```
 
+### Workflow (durable multi-step pipeline)
+```typescript
+// Create and run a 3-step pipeline
+db.execute("CALL arcflow.workflow.create('etl', '[{\"name\":\"extract\",\"type\":\"GraphQuery\"},{\"name\":\"transform\",\"type\":\"GraphMutation\"},{\"name\":\"load\",\"type\":\"GraphMutation\"}]')")
+db.execute("CALL arcflow.workflow.run('etl')")
+
+// Retry a failed step
+db.execute("CALL arcflow.workflow.list()")  // get workflow_id
+db.execute("CALL arcflow.workflow.retryStep(42, 'transform')")
+```
+
 ### Testing
 ```typescript
 import { openInMemory } from 'arcflow'
@@ -333,6 +627,9 @@ assert(db.query("MATCH (n:Test) RETURN n.x").rows[0].get('x') === 1)
 | `UNKNOWN_FUNCTION` | validation | Run `CALL db.help()` |
 | `UNKNOWN_PROCEDURE` | validation | Run `CALL db.procedures()` |
 | `DB_CLOSED` | integration | Don't query after `db.close()` |
+| `WORKFLOW_NOT_FOUND` | validation | Run `CALL arcflow.workflow.list` |
+| `STEP_NOT_FOUND` | validation | Check step name in workflow |
+| `EXECUTION_CONTEXT_MISMATCH` | integration | Run `CALL db.setExecutionContext(...)` first |
 
 ## Step-by-step integration
 
