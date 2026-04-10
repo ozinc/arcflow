@@ -36,7 +36,7 @@ MATCH (row) FROM VIEW revenue_by_region
 -- Happens automatically. No code change.
 
 -- Mode 3: Frozen snapshot (point-in-time replay)
-MATCH (row) FROM VIEW revenue_by_region AS OF 1710511200000
+MATCH (row) FROM VIEW revenue_by_region AS OF seq 1000
   RETURN row.region, row.revenue
 
 -- Mode 4: Delta batch (replay deltas from seq 1000 to 2000, no live updates)

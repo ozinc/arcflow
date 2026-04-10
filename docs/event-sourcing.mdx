@@ -69,7 +69,7 @@ RETURN o.status
 -- Result: "confirmed"
 
 -- State at order creation
-MATCH (o:Order) AS OF 1711324800000
+MATCH (o:Order) AS OF seq 100
 RETURN o.id, o.status, o.total
 ```
 
@@ -106,7 +106,7 @@ CALL db.temporalCompare(
 Every fact has a timestamp, every relationship has provenance. Auditors can query: "What was the state of account X on March 15 at 2:00 PM?"
 
 ```cypher
-MATCH (a:Account {id: 'ACC-789'}) AS OF 1710511200000
+MATCH (a:Account {id: 'ACC-789'}) AS OF seq 42
 RETURN a.balance, a.status, a._updated_at
 ```
 

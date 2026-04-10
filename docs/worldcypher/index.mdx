@@ -44,7 +44,7 @@ ORDER BY p.name LIMIT 10                 -- modifiers: sort and limit
 
 | Feature | Syntax | Description |
 |---|---|---|
-| Temporal snapshots | `AS OF 1700000000` | Query at a point in time |
+| Temporal snapshots | `AS OF seq N` | Query graph at sequence N |
 | Reactive queries | `LIVE MATCH ...` | Standing queries that re-evaluate |
 | Live algorithms | `LIVE CALL algo.pageRank()` | Incrementally maintained |
 | Persistent views | `CREATE LIVE VIEW ...` | Named live query |

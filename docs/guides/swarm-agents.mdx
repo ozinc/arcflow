@@ -90,9 +90,64 @@ CREATE LIVE VIEW pending_tasks AS
 MATCH (row) FROM VIEW pending_tasks RETURN row
 ```
 
+## Durable Workflows (Built-in Orchestration)
+
+For multi-step agent pipelines that need durability, retries, and cancellation — use ArcFlow's built-in workflow engine. Workflows are stored as `:Workflow` and `:WorkflowStep` graph nodes, so they're fully queryable and MVCC-safe.
+
+```typescript
+// Create a workflow with named steps
+db.mutate(`
+  CALL arcflow.workflow.create(
+    'agent-pipeline',
+    '[{"name":"ingest","type":"GraphMutation"},{"name":"enrich","type":"GraphMutation"},{"name":"emit","type":"GraphMutation"}]'
+  )
+`)
+
+// List all workflows and their status
+const wfs = db.query("CALL arcflow.workflow.list() YIELD workflow_id, name, status, step_count")
+
+// Run a workflow
+db.mutate("CALL arcflow.workflow.run($id)", { id: workflowId })
+
+// Retry a failed step
+db.mutate("CALL arcflow.workflow.retryStep($id, 'enrich')", { id: workflowId })
+
+// Cancel a running workflow
+db.mutate("CALL arcflow.workflow.cancel($id)", { id: workflowId })
+```
+
+Query workflow state directly via graph — no separate dashboard needed:
+
+```cypher
+-- All running workflows
+MATCH (w:Workflow {status: 'running'}) RETURN w.name, w.started_at
+
+-- Steps that failed
+MATCH (w:Workflow)-[:HAS_STEP]->(s:WorkflowStep {status: 'failed'})
+RETURN w.name, s.name, s.error
+```
+
+## Named Sessions
+
+Named sessions let agents resume work across restarts without losing context. Each session tracks its query history.
+
+```typescript
+// Open a named session (creates if not exists, resumes if it does)
+const sess = db.query("CALL arcflow.session.open('scout-agent-1') YIELD session_id, name, query_count")
+const sessionId = sess.rows[0].get('session_id')
+
+// List active sessions
+db.query("CALL arcflow.session.list() YIELD session_id, name, query_count, created_at")
+
+// Close when done
+db.mutate("CALL arcflow.session.close($id)", { id: sessionId })
+```
+
+Use named sessions when agents need persistent identity — e.g., a scout that runs continuously and should resume its task queue after a crash.
+
 ## Use cases
 
-- **AI agent orchestration** — multiple LLM agents sharing a knowledge graph
+- **AI agent orchestration** — multiple LLM agents sharing a knowledge graph with durable workflow coordination
 - **Game AI** — NPC teams, squad coordination, shared perception
 - **Robotics** — multi-robot task allocation, shared world model
-- **Distributed processing** — worker pools with graph-based task queues
+- **Distributed processing** — worker pools with graph-based task queues and built-in retry
