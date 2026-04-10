@@ -1,11 +1,15 @@
 ---
 title: "Use Case: Behavior Graphs"
-description: "Use Case: Behavior Graphs"
+description: "Behavior trees embedded in a world model — the tree IS the graph, with confidence-scored transitions, execution provenance, and temporal history"
 section: "use-cases"
 status: "stable"
 ---
 
 # Use Case: Behavior Graphs
+
+In ArcFlow, a behavior tree is not a separate engine layered on top of the world model — the tree IS the graph. Nodes are graph nodes. Transitions are edges. The blackboard is the property store. The agent's decision history is queryable with `AS OF seq N`.
+
+This matters for autonomous agents and game AI because behavior is inseparable from world state. An agent that can traverse the same graph it lives in — seeing its own history, querying its environment, following relationships to nearby entities — makes decisions grounded in the full world model rather than a shallow key-value blackboard.
 
 Model behavior trees as graph structures for game AI, robotics, and autonomous agents.
 

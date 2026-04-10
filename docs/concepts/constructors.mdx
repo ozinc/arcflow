@@ -1,6 +1,6 @@
 ---
 title: "Constructors"
-description: "Executable, versioned, auditable programs that build relationships"
+description: "Executable, versioned, confidence-scored relationship builders — the world model's enrichment layer, no external pipelines"
 section: "concepts"
 order: 2
 since: "0.2.0"
@@ -8,6 +8,8 @@ status: "stable"
 ---
 
 # Constructors
+
+A Constructor is a named, versioned, graph-native enrichment program. It processes nodes with a specific label, builds relationships with confidence scores and provenance, and re-runs automatically when source data changes — no external pipeline, no nightly batch job, no drift between runs.
 
 Consider a fraud detection system. You have 10 million transactions and 500,000 accounts. In a traditional graph database, you'd write a batch job to scan for suspicious patterns, generate edges, run it nightly, and hope nothing drifts between runs:
 

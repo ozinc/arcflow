@@ -1,6 +1,6 @@
 # ArcFlow
 
-Embedded graph database. Runs everywhere — browser (WASM), Node.js, Python, Rust, Docker. No server needed.
+The World Model database — spatial-temporal, confidence-scored, embedded. Space and time are first-class dimensions. Every node has an observation class (observed/inferred/predicted) and confidence score [0.0, 1.0]. Full GQL (ISO/IEC 39075, Cypher-compatible). Runs everywhere — browser (WASM), Node.js, Python, Rust, Docker. No server needed.
 
 ## Integration model — three surfaces, no overlap
 

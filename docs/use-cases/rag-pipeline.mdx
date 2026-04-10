@@ -1,13 +1,17 @@
 ---
 title: "Use Case: RAG Pipeline"
-description: "Use Case: RAG Pipeline"
+description: "Trusted RAG on a world model — confidence-scored facts, provenance-tracked sources, and multi-hop graph traversal replace flat chunk retrieval"
 section: "use-cases"
 status: "stable"
 ---
 
 # Use Case: RAG Pipeline
 
-Build a retrieval-augmented generation pipeline that combines vector similarity, graph traversal, and full-text search for richer LLM context.
+Standard RAG retrieves flat chunks and trusts the LLM to figure out the rest. Trusted RAG runs on a world model — every fact has a confidence score, every source has provenance, and retrieval follows relationship paths rather than approximate vector similarity.
+
+LLMs are strong at language. They are weak at multi-hop reasoning over connected facts — finding what links entity A to entity B through three degrees of relationship. That's a traversal problem. It requires world model infrastructure, not a vector index.
+
+Build a retrieval-augmented generation pipeline that combines vector similarity, graph traversal, and full-text search — all operating on the same spatial-temporal world model.
 
 ## The problem
 
