@@ -1,0 +1,225 @@
+---
+title: "Autonomous Systems"
+description: "World Model infrastructure for autonomous systems — robot fleets, UAVs, self-driving vehicles, and industrial automation where shared spatial-temporal state is the operational foundation"
+section: "use-cases"
+status: "stable"
+---
+
+# Autonomous Systems
+
+Every autonomous system is, at its core, a question of state: what is known, when it was known, and how much to trust it. A robot navigating a warehouse, a UAV fleet maintaining formation, a self-driving vehicle making a lane-change decision — each requires a continuous, spatially precise, temporally accurate, confidence-scored representation of its environment.
+
+That representation is a world model. ArcFlow is the database built to be one.
+
+## The infrastructure problem
+
+Most autonomous system architectures cobble together three or more systems:
+
+- A spatial data store for positions and geometry
+- A time-series database for sensor history
+- A graph or relational database for entity relationships
+- An ML model store for confidence scores
+- A message broker for real-time updates
+
+Each boundary between these systems introduces latency, consistency risk, and operational complexity. A single query that crosses systems — "find all robots within 20 meters of a high-confidence obstacle, sorted by their last confirmed status" — requires a join across at least three of them.
+
+ArcFlow collapses this stack into one in-process engine.
+
+## The data model
+
+```cypher
+-- Physical entities with spatial position and observation class
+CREATE (r1:Robot {
+  id: 'ROBOT-01',
+  x: 12.4, y: 8.7, z: 0.0,
+  vx: 0.5, vy: 0.0, vz: 0.0,
+  status: 'navigating',
+  battery_pct: 87,
+  _observation_class: 'observed',
+  _confidence: 0.99
+})
+
+-- Obstacles — observed vs predicted
+CREATE (o1:Obstacle {
+  id: 'OBS-001',
+  x: 18.0, y: 8.5, z: 0.0,
+  type: 'static',
+  _observation_class: 'observed',
+  _confidence: 0.98
+})
+
+CREATE (o2:Obstacle {
+  id: 'OBS-002',
+  x: 25.0, y: 12.0, z: 0.0,
+  type: 'dynamic',
+  _observation_class: 'predicted',
+  _confidence: 0.42
+})
+
+-- Detection edges carry sensor provenance
+CREATE (r1)-[:DETECTS {
+  sensor: 'lidar',
+  range_m: 8.3,
+  _confidence: 0.98,
+  at: timestamp()
+}]->(o1)
+
+-- Fleet coordination
+CREATE (f:Fleet {id: 'FLEET-A', formation: 'line'})
+CREATE (r1)-[:MEMBER_OF {role: 'lead', position: 1}]->(f)
+```
+
+## Spatial queries — what is around me?
+
+```cypher
+-- All entities within 15m of Robot-01 (R*-tree backed)
+CALL algo.nearestNodes(point({x: 12.4, y: 8.7}), 'Obstacle', 10)
+  YIELD node AS obs, distance
+WHERE distance < 15.0
+RETURN obs.id, obs.type, obs._observation_class, obs._confidence, distance
+ORDER BY distance
+
+-- High-confidence obstacles only — filter out predictions
+CALL algo.nearestNodes(point({x: 12.4, y: 8.7}), 'Obstacle', 10)
+  YIELD node AS obs, distance
+WHERE distance < 15.0
+  AND obs._observation_class = 'observed'
+  AND obs._confidence > 0.85
+RETURN obs.id, distance
+
+-- Line-of-sight check between two entities
+CALL arcflow.scene.lineOfSight(robot_id, obstacle_id)
+  YIELD has_los, note
+```
+
+## Temporal queries — what changed?
+
+```cypher
+-- Where was this robot 30 seconds ago?
+MATCH (r:Robot {id: 'ROBOT-01'}) AS OF (timestamp() - 30000)
+RETURN r.x, r.y, r.status
+
+-- Replay the last 5 minutes of all robot positions
+MATCH (r:Robot) AS OF seq 1000
+RETURN r.id, r.x, r.y, r.status
+
+-- Detect if any robot has been stationary for more than 60 seconds
+MATCH (r:Robot)
+WHERE r.status = 'stopped'
+  AND r._updated_at < (timestamp() - 60000)
+RETURN r.id, r.x, r.y, r._updated_at
+```
+
+## Confidence-filtered decision making
+
+```cypher
+-- Only navigate toward zones where all obstacles are high-confidence
+MATCH (target:Zone {id: $target_zone_id})
+MATCH (obs:Obstacle)
+WHERE obs._observation_class IN ['observed', 'inferred']
+  AND obs._confidence > 0.7
+  AND distance(obs.position, target.position) < 20.0
+RETURN count(obs) AS blocking_obstacles
+
+-- Confidence-weighted PageRank to find the most "trusted" nodes in the sensor graph
+CALL algo.confidencePageRank()
+YIELD nodeId, score
+RETURN nodeId, score ORDER BY score DESC LIMIT 10
+```
+
+## Reactive monitoring — fire on state change
+
+```typescript
+import { open } from 'arcflow'
+
+const db = open('./data/world-model')
+
+// Alert when any robot enters a restricted zone
+const zoneMonitor = db.subscribe(
+  `MATCH (r:Robot)-[:IN_ZONE]->(z:Zone {restricted: true})
+   WHERE r._observation_class = 'observed'
+   RETURN r.id, z.id, r.x, r.y`,
+  (event) => {
+    for (const row of event.added) {
+      triggerAlert(`Robot ${row.get('r.id')} entered restricted zone ${row.get('z.id')}`)
+      db.mutate(`MATCH (r:Robot {id: $id}) SET r.status = 'halted'`, { id: row.get('r.id') })
+    }
+  }
+)
+
+// Live view: fleet health dashboard (auto-maintained, zero-cost reads)
+db.mutate(`
+  CREATE LIVE VIEW fleet_health AS
+  MATCH (r:Robot)
+  RETURN r.id, r.status, r.battery_pct, r._confidence
+  ORDER BY r.battery_pct ASC
+`)
+
+const health = db.query("MATCH (row) FROM VIEW fleet_health RETURN row")
+```
+
+## Multi-robot coordination
+
+```cypher
+-- Fleet members sorted by their position in formation
+MATCH (r:Robot)-[m:MEMBER_OF]->(f:Fleet {id: 'FLEET-A'})
+RETURN r.id, r.x, r.y, m.position
+ORDER BY m.position
+
+-- Find robots that have lost contact (no detection events in last 10 seconds)
+MATCH (r:Robot)
+WHERE NOT EXISTS {
+  MATCH (r)-[d:DETECTS]->()
+  WHERE d.at > (timestamp() - 10000)
+}
+RETURN r.id, r.status
+
+-- Shortest path between two robots through the navigable graph
+MATCH p = shortestPath(
+  (a:Robot {id: 'ROBOT-01'}),
+  (b:Robot {id: 'ROBOT-05'})
+  -[:NAVIGABLE*]->()
+)
+RETURN length(p), nodes(p)
+```
+
+## OpenUSD / physics integration
+
+For robotic systems that use USD-based scene graphs (Isaac Sim, digital twin platforms):
+
+```cypher
+-- Export the world model as USD scene description
+CALL arcflow.scene.toUsda() YIELD usda
+
+-- Resolve USD prim path to graph node
+CALL arcflow.scene.primId('/World/Robots/ROBOT-01') YIELD prim_path, prim_id
+
+-- Collision contacts from physics simulation
+CALL arcflow.scene.collisions(robot_id) YIELD from_id, to_id, impulse, at_time
+
+-- Neighborhood in robot's local coordinate space
+CALL arcflow.scene.queryInLocalSpace(robot_id, 10.0)
+  YIELD node_id, local_x, local_y, local_z
+```
+
+## Why one world model instead of five systems
+
+| Capability | Traditional stack | ArcFlow |
+|---|---|---|
+| Spatial proximity | Separate spatial DB + query | `CALL algo.nearestNodes(...)` |
+| Entity history | Time-series DB + join | `AS OF seq N` on same graph |
+| Confidence scoring | Application logic | `_confidence` on every fact |
+| Observation class | Not modeled | `_observation_class` built-in |
+| Reactive alerts | Message broker + CDC | `db.subscribe()` in-process |
+| Graph algorithms | External tool | `CALL algo.pageRank()` built-in |
+| Fleet relationships | Relational DB + joins | First-class edges with properties |
+| USD integration | Separate scene graph | `arcflow.scene.*` procedures |
+
+## See Also
+
+- [Building a World Model](/guides/world-model) — step-by-step with spatial, temporal, and confidence
+- [Spatial Queries](/spatial-knowledge) — R*-tree, frustum, line-of-sight
+- [Temporal Queries](/worldcypher/temporal) — `AS OF seq N`, replay, comparison
+- [Reactive Queries](/reactive) — live subscriptions and materialized views
+- [Grounded Neural Objects](/use-cases/grounded-neural-objects) — lifting detections into persistent entities
+- [Digital Twins](/use-cases/digital-twins) — live mirror of physical systems

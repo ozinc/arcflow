@@ -174,7 +174,10 @@
         { "slug": "use-cases/fraud-detection", "title": "Fraud Detection", "order": 4 },
         { "slug": "use-cases/sports-analytics", "title": "Sports Analytics", "order": 5 },
         { "slug": "use-cases/grounded-neural-objects", "title": "Grounded Neural Objects", "order": 6 },
-        { "slug": "use-cases/behavior-graphs", "title": "Behavior Graphs", "order": 7 }
+        { "slug": "use-cases/behavior-graphs", "title": "Behavior Graphs", "order": 7 },
+        { "slug": "use-cases/autonomous-systems", "title": "Autonomous Systems", "order": 8 },
+        { "slug": "use-cases/digital-twins", "title": "Digital Twins", "order": 9 },
+        { "slug": "use-cases/robotics", "title": "Robotics & Perception", "order": 10 }
       ]
     },
     {

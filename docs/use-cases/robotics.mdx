@@ -1,0 +1,242 @@
+---
+title: "Robotics & Perception"
+description: "ArcFlow as the world model database for robotics — sensor fusion, spatial perception, confident entity tracking, and multi-robot coordination in one embedded engine"
+section: "use-cases"
+status: "stable"
+---
+
+# Robotics & Perception
+
+Robotics perception is the process of turning sensor data — lidar returns, camera detections, radar contacts — into a structured, queryable model of the world the robot can act on. That model must be spatially precise, temporally accurate, confidence-scored, and available in real time.
+
+ArcFlow is designed to be that model. It runs in-process alongside the robot's software stack — no network round-trip between sensing and decision-making.
+
+## The perception pipeline as a world model
+
+```
+Sensors        →    ArcFlow World Model    →    Planning / Control
+────────            ────────────────────        ──────────────────
+lidar               nodes: entities             spatial queries
+camera              edges: relationships         temporal replay
+radar               _confidence scores           confidence filters
+IMU                 _observation_class           graph algorithms
+GPS                 spatial index (R*-tree)      reactive triggers
+```
+
+Every sensor reading flows into the world model as a versioned mutation. The history of every entity is preserved. Confidence is tracked per observation. The planning layer reads from a single, consistent source — not a patchwork of ROS topics and CSV logs.
+
+## Building the perceptual world model
+
+```cypher
+-- Entities from sensor fusion
+CREATE (p1:Entity {
+  track_id: 'TRK-001',
+  class: 'pedestrian',
+  x: 5.2, y: 0.8, z: 0.0,
+  vx: 0.3, vy: -0.1, vz: 0.0,
+  _observation_class: 'observed',
+  _confidence: 0.96
+})
+
+CREATE (p2:Entity {
+  track_id: 'TRK-002',
+  class: 'vehicle',
+  x: 12.0, y: 3.1, z: 0.5,
+  vx: 2.1, vy: 0.0, vz: 0.0,
+  _observation_class: 'observed',
+  _confidence: 0.91
+})
+
+-- Occlusion — predicted entity behind another
+CREATE (p3:Entity {
+  track_id: 'TRK-003',
+  class: 'unknown',
+  x: 14.5, y: 3.1, z: 0.0,
+  _observation_class: 'predicted',
+  _confidence: 0.38
+})
+
+-- Sensor provenance on every detection
+CREATE (lidar:Sensor {id: 'LIDAR-FRONT', type: 'lidar', range_m: 100})
+CREATE (lidar)-[:DETECTED {
+  at: timestamp(),
+  range_m: 5.8,
+  intensity: 0.87,
+  _confidence: 0.96
+}]->(p1)
+```
+
+## Spatial perception queries
+
+```cypher
+-- All entities within 20m (k-nearest, R*-tree backed, >2000/s at 11K entities)
+CALL algo.nearestNodes(point({x: 0.0, y: 0.0}), 'Entity', 50)
+  YIELD node AS e, distance
+WHERE distance < 20.0
+RETURN e.track_id, e.class, e._observation_class, e._confidence, distance
+ORDER BY distance
+
+-- Trusted entities only (observed, high confidence) — safety-critical filter
+CALL algo.nearestNodes(point({x: 0.0, y: 0.0}), 'Entity', 50)
+  YIELD node AS e, distance
+WHERE distance < 15.0
+  AND e._observation_class = 'observed'
+  AND e._confidence > 0.85
+RETURN e.track_id, e.class, distance
+
+-- Frustum: what is in the forward field of view?
+CALL arcflow.scene.frustumQuery(0, 0, 0.5, 1, 0, 0, 60, 0.5, 50)
+  YIELD node_id, label, x, y, z
+
+-- Line-of-sight: is TRK-002 visible from current position?
+CALL arcflow.scene.lineOfSight(ego_id, track_002_id)
+  YIELD has_los, note
+```
+
+## Temporal replay and diagnosis
+
+```cypher
+-- Where was entity TRK-001 100ms ago?
+MATCH (e:Entity {track_id: 'TRK-001'}) AS OF (timestamp() - 100)
+RETURN e.x, e.y, e.vx, e.vy
+
+-- Trajectory over the last 2 seconds
+MATCH (e:Entity {track_id: 'TRK-001'}) AS OF seq 500
+RETURN e.x, e.y, e._confidence
+
+-- Diagnose a near-miss: replay the world state at moment of incident
+MATCH (e:Entity) AS OF seq 4821
+RETURN e.track_id, e.class, e.x, e.y, e._observation_class, e._confidence
+```
+
+## Reactive safety systems
+
+```typescript
+import { open } from 'arcflow'
+
+const db = open('./data/robot-world-model')
+
+// Hard stop: any high-confidence entity within 2m emergency radius
+const safetyMonitor = db.subscribe(
+  `CALL algo.nearestNodes(point({x: 0, y: 0}), 'Entity', 10)
+   YIELD node AS e, distance
+   WHERE distance < 2.0
+     AND e._observation_class = 'observed'
+     AND e._confidence > 0.8
+   RETURN e.track_id, e.class, distance`,
+  (event) => {
+    if (event.added.length > 0) {
+      triggerEmergencyStop()
+    }
+  }
+)
+
+// Slow zone: any entity entering a 5m caution radius
+const cautionMonitor = db.subscribe(
+  `CALL algo.nearestNodes(point({x: 0, y: 0}), 'Entity', 20)
+   YIELD node AS e, distance
+   WHERE distance < 5.0 AND distance >= 2.0
+     AND e._observation_class IN ['observed', 'inferred']
+   RETURN e.track_id, distance`,
+  (event) => {
+    if (event.added.length > 0) {
+      reduceSpeed(event.added[0].get('distance'))
+    }
+  }
+)
+```
+
+## Multi-robot coordination
+
+```cypher
+-- Find robots within communication range of each other
+MATCH (a:Robot)-[:COMMS_WITH]->(b:Robot)
+WHERE a.id <> b.id
+RETURN a.id, b.id
+
+-- Assign the nearest available robot to a task
+MATCH (task:Task {status: 'unassigned'})
+CALL algo.nearestNodes(point({x: task.x, y: task.y}), 'Robot', 5)
+  YIELD node AS robot, distance
+WHERE robot.status = 'idle'
+WITH robot, task, distance
+ORDER BY distance LIMIT 1
+SET robot.status = 'assigned', task.status = 'assigned'
+CREATE (robot)-[:EXECUTING]->(task)
+RETURN robot.id, task.id, distance
+
+-- Fleet-wide health: centrality-based criticality
+CALL algo.pageRank()
+YIELD nodeId, score
+MATCH (r:Robot) WHERE id(r) = nodeId
+RETURN r.id, r.status, r.battery_pct, score
+ORDER BY score DESC
+```
+
+## Track lifecycle — observed to confirmed to lost
+
+```cypher
+-- Promote a predicted track to observed when confidence exceeds threshold
+MATCH (e:Entity {track_id: 'TRK-003'})
+WHERE e._confidence >= 0.80
+SET e._observation_class = 'observed'
+
+-- Mark a track as lost (no detection in last 500ms)
+MATCH (e:Entity)
+WHERE NOT EXISTS {
+  MATCH ()-[d:DETECTED]->(e)
+  WHERE d.at > (timestamp() - 500)
+}
+SET e._observation_class = 'predicted', e._confidence = e._confidence * 0.85
+
+-- Clean up tracks that have been lost too long
+MATCH (e:Entity)
+WHERE e._observation_class = 'predicted'
+  AND e._confidence < 0.10
+DETACH DELETE e
+```
+
+## ROS integration pattern
+
+```typescript
+// Subscribe to ROS detection messages, write to world model
+import { open } from 'arcflow'
+import * as rclnodejs from 'rclnodejs'
+
+const db = open('./data/robot-world-model')
+
+rclnodejs.init().then(() => {
+  const node = new rclnodejs.Node('arcflow_bridge')
+  
+  node.createSubscription(
+    'vision_msgs/msg/Detection3DArray',
+    '/detections',
+    (msg) => {
+      for (const det of msg.detections) {
+        const { x, y, z } = det.bbox.center.position
+        const confidence = det.results[0]?.score ?? 0.5
+        const classId = det.results[0]?.hypothesis.class_id ?? 'unknown'
+        
+        db.mutate(`
+          MERGE (e:Entity {track_id: $id})
+          SET e.x = $x, e.y = $y, e.z = $z,
+              e.class = $class,
+              e._confidence = $conf,
+              e._observation_class = 'observed'
+        `, { id: det.id, x, y, z, class: classId, conf: confidence })
+      }
+    }
+  )
+  
+  rclnodejs.spin(node)
+})
+```
+
+## See Also
+
+- [Building a World Model](/guides/world-model) — the foundational guide
+- [Spatial Queries](/spatial-knowledge) — full R*-tree and frustum reference
+- [Temporal Queries](/worldcypher/temporal) — replay, `AS OF seq N`
+- [Grounded Neural Objects](/use-cases/grounded-neural-objects) — entity identity persistence
+- [Autonomous Systems](/use-cases/autonomous-systems) — fleet coordination
+- [Confidence & Provenance](/concepts/confidence-and-provenance) — scoring sensor data

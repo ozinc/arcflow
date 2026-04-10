@@ -1,0 +1,220 @@
+---
+title: "Digital Twins"
+description: "ArcFlow as the world model layer for digital twins — a live, spatially grounded, temporally versioned graph replica of a physical system"
+section: "use-cases"
+status: "stable"
+---
+
+# Digital Twins
+
+A digital twin is a live replica of a physical system — a building, a factory floor, a vehicle fleet, a stadium. The replica is only useful if it is spatially precise, temporally current, and queryable: you need to know where things are, what state they are in right now, what state they were in before, and what relationships connect them.
+
+That is a world model. ArcFlow is the database layer built to maintain it.
+
+## What distinguishes a world model twin from a data dashboard
+
+Most "digital twin" implementations are dashboards — they display current sensor readings in a 3D visualization. They answer: "What is the current value of sensor X?" They cannot answer: "What was the state of this zone 12 minutes ago?", "Which assets are within 5 meters of this equipment?", or "What changed between shift A and shift B?"
+
+A world model twin can answer all of these. The difference is architectural: a dashboard reads from a time-series store. A world model twin reads from a spatial-temporal graph where every entity, position, relationship, and state change is preserved and queryable.
+
+## The data model
+
+```cypher
+-- Physical assets as graph nodes with spatial position
+CREATE (pump:Asset {
+  id: 'PUMP-07',
+  name: 'Centrifugal Pump 7',
+  type: 'pump',
+  x: 24.5, y: 18.2, z: 1.1,
+  status: 'running',
+  rpm: 3200,
+  temp_c: 68.4,
+  _observation_class: 'observed',
+  _confidence: 0.99
+})
+
+CREATE (valve:Asset {
+  id: 'VALVE-12',
+  name: 'Gate Valve 12',
+  type: 'valve',
+  x: 27.0, y: 18.2, z: 1.1,
+  status: 'open',
+  flow_rate: 142.0,
+  _observation_class: 'observed',
+  _confidence: 0.97
+})
+
+-- Zones — physical spaces in the facility
+CREATE (zone:Zone {
+  id: 'ZONE-A2',
+  name: 'Pump Room A2',
+  x_min: 20.0, x_max: 35.0,
+  y_min: 15.0, y_max: 25.0,
+  hazard_class: 'mechanical',
+  access_required: 'maintenance'
+})
+
+-- Relationships — topology of the physical system
+CREATE (pump)-[:FEEDS]->(valve)
+CREATE (pump)-[:LOCATED_IN]->(zone)
+CREATE (valve)-[:LOCATED_IN]->(zone)
+
+-- Sensor readings as edges with provenance
+CREATE (sensor:Sensor {id: 'TEMP-07', type: 'thermocouple'})
+CREATE (sensor)-[:MONITORS {
+  reading: 68.4,
+  unit: 'celsius',
+  at: timestamp(),
+  _confidence: 0.99
+}]->(pump)
+```
+
+## Spatial queries
+
+```cypher
+-- All assets within 10m of a location (R*-tree indexed)
+CALL algo.nearestNodes(point({x: 24.5, y: 18.2}), 'Asset', 20)
+  YIELD node AS asset, distance
+WHERE distance < 10.0
+RETURN asset.id, asset.name, asset.status, distance
+ORDER BY distance
+
+-- Assets in a specific zone
+MATCH (asset:Asset)-[:LOCATED_IN]->(z:Zone {id: 'ZONE-A2'})
+RETURN asset.id, asset.name, asset.type, asset.status
+
+-- Frustum query — what does this camera see?
+CALL arcflow.scene.frustumQuery(24.0, 20.0, 3.0, 0, -1, 0, 90, 1, 30)
+  YIELD node_id, label, x, y, z
+```
+
+## Temporal queries — the full history
+
+```cypher
+-- What was the state of this asset 2 hours ago?
+MATCH (p:Asset {id: 'PUMP-07'}) AS OF (timestamp() - 7200000)
+RETURN p.status, p.rpm, p.temp_c
+
+-- Temperature trend over the last hour (every 5 minutes)
+MATCH (s:Sensor {id: 'TEMP-07'})-[r:MONITORS]->(p:Asset {id: 'PUMP-07'})
+WHERE r.at > (timestamp() - 3600000)
+RETURN r.reading, r.at
+ORDER BY r.at
+
+-- Compare current state to state at shift start
+MATCH (p:Asset) AS OF seq 1000
+RETURN p.id, p.status, p.temp_c
+```
+
+## Anomaly detection — live and historical
+
+```typescript
+import { open } from 'arcflow'
+
+const db = open('./data/facility-twin')
+
+// Live alert: temperature exceeds threshold
+const tempAlert = db.subscribe(
+  `MATCH (s:Sensor)-[r:MONITORS]->(a:Asset)
+   WHERE r.reading > 90
+     AND s.type = 'thermocouple'
+   RETURN a.id, a.name, r.reading, r.at`,
+  (event) => {
+    for (const row of event.added) {
+      triggerMaintenanceAlert({
+        asset: row.get('a.id'),
+        reading: row.get('r.reading'),
+        at: row.get('r.at')
+      })
+    }
+  }
+)
+
+// Live view: all assets currently in abnormal state (auto-maintained)
+db.mutate(`
+  CREATE LIVE VIEW abnormal_assets AS
+  MATCH (a:Asset)
+  WHERE a.status NOT IN ['running', 'idle', 'standby']
+     OR a.temp_c > 85
+  RETURN a.id, a.name, a.status, a.temp_c
+`)
+```
+
+## Maintenance and topology queries
+
+```cypher
+-- All assets downstream of a given pump (follow FEEDS edges)
+MATCH (pump:Asset {id: 'PUMP-07'})-[:FEEDS*1..5]->(downstream:Asset)
+RETURN downstream.id, downstream.name, downstream.type
+
+-- Find the critical path: which assets, if they fail, affect the most others?
+CALL algo.pageRank()
+YIELD nodeId, score
+MATCH (a:Asset) WHERE id(a) = nodeId
+RETURN a.id, a.name, score ORDER BY score DESC LIMIT 10
+
+-- Connected components — isolated subsystems
+CALL algo.connectedComponents()
+YIELD componentId, nodeCount
+ORDER BY nodeCount DESC
+
+-- Shortest path between two assets through the physical system
+MATCH p = shortestPath(
+  (a:Asset {id: 'PUMP-07'}),
+  (b:Asset {id: 'VALVE-12'})
+)
+RETURN p, length(p)
+```
+
+## USD scene export
+
+For digital twins that integrate with 3D visualization platforms (USD-based):
+
+```cypher
+-- Export the entire twin as USD ASCII (USDA format)
+CALL arcflow.scene.toUsda() YIELD usda
+
+-- Query in local coordinate space of a specific asset
+CALL arcflow.scene.queryInLocalSpace(pump_id, 5.0)
+  YIELD node_id, local_x, local_y, local_z
+
+-- Collision check (from physics simulation)
+CALL arcflow.scene.collisions(pump_id)
+  YIELD from_id, to_id, impulse, at_time
+```
+
+## Sync to cloud
+
+The world model twin runs locally — at the edge, on-site, in the facility. Mutations replicate to cloud automatically. Cloud holds the historical archive; the edge holds the live state.
+
+```typescript
+// Local instance — runs at the facility
+const local = open('./data/facility-twin')
+
+// Mutations are local-first, replicate in background
+local.mutate(`MATCH (a:Asset {id: 'PUMP-07'}) SET a.temp_c = $temp`, { temp: 71.2 })
+
+// Cloud instance — full history, accessible from anywhere
+// Automatically synchronized via ArcFlow Cloud
+```
+
+## The world model difference
+
+| Question | Dashboard approach | ArcFlow World Model |
+|---|---|---|
+| What is the current state? | ✓ reads latest sensor value | ✓ same |
+| What was the state 2 hours ago? | ✗ requires separate archive query | ✓ `AS OF (timestamp() - 7200000)` |
+| What changed between shift A and B? | ✗ complex join across time ranges | ✓ temporal comparison query |
+| What assets are within 10m of X? | ✗ requires external spatial system | ✓ `CALL algo.nearestNodes(...)` |
+| What does failure of asset X affect? | ✗ requires topology in separate DB | ✓ `MATCH (a)-[:FEEDS*]->()` |
+| Alert when threshold exceeded? | ✗ polling or external CEP | ✓ `db.subscribe(...)` in-process |
+| Which assets are most critical? | ✗ requires manual analysis | ✓ `CALL algo.pageRank()` |
+
+## See Also
+
+- [Building a World Model](/guides/world-model) — the core pattern
+- [Spatial Queries](/spatial-knowledge) — R*-tree, frustum, proximity
+- [Temporal Queries](/worldcypher/temporal) — `AS OF seq N`, replay
+- [Reactive Queries](/reactive) — live alerts and materialized views
+- [Autonomous Systems](/use-cases/autonomous-systems) — autonomous systems in the same world model
+- [Sync](/sync) — edge-to-cloud replication
