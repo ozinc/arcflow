@@ -1,0 +1,149 @@
+---
+title: "World Model"
+description: "A world model is a persistent, spatial-temporal representation of what is, was, and will be. ArcFlow is the database built to be one."
+section: "concepts"
+status: "stable"
+---
+
+# World Model
+
+A world model is a persistent, queryable representation of physical or simulated reality — what entities exist, where they are, how they relate to each other, how confident we are in each fact, and how all of this has evolved over time.
+
+Every autonomous system needs one. A robot navigating a warehouse. A camera network tracking 22 players at 60fps. An AI agent coordinating with other agents across sessions. A digital twin mirroring a physical facility. All of these need the same underlying capability: a continuously updated, spatially grounded, temporally aware, confidence-scored model of the world.
+
+ArcFlow is built to be that model.
+
+## What makes a world model different from a database
+
+Most databases store facts. A world model stores facts *plus* the spatial context, temporal history, confidence level, and provenance of each fact. This isn't a feature extension — it's an architectural difference.
+
+| Dimension | Conventional database | ArcFlow World Model |
+|---|---|---|
+| **Space** | Coordinates as numeric columns | Spatial predicates native — R*-tree indexed, frustum queries, proximity algorithms |
+| **Time** | Timestamps on rows | Every mutation versioned — query any previous state with `AS OF seq N` |
+| **Confidence** | Binary (is it there or not) | Scored [0.0, 1.0] on every node and relationship |
+| **Provenance** | Absent or logged separately | Built-in — every edge records which sensor, model, or process produced it |
+| **Observation class** | Not modeled | First-class: `observed`, `inferred`, or `predicted` on every node |
+| **Relationships** | Foreign keys, derived at query time | First-class edges with properties — the connection is a stored fact |
+| **Reactivity** | Poll for changes | `LIVE MATCH` — standing queries fire on every relevant mutation |
+
+These aren't checkboxes. They're the minimum requirements for a system that needs to reason about the world.
+
+## Observed, inferred, predicted
+
+The world model distinguishes three epistemic states for every fact:
+
+**Observed** — directly measured by a sensor, confirmed by an event, or received from a trusted source. The highest confidence class. A player's position from a calibrated camera feed. A confirmed transaction. A verified identity link.
+
+**Inferred** — derived through reasoning over observed facts. A trajectory extrapolated from position history. A relationship type concluded from behavioral patterns. Medium confidence — the logic may be sound, but the source data has its own uncertainty.
+
+**Predicted** — model output, statistical projection, or estimated future state. A contact detected by radar at low confidence. An entity's likely position in three frames. Lowest trust — useful for planning, not for ground truth.
+
+```cypher
+-- Only act on high-confidence observed facts
+MATCH (e:Entity)
+WHERE e._observation_class = 'observed'
+  AND e._confidence > 0.9
+RETURN e.name, e.x, e.y, e.z
+
+-- Flag predictions for follow-up verification
+MATCH (e:Entity)-[r:DETECTS]->(contact:Entity)
+WHERE contact._observation_class = 'predicted'
+  AND r._confidence < 0.5
+RETURN e.name, contact.name, r.sensor, r._confidence
+ORDER BY r._confidence ASC
+```
+
+This distinction is what makes world model queries trustworthy, not just fast.
+
+## Spatial-temporal as a first-class dimension
+
+Space and time are not columns in ArcFlow — they are native dimensions.
+
+**Spatial**: `point({x, y, z})` values are indexed by an R*-tree. Nearest-neighbor queries, radius queries, bounding boxes, frustum queries, and line-of-sight calculations are built in — not implemented in application code.
+
+**Temporal**: every mutation is versioned. The graph at any previous point in time is fully queryable. Not from an audit log or a separate history table — from the same graph, the same queries, just `AS OF seq N`.
+
+```cypher
+-- Where were all entities 5 seconds ago?
+MATCH (e:Entity) AS OF (timestamp() - 5000)
+RETURN e.name, e.x, e.y, e.z
+
+-- K-nearest entities to a point (R*-tree backed)
+CALL algo.nearestNodes(point({x: 40.0, y: 60.0}), 'Entity', 10)
+YIELD node, distance
+RETURN node.name, distance
+
+-- Frustum query — what is visible from this camera?
+CALL arcflow.scene.frustumQuery(0, 0, 15, 0, 1, 0, 90, 1, 200)
+YIELD node_id, label, x, y, z
+```
+
+## Graph structure for relational reasoning
+
+Physical reality is relational. Entities belong to groups, communicate through channels, are detected by sensors, occupy zones, and interact along paths. A world model that stores only entity properties misses the structure that makes reasoning possible.
+
+ArcFlow stores relationships as first-class objects with their own properties, direction, and confidence. The network of relationships — formation membership, communication links, detection edges, zone occupancy — is queryable with the same pattern syntax as entity properties.
+
+```cypher
+-- Entities within 30m of the origin AND in the Alpha formation
+CALL algo.nearestNodes(point({x: 0, y: 0}), 'Entity', 20)
+YIELD node AS e, distance
+WHERE distance < 30
+MATCH (e)-[:MEMBER_OF]->(f:Formation {name: 'Alpha'})
+RETURN e.name, distance, f.pattern
+
+-- Shortest communication path between two entities
+MATCH p = shortestPath(
+  (a:Entity {name: 'Drone-01'}),
+  (b:Entity {name: 'Rover-03'})
+)
+RETURN p, length(p)
+```
+
+## Continuous and reactive
+
+A world model that requires polling is not continuous. ArcFlow's reactive layer means the model notifies subscribers when anything relevant changes — without polling, without batch jobs, without latency introduced by a scheduler.
+
+```typescript
+const db = open('./data/world-model')
+
+// Standing pattern: fires when a new entity enters proximity
+const monitor = db.subscribe(
+  `MATCH (a:Entity)-[:DETECTS]->(b:Entity)
+   WHERE b._observation_class = 'predicted'
+   RETURN a.name, b.name, b.x, b.y`,
+  (event) => {
+    for (const row of event.added) {
+      // A new predicted contact has been detected
+      scheduleVerification(row.get('b.name'))
+    }
+  }
+)
+```
+
+## Why OZ built ArcFlow
+
+OZ builds operational AI infrastructure for physical environments — sports venues, industrial facilities, autonomous fleets. Every system OZ runs needs the same thing at its core: a continuous, spatial-temporal representation of what is happening, where, and how reliably we know it.
+
+That representation did not exist as a database product. The landscape had two failure modes:
+
+**General-purpose databases** treat coordinates as numeric columns, timestamps as metadata, and confidence as something you implement yourself. Spatial queries require extensions. Temporal history requires separate audit tables. Confidence scoring is entirely application logic. The result is a stack of five systems doing the work of one — each with its own consistency model, each requiring its own maintenance, each introducing its own latency.
+
+**Foundation model databases** represent the world through statistical correlations across internet-scale data. They are extraordinary at language and perception. They are not designed for ground-truth sensor data where spatial precision is measured in centimeters, temporal accuracy is measured in milliseconds, and every fact must be traceable to the instrument that produced it.
+
+The world model era is real. AI systems that navigate physical environments, coordinate autonomous fleets, or make decisions with real consequences all require the same infrastructure: a database where space and time are first-class dimensions from first principles — not extensions, not add-ons, not workarounds.
+
+OZ built ArcFlow because that infrastructure did not exist. It runs in-process (no server, no round-trip), in the browser (any device, zero install), or as a lightweight server — with the same query language, the same temporal guarantees, the same confidence model everywhere. The intention is to give every team building world-aware systems the same foundation that OZ's own physical infrastructure runs on.
+
+Every match day. Every shift. Every season. Not a demo — infrastructure.
+
+## See Also
+
+- [Building a World Model](/guides/world-model) — step-by-step guide with 20 entities, spatial queries, temporal memory, and algorithm overlay
+- [Confidence & Provenance](/concepts/confidence-and-provenance) — scoring and tracing every fact
+- [Observations & Evidence](/concepts/observations) — the observation model in detail
+- [Spatial Knowledge Graph](/spatial-knowledge) — spatial primitives deep dive
+- [Temporal Queries](/worldcypher/temporal) — querying past states
+- [Reactive Queries](/reactive) — standing queries and live updates
+- [Fraud Detection](/use-cases/fraud-detection) — World Model applied to financial networks

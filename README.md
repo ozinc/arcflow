@@ -1,6 +1,8 @@
 # ArcFlow
 
-The embedded graph database. Runs in the browser, Node.js, Python, Rust, and Docker. No server needed.
+The **World Model database**. Spatial-temporal, confidence-scored, embedded. Runs in the browser, Node.js, Python, Rust, and Docker. No server needed.
+
+Space and time are first-class dimensions — not columns, not extensions. Every mutation is versioned. Every fact carries an observation class (`observed`, `inferred`, `predicted`) and a confidence score. The entire history of the world model is queryable with a single ISO GQL syntax.
 
 **[Try it now — arcflow.dev/engine](https://arcflow.dev/engine)** — runs in your browser, zero install.
 
@@ -19,7 +21,7 @@ console.log(result.rows[0].get('age'))   // 30 (typed)
 db.close()
 ```
 
-Two lines to a working graph. Or zero lines — just open the browser.
+Two lines to a working world model. Or zero lines — just open the browser.
 
 ## Why ArcFlow
 
@@ -54,13 +56,15 @@ One in-process library replaces six services:
 
 | Use Case | Why ArcFlow |
 |---|---|
+| **World models** | Continuous spatial-temporal graph — entities, positions, relationships, confidence scores, full history |
+| Robotics & autonomous systems | Sensor fusion, spatial proximity, confidence-filtered perception, temporal replay |
+| Game AI | NPCs with persistent memory, shared world state, spatial awareness, behavior graphs |
+| Digital twins | Live replica of physical systems — queryable, versioned, spatially grounded |
 | Knowledge graphs | Entity linking, confidence-scored facts, provenance — all in one engine |
 | RAG pipelines | Graph traversal for multi-hop reasoning — the gap between what LLMs know and what they can connect |
 | AI agent memory | Persistent, queryable graph across sessions — not context window tricks |
-| Trading pipelines | Window functions, live views, proven batch/delta equivalence |
-| Sports analytics | Spatial queries, player tracking, real-time algorithms |
-| Game state | Behavior trees as graph subgraphs, persistent world model |
-| IoT / robotics | Sensor state, spatial awareness, temporal snapshots |
+| Fraud detection | Circular patterns, shared identity clusters, temporal velocity — graph patterns SQL can't write |
+| Sports analytics | Player tracking, spatial queries, real-time formation analysis |
 
 ## Features
 

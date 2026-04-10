@@ -36,18 +36,19 @@
       "id": "concepts",
       "title": "Concepts",
       "items": [
-        { "slug": "concepts/graph-model", "title": "Graph Model", "order": 1 },
-        { "slug": "concepts/worldcypher", "title": "Query Language (GQL)", "order": 2 },
-        { "slug": "concepts/graph-patterns", "title": "Graph Patterns", "order": 3 },
-        { "slug": "concepts/sql-vs-gql", "title": "SQL vs GQL", "order": 4 },
-        { "slug": "concepts/parameters", "title": "Parameters", "order": 5 },
-        { "slug": "concepts/results", "title": "Query Results", "order": 6 },
-        { "slug": "concepts/persistence", "title": "Persistence & WAL", "order": 7 },
-        { "slug": "concepts/error-handling", "title": "Error Handling", "order": 8 },
-        { "slug": "concepts/observations", "title": "Observations & Evidence", "order": 9 },
-        { "slug": "concepts/confidence-and-provenance", "title": "Confidence & Provenance", "order": 10 },
-        { "slug": "concepts/proof-artifacts", "title": "Proof Artifacts & Gates", "order": 11 },
-        { "slug": "concepts/constructors", "title": "Constructors", "order": 12 }
+        { "slug": "concepts/world-model", "title": "World Model", "order": 1 },
+        { "slug": "concepts/graph-model", "title": "Graph Model", "order": 2 },
+        { "slug": "concepts/worldcypher", "title": "Query Language (GQL)", "order": 3 },
+        { "slug": "concepts/graph-patterns", "title": "Graph Patterns", "order": 4 },
+        { "slug": "concepts/sql-vs-gql", "title": "SQL vs GQL", "order": 5 },
+        { "slug": "concepts/parameters", "title": "Parameters", "order": 6 },
+        { "slug": "concepts/results", "title": "Query Results", "order": 7 },
+        { "slug": "concepts/persistence", "title": "Persistence & WAL", "order": 8 },
+        { "slug": "concepts/error-handling", "title": "Error Handling", "order": 9 },
+        { "slug": "concepts/observations", "title": "Observations & Evidence", "order": 10 },
+        { "slug": "concepts/confidence-and-provenance", "title": "Confidence & Provenance", "order": 11 },
+        { "slug": "concepts/proof-artifacts", "title": "Proof Artifacts & Gates", "order": 12 },
+        { "slug": "concepts/constructors", "title": "Constructors", "order": 13 }
       ]
     },
     {
