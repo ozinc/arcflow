@@ -133,7 +133,7 @@
         { "slug": "guides/migrating-from-neo4j", "title": "Migrating from Neo4j", "order": 8 },
         { "slug": "guides/filesystem-workspace", "title": "Filesystem Workspace", "order": 9 },
         { "slug": "guides/sql-to-gql", "title": "From SQL to GQL", "order": 10 },
-        { "slug": "guides/agent-integration", "title": "Agent Integration (Coding Tools)", "order": 11 },
+        { "slug": "guides/agent-integration", "title": "ArcFlow for Coding Agents", "order": 11 },
         { "slug": "guides/data-quality", "title": "Data Quality & Pipeline Integrity", "order": 12 },
         { "slug": "guides/code-intelligence", "title": "Code Intelligence", "order": 13 }
       ]
