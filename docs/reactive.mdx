@@ -210,6 +210,41 @@ Live queries maintain a standing result set. When a mutation affects nodes or re
 
 > **Note:** For new projects, prefer `CREATE LIVE VIEW` over legacy live queries. Live views use Z-set algebra for mathematically guaranteed correctness and support view chaining.
 
+## TypeScript SDK — Live Subscriptions
+
+For applications using the TypeScript SDK, `db.subscribe()` wraps the `CREATE LIVE VIEW` infrastructure and delivers deltas to a handler:
+
+```typescript
+import { openInMemory } from 'arcflow'
+
+const db = openInMemory()
+
+const sub = db.subscribe(
+  "MATCH (n:Alert) WHERE n.severity = 'critical' RETURN n.id, n.message",
+  (event) => {
+    console.log('new:', event.added)     // SubscriptionRow[]
+    console.log('gone:', event.removed)  // SubscriptionRow[]
+    console.log('seq:', event.frontier)  // monotonic mutation sequence
+  },
+  { pollIntervalMs: 50 }
+)
+
+// Stop the subscription and drop the underlying live view
+sub.cancel()
+```
+
+### React hooks
+
+```typescript
+import { useQuery, useLiveQuery } from '@arcflow/react'
+
+// One-shot — re-runs when params change
+const { rows, loading } = useQuery(db, "MATCH (n:Person) RETURN n.name", {})
+
+// Live — updates automatically on mutations
+const { rows } = useLiveQuery(db, "MATCH (n:Alert) WHERE n.active = true RETURN n")
+```
+
 ## Execution Context
 
 View the current execution context including active subscriptions and pending events:
@@ -276,7 +311,7 @@ ArcFlow's messaging is **in-process event routing for applications that embed Ar
 
 **Use ArcFlow messaging when:** your application embeds ArcFlow and needs internal event routing, reactive queries, or CDC without deploying external brokers or caches.
 
-**Use an external broker when:** you need cross-process messaging, distributed fan-out, or durable workflow orchestration at scale.
+**Use an external broker when:** you need cross-process messaging or distributed fan-out across services.
 
 The in-process messaging layer serves as the foundation for durable, graph-aware workflow orchestration — behavior trees that tick, steps that retry, events that trigger actions. No external infrastructure needed for the common case.
 
@@ -291,4 +326,12 @@ ArcFlow's pub/sub covers the "lightweight in-process messaging" use case that de
 ArcFlow's CDC (`db.mutations()`, `db.changesSince()`) covers the "change log for a single data source" use case. It does NOT replace distributed streaming with partitioned topics or multi-consumer fan-out. Use ArcFlow CDC to feed changes to a streaming platform, not to replace it.
 
 ### Workflow Orchestration Platforms?
-Workflow orchestration is a separate product category. ArcFlow's workflow capabilities cover durable step execution with retry policies, but cloud-hosted workflow platforms with function-as-a-step models are a different use case. ArcFlow's strength is that the workflow state lives in the same graph as the business data — no separate state store.
+ArcFlow ships a built-in graph-native workflow engine. Workflows are stored as `:Workflow`/`:WorkflowStep` nodes with `:HAS_STEP` edges, managed via `CALL arcflow.workflow.*` procedures. Steps are MVCC-safe, idempotent, and support retry policies. The workflow state lives in the same graph as your business data — no separate state store, no external orchestration service needed for the common case.
+
+```cypher
+CALL arcflow.workflow.create('etl', '[{"name":"ingest","type":"GraphMutation"},{"name":"analyze","type":"GraphQuery"}]')
+CALL arcflow.workflow.run('etl')
+CALL arcflow.workflow.retryStep(wf_id, 'ingest')  -- retry a failed step
+```
+
+Cloud-hosted workflow platforms remain the better choice for function-as-a-step models where individual steps are external HTTP services, or when you need a web UI for workflow visualization.

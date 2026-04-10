@@ -24,7 +24,7 @@ This guide covers what stays the same, what's different, and how to move your da
 | **Query language** | Cypher, Gremlin, GSQL, GQL | WorldCypher (ArcFlow's GQL dialect with spatial/temporal/reactive extensions) |
 | **Indexes** | B-tree, full-text, vector (varies by vendor) | Property index, HNSW vector index |
 | **Transactions** | Full ACID (most vendors) | WAL-based journaling |
-| **Clustering** | Causal clustering, replication (varies) | Single-node (replication planned) |
+| **Clustering** | Causal clustering, replication (varies) | SWMR replication via Arrow Flight WAL tailing |
 | **GPU acceleration** | None | CUDA + Metal (17 kernels each) |
 | **Vector search** | Add-on or separate product (varies) | HNSW index + algo.graphRAG built-in |
 | **Temporal** | None, plugin, or limited (varies) | Built-in: AS OF, clock domains, temporal replay |
@@ -33,6 +33,8 @@ This guide covers what stays the same, what's different, and how to move your da
 ArcFlow can run as an in-process engine with zero network overhead, or as a standalone server. The in-process mode eliminates serialization and connection management entirely.
 
 ## GQL Compatibility
+
+**Conformance:** ArcFlow passes 100% of the openCypher TCK (3881/3881 scenarios) and implements ISO GQL V2 fully, including GQLSTATUS codes, `IS LABELED`, `ELEMENT_ID`, `NEXT WHEN/THEN/ELSE/END` conditional pipelines, `UNIQUE` and `PRIMARY KEY` constraints, and transaction control statements.
 
 If you're coming from Neo4j, Memgraph, or FalkorDB (all GQL-family), most of your queries port directly. Coming from TigerGraph (GSQL) or Cosmos DB (Gremlin) requires a query rewrite, but the graph modeling concepts transfer.
 
@@ -85,7 +87,6 @@ Standard GQL features or vendor-specific extensions not yet available in WorldCy
 | Subqueries (`CALL {}`) | Not implemented | Use WITH for pipeline queries |
 | `CREATE ... SET` chaining | Use comma syntax | `CREATE (n:Label {prop1: v1, prop2: v2})` |
 | Multi-database | Not implemented | Single graph store |
-| Role-based access | Not implemented | Single-user |
 
 ## Performance Comparison
 
@@ -225,7 +226,7 @@ CALL algo.pageRank()
 - Full ACID transactions are a hard requirement
 - Your graph exceeds available RAM
 - You need a large plugin ecosystem
-- You need enterprise features (RBAC, causal clustering, CDC)
+- You need a large ecosystem of pre-built connectors and enterprise support
 
 ## See Also
 

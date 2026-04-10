@@ -134,7 +134,32 @@ arcflow sync announce # Print this node's announcement JSON
 | Background auto-sync | `arcflow sync start` daemon |
 | LAN peer discovery | UDP multicast announce |
 | WebSocket delta-push | Live delta stream over WS |
+| **Arrow Flight WAL tailing** | High-throughput WAL streaming to read replicas |
+| **Object-store fan-out** | WAL segments written to S3/GCS/Azure for durable replication |
 | WASM (browser) | Not yet supported |
+
+## Replication (SWMR)
+
+ArcFlow supports a Single-Writer-Multiple-Reader replication model via Arrow Flight WAL tailing. The primary node streams WAL entries over Arrow Flight; read replicas apply them in order.
+
+```cypher
+-- Check SWMR contract and replication configuration
+CALL arcflow.replication.contract()
+  YIELD mode, writes_enabled, replication_factor, description
+
+-- Arrow Flight WAL tailing parameters
+CALL arcflow.replication.walTailing()
+  YIELD field, value, description
+
+-- Object-store fan-out configuration (S3/GCS/Azure)
+CALL arcflow.replication.objectStoreFanout()
+  YIELD field, value, description
+
+-- Live replication health
+CALL db.replicationStatus()
+```
+
+The `mode` from `arcflow.replication.contract()` is one of `"primary"`, `"replica"`, or `"standalone"`. `writes_enabled` is `false` on read replicas.
 
 ## API reference
 
