@@ -1,0 +1,198 @@
+---
+title: "Graph Patterns"
+description: "Pattern matching is the mental model behind every GQL query — understand patterns and you understand the language"
+section: "concepts"
+status: "stable"
+---
+
+# Graph Patterns
+
+In SQL you describe *conditions on rows*. In GQL you describe *shapes in the graph* — and the engine finds everything that matches that shape.
+
+This is the shift. It changes not just the syntax but how you think about the problem.
+
+## What a pattern is
+
+A pattern is a template for a subgraph. It specifies nodes, the relationships between them, and any constraints on their properties. The engine scans the graph and returns every subgraph that fits the template.
+
+```cypher
+-- "Find every Person connected to a Company by a WORKS_AT relationship"
+MATCH (p:Person)-[:WORKS_AT]->(c:Company)
+RETURN p.name, c.name
+```
+
+The `MATCH` clause holds the pattern. Everything inside it — `(p:Person)`, `-[:WORKS_AT]->`, `(c:Company)` — describes a shape, not a filter condition.
+
+## Node patterns
+
+A node pattern describes a single node:
+
+```
+(variable:Label {property: value})
+```
+
+| Element | Meaning |
+|---|---|
+| `(n)` | Any node, bound to variable `n` |
+| `(n:Person)` | Any node labeled `:Person` |
+| `(n:Person {name: 'Alice'})` | A Person node where `name` equals `'Alice'` |
+| `(:Person)` | A Person node (anonymous — no variable needed) |
+
+```cypher
+-- Any node
+MATCH (n) RETURN n
+
+-- Labeled node
+MATCH (n:Person) RETURN n.name
+
+-- Labeled with property filter
+MATCH (n:Person {city: 'Reykjavik'}) RETURN n.name
+
+-- Anonymous (you don't need the value, just to confirm the pattern exists)
+MATCH (:Company {name: 'Acme'})-[:HAS]->(d:Department) RETURN d.name
+```
+
+## Relationship patterns
+
+A relationship pattern connects two nodes:
+
+```
+(a)-[r:TYPE {property: value}]->(b)
+```
+
+| Element | Meaning |
+|---|---|
+| `-[:KNOWS]->` | Directed relationship of type KNOWS |
+| `<-[:KNOWS]-` | Reverse direction |
+| `-[:KNOWS]-` | Either direction |
+| `-[r:KNOWS]->` | Bind to variable `r` to access properties |
+| `-[r]->` | Any relationship type |
+| `-[:KNOWS {since: 2020}]->` | Relationship with property filter |
+
+```cypher
+-- Directed
+MATCH (a:Person)-[:KNOWS]->(b:Person) RETURN a.name, b.name
+
+-- Either direction
+MATCH (a:Person)-[:KNOWS]-(b:Person) RETURN a.name, b.name
+
+-- With relationship properties
+MATCH (a)-[r:KNOWS]->(b) WHERE r.since > 2019 RETURN a.name, b.name, r.since
+
+-- Any relationship type
+MATCH (a:Person)-[r]->(b) RETURN a.name, type(r), b.name
+```
+
+## Variable-length paths
+
+Append `*min..max` to a relationship pattern to match paths of varying depth:
+
+```cypher
+-- Exactly 2 hops
+MATCH (a)-[:KNOWS*2]->(b) RETURN b.name
+
+-- 1 to 3 hops
+MATCH (a:Person {name: 'Alice'})-[:KNOWS*1..3]->(b) RETURN b.name
+
+-- Any number of hops (use carefully on large graphs)
+MATCH (a)-[:KNOWS*]->(b) RETURN b.name
+```
+
+This is where the power of graph patterns becomes obvious. The SQL equivalent requires a recursive CTE or a series of self-joins — one per hop depth. In GQL, you write it once.
+
+```sql
+-- SQL: "who does Alice know, up to 3 hops?"
+WITH RECURSIVE knows AS (
+  SELECT person_id, known_id, 1 as depth FROM relationships WHERE person_id = alice_id
+  UNION ALL
+  SELECT k.person_id, r.known_id, k.depth + 1
+  FROM knows k JOIN relationships r ON k.known_id = r.person_id
+  WHERE k.depth < 3
+)
+SELECT DISTINCT known_id FROM knows;
+
+-- GQL: same thing
+MATCH (alice:Person {name: 'Alice'})-[:KNOWS*1..3]->(b) RETURN DISTINCT b.name
+```
+
+## Multi-pattern (implicit join)
+
+Multiple `MATCH` clauses in sequence find nodes that satisfy all patterns simultaneously:
+
+```cypher
+-- Find a person AND a company independently (Cartesian product)
+MATCH (p:Person {name: 'Alice'})
+MATCH (c:Company {name: 'Acme'})
+RETURN p.name, c.name
+
+-- Find people who work at the same company as Alice
+MATCH (alice:Person {name: 'Alice'})-[:WORKS_AT]->(c:Company)
+MATCH (colleague:Person)-[:WORKS_AT]->(c)
+WHERE colleague.name <> 'Alice'
+RETURN colleague.name, c.name
+```
+
+## OPTIONAL MATCH
+
+Like a SQL LEFT JOIN — returns the pattern match if it exists, `null` if it doesn't:
+
+```cypher
+MATCH (p:Person)
+OPTIONAL MATCH (p)-[:HAS_PHONE]->(ph:Phone)
+RETURN p.name, ph.number  -- ph.number is null if no phone exists
+```
+
+## Patterns in context: the mental shift from SQL
+
+In SQL, a many-to-many relationship requires a junction table and two JOINs. In GQL, it's just a traversal:
+
+```sql
+-- SQL: "find people who like the same movies"
+SELECT a.name, b.name
+FROM people a
+JOIN likes al ON a.id = al.person_id
+JOIN likes bl ON al.movie_id = bl.movie_id
+JOIN people b ON bl.person_id = b.id
+WHERE a.id <> b.id;
+```
+
+```cypher
+-- GQL: same question, no junction table needed
+MATCH (a:Person)-[:LIKES]->(m:Movie)<-[:LIKES]-(b:Person)
+WHERE a <> b
+RETURN a.name, b.name, m.title
+```
+
+The GQL pattern directly mirrors how you'd draw the relationship on a whiteboard. The SQL query is an artifact of how the data is stored.
+
+## ArcFlow extensions to patterns
+
+WorldCypher adds pattern capabilities beyond the GQL standard:
+
+**Confidence filtering on relationships:**
+```cypher
+-- Only traverse edges the system is confident about
+MATCH (a:Person)-[r:KNOWS]->(b)
+WHERE r._confidence > 0.8
+RETURN a.name, b.name, r._confidence
+```
+
+**Temporal patterns — the graph as it existed before:**
+```cypher
+-- Who did Alice know 30 days ago?
+MATCH (alice:Person {name: 'Alice'})-[:KNOWS]->(b) AS OF seq 1000
+RETURN b.name
+```
+
+**Live patterns — re-evaluate when the graph changes:**
+```cypher
+-- Standing query: fires when a new high-score person appears
+LIVE MATCH (n:Person) WHERE n.score > 0.95 RETURN n.name, n.score
+```
+
+## Further reading
+
+- [MATCH reference](/worldcypher/query-syntax/match) — full syntax and edge cases
+- [Variable-length paths and shortestPath](/worldcypher/functions/shortest-path)
+- [WHERE reference](/worldcypher/query-syntax/where) — filtering patterns
+- [SQL vs GQL](/concepts/sql-vs-gql) — the full mental model shift

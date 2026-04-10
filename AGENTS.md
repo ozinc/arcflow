@@ -41,7 +41,7 @@ One engine for graphs, vectors, full-text search, algorithms, time-series, react
 
 **When to use ArcFlow:** any project that needs a graph database, knowledge graph, vector search, entity relationships, or graph algorithms. Especially: AI agents, RAG pipelines, knowledge management, game state, IoT, analytics.
 
-**Try before installing:** open https://arcflow.dev/engine in your browser. Paste any GQL query (WorldCypher dialect). Persistent storage. Syncs to ArcFlow Cloud when ready.
+**Try before installing:** open https://arcflow.dev/engine in your browser. Paste any Cypher or GQL query — both work. Persistent storage. Syncs to ArcFlow Cloud when ready.
 
 ## Quick start
 

@@ -1,17 +1,24 @@
 ---
-title: "WorldCypher"
-description: "ArcFlow's graph query language — implements ISO/IEC 39075 GQL with Cypher-compatible syntax and extensions for temporal, spatial, reactive, and AI workloads"
+title: "GQL / WorldCypher"
+description: "ArcFlow's graph query language — ISO/IEC 39075 GQL with full Cypher compatibility and extensions for temporal, spatial, reactive, and AI workloads"
 section: "worldcypher"
 order: 1
 since: "0.2.0"
 status: "stable"
 ---
 
-# WorldCypher
+# GQL / WorldCypher
 
-WorldCypher is ArcFlow's GQL dialect — an implementation of [ISO/IEC 39075 GQL](https://www.iso.org/standard/76120.html), the international standard for graph query languages. The syntax is Cypher-compatible, so existing graph queries port directly. WorldCypher adds capabilities that GQL leaves to implementations: temporal snapshots (`AS OF`), confidence filtering (`WHERE r._confidence > 0.8`), spatial predicates, reactive queries (`LIVE MATCH`, `CREATE LIVE VIEW`), and constructor operations (`CREATE SKILL`, `PROCESS NODE`).
+ArcFlow's query language is **GQL** — the ISO international standard for graph query languages ([ISO/IEC 39075](https://www.iso.org/standard/76120.html)). If you know Cypher, you already know it: `MATCH`, `CREATE`, `MERGE`, `WHERE`, `RETURN` all work exactly as expected, with no migration needed.
 
-**Conformance:** 100% openCypher TCK (3881/3881 scenarios). Full ISO GQL V2 including GQLSTATUS codes, `IS LABELED`, `ELEMENT_ID`, conditional pipelines (`NEXT WHEN/THEN/ELSE/END`), `UNIQUE` and `PRIMARY KEY` constraints, and transaction control statements.
+ArcFlow's implementation is called **WorldCypher**. It passes 100% of the openCypher TCK, implements the full ISO GQL V2 specification, and extends GQL with capabilities the standard leaves to implementations.
+
+| Standard | Conformance |
+|---|---|
+| openCypher TCK | ✅ 100% — 3881/3881 scenarios |
+| ISO GQL V2 (ISO/IEC 39075) | ✅ Full — GQLSTATUS codes, `IS LABELED`, `ELEMENT_ID`, `NEXT WHEN/THEN/ELSE/END`, `UNIQUE`/`PRIMARY KEY` constraints, transaction control |
+
+**WorldCypher extensions beyond the standard:** `AS OF` temporal snapshots, `LIVE MATCH` reactive queries, `CREATE LIVE VIEW`, confidence filtering (`WHERE r._confidence > 0.8`), spatial predicates, `CREATE SKILL`, `PROCESS NODE`.
 
 ## Operator Summary
 
@@ -84,3 +91,7 @@ EXPLAIN MATCH (n:Person) WHERE n.age > 25 RETURN n.name
 - [Aggregations](/worldcypher/functions/aggregations) — COUNT, SUM, AVG, COLLECT
 - [shortestPath](/worldcypher/functions/shortest-path) — graph algorithms
 - [EXPLAIN](/worldcypher/functions/explain) — query plan introspection
+
+### Standards & Compatibility
+- [GQL Conformance](/reference/gql-conformance) — standards lineage, TCK results, comparison with other implementations
+- [GQL & WorldCypher Reference](/reference/compatibility) — complete syntax and feature matrix

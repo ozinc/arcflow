@@ -13,6 +13,16 @@ status: "stable"
 
 **Every answer carries a confidence score, a provenance chain, and a classification of how the fact was derived — observed, inferred, or predicted.**
 
+## The deep knowledge problem
+
+LLMs are trained on vast corpora. They know facts. What they struggle with is traversal — questions where the answer requires following a chain of relationships that isn't directly encoded in their weights.
+
+Ask an LLM to find the causal path between two entities separated by several degrees of connection, and it will confabulate or give up. The knowledge is somewhere in the training data; the multi-hop reasoning to connect it isn't reliably retrievable. This is the structural gap that no amount of fine-tuning closes: LLMs are lookup tables, not traversal engines.
+
+Graph databases close that gap. They don't approximate paths — they compute them. A six-hop traversal that produces the wrong answer in an LLM takes milliseconds in a graph and is exact. The question isn't whether your model knows about the entities. It's whether it can connect them.
+
+ArcFlow's Trusted RAG is built on this insight: combine an LLM's language fluency with a graph engine's traversal capability, then add a layer the combination still needs — filtering by reliability, tracing every answer to its source, and distinguishing hard facts from statistical guesses.
+
 Standard RAG retrieves text chunks and hopes the LLM gets it right. There is no way to filter by reliability, trace an answer to its source document, or distinguish hard facts from statistical guesses. ArcFlow's Trusted RAG scores every fact (0.0-1.0), records which extraction model produced it, and filters low-confidence facts before the LLM ever sees them. The result: auditable answers with a verifiable evidence trail.
 
 ```cypher

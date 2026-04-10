@@ -1,6 +1,6 @@
 ---
 title: "From SQL to GQL"
-description: "Connect ArcFlow with any PostgreSQL client using familiar SQL tooling. Understand how the PostgreSQL wire protocol works as a bridge into WorldCypher and the ISO GQL standard."
+description: "Connect ArcFlow with any PostgreSQL client using familiar SQL tooling. Understand how the PostgreSQL wire protocol works as a bridge into GQL (ISO/IEC 39075) and WorldCypher."
 section: "guides"
 order: 10
 since: "4.0.0"
@@ -9,9 +9,19 @@ status: "stable"
 
 # From SQL to GQL
 
+SQL standardized how software talks to relational databases in 1983. That standard has held for over 40 years — not because SQL is perfect, but because a single standard creates an ecosystem. Every ORM, BI tool, query builder, and analytics pipeline speaks SQL because every relational database speaks SQL. Standardization is the network effect.
+
+Graph databases spent two decades without that. Every vendor shipped a different query language: Neo4j had Cypher, Apache TinkerPop had Gremlin, TigerGraph had GSQL, ArangoDB had AQL. Each powerful. None interoperable. You learned one, and your knowledge didn't transfer.
+
+In 2024, ISO published GQL (ISO/IEC 39075) — the SQL for graph databases. The same arc: fragmented proprietary languages → single international standard → shared ecosystem. GQL is the only standardized query language in the NoSQL landscape; no other NoSQL category — key-value, document, column-family — has an equivalent.
+
+ArcFlow implements GQL in full. The PostgreSQL wire protocol below gives you the connection model you already know. The queries you write are GQL.
+
+---
+
 ArcFlow implements the PostgreSQL wire protocol v3. Any tool that speaks PostgreSQL — psql, pgAdmin, Grafana, DBeaver, psycopg2, pgx, node-postgres, sqlx — connects without modification.
 
-The queries running underneath are WorldCypher, ArcFlow's graph query language aligned with the ISO/IEC 39075 GQL standard. The PostgreSQL wire is a connection bridge, not a SQL execution layer.
+The queries running underneath are GQL (ISO/IEC 39075) — ArcFlow's implementation is called WorldCypher, which is also fully Cypher-compatible. The PostgreSQL wire is a connection bridge, not a SQL execution layer.
 
 This guide explains how the two fit together and how to move from familiar SQL tooling into GQL queries when you're ready.
 
@@ -170,7 +180,7 @@ arcflow --pg 5432 --data-dir ./production
 
 In Grafana:
 - Add a PostgreSQL datasource pointing to `localhost:5432`
-- Write WorldCypher in the query panel
+- Write GQL queries in the query panel
 - Results render as tables, time series, or graphs depending on the query shape
 
 Example dashboard query:
@@ -184,15 +194,16 @@ ORDER BY e.timestamp
 
 ## GQL and the ISO standard
 
-WorldCypher is aligned with ISO/IEC 39075 GQL, the international standard for graph query languages (published 2024). GQL is designed to be to graph databases what SQL is to relational databases — a standard interface that works across implementations.
+GQL (ISO/IEC 39075) is the international standard for graph query languages, published in 2024. It's designed to be to graph databases what SQL is to relational databases — a standard interface that works across implementations. ArcFlow implements it fully (100% openCypher TCK, complete ISO GQL V2).
 
-The PostgreSQL wire protocol gives you a familiar connection model. GQL gives you a query language with a standards body behind it.
+The PostgreSQL wire protocol gives you a familiar connection model. GQL gives you a query language with a standards body behind it, and Cypher compatibility means existing queries port without changes.
 
-For the full WorldCypher / GQL reference, see [WorldCypher Reference](/worldcypher).
+For conformance details and a comparison with other implementations, see [GQL Conformance](/reference/gql-conformance). For the complete syntax reference, see [GQL / WorldCypher Reference](/worldcypher).
 
 ## See Also
 
+- [GQL Conformance](/reference/gql-conformance) — standards lineage, TCK results, comparison with other implementations
 - [Server Modes & PG Wire](/server) — full protocol details and authentication options
-- [WorldCypher Reference](/worldcypher) — complete query language reference
+- [GQL / WorldCypher Reference](/worldcypher) — complete query language reference
 - [Quickstart](/quickstart) — get running in 5 minutes
 - [Migration Guide](/guides/migrating-from-neo4j) — coming from Neo4j or another graph database

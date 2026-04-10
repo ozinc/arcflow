@@ -1,0 +1,97 @@
+---
+title: "GQL Conformance"
+description: "ArcFlow's conformance to ISO/IEC 39075 GQL and the openCypher TCK — standards coverage, lineage, and extensions beyond the specification"
+section: "reference"
+status: "stable"
+---
+
+# GQL Conformance
+
+GQL is to graph databases what SQL is to relational databases: a single standard query language that any conformant database speaks, giving tooling, drivers, and developers a shared foundation.
+
+SQL held that role for 50 years in the relational world. GQL, published as [ISO/IEC 39075](https://www.iso.org/standard/76120.html) in 2024, is designed to do the same for graph data — ending the era where every graph database shipped its own proprietary language (Cypher, Gremlin, GSQL, AQL) that didn't transfer between systems.
+
+What makes GQL notable beyond its own merits: it is the only standardized query language in the NoSQL landscape. Key-value stores, document databases, column-family systems — none have a formal ISO standard. Graph databases are uniquely positioned with a specifications committee, a defined conformance test suite, and vendor-neutral interoperability. Full GQL conformance is a meaningful guarantee, not a checkbox.
+
+ArcFlow implements GQL in full — 100% of the openCypher TCK, complete ISO GQL V2 specification, and extensions for workloads the standard deliberately leaves to implementations.
+
+## Conformance at a glance
+
+| Standard | Status | Detail |
+|---|---|---|
+| openCypher TCK | ✅ 100% | 3881/3881 test scenarios pass |
+| ISO GQL V2 (ISO/IEC 39075) | ✅ Full | See feature list below |
+
+No partial conformance. No "in progress" list for mandatory features. If a query runs on Neo4j, Memgraph, or FalkorDB, it runs on ArcFlow.
+
+## Standards lineage
+
+Understanding the relationship between Cypher, openCypher, and GQL helps set expectations:
+
+```
+Cypher (Neo4j, ~2011)
+  └── openCypher (open specification, 2015 — basis for TCK)
+        └── ISO GQL (ISO/IEC 39075, published 2024 — international standard)
+              └── WorldCypher (ArcFlow's implementation — GQL + extensions)
+```
+
+GQL was heavily influenced by Cypher. If you know Cypher, you already know GQL — the core clauses (`MATCH`, `CREATE`, `MERGE`, `WHERE`, `RETURN`, `WITH`, `UNWIND`) are identical in semantics. ISO GQL V2 adds new features on top: label predicates, element identity, conditional pipelines, GQLSTATUS codes, and transaction control.
+
+WorldCypher sits at the top of this hierarchy: it passes the full openCypher TCK, implements ISO GQL V2 in its entirety, and adds capabilities that the standard deliberately leaves to implementations.
+
+## ISO GQL V2 features
+
+These features are specified in ISO GQL V2 and fully supported in WorldCypher:
+
+| Feature | Syntax | Notes |
+|---|---|---|
+| Label predicate | `WHERE n IS LABELED :Person` | ISO GQL V2 label test |
+| Element identity | `ELEMENT_ID(n)` | Stable node/edge identifier |
+| Conditional pipeline | `NEXT WHEN c THEN ... ELSE ... END` | GQL-native branching |
+| GQLSTATUS codes | Structured error codes | Standard-conformant status reporting |
+| `UNIQUE` constraint | `CREATE CONSTRAINT ON :L(p) ASSERT UNIQUE` | |
+| `PRIMARY KEY` constraint | `CREATE CONSTRAINT ON :L(p) ASSERT PRIMARY KEY` | |
+| Transaction control | `START TRANSACTION [READ ONLY]`, `COMMIT`, `ROLLBACK` | |
+| `OPTIONAL MATCH` | `OPTIONAL MATCH (a)-[:R]->(b)` | Left-outer join semantics |
+| `CASE WHEN` | `CASE n.status WHEN 'a' THEN ... END` | |
+
+## WorldCypher extensions beyond the GQL standard
+
+GQL is intentionally abstract in several areas, leaving implementation choices to vendors. WorldCypher makes the following choices and adds capabilities beyond the spec:
+
+| Extension | Syntax | What it does |
+|---|---|---|
+| Temporal snapshots | `MATCH (n) AS OF seq N` | Query the graph at a past checkpoint |
+| Reactive queries | `LIVE MATCH (n:Label) RETURN n` | Standing query, re-evaluates on change |
+| Live algorithms | `LIVE CALL algo.pageRank()` | Incrementally maintained graph algorithm |
+| Persistent live views | `CREATE LIVE VIEW name AS ...` | CDC-maintained materialized view |
+| Confidence filtering | `WHERE r._confidence > 0.8` | Per-edge confidence score predicate |
+| Spatial predicates | `WHERE geo.distance(n.loc, $point) < 1000` | Geospatial filtering |
+| Skill constructors | `CREATE SKILL name FROM PROMPT ...` | Declarative AI skill definition |
+| Node processing | `PROCESS NODE (n:Label)` | Execute a skill across matching nodes |
+| Window functions | `avg(n.x) OVER (PARTITION BY ... ORDER BY ...)` | LAG, LEAD, STDDEV_POP, PERCENT_RANK, ROW_NUMBER |
+| Graph algorithms | `CALL algo.pageRank()` | 30+ built-in — no projection lifecycle |
+| Vector search | `CALL algo.vectorSearch(index, $vec, k)` | HNSW k-NN |
+| Hybrid search | `CALL algo.hybridSearch()` | Vector + graph traversal in one call |
+
+## Comparison with other implementations
+
+| Implementation | openCypher TCK | ISO GQL V2 | Notes |
+|---|---|---|---|
+| **ArcFlow (WorldCypher)** | ✅ 100% (3881/3881) | ✅ Full | Plus temporal, reactive, and AI extensions |
+| Neo4j (Cypher) | ✅ Full | ⚠️ Majority of mandatory features; partial optional; [actively working on gaps](https://neo4j.com/docs/cypher-manual/current/appendix/gql-conformance/) |
+| Microsoft Fabric | — | ⚠️ Partial — [long list of unsupported features](https://learn.microsoft.com/en-us/fabric/graph/limitations#gql-conformance) | Preview; many mandatory features still in progress |
+| Memgraph | ✅ Full | ⚠️ Partial | openCypher-native; GQL V2 in progress |
+| FalkorDB | ✅ Full | ⚠️ Partial | Redis-based; GQL V2 in progress |
+
+## What "100% openCypher TCK" means
+
+The openCypher Technology Compatibility Kit (TCK) is a suite of 3881 acceptance test scenarios covering the full openCypher specification — pattern matching, predicates, aggregations, path operations, null semantics, and edge cases. Passing 100% means every documented Cypher behavior is implemented exactly as specified, including corner cases around `null` propagation, `OPTIONAL MATCH` semantics, and aggregation ordering.
+
+Any query that runs on a Cypher-based database (Neo4j, Memgraph, FalkorDB) will produce identical results on ArcFlow.
+
+## Further reading
+
+- [GQL & WorldCypher Reference](./compatibility) — complete syntax and feature matrix
+- [Migration Guide](/guides/migrating-from-neo4j) — porting queries from Neo4j, Memgraph, FalkorDB
+- [ISO/IEC 39075 GQL standard](https://www.iso.org/standard/76120.html) — the specification itself

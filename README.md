@@ -55,8 +55,8 @@ One in-process library replaces six services:
 | Use Case | Why ArcFlow |
 |---|---|
 | Knowledge graphs | Entity linking, confidence-scored facts, provenance — all in one engine |
-| RAG pipelines | Vector search + graph traversal + full-text in a single query |
-| AI agent memory | In-process graph the agent can spin up, use, and discard |
+| RAG pipelines | Graph traversal for multi-hop reasoning — the gap between what LLMs know and what they can connect |
+| AI agent memory | Persistent, queryable graph across sessions — not context window tricks |
 | Trading pipelines | Window functions, live views, proven batch/delta equivalence |
 | Sports analytics | Spatial queries, player tracking, real-time algorithms |
 | Game state | Behavior trees as graph subgraphs, persistent world model |
@@ -114,7 +114,8 @@ try { db.query("BAD") } catch (e) {
 | Section | What you'll learn |
 |---|---|
 | [Quickstart](docs/quickstart.mdx) | First query in 5 minutes |
-| [WorldCypher](docs/worldcypher/index.mdx) | Query language reference |
+| [GQL / WorldCypher](docs/worldcypher.mdx) | Query language (ISO/IEC 39075 GQL, Cypher-compatible) |
+| [GQL Conformance](docs/reference/gql-conformance.mdx) | Standards lineage, TCK results, comparison with other implementations |
 | [Tutorials](docs/tutorials/knowledge-graph.mdx) | Knowledge graph, vector search, algorithms |
 | [Recipes](docs/recipes/crud.mdx) | Copy-paste patterns |
 | [API Reference](docs/reference/api.mdx) | TypeScript SDK API |
@@ -124,7 +125,7 @@ try { db.query("BAD") } catch (e) {
 
 | File | Purpose |
 |---|---|
-| [`AGENTS.md`](AGENTS.md) | Full context — API, WorldCypher, comparison table, patterns |
+| [`AGENTS.md`](AGENTS.md) | Full context — API, GQL (WorldCypher), comparison table, patterns |
 | [`llms.txt`](llms.txt) | Compact reference for quick orientation |
 | [`llms-full.txt`](llms-full.txt) | Complete reference with every procedure |
 

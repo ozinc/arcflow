@@ -1,0 +1,202 @@
+---
+title: "Fraud Detection"
+description: "Fraud detection as a World Model problem: building a persistent, confidence-scored financial world model where rings, synthetic identities, and anomalies become visible as graph patterns"
+section: "use-cases"
+status: "stable"
+---
+
+# Fraud Detection
+
+Fraud detection is a World Model problem.
+
+A transaction in isolation looks clean. What makes it fraudulent is its position in a larger structure — a circular chain of transfers, a cluster of accounts sharing one phone number, a new account that moves money before its owner ever logs in again. That structure exists in the world. The question is whether your database can represent it and reason over it.
+
+ArcFlow's World Model approach gives you a persistent, confidence-scored financial graph where entities (accounts, devices, identities) have provenance, relationships carry evidence quality scores, and every historical state is queryable. Fraud isn't detected by rules that fire on individual transactions — it emerges from pattern queries over the model.
+
+## Building the financial world model
+
+```cypher
+-- Accounts as entities in the world
+CREATE (a1:Account {id: 'ACC-001', owner: 'Alice Chen', created_at: '2024-01-15'})
+CREATE (a2:Account {id: 'ACC-002', owner: 'Bob Marsh', created_at: '2024-01-16'})
+CREATE (a3:Account {id: 'ACC-003', owner: 'Carol Kim', created_at: '2024-01-16'})
+CREATE (a4:Account {id: 'ACC-004', owner: 'Dave Lund', created_at: '2024-01-17'})
+CREATE (a5:Account {id: 'ACC-005', owner: 'Eve Park', created_at: '2024-01-17'})
+
+-- Identity attributes as shared graph nodes
+-- When two accounts share a phone, they share a node — the link is structural
+CREATE (p1:Phone {number: '+354-555-0101'})
+CREATE (d1:Device {fingerprint: 'fp-abc123', type: 'mobile'})
+CREATE (ip1:IPAddress {address: '192.168.1.50'})
+
+-- Identity links — with observation class (how was this verified?)
+CREATE (a1)-[:REGISTERED_WITH {_observation_class: 'observed', _confidence: 0.99}]->(p1)
+CREATE (a3)-[:REGISTERED_WITH {_observation_class: 'observed', _confidence: 0.99}]->(p1)
+-- Same phone: a structural fact in the world model, not a rule
+
+CREATE (a1)-[:LOGGED_IN_FROM {_observation_class: 'observed', _confidence: 0.95}]->(d1)
+CREATE (a4)-[:LOGGED_IN_FROM {_observation_class: 'observed', _confidence: 0.95}]->(d1)
+
+-- Transactions — observed facts with timestamps
+CREATE (a1)-[:SENT {amount: 1000, at: '2024-02-01T10:00:00', _observation_class: 'observed'}]->(a2)
+CREATE (a2)-[:SENT {amount: 950,  at: '2024-02-01T10:15:00', _observation_class: 'observed'}]->(a3)
+CREATE (a3)-[:SENT {amount: 900,  at: '2024-02-01T10:30:00', _observation_class: 'observed'}]->(a4)
+CREATE (a4)-[:SENT {amount: 850,  at: '2024-02-01T10:45:00', _observation_class: 'observed'}]->(a5)
+CREATE (a5)-[:SENT {amount: 800,  at: '2024-02-01T11:00:00', _observation_class: 'observed'}]->(a1)
+```
+
+Every fact in the model has an observation class. Transactions are `observed` — confirmed by the payment system. Risk scores added by a model might be `inferred`. Predicted future behavior is `predicted`. This distinction matters when you're deciding which signals to act on.
+
+## Pattern 1: Circular transactions emerge from the world model
+
+Fraud rings are circular paths. In the world model, the question is: does a path exist that starts and ends at the same account?
+
+```cypher
+-- Find circular money flows (rings of 2–10 hops)
+MATCH (a:Account)-[:SENT*2..10]->(a)
+RETURN a.id, a.owner
+
+-- Get the full ring structure
+MATCH p = (a:Account)-[:SENT*2..10]->(a)
+RETURN a.id, length(p) AS ring_size,
+       [r IN relationships(p) | r.amount] AS amounts,
+       [r IN relationships(p) | r.at]     AS timestamps
+ORDER BY ring_size
+```
+
+This query describes a shape in the world model — a cycle. The engine finds all subgraphs matching that shape. There is no SQL equivalent that doesn't require a recursive CTE with explicit cycle detection, and it degrades significantly past 4 hops.
+
+## Pattern 2: Shared identity clusters
+
+In the financial world model, identity attributes (phones, devices, IPs) are nodes — not columns. When two accounts share a phone, they share a node. The link is structural; no JOIN needed.
+
+```cypher
+-- Accounts sharing a phone number
+MATCH (a1:Account)-[:REGISTERED_WITH]->(p:Phone)<-[:REGISTERED_WITH]-(a2:Account)
+WHERE a1 <> a2
+RETURN p.number, collect(a1.id) + collect(a2.id) AS linked_accounts
+
+-- Broader: all accounts connected by ANY shared identity attribute
+MATCH (a1:Account)-[:REGISTERED_WITH|LOGGED_IN_FROM]->(attr)
+                  <-[:REGISTERED_WITH|LOGGED_IN_FROM]-(a2:Account)
+WHERE a1 <> a2
+RETURN a1.id, a2.id, labels(attr)[0] AS shared_via
+```
+
+The second query finds the full synthetic identity network — accounts linked through any combination of shared phones, devices, or IPs — in a single traversal. In a traditional system, this requires multi-table joins across each attribute type separately, then deduplication.
+
+## Pattern 3: Velocity — time-awareness from the world model
+
+Because the world model records when entities were created and when events occurred, temporal anomalies are direct queries:
+
+```cypher
+-- Accounts that sent money within 24 hours of creation
+MATCH (a:Account)-[r:SENT]->(:Account)
+WHERE duration.between(datetime(a.created_at), datetime(r.at)).hours < 24
+RETURN a.id, a.owner, a.created_at, r.amount, r.at
+ORDER BY a.created_at
+```
+
+```cypher
+-- Structuring: many small transactions summing above a threshold
+MATCH (a:Account)-[r:SENT]->(b:Account)
+WITH a, b, count(r) AS tx_count, sum(r.amount) AS total, collect(r.amount) AS amounts
+WHERE tx_count >= 5 AND total > 9000
+  AND all(amt IN amounts WHERE amt < 2000)
+RETURN a.id, b.id, tx_count, total
+ORDER BY total DESC
+```
+
+## Pattern 4: Confidence-filtered risk signals
+
+The world model tracks how confident we are in each fact. Risk scores from an ML model might be added as `inferred` facts with a confidence score. Only act on signals above a threshold:
+
+```cypher
+-- High-confidence identity links between different accounts
+MATCH (a1:Account)-[r1:REGISTERED_WITH]->(p:Phone)<-[r2:REGISTERED_WITH]-(a2:Account)
+WHERE r1._confidence > 0.9
+  AND r2._confidence > 0.9
+  AND a1 <> a2
+RETURN p.number, a1.id, a2.id
+```
+
+As evidence accumulates — more transactions, more verification — confidence scores rise. The world model doesn't just store facts; it stores how much to trust them.
+
+## Pattern 5: Structural centrality via graph algorithms
+
+Mule accounts are structurally central — many transaction paths pass through them. PageRank over the financial world model surfaces them directly:
+
+```cypher
+CALL algo.pageRank()
+YIELD nodeId, score
+MATCH (a:Account) WHERE id(a) = nodeId AND score > 0.5
+RETURN a.id, a.owner, score
+ORDER BY score DESC LIMIT 20
+```
+
+Central accounts in a transaction graph that are young and share identity attributes with other accounts are the highest-priority investigation targets.
+
+## Live monitoring: reactive world model
+
+The world model is live. When a new transaction completes a ring, the alert fires immediately:
+
+```typescript
+import { open } from 'arcflow'
+
+const db = open('./data/financial-world-model')
+
+// Standing pattern: fires whenever a new ring closes
+const monitor = db.subscribe(
+  `MATCH (a:Account)-[:SENT*2..6]->(a)
+   WHERE NOT a.flagged
+   RETURN a.id, a.owner`,
+  (event) => {
+    for (const row of event.added) {
+      const id = row.get('id')
+      console.log(`Ring closed: ${id}`)
+      db.mutate(`MATCH (a:Account {id: $id}) SET a.flagged = true, a.risk = 'high'`, { id })
+    }
+  }
+)
+```
+
+No polling. No batch job. The moment a `SENT` edge that completes a ring is written, the reactive layer fires.
+
+## Querying the past
+
+Because the world model is temporal, you can reconstruct any previous state:
+
+```cypher
+-- What did the account network look like before the suspicious transfers?
+MATCH (a:Account)-[:SENT]->(b:Account) AS OF seq 1000
+RETURN a.id, b.id
+
+-- Compare current structure to state 24 hours ago
+MATCH (a:Account {id: 'ACC-001'}) AS OF (timestamp() - 86400000)
+RETURN a.flagged, a.risk
+```
+
+Auditors get a full timeline, not just current state. Investigators can replay exactly what was known at any point in the investigation.
+
+## Why World Model changes fraud detection
+
+| Approach | Traditional (rules + SQL) | ArcFlow World Model |
+|---|---|---|
+| Rings | Recursive CTE, slow past 4 hops | `MATCH (a)-[:SENT*2..10]->(a)` |
+| Shared identity | Separate table per attribute type | Structural — shared nodes |
+| Velocity | Scheduled batch job | Temporal query on the live model |
+| Evidence quality | Binary (flagged / not flagged) | Confidence score [0.0, 1.0] on every fact |
+| Ring detection latency | Minutes to hours | Milliseconds — reactive pattern |
+| Historical audit | Audit log table | `AS OF seq N` on the graph itself |
+| Algorithm (centrality) | External tool or manual impl | `CALL algo.pageRank()` in one query |
+
+The fundamental shift: instead of writing rules that fire on individual events, you build a model of the financial world — accounts, identities, transactions, and their relationships — and ask structural questions about it.
+
+## See Also
+
+- [Building a World Model](/guides/world-model) — the foundational pattern
+- [Graph Patterns](/concepts/graph-patterns) — how pattern matching works
+- [SQL vs GQL](/concepts/sql-vs-gql) — why the mental model shift matters
+- [Confidence & Provenance](/concepts/confidence-and-provenance) — scoring evidence quality
+- [Reactive Queries](/reactive) — live monitoring without polling
+- [Temporal Queries](/worldcypher/temporal) — querying historical state

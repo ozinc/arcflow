@@ -1,0 +1,213 @@
+---
+title: "Glossary"
+description: "Definitions for graph, GQL, and ArcFlow-specific terms"
+section: "reference"
+status: "stable"
+---
+
+# Glossary
+
+Core terms used across ArcFlow documentation. Terms marked **ArcFlow** are specific to ArcFlow's implementation or extensions beyond standard GQL.
+
+---
+
+## Node
+
+The fundamental unit of a graph. Represents an entity — a person, a document, a sensor reading, a transaction. Nodes have zero or more **labels** and zero or more **properties**.
+
+```cypher
+CREATE (n:Person {name: 'Alice', age: 30})
+--      ^label    ^properties
+```
+
+---
+
+## Relationship (Edge)
+
+A typed, directed connection between two nodes. Relationships have a **type**, a direction, and zero or more properties. Unlike a JOIN in SQL, a relationship is a first-class object stored in the graph — not derived at query time.
+
+```cypher
+CREATE (a:Person)-[:KNOWS {since: 2020}]->(b:Person)
+--                 ^type   ^property
+```
+
+---
+
+## Label
+
+A category tag on a node. One node can have multiple labels. Labels are used in MATCH patterns to filter which nodes to traverse.
+
+```cypher
+CREATE (n:Person:Admin {name: 'Alice'})  -- two labels
+MATCH (n:Person) RETURN n               -- match by label
+```
+
+---
+
+## Property
+
+A key-value pair stored on a node or relationship. Property values are typed: string, integer, float, boolean, list, point, or date/time types.
+
+---
+
+## Pattern
+
+A template describing a subgraph shape. The MATCH clause holds a pattern; the engine finds all subgraphs that fit it. This is the core mental model of GQL — you describe a shape, not a condition.
+
+```cypher
+-- Pattern: a Person connected via WORKS_AT to a Company
+MATCH (p:Person)-[:WORKS_AT]->(c:Company)
+```
+
+---
+
+## Traversal
+
+Following relationships from one node to the next. Unlike a SQL JOIN (which scans tables), traversal follows pointer chains directly — the cost is proportional to the number of hops, not the size of the dataset.
+
+---
+
+## Hop
+
+One step along a relationship between two nodes. A two-hop path: `(a)-[:R]->(b)-[:R]->(c)`.
+
+---
+
+## Path
+
+A sequence of alternating nodes and relationships from a source to a destination. Paths are first-class in GQL — you can bind them to variables, measure their length, and return them.
+
+```cypher
+MATCH p = (a:Person)-[:KNOWS*1..3]->(b:Person)
+RETURN length(p), nodes(p)
+```
+
+---
+
+## Variable-length path
+
+A path where the number of relationship hops is a range, not a fixed value. Written as `*min..max` after the relationship type.
+
+```cypher
+MATCH (a)-[:KNOWS*1..5]->(b)  -- 1 to 5 hops
+```
+
+---
+
+## Directed graph
+
+A graph where relationships have direction — `(a)-[:R]->(b)` is different from `(b)-[:R]->(a)`. ArcFlow's graph is directed. You can query in either direction or both.
+
+---
+
+## Property graph
+
+A graph model where both nodes and relationships can carry arbitrary key-value properties. GQL (ISO/IEC 39075) is the standard query language for property graphs.
+
+---
+
+## GQL
+
+Graph Query Language. The ISO international standard (ISO/IEC 39075, published 2024) for querying property graphs. Derived substantially from openCypher. ArcFlow's implementation is called WorldCypher.
+
+---
+
+## openCypher
+
+An open specification of the Cypher query language, originally developed at Neo4j. openCypher was a key input to the ISO GQL standard. ArcFlow passes 100% of the openCypher TCK (3881/3881 scenarios).
+
+---
+
+## WorldCypher
+
+**ArcFlow.** ArcFlow's implementation of ISO GQL, extended with temporal snapshots, reactive queries, confidence scoring, spatial predicates, constructors, and graph algorithm procedures. All standard GQL syntax works; WorldCypher adds what the standard leaves to implementations.
+
+---
+
+## MVCC (Multi-Version Concurrency Control)
+
+**ArcFlow.** The mechanism that allows reads and writes to proceed concurrently without blocking each other. ArcFlow uses ArcSwap for lock-free pointer swaps, meaning reads never wait for writes. Each write creates a new version; readers see a consistent snapshot.
+
+---
+
+## WAL (Write-Ahead Log)
+
+**ArcFlow.** The durability mechanism. Every mutation is written to the WAL before it's applied to the in-memory graph. On crash, the WAL replays to restore the last committed state. ArcFlow's WAL is the replication source for SWMR setups.
+
+---
+
+## Observation class
+
+**ArcFlow.** A built-in property on every node (`_observation_class`) that records how the node's data was acquired:
+
+| Value | Meaning |
+|---|---|
+| `observed` | Directly measured — a sensor reading, a confirmed transaction |
+| `inferred` | Derived from reasoning over observed facts |
+| `predicted` | A model output or statistical projection |
+
+Observation class is the foundation for **confidence filtering** — queries can restrict to only `observed` facts to get the highest-trust results.
+
+---
+
+## Confidence score
+
+**ArcFlow.** A float `[0.0, 1.0]` on nodes and relationships (`_confidence`) indicating how reliable the data is. Set by extraction models, sensors, or manual curation. Queries can filter by confidence:
+
+```cypher
+MATCH (a)-[r:DETECTS]->(b)
+WHERE r._confidence > 0.8
+RETURN a.name, b.name
+```
+
+---
+
+## World Model
+
+**ArcFlow.** A persistent, spatial-temporal knowledge graph representing the state of a real or simulated environment. Entities have position, velocity, and observation class. Relationships carry provenance and confidence. The entire history is queryable via `AS OF seq N`. Used for robotics perception, game AI, digital twins, autonomous systems, and active inference agents.
+
+---
+
+## Constructor
+
+**ArcFlow.** A named, persistent graph procedure that processes nodes with a specific label. Defined with `CREATE SKILL`, triggered with `PROCESS NODE`. Constructors implement extraction pipelines, enrichment steps, and transformation logic as graph-native operations.
+
+---
+
+## Live view
+
+**ArcFlow.** A named, incrementally maintained query result. Created with `CREATE LIVE VIEW`, updated automatically as the underlying graph changes. Zero-cost reads — the result is pre-computed. Equivalent to a materialized view in SQL, but reactive.
+
+```cypher
+CREATE LIVE VIEW active_users AS
+MATCH (u:User) WHERE u.last_active > timestamp() - 3600000
+RETURN u.id, u.name
+```
+
+---
+
+## Reactive query
+
+**ArcFlow.** A standing query that re-evaluates when the graph changes. Written as `LIVE MATCH` or registered via `db.subscribe()`. The engine pushes deltas (added/removed rows) to the subscriber rather than requiring polling.
+
+---
+
+## TCK (Technology Compatibility Kit)
+
+A test suite for verifying query language conformance. The openCypher TCK contains 3881 scenarios. ArcFlow passes all of them.
+
+---
+
+## SWMR (Single Writer, Multiple Readers)
+
+**ArcFlow.** ArcFlow's replication topology. One primary node writes; read replicas follow the WAL via Arrow Flight. Reads on replicas are fully consistent with the primary's committed state.
+
+---
+
+## See Also
+
+- [Graph Model](/concepts/graph-model) — detailed node/relationship/property model
+- [Graph Patterns](/concepts/graph-patterns) — how to write pattern queries
+- [SQL vs GQL](/concepts/sql-vs-gql) — mental model shift from relational to graph
+- [GQL Conformance](/reference/gql-conformance) — standards coverage
+- [Confidence & Provenance](/concepts/confidence-and-provenance) — scoring and tracing facts

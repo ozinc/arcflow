@@ -1,0 +1,180 @@
+---
+title: "SQL vs GQL — The Mental Model Shift"
+description: "Moving from SQL to GQL isn't about syntax — it's about thinking in connections instead of tables"
+section: "concepts"
+status: "stable"
+---
+
+# SQL vs GQL — The Mental Model Shift
+
+SQL and GQL solve different problems. SQL is excellent at what it was designed for: structured, normalized data in well-defined tables. GQL is excellent at what SQL was never designed for: data where the relationships between things are as important as the things themselves.
+
+This page is about the mental model shift, not the syntax. If you understand the difference in thinking, the syntax follows naturally.
+
+## The fundamental difference
+
+**SQL asks: which rows satisfy this condition?**
+
+```sql
+SELECT name, age FROM people WHERE age > 30
+```
+
+**GQL asks: which structures exist in this graph?**
+
+```cypher
+MATCH (p:Person)-[:WORKS_AT]->(c:Company)
+WHERE p.age > 30
+RETURN p.name, c.name
+```
+
+SQL operates on tables. GQL operates on patterns. The difference becomes most visible when relationships are involved.
+
+## The JOIN problem
+
+In SQL, relationships between entities are represented as foreign keys. To traverse them, you JOIN tables. One relationship = one JOIN. Two relationships = two JOINs. A five-hop path requires five JOINs — and SQL query planners weren't built for this.
+
+**"Who are Alice's second-degree connections?"**
+
+```sql
+-- SQL: explicit joins for each hop
+SELECT DISTINCT p3.name
+FROM people p1
+JOIN knows k1 ON p1.id = k1.from_id
+JOIN people p2 ON k1.to_id = p2.id
+JOIN knows k2 ON p2.id = k2.from_id
+JOIN people p3 ON k2.to_id = p3.id
+WHERE p1.name = 'Alice'
+  AND p3.id != p1.id;
+```
+
+```cypher
+-- GQL: describe the path, not the join mechanics
+MATCH (alice:Person {name: 'Alice'})-[:KNOWS*2]->(connection)
+RETURN DISTINCT connection.name
+```
+
+The SQL query is procedural: you're describing *how* to traverse the data. The GQL query is declarative: you're describing *what shape* you're looking for. As the number of hops increases, SQL scales poorly — the GQL query changes by one character (`*2` becomes `*3`).
+
+## Schema: required vs optional
+
+SQL requires a schema before you can store data. Every column must be declared with a type. Adding a new attribute means an `ALTER TABLE`. Changing a relationship between entities may require new junction tables and migrations.
+
+GQL is schema-optional. You can create a node with any properties at any time:
+
+```cypher
+-- These can coexist without any schema definition
+CREATE (n:Person {name: 'Alice', age: 30})
+CREATE (n:Person {name: 'Bob', email: 'bob@co.com', verified: true})
+CREATE (n:Person {name: 'Carol', company: 'Acme', title: 'Engineer', linkedin: '...'})
+```
+
+Different nodes with the same label can have different properties. The graph adapts to your data rather than forcing your data into a fixed shape. `CALL db.schema()` gives you the emergent schema when you need it.
+
+## Modeling relationships: JOINs vs first-class edges
+
+In SQL, a many-to-many relationship requires a junction table. Every relationship type you need = a table to manage.
+
+```sql
+-- SQL: three tables to represent "person likes movie"
+CREATE TABLE people (id, name, ...);
+CREATE TABLE movies (id, title, ...);
+CREATE TABLE likes (person_id, movie_id, liked_at);  -- junction table
+```
+
+In GQL, relationships are first-class. They exist between nodes directly and can carry their own properties:
+
+```cypher
+-- GQL: relationship with properties, no junction table
+CREATE (alice:Person {name: 'Alice'})
+CREATE (film:Movie {title: 'Arrival'})
+CREATE (alice)-[:LIKES {since: '2024-01', rating: 9}]->(film)
+```
+
+As data complexity grows — more entity types, more relationship types, more properties — the SQL approach requires progressively more tables, more JOINs, and more careful schema design. The GQL approach stays proportional to what you're actually modeling.
+
+## Queries that are natural in GQL and awkward in SQL
+
+**"Find all fraud rings" (circular transactions):**
+
+```sql
+-- SQL: CTEs required, becomes unwieldy beyond 3 hops
+WITH RECURSIVE paths AS (
+  SELECT from_account, to_account, ARRAY[from_account] AS visited, 1 AS depth
+  FROM transactions
+  UNION ALL
+  SELECT p.from_account, t.to_account, p.visited || t.from_account, p.depth + 1
+  FROM paths p JOIN transactions t ON p.to_account = t.from_account
+  WHERE NOT t.from_account = ANY(p.visited) AND p.depth < 10
+)
+SELECT * FROM paths WHERE to_account = from_account;
+```
+
+```cypher
+-- GQL: pattern describes the ring directly
+MATCH (a:Account)-[:SENT*2..10]->(a)
+RETURN a.id
+```
+
+**"Find mutual connections between two people":**
+
+```sql
+-- SQL: correlated subquery or triple join
+SELECT p.name
+FROM people p
+WHERE p.id IN (
+  SELECT k1.to_id FROM knows k1 WHERE k1.from_id = alice_id
+) AND p.id IN (
+  SELECT k2.to_id FROM knows k2 WHERE k2.from_id = bob_id
+);
+```
+
+```cypher
+-- GQL: bidirectional pattern
+MATCH (alice:Person {name: 'Alice'})-[:KNOWS]->(mutual)<-[:KNOWS]-(bob:Person {name: 'Bob'})
+RETURN mutual.name
+```
+
+**"Shortest path between two entities":**
+
+```sql
+-- SQL: recursive CTE, complex, slow on large data
+-- (omitted for brevity — it's ~20 lines and requires careful cycle detection)
+```
+
+```cypher
+-- GQL: one function
+shortestPath (alice:Person {name: 'Alice'}), (bob:Person {name: 'Bob'})
+```
+
+## Where SQL is still better
+
+GQL is not a replacement for SQL everywhere. SQL excels at:
+
+- **Large-scale aggregations on flat data** — GROUP BY over millions of uniform rows
+- **Complex set operations** — INTERSECT, EXCEPT, UNION across structured tables
+- **Strict schema enforcement** — when your data model is fixed and well-known
+- **Reporting and BI tooling** — the ecosystem around SQL is massive
+
+The decision is about your data and your questions. If your data is naturally relational — connected entities where the connections themselves carry meaning — GQL fits. If your data is naturally tabular — facts about homogeneous things — SQL fits.
+
+ArcFlow bridges both: the PostgreSQL wire protocol means your SQL tooling connects directly, and window functions (`LAG`, `LEAD`, `STDDEV_POP`, `PERCENT_RANK`) bring time-series analytics into the same database.
+
+## The practical starting point
+
+You don't need to rewrite everything. Start with the question that SQL struggles with — the one that requires five JOINs or a recursive CTE — and write it as a graph pattern. That's where GQL pays off immediately.
+
+```cypher
+-- Start with what SQL makes hard
+MATCH (a:Account)-[:TRANSFERRED_TO*1..5]->(b:Account)
+WHERE a.flagged = true
+RETURN b.id, b.owner, count(*) AS connection_count
+ORDER BY connection_count DESC
+LIMIT 20
+```
+
+## Further reading
+
+- [Graph Patterns](/concepts/graph-patterns) — how to write patterns
+- [From SQL to GQL](/guides/sql-to-gql) — connecting your existing SQL tools to ArcFlow
+- [Migration Guide](/guides/migrating-from-neo4j) — coming from Neo4j or another graph database
+- [GQL Conformance](/reference/gql-conformance) — the standards story

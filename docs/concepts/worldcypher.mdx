@@ -1,15 +1,15 @@
 ---
-title: "WorldCypher Query Language"
-description: "WorldCypher Query Language"
+title: "Query Language (GQL)"
+description: "ArcFlow queries use GQL — the ISO standard for graph query languages. If you know Cypher, you already know it."
 section: "concepts"
 status: "stable"
 ---
 
-# WorldCypher Query Language
+# Query Language (GQL)
 
-WorldCypher is ArcFlow's GQL dialect — an implementation of [ISO/IEC 39075 GQL](https://www.iso.org/standard/76120.html), the international standard for graph query languages. The syntax is compatible with Cypher, so existing Cypher queries run without modification. WorldCypher extends GQL with temporal queries (`AS OF`), reactive queries (`LIVE MATCH`, `CREATE LIVE VIEW`), vector search, graph algorithms, and confidence/provenance semantics.
+ArcFlow queries are written in **GQL** — the ISO standard for graph query languages ([ISO/IEC 39075](https://www.iso.org/standard/76120.html)). If you know Cypher, you already know it. If you don't, it reads like ASCII art.
 
-If you know Cypher, you know WorldCypher. If you don't, it reads like ASCII art.
+ArcFlow's implementation of GQL is called **WorldCypher**. It passes 100% of the openCypher TCK (3881/3881 scenarios), fully implements ISO GQL V2, and adds extensions for temporal, reactive, and AI workloads.
 
 ## Reading data
 

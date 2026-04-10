@@ -37,20 +37,22 @@
       "title": "Concepts",
       "items": [
         { "slug": "concepts/graph-model", "title": "Graph Model", "order": 1 },
-        { "slug": "concepts/worldcypher", "title": "WorldCypher Intro", "order": 2 },
-        { "slug": "concepts/parameters", "title": "Parameters", "order": 3 },
-        { "slug": "concepts/results", "title": "Query Results", "order": 4 },
-        { "slug": "concepts/persistence", "title": "Persistence & WAL", "order": 5 },
-        { "slug": "concepts/error-handling", "title": "Error Handling", "order": 6 },
-        { "slug": "concepts/observations", "title": "Observations & Evidence", "order": 7 },
-        { "slug": "concepts/confidence-and-provenance", "title": "Confidence & Provenance", "order": 8 },
-        { "slug": "concepts/proof-artifacts", "title": "Proof Artifacts & Gates", "order": 9 },
-        { "slug": "concepts/constructors", "title": "Constructors", "order": 10 }
+        { "slug": "concepts/worldcypher", "title": "Query Language (GQL)", "order": 2 },
+        { "slug": "concepts/graph-patterns", "title": "Graph Patterns", "order": 3 },
+        { "slug": "concepts/sql-vs-gql", "title": "SQL vs GQL", "order": 4 },
+        { "slug": "concepts/parameters", "title": "Parameters", "order": 5 },
+        { "slug": "concepts/results", "title": "Query Results", "order": 6 },
+        { "slug": "concepts/persistence", "title": "Persistence & WAL", "order": 7 },
+        { "slug": "concepts/error-handling", "title": "Error Handling", "order": 8 },
+        { "slug": "concepts/observations", "title": "Observations & Evidence", "order": 9 },
+        { "slug": "concepts/confidence-and-provenance", "title": "Confidence & Provenance", "order": 10 },
+        { "slug": "concepts/proof-artifacts", "title": "Proof Artifacts & Gates", "order": 11 },
+        { "slug": "concepts/constructors", "title": "Constructors", "order": 12 }
       ]
     },
     {
       "id": "worldcypher",
-      "title": "WorldCypher",
+      "title": "GQL / WorldCypher",
       "items": [
         { "slug": "worldcypher", "title": "Overview", "order": 1 },
         { "slug": "worldcypher/query-syntax/match", "title": "MATCH", "order": 2 },
@@ -168,9 +170,10 @@
         { "slug": "use-cases/agent-tooling", "title": "Agent Tooling", "order": 1 },
         { "slug": "use-cases/knowledge-management", "title": "Knowledge Management", "order": 2 },
         { "slug": "use-cases/rag-pipeline", "title": "RAG Pipeline", "order": 3 },
-        { "slug": "use-cases/sports-analytics", "title": "Sports Analytics", "order": 4 },
-        { "slug": "use-cases/grounded-neural-objects", "title": "Grounded Neural Objects", "order": 5 },
-        { "slug": "use-cases/behavior-graphs", "title": "Behavior Graphs", "order": 6 }
+        { "slug": "use-cases/fraud-detection", "title": "Fraud Detection", "order": 4 },
+        { "slug": "use-cases/sports-analytics", "title": "Sports Analytics", "order": 5 },
+        { "slug": "use-cases/grounded-neural-objects", "title": "Grounded Neural Objects", "order": 6 },
+        { "slug": "use-cases/behavior-graphs", "title": "Behavior Graphs", "order": 7 }
       ]
     },
     {
@@ -178,11 +181,13 @@
       "title": "Reference",
       "items": [
         { "slug": "reference/api", "title": "TypeScript API", "order": 1 },
-        { "slug": "reference/compatibility", "title": "Compatibility Matrix", "order": 2 },
-        { "slug": "reference/types", "title": "Data Types", "order": 3 },
-        { "slug": "reference/operators", "title": "Operators", "order": 4 },
-        { "slug": "reference/errors", "title": "Error Codes", "order": 5 },
-        { "slug": "reference/known-issues", "title": "Known Issues", "order": 6 }
+        { "slug": "reference/gql-conformance", "title": "GQL Conformance", "order": 2 },
+        { "slug": "reference/compatibility", "title": "Compatibility Matrix", "order": 3 },
+        { "slug": "reference/glossary", "title": "Glossary", "order": 4 },
+        { "slug": "reference/types", "title": "Data Types", "order": 5 },
+        { "slug": "reference/operators", "title": "Operators", "order": 6 },
+        { "slug": "reference/errors", "title": "Error Codes", "order": 7 },
+        { "slug": "reference/known-issues", "title": "Known Issues", "order": 8 }
       ]
     }
   ]

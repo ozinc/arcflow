@@ -9,6 +9,12 @@ status: "stable"
 
 # Agent-Native Database
 
+LLMs have context windows, not memory. They process what you give them in a session, then lose it. For an agent doing complex, multi-session work — analyzing a codebase, maintaining a world model, tracking relationships between entities across time — that's not a solvable problem with a bigger context window. The architecture is wrong.
+
+The answer is persistent, queryable, structured memory: a knowledge graph the agent writes to, reads from, and traverses, session after session. Not a vector store (which finds similar things) — a graph (which finds connected things). The difference matters when the question is relational: *what depends on this?* *who is connected to whom through what path?* *what changed since last week?* Those are traversal questions. They require a traversal engine.
+
+ArcFlow is that engine. It runs in-process, starts in two lines of code, and surfaces to agents through three interfaces:
+
 Three surfaces, no overlap:
 
 | Consumer | Integration | Why |

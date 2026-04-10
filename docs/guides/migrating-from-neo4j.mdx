@@ -9,7 +9,9 @@ status: "stable"
 
 # Migration Guide
 
-If you've worked with Neo4j, Memgraph, FalkorDB, TigerGraph, or Cosmos DB's Gremlin API, most of what you know transfers. ArcFlow's WorldCypher is Cypher-inspired; your existing `MATCH`, `CREATE`, `MERGE`, and `WHERE` clauses work without modification. What changes: the deployment model (in-process or lightweight server, no JVM), built-in GPU-accelerated algorithms, confidence scoring, temporal queries, and vector search with no add-ons.
+If you've worked with Neo4j, Memgraph, FalkorDB, TigerGraph, or Cosmos DB's Gremlin API, most of what you know transfers. ArcFlow uses GQL (ISO/IEC 39075) with full Cypher compatibility — your existing `MATCH`, `CREATE`, `MERGE`, and `WHERE` clauses work without modification. This isn't coincidence: Cypher was the dominant influence on the ISO GQL specification. The syntax survived the standardization process largely intact.
+
+What changes: the deployment model (in-process or lightweight server, no JVM), built-in GPU-accelerated algorithms, confidence scoring, temporal queries, and vector search with no add-ons.
 
 This guide covers what stays the same, what's different, and how to move your data.
 
@@ -21,7 +23,7 @@ This guide covers what stays the same, what's different, and how to move your da
 | **Runtime** | JVM (Neo4j, TigerGraph), C/C++ (Memgraph, FalkorDB), .NET (Cosmos DB) | Native binary, no runtime dependency |
 | **Memory model** | Off-heap page cache or shared memory | In-process shared memory (SoC architecture) |
 | **Serialization** | Wire protocol (Bolt, Gremlin, GSQL) | None (in-process) or TCP/HTTP |
-| **Query language** | Cypher, Gremlin, GSQL, GQL | WorldCypher (ArcFlow's GQL dialect with spatial/temporal/reactive extensions) |
+| **Query language** | Cypher, Gremlin, GSQL, GQL | GQL (ISO/IEC 39075) — WorldCypher implementation; 100% openCypher TCK, full ISO GQL V2 |
 | **Indexes** | B-tree, full-text, vector (varies by vendor) | Property index, HNSW vector index |
 | **Transactions** | Full ACID (most vendors) | WAL-based journaling |
 | **Clustering** | Causal clustering, replication (varies) | SWMR replication via Arrow Flight WAL tailing |
@@ -34,7 +36,7 @@ ArcFlow can run as an in-process engine with zero network overhead, or as a stan
 
 ## GQL Compatibility
 
-**Conformance:** ArcFlow passes 100% of the openCypher TCK (3881/3881 scenarios) and implements ISO GQL V2 fully, including GQLSTATUS codes, `IS LABELED`, `ELEMENT_ID`, `NEXT WHEN/THEN/ELSE/END` conditional pipelines, `UNIQUE` and `PRIMARY KEY` constraints, and transaction control statements.
+**Conformance:** ArcFlow passes 100% of the openCypher TCK (3881/3881 scenarios) and implements ISO GQL V2 fully, including GQLSTATUS codes, `IS LABELED`, `ELEMENT_ID`, `NEXT WHEN/THEN/ELSE/END` conditional pipelines, `UNIQUE` and `PRIMARY KEY` constraints, and transaction control statements. See [GQL Conformance](/reference/gql-conformance) for the full breakdown and comparison with other implementations.
 
 If you're coming from Neo4j, Memgraph, or FalkorDB (all GQL-family), most of your queries port directly. Coming from TigerGraph (GSQL) or Cosmos DB (Gremlin) requires a query rewrite, but the graph modeling concepts transfer.
 

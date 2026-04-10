@@ -1,11 +1,11 @@
-name: WorldCypher Compatibility
-description: Report a WorldCypher syntax that doesn't work as expected
+name: GQL / WorldCypher Compatibility
+description: Report a GQL query (WorldCypher) that doesn't work as expected
 labels: [worldcypher, compatibility]
 body:
   - type: textarea
     id: query
     attributes:
-      label: WorldCypher Query
+      label: GQL Query (WorldCypher)
       description: The query that doesn't work or behaves unexpectedly
       render: cypher
     validations:

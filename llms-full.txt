@@ -1,6 +1,6 @@
 # ArcFlow SDK — Complete Agent Reference
 
-This file contains the complete API surface, WorldCypher syntax, and all patterns
+This file contains the complete API surface, GQL (WorldCypher) syntax, and all patterns
 needed to integrate ArcFlow into any TypeScript/Node.js application.
 
 ## Installation
@@ -89,7 +89,7 @@ const { rows, loading, error } = useQuery(db, "MATCH (n:Person) RETURN n.name", 
 const { rows } = useLiveQuery(db, "MATCH (n:Alert) WHERE n.active = true RETURN n")
 ```
 
-## WorldCypher — Complete Syntax Reference
+## GQL / WorldCypher — Complete Syntax Reference
 
 ### CREATE
 ```cypher
