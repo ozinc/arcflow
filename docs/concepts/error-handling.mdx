@@ -37,6 +37,23 @@ try {
 | `execution` | Runtime error during query execution | `UNKNOWN`, general execution failures |
 | `integration` | Infrastructure or lifecycle error | `LOCK_POISONED`, `WAL_ERROR`, `DB_CLOSED` |
 
+## Error code reference
+
+| Code | Category | Meaning | Fix |
+|---|---|---|---|
+| `EXPECTED_KEYWORD` | parse | Query syntax wrong | Check MATCH/CREATE/MERGE syntax |
+| `UNEXPECTED_TOKEN` | parse | Unexpected token in query | Run `CALL db.help()` |
+| `UNKNOWN_FUNCTION` | validation | Function doesn't exist | Run `CALL db.help()` |
+| `UNKNOWN_PROCEDURE` | validation | Procedure doesn't exist | Run `CALL db.procedures()` |
+| `WORKFLOW_NOT_FOUND` | validation | Workflow name doesn't exist | Run `CALL arcflow.workflow.list` |
+| `STEP_NOT_FOUND` | validation | Step name not in workflow | Check step name spelling |
+| `EXECUTION_CONTEXT_MISMATCH` | integration | Context guard failed (ANTI-0019) | `CALL db.setExecutionContext(...)` first |
+| `UNKNOWN_EXECUTION_CONTEXT` | validation | Invalid context string | Use `local_cpu`, `local_gpu`, or `distributed` |
+| `TEMPORAL_WAL_NOT_WIRED` | integration | AS OF seq used without WAL context | Use `JournaledStore` or `ConcurrentStore` |
+| `LOCK_POISONED` | integration | Internal mutex poisoned | Restart the process |
+| `WAL_ERROR` | integration | Write-ahead log I/O error | Check disk space and file permissions |
+| `DB_CLOSED` | integration | Called after `db.close()` | Don't use db after closing |
+
 ## Common errors and fixes
 
 ### Parse errors

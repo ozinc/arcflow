@@ -198,7 +198,7 @@ MATCH (a:Person)-[:KNOWS]->(b:Person) RETURN a.name, b.name
 MATCH (a)-[:KNOWS*1..3]->(b) RETURN b.name
 MATCH (n:Person) RETURN count(*), avg(n.age), sum(n.score)
 MATCH (n:Person) WITH n WHERE n.age > 25 RETURN n.name
-MATCH (n:Person) AS OF 1700000000 RETURN n.name
+MATCH (n:Person) AS OF seq 42 RETURN n.name
 ```
 
 ### Window functions

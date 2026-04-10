@@ -237,7 +237,7 @@ Returns rows with sequence number, operation description, and timestamp.
 
 ```sql
 -- Point-in-time query (query modifier, not a CALL procedure)
-MATCH (n:Person) AS OF 1700000000000
+MATCH (n:Person) AS OF seq N
 RETURN n.name
 ```
 

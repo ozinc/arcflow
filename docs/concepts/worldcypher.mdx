@@ -125,7 +125,7 @@ CALL algo.vectorSearch('my_index', $vector, 10)
 Query the graph at a point in time:
 
 ```cypher
-MATCH (n:Person) AS OF 1700000000 RETURN n.name
+MATCH (n:Person) AS OF seq N RETURN n.name
 ```
 
 ## Full-text search

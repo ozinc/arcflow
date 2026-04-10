@@ -70,7 +70,7 @@ clauses:
     syntax: "LIMIT 10"
   - name: AS_OF
     status: supported
-    syntax: "MATCH (n) AS OF 1700000000"
+    syntax: "MATCH (n) AS OF seq N"
 
 expressions:
   - name: CONTAINS

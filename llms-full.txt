@@ -169,7 +169,9 @@ MATCH (n:Person) RETURN n.name ORDER BY n.age DESC LIMIT 10
 
 ### Temporal
 ```cypher
-MATCH (n:Person) AS OF 1700000000 RETURN n.name
+-- AS OF seq N — preferred form (WAL-based exact snapshot by mutation sequence)
+MATCH (n:Person) AS OF seq 42 RETURN n.name
+-- AS OF <timestamp> is deprecated; use AS OF seq N
 ```
 
 ### Indexes

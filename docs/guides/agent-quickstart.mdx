@@ -39,8 +39,8 @@ db.mutate("CREATE (n:Person {name: 'Alice', age: 30, email: 'alice@example.com'}
 // Create with parameters (always use this for user input)
 db.mutate("CREATE (n:Person {name: $name, age: $age})", { name: 'Bob', age: 35 })
 
-// Create a relationship
-db.mutate("CREATE (a:Person {name: 'Alice'})-[:KNOWS]->(b:Person {name: 'Bob'})")
+// Create a relationship (MATCH existing nodes first, then MERGE the edge)
+db.mutate("MATCH (a:Person {name: 'Alice'}) MATCH (b:Person {name: 'Bob'}) MERGE (a)-[:KNOWS]->(b)")
 
 // Batch create (faster for bulk operations)
 db.batchMutate([
@@ -165,6 +165,8 @@ Error codes you'll encounter:
 | `EXPECTED_KEYWORD` | parse | Query syntax wrong | Check MATCH/CREATE/MERGE spelling |
 | `UNKNOWN_FUNCTION` | validation | Function doesn't exist | Run `CALL db.help()` to see available |
 | `UNKNOWN_PROCEDURE` | validation | Procedure doesn't exist | Run `CALL db.procedures` |
+| `WORKFLOW_NOT_FOUND` | validation | Workflow name not found | Run `CALL arcflow.workflow.list` |
+| `EXECUTION_CONTEXT_MISMATCH` | integration | Context guard failed | Run `CALL db.setExecutionContext(...)` first |
 | `DB_CLOSED` | integration | Called after `db.close()` | Don't use db after closing |
 
 ## Step 10: Close
@@ -184,11 +186,11 @@ const db = openInMemory()
 try {
   // Create
   db.batchMutate([
-    "CREATE (alice:Person {id: 'p1', name: 'Alice', age: 30})",
-    "CREATE (bob:Person {id: 'p2', name: 'Bob', age: 35})",
-    "CREATE (acme:Org {id: 'o1', name: 'Acme', industry: 'tech'})",
+    "MERGE (alice:Person {id: 'p1', name: 'Alice', age: 30})",
+    "MERGE (bob:Person {id: 'p2', name: 'Bob', age: 35})",
+    "MERGE (acme:Org {id: 'o1', name: 'Acme', industry: 'tech'})",
   ])
-  db.mutate("CREATE (a:Person {id: 'p1'})-[:WORKS_AT]->(o:Org {id: 'o1'})")
+  db.mutate("MATCH (a:Person {id: 'p1'}) MATCH (o:Org {id: 'o1'}) MERGE (a)-[:WORKS_AT]->(o)")
 
   // Read
   const people = db.query("MATCH (n:Person) RETURN n.name, n.age ORDER BY n.name")

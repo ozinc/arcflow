@@ -58,7 +58,7 @@ Features in WorldCypher that go beyond standard GQL — ArcFlow-specific capabil
 
 | Feature | Syntax | Purpose |
 |---|---|---|
-| **Temporal snapshots** | `MATCH (n) AS OF 1700000000000` | Point-in-time queries |
+| **Temporal snapshots** | `MATCH (n) AS OF seq 42` | Point-in-time queries (by mutation sequence) |
 | **Confidence scoring** | `confidence(n)`, `observationClass(n)` | Trust metadata on every node/edge |
 | **Authority planes** | `authorityPlane(n)` | Semantic vs scene classification |
 | **Clock domains** | `clockDomain(n)` | Multi-clock temporal modeling |

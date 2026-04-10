@@ -9,20 +9,25 @@ status: "stable"
 
 ArcFlow natively supports time-aware queries — snapshot the graph at any point in time, track trajectories, and compute temporal metrics.
 
-## AS OF — time travel queries
+## AS OF seq N — time travel queries
 
-Query the graph as it existed at a specific Unix timestamp:
+Query the graph as it existed at a specific **mutation sequence number**. The engine replays the WAL onto a clean snapshot at that sequence.
 
 ```cypher
--- What did the graph look like at this timestamp?
-MATCH (n:Person) AS OF 1700000000 RETURN n.name, n.age
+-- What did the graph look like at sequence 42?
+MATCH (n:Person) AS OF seq 42 RETURN n.name, n.age
 ```
 
 ```typescript
-const snapshot = db.query("MATCH (n:Person) AS OF $ts RETURN n.name", {
-  ts: Math.floor(Date.now() / 1000) - 3600  // 1 hour ago
-})
+// Get current sequence, then query an earlier snapshot
+const clock = db.query("CALL db.clock()")
+const currentSeq = Number(clock.rows[0].get('tick'))
+
+// Query state from 100 mutations ago
+const snapshot = db.query(`MATCH (n:Person) AS OF seq ${currentSeq - 100} RETURN n.name`)
 ```
+
+> **Deprecated:** `AS OF <unix_timestamp>` emits a deprecation warning. Use `AS OF seq N` for correctness.
 
 ## Temporal procedures
 

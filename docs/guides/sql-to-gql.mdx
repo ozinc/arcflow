@@ -151,7 +151,7 @@ WHERE influencer.followers > 10000
 RETURN influencer.name, count(u) AS reach
 
 -- Point-in-time query
-MATCH (u:User) AS OF 1700000000000 RETURN u.name, u.followers
+MATCH (u:User) AS OF seq N RETURN u.name, u.followers
 
 -- Graph algorithm
 CALL algo.pageRank() YIELD nodeId, score
