@@ -13,6 +13,7 @@ npm install arcflow
 
 ```typescript
 import { open, openInMemory, ArcflowError } from 'arcflow'
+import { useQuery, useLiveQuery } from '@arcflow/react'
 
 // ── Lifecycle ──
 const db = openInMemory()                    // In-memory (testing)
@@ -30,6 +31,7 @@ result.columns                               // ["n.name", "n.age"]
 result.rows                                  // TypedRow[]
 result.rowCount                              // number
 result.computeMs                             // number (ms)
+result.gqlstatus()                           // "00000" (rows) | "02000" (no data) — ISO GQL
 result.rows[0].get('name')                   // "Alice" (string)
 result.rows[0].get('age')                    // 30 (number)
 result.rows[0].get('nonexistent')            // null
@@ -46,6 +48,26 @@ const count = db.batchMutate([
   "MERGE (b:Org {id: 'o1', name: 'Acme'})",
 ])                                           // 2
 
+// ── Live subscription ──
+const sub = db.subscribe(
+  "MATCH (n:Alert) WHERE n.severity = 'critical' RETURN n.id, n.message",
+  (event) => {
+    event.added     // SubscriptionRow[] — new rows
+    event.removed   // SubscriptionRow[] — rows that left
+    event.current   // SubscriptionRow[] — full current result
+    event.frontier  // number — monotonic mutation sequence
+  },
+  { pollIntervalMs: 50 }
+)
+sub.cancel()                                 // stop and drop live view
+
+// ── Pagination ──
+const cursor = db.cursor("MATCH (n:Doc) RETURN n.id, n.text", {}, 100)
+while (!cursor.done) {
+  const page = cursor.next()                 // QueryResult | null
+}
+cursor.close()
+
 // ── Errors ──
 try { db.query("INVALID") } catch (e) {
   if (e instanceof ArcflowError) {
@@ -61,6 +83,10 @@ try { db.query("INVALID") } catch (e) {
 db.query("MATCH (n {name: $name, score: $s}) RETURN n", { name: 'Alice', s: 42 })
 // Arrays: pass as JSON string
 db.query("CALL algo.vectorSearch('idx', $v, 10)", { v: JSON.stringify([0.1, 0.2]) })
+
+// ── React hooks ──
+const { rows, loading, error } = useQuery(db, "MATCH (n:Person) RETURN n.name", {})
+const { rows } = useLiveQuery(db, "MATCH (n:Alert) WHERE n.active = true RETURN n")
 ```
 
 ## WorldCypher — Complete Syntax Reference
@@ -184,6 +210,42 @@ CALL algo.factsByRegime('2024')
 CALL algo.multiModalFusion()
 ```
 
+### Indexes and constraints
+```cypher
+CREATE VECTOR INDEX name FOR (n:Label) ON (n.embedding) OPTIONS {dimensions: 1536, similarity: 'cosine'}
+CREATE FULLTEXT INDEX name FOR (n:Label) ON (n.prop)
+CREATE INDEX ON :Label(prop)
+CREATE CONSTRAINT ON :Label(prop) ASSERT UNIQUE
+CREATE CONSTRAINT ON :Label(prop) ASSERT PRIMARY KEY
+CREATE CONSTRAINT ON :Label(prop) ASSERT SEMANTIC UNIQUE THRESHOLD 0.95
+```
+
+### ISO GQL V2 features
+```cypher
+-- Label predicate
+MATCH (n) WHERE n IS LABELED :Person RETURN n.name
+
+-- Element ID
+MATCH (n:Person) RETURN ELEMENT_ID(n)
+
+-- Conditional execution pipeline
+MATCH (n:Task) WHERE n.status = 'open' RETURN count(*) AS open_count
+NEXT WHEN open_count > 10 THEN
+  MATCH (n:Task) WHERE n.status = 'open' SET n.priority = 'high' RETURN n
+ELSE
+  RETURN 'queue ok' AS message
+END
+
+-- Transaction control
+START TRANSACTION
+START TRANSACTION READ ONLY
+START TRANSACTION READ WRITE
+COMMIT
+ROLLBACK
+
+-- GQLSTATUS: result.gqlstatus() == "00000" (rows) | "02000" (no data)
+```
+
 ### Database procedures
 ```cypher
 CALL db.stats()
@@ -192,6 +254,7 @@ CALL db.labels()
 CALL db.types()
 CALL db.propertyKeys()
 CALL db.indexes()
+CALL db.constraints()
 CALL db.nodeCount()
 CALL db.relationshipCount()
 CALL db.version()
@@ -209,6 +272,146 @@ CALL db.procedures()
 CALL db.tutorial()
 CALL db.index.fulltext.queryNodes('index_name', 'search query')
 CALL db.checkpointMeta()
+CALL db.clock()
+CALL db.changesSince(seq)
+CALL db.liveViews()
+CALL db.viewStats()
+```
+
+### Storage and performance procedures
+```cypher
+-- CSR cache
+CALL db.warmCsr()     YIELD status                       -- "warm" | "rebuilt"
+CALL db.csrStats()    YIELD status, vertices, edges, rel_types,
+                            edge_type_distribution, memory_bytes,
+                            delta_added, delta_removed
+
+-- DenseStore (columnar, always-on)
+CALL db.denseStore()  YIELD enabled, nodes, tables, memory_bytes, coverage
+
+-- Unified storage mode
+CALL db.storageMode() YIELD mode, node_count, csr_warm, csr_auto_threshold,
+                            dense_store_enabled, dense_store_nodes
+-- mode: "HashMap" | "DenseStore" | "HashMap+CSR" | "DenseStore+CSR"
+
+-- Parallel execution config
+CALL db.parallelConfig() YIELD morsel_size, rayon_threads,
+                               dense_store_coverage, csr_status, csr_delta_pending
+```
+
+### GPU procedures
+```cypher
+-- Per-device pool (one row per CUDA device)
+CALL db.gpuStatus()   YIELD device_id, inflight, sm_count, vram_mib, status
+-- status: "available" (inflight < 8) | "saturated"
+
+-- Kernel dispatch registry with H2D cost gate
+CALL dbms.gpuThresholds() YIELD algorithm, min_input_size, bytes_per_element,
+                                validated, cuda_min_cc
+
+-- Full GPU stack info
+CALL db.gpuStack()
+```
+
+### Execution context (ANTI-0019)
+```cypher
+CALL db.executionContext()              YIELD context
+-- context: "local_cpu" | "local_gpu" | "distributed"
+CALL db.setExecutionContext('local_gpu')   YIELD context, status
+CALL db.requireExecutionContext('local_gpu') YIELD context, status
+-- Raises EXECUTION_CONTEXT_MISMATCH if active context doesn't match
+```
+
+### OTel (observability)
+```cypher
+CALL db.otelPolicy()          YIELD policy   -- "off" | "lite" | "full"
+CALL db.setOtelPolicy('lite') YIELD policy
+```
+
+### Auth / RBAC
+```cypher
+CALL db.auth.whoami()
+CALL db.auth.policies()
+CALL db.auth.check('reader', 'read', 'Person')
+CALL db.auth.setPolicy('reader', 'read', 'Person')
+CALL db.auth.createApiKey('service-acct', 'reader')  YIELD key, name, roles
+CALL db.auth.revokeApiKey('service-acct')
+CALL db.auth.listApiKeys()                           YIELD name, roles, created_at
+CALL db.auth.auditLog(since, limit)                  YIELD identity, action, query_hash, result_code
+```
+
+### Replication
+```cypher
+CALL arcflow.replication.contract()         YIELD mode, writes_enabled, replication_factor, description
+CALL arcflow.replication.walTailing()       YIELD field, value, description
+CALL arcflow.replication.objectStoreFanout() YIELD field, value, description
+CALL db.replicationStatus()
+```
+
+### Sessions (named resumable)
+```cypher
+CALL arcflow.session.open('my-session')   YIELD name, session_id, status
+CALL arcflow.session.list()               YIELD name, session_id, query_count, created_at
+CALL arcflow.session.close('my-session')  YIELD name, status
+```
+
+### Workflow engine (graph-native, MVCC-safe)
+```cypher
+-- Step types: GraphQuery | GraphMutation | Sleep | ExternalCall | Condition
+CALL arcflow.workflow.create('wf', '[{"name":"s1","type":"GraphMutation"}]')
+                                          YIELD workflow_id, name, status
+CALL arcflow.workflow.list()              YIELD workflow_id, name, status
+CALL arcflow.workflow.run('wf')           YIELD workflow_id, name, started_steps
+CALL arcflow.workflow.cancel('wf')        YIELD workflow_id, name, status
+CALL arcflow.workflow.retryStep(wf_id, 'step-name') YIELD step_id, step_name, status
+
+-- Reference (schema docs, not runtime state)
+CALL arcflow.workflow.stepKinds()         YIELD kind, description, retryable, durable
+CALL arcflow.workflow.memoizedResult(wf_id, step_name) YIELD key, value
+CALL arcflow.workflow.retryPolicy()       YIELD field, value, description
+CALL arcflow.workflow.flowControl()       YIELD mode, description, scope, unit
+CALL arcflow.workflow.eventTypes()        YIELD step_type, trigger, correlation_key, timeout_supported
+CALL arcflow.workflow.errorPolicy()       YIELD field, value, description
+CALL arcflow.workflow.cancelPolicy()      YIELD rule, description
+CALL arcflow.workflow.cronPolicy()        YIELD field, value, description
+CALL arcflow.workflow.delayPolicy()       YIELD field, value, description
+CALL arcflow.workflow.sleepPolicy()       YIELD field, value, description
+```
+
+### OpenUSD scene
+```cypher
+CALL arcflow.scene.toUsda()                              YIELD usda
+CALL arcflow.scene.primId('/World/MyMesh')               YIELD prim_path, prim_id
+CALL arcflow.scene.frustumQuery(0,0,0, 1,0,0, 60, 1, 100) YIELD node_id, label, x, y, z
+CALL arcflow.scene.lineOfSight(from_id, to_id)           YIELD has_los, note
+CALL arcflow.scene.collisions(node_id)                   YIELD from_id, to_id, impulse, at_time
+CALL arcflow.scene.queryInLocalSpace(node_id, 10.0)      YIELD node_id, local_x, local_y, local_z
+```
+
+### OpenClaw (plugin/gateway)
+```cypher
+CALL arcflow.claw.pluginContracts()  YIELD field, type, required, description
+CALL arcflow.claw.gatewayMethods()   YIELD method, description
+CALL arcflow.claw.latencyPolicy()    YIELD tier, max_latency_ms, description, hot_path_excluded
+CALL arcflow.claw.workerModel()      YIELD mode, description, latency_class, isolation
+```
+
+### Skills
+```cypher
+CALL arcflow.skills.export('my-pack', '1.0.0')  YIELD json
+CALL arcflow.skills.import(json)                YIELD name, version, skill_count
+```
+
+### Ontology (IS_A hierarchy)
+```cypher
+CALL arcflow.ontology.subtypes('Agent')    YIELD label, depth
+CALL arcflow.ontology.ancestors('Person')  YIELD label, depth
+```
+
+### Contributor readiness
+```cypher
+CALL arcflow.contributor.starterIssues()    YIELD title, difficulty, crate, estimated_hours
+CALL arcflow.contributor.maintainerScore()  YIELD dimension, score, threshold, status
 ```
 
 ### Temporal procedures

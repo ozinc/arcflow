@@ -244,6 +244,45 @@ CALL arcflow.spatial.dispatch_stats()
 
 ---
 
+## GPU Introspection Procedures
+
+### `CALL db.gpuStatus()`
+
+Returns one row per CUDA device in the pool. Use this to check device availability and current load before submitting expensive GPU workloads.
+
+```cypher
+CALL db.gpuStatus() YIELD device_id, inflight, sm_count, vram_mib, status
+```
+
+| Column | Type | Description |
+|---|---|---|
+| `device_id` | int | CUDA device index |
+| `inflight` | int | Currently executing GPU kernels |
+| `sm_count` | int | Streaming multiprocessor count |
+| `vram_mib` | int | Device VRAM in MiB |
+| `status` | string | `"available"` (inflight < 8) or `"saturated"` |
+
+Returns a single row `{device_id: "N/A", status: "no CUDA devices"}` when no CUDA hardware is present.
+
+### `CALL dbms.gpuThresholds()`
+
+Returns the GPU kernel dispatch registry — the H2D cost gate and minimum requirements for each algorithm. Use this to understand why an algorithm is or isn't routing to GPU.
+
+```cypher
+CALL dbms.gpuThresholds()
+  YIELD algorithm, min_input_size, bytes_per_element, validated, cuda_min_cc
+```
+
+| Column | Description |
+|---|---|
+| `algorithm` | Algorithm name (e.g. `"pageRank"`, `"leiden"`) |
+| `min_input_size` | Minimum node count before GPU dispatch is considered |
+| `bytes_per_element` | Per-node memory estimate for H2D transfer cost calculation |
+| `validated` | Whether the kernel has been validated on this hardware |
+| `cuda_min_cc` | Minimum CUDA compute capability required (e.g. `"9.0"`) or `"none"` |
+
+---
+
 ## Vision
 
 ArcFlow provides a complete GraphBLAS runtime where the entire algorithm suite runs on sparse linear algebra primitives. Every graph operation — from simple traversal to complex analytics — expressed as matrix operations, automatically dispatched to the best available hardware.

@@ -160,8 +160,11 @@ interface QueryResult {
   rows: TypedRow[]        // Typed row accessors
   rowCount: number        // Number of rows
   computeMs: number       // Execution time (ms)
+  gqlstatus(): string     // ISO GQL status: "00000" = data, "02000" = no data
 }
 ```
+
+`gqlstatus()` follows ISO/IEC 39075 GQL. `"00000"` means rows were returned; `"02000"` means the query succeeded but produced no rows (e.g. a `MATCH` with no matches, or a filter that eliminated everything).
 
 ## `MutationResult`
 

@@ -11,6 +11,8 @@ status: "stable"
 
 WorldCypher is ArcFlow's GQL dialect — an implementation of [ISO/IEC 39075 GQL](https://www.iso.org/standard/76120.html), the international standard for graph query languages. The syntax is Cypher-compatible, so existing graph queries port directly. WorldCypher adds capabilities that GQL leaves to implementations: temporal snapshots (`AS OF`), confidence filtering (`WHERE r._confidence > 0.8`), spatial predicates, reactive queries (`LIVE MATCH`, `CREATE LIVE VIEW`), and constructor operations (`CREATE SKILL`, `PROCESS NODE`).
 
+**Conformance:** 100% openCypher TCK (3881/3881 scenarios). Full ISO GQL V2 including GQLSTATUS codes, `IS LABELED`, `ELEMENT_ID`, conditional pipelines (`NEXT WHEN/THEN/ELSE/END`), `UNIQUE` and `PRIMARY KEY` constraints, and transaction control statements.
+
 ## Operator Summary
 
 | Category | Operators |
@@ -20,6 +22,9 @@ WorldCypher is ArcFlow's GQL dialect — an implementation of [ISO/IEC 39075 GQL
 | Write | `CREATE` node, `CREATE` relationship, `MERGE` (upsert), `DELETE`, `SET` |
 | Projection | `RETURN`, `RETURN ... AS`, `DISTINCT`, `ORDER BY`, `SKIP`, `LIMIT` |
 | Aggregation | `COUNT`, `SUM`, `AVG`, `COLLECT` |
+| GQL V2 | `IS LABELED :Label`, `ELEMENT_ID(n)`, `NEXT WHEN/THEN/ELSE/END` |
+| Constraints | `CREATE CONSTRAINT ON :L(p) ASSERT UNIQUE`, `ASSERT PRIMARY KEY` |
+| Transaction | `START TRANSACTION [READ ONLY]`, `COMMIT`, `ROLLBACK` |
 | Constructors | `CREATE SKILL`, `PROCESS NODE`, `REPROCESS EDGES` |
 | Introspection | `EXPLAIN` |
 

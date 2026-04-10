@@ -52,21 +52,40 @@ const persistent = open('./data/graph')
 
 - `openInMemory()` → ArcflowDB
 - `open(dataDir)` → ArcflowDB (persistent)
-- `db.query(cypher, params?)` → { columns, rows, rowCount, computeMs }
+- `db.query(cypher, params?)` → { columns, rows, rowCount, computeMs, gqlstatus() }
 - `db.mutate(cypher, params?)` → MutationResult
 - `db.batchMutate(queries[])` → number
+- `db.subscribe(query, handler, opts?)` → LiveQuery (cancel())
+- `db.cursor(query, params?, pageSize?)` → QueryCursor
 - `row.get('column')` → string | number | boolean | null (typed)
 - `ArcflowError` → { code, category, suggestion }
+- `@arcflow/react` → useQuery(db, q, params), useLiveQuery(db, q)
 
-## GQL / WorldCypher (ISO/IEC 39075 GQL)
+## GQL / WorldCypher (ISO/IEC 39075 GQL) — 100% openCypher TCK (3881/3881)
 
 CREATE, MATCH, MERGE, SET, DELETE, DETACH DELETE, REMOVE,
 WITH, UNWIND, WHERE, RETURN, ORDER BY, LIMIT,
 OPTIONAL MATCH, AS OF, CONTAINS, STARTS WITH,
 CREATE VECTOR INDEX, CREATE FULLTEXT INDEX,
+CREATE CONSTRAINT ON :L(p) ASSERT UNIQUE,
+CREATE CONSTRAINT ON :L(p) ASSERT PRIMARY KEY,
+IS LABELED :Label, ELEMENT_ID(n),
+RETURN * NEXT WHEN/THEN/ELSE/END,
+START TRANSACTION [READ ONLY | READ WRITE], COMMIT, ROLLBACK,
 CALL algo.pageRank(), CALL algo.louvain(), CALL algo.vectorSearch(),
 CALL algo.nearestNodes(), CALL algo.objectsInFrustum(), CALL spatial.raycast(),
 CALL db.stats(), CALL db.schema(), CALL db.help(), CALL db.spatialMetadata(),
+CALL db.gpuStatus(), CALL dbms.gpuThresholds(),
+CALL db.storageMode(), CALL db.warmCsr(), CALL db.csrStats(), CALL db.denseStore(),
+CALL db.parallelConfig(), CALL db.executionContext(), CALL db.otelPolicy(),
+CALL db.auth.whoami(), CALL db.auth.policies(), CALL db.auth.createApiKey(),
+CALL arcflow.session.open(), CALL arcflow.session.list(), CALL arcflow.session.close(),
+CALL arcflow.workflow.create(), CALL arcflow.workflow.run(), CALL arcflow.workflow.cancel(),
+CALL arcflow.workflow.retryStep(),
+CALL arcflow.scene.toUsda(), CALL arcflow.scene.frustumQuery(), CALL arcflow.scene.lineOfSight(),
+CALL arcflow.replication.contract(), CALL arcflow.replication.walTailing(),
+CALL arcflow.skills.export(), CALL arcflow.skills.import(),
+CALL arcflow.ontology.subtypes(), CALL arcflow.ontology.ancestors(),
 LIVE MATCH, LIVE CALL, CREATE LIVE VIEW
 
 ## PostgreSQL wire protocol (SQL tooling bridge)
