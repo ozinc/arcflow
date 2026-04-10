@@ -19,6 +19,7 @@ interface QueryResult {
   rows: TypedRow[]       // Result rows with typed access
   rowCount: number       // Number of rows
   computeMs: number      // Execution time in milliseconds
+  gqlstatus(): string    // ISO GQL status: "00000" = data, "02000" = no data
 }
 ```
 
@@ -93,6 +94,23 @@ if (result.rowCount === 0) {
   console.log('No results found')
 }
 ```
+
+## ISO GQL status codes
+
+`gqlstatus()` returns the ISO/IEC 39075 GQL status for the result:
+
+```typescript
+const result = db.query("MATCH (n:Person) WHERE n.age > 100 RETURN n.name")
+result.gqlstatus()  // "02000" — query succeeded, no matching rows
+// vs.
+const result2 = db.query("MATCH (n:Person) RETURN n.name")
+result2.gqlstatus() // "00000" — rows were returned
+```
+
+| Code | Meaning |
+|---|---|
+| `"00000"` | Success with data — at least one row returned |
+| `"02000"` | No data — query executed correctly but matched nothing |
 
 ## Timing
 

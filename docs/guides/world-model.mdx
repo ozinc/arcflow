@@ -240,7 +240,7 @@ You now have a world model with:
 | **Typed relationships** | Communication links, formations, sensor detections |
 | **Observation classes** | Distinguish observed facts from predictions |
 | **Confidence scores** | Filter unreliable knowledge from trusted queries |
-| **Temporal memory** | Query any previous state with AS OF |
+| **Temporal memory** | Query any previous state with `AS OF seq N` |
 | **Graph algorithms** | Discover structure (centrality, components, clustering) |
 | **Vector search** | Semantic similarity across entities |
 | **Provenance** | Every edge knows which sensor produced it and when |
@@ -251,6 +251,35 @@ This is the foundation for:
 - **Digital twins** — live spatial replicas of physical systems
 - **Active inference agents** — entities maintaining belief distributions over their environment
 - **Autonomous systems** — vehicles, drones, and fleets sharing a spatial knowledge graph
+
+---
+
+## Step 8: OpenUSD Scene Export and Physics Queries
+
+If your world model represents a USD stage (robotics, digital twins, game engines), ArcFlow can export and query it using USD semantics directly:
+
+```cypher
+-- Export the entire graph as USD ASCII (USDA format)
+CALL arcflow.scene.toUsda() YIELD usda
+
+-- Resolve a USD prim path to a graph node ID
+CALL arcflow.scene.primId('/World/Drones/Drone-Alpha') YIELD prim_path, prim_id
+
+-- Frustum query (6-plane containment) — what does this camera see?
+-- Args: origin (x,y,z), direction (dx,dy,dz), fovDeg, nearZ, farZ
+CALL arcflow.scene.frustumQuery(0, 0, 15, 0, 1, 0, 90, 1, 200)
+  YIELD node_id, label, x, y, z
+
+-- Line-of-sight check between two node IDs
+CALL arcflow.scene.lineOfSight(drone_id, rover_id) YIELD has_los, note
+
+-- Collision contacts for a node (physics boundary facts)
+CALL arcflow.scene.collisions(rover_id) YIELD from_id, to_id, impulse, at_time
+
+-- Neighborhood in local coordinate space (relative to a prim's transform)
+CALL arcflow.scene.queryInLocalSpace(drone_id, 50.0)
+  YIELD node_id, local_x, local_y, local_z
+```
 
 ---
 

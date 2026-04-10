@@ -69,13 +69,25 @@ status: "stable"
 | UNION | `query1 UNION query2` | 0.22.0 |
 | Arithmetic | `n.age + 1`, `n.salary * 1.1` | 0.23.0 |
 
+## ISO GQL V2
+
+| Operator | Syntax | Notes |
+|---|---|---|
+| IS LABELED | `WHERE n IS LABELED :Person` | Label predicate |
+| ELEMENT_ID | `RETURN ELEMENT_ID(n)` | Stable element identifier |
+| NEXT WHEN/THEN/ELSE/END | `RETURN count(*) NEXT WHEN c > 10 THEN ... ELSE ... END` | Conditional pipeline |
+| START TRANSACTION | `START TRANSACTION [READ ONLY \| READ WRITE]` | Explicit transaction |
+| COMMIT / ROLLBACK | `COMMIT` / `ROLLBACK` | Transaction control |
+
 ## Schema
 
 | Operator | Syntax | Since |
 |---|---|---|
 | CREATE INDEX | `CREATE INDEX ON :Label(prop)` | 0.10.0 |
 | DROP INDEX | `DROP INDEX ON :Label(prop)` | 0.15.0 |
-| CREATE CONSTRAINT | `CREATE CONSTRAINT ON (n:L) ASSERT n.k IS UNIQUE` | 0.14.0 |
+| CREATE CONSTRAINT (UNIQUE) | `CREATE CONSTRAINT ON :Label(prop) ASSERT UNIQUE` | 0.14.0 |
+| CREATE CONSTRAINT (PRIMARY KEY) | `CREATE CONSTRAINT ON :Label(prop) ASSERT PRIMARY KEY` | current |
+| CREATE CONSTRAINT (SEMANTIC UNIQUE) | `CREATE CONSTRAINT ON :Label(prop) ASSERT SEMANTIC UNIQUE THRESHOLD 0.95` | current |
 | DROP CONSTRAINT | `DROP CONSTRAINT ON (n:L) ASSERT n.k IS UNIQUE` | 0.15.0 |
 
 ## Aggregation

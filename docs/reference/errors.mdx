@@ -47,6 +47,11 @@ TypedError {
 | `VECTOR_DIM_MISMATCH` | validation | Query vector ≠ index dimensions | Match vector length to `OPTIONS {dimensions}` |
 | `INDEX_NOT_FOUND` | validation | Named index doesn't exist | Check `CALL db.indexes` |
 | `CONSTRAINT_VIOLATION` | validation | Unique constraint failed | Use MERGE instead of CREATE |
+| `WORKFLOW_NOT_FOUND` | validation | `arcflow.workflow.*` target not found | Run `CALL arcflow.workflow.list` |
+| `STEP_NOT_FOUND` | validation | Step name not in workflow | Check step name spelling |
+| `EXECUTION_CONTEXT_MISMATCH` | integration | `requireExecutionContext` guard failed | `CALL db.setExecutionContext(...)` first |
+| `UNKNOWN_EXECUTION_CONTEXT` | validation | Invalid context string | Use `local_cpu`, `local_gpu`, or `distributed` |
+| `TEMPORAL_WAL_NOT_WIRED` | integration | `AS OF seq N` without WAL context | Use `JournaledStore` or `ConcurrentStore` |
 
 ## Design Principle
 

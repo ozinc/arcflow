@@ -26,7 +26,15 @@ const disk = open('./data/graph')
 1. **Write**: mutations are appended to the WAL before being applied
 2. **Crash**: if the process dies, the WAL retains all committed mutations
 3. **Recovery**: on next `open()`, the WAL replays automatically — no data loss
-4. **Checkpoint**: periodically compacts the WAL into a snapshot
+4. **Background checkpoint**: the WAL is periodically compacted into a snapshot in a background thread — no write pause
+
+## Read path — MVCC lock-free reads
+
+The read path uses an ArcSwap CoW (copy-on-write) store. Readers load the current graph snapshot via an atomic pointer swap — no read lock, no contention with writers. Writes produce a new snapshot and atomically swap it in. This means:
+
+- `db.query()` never blocks on a concurrent `db.mutate()`
+- `db.mutate()` never blocks on concurrent reads
+- Zero-copy commit: the committed snapshot is the same Arc the engine already holds
 
 ```typescript
 const db = open('./my-graph')
