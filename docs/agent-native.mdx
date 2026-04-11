@@ -1,6 +1,6 @@
 ---
 title: "Agent-Native Database"
-description: "Filesystem-first agent workspace — zero protocol overhead, CLI-native, structured for AI agents"
+description: "The world model layer for AI agents — persistent, spatial-temporal, confidence-scored. Single agents use it as working memory. Agent swarms use it as a shared substrate for coordinated action without message brokers."
 section: "agent-native"
 order: 1
 since: "8.0.0"
@@ -13,7 +13,9 @@ LLMs have context windows, not memory. They process what you give them in a sess
 
 The answer is a persistent world model — spatial-temporal, confidence-scored, graph-structured — that the agent writes to, reads from, and traverses, session after session. Not a vector store (which finds similar things) — a world model (which captures what connects, where it is, when it changed, and how reliably we know it). The difference matters when the question is relational: *what depends on this?* *who is connected to whom through what path?* *what changed since last week?* Those are world model questions. They require world model infrastructure.
 
-ArcFlow is that engine. It runs in-process, starts in two lines of code, and surfaces to agents through three interfaces:
+ArcFlow is that engine. It runs in-process, starts in two lines of code, and surfaces to agents through three interfaces.
+
+When a single agent needs working memory, a bigger context window helps. When multiple agents need coordinated action on shared world state — robot swarms, multi-agent pipelines, distributed code analysis — context windows become irrelevant. Each agent needs to write observations, read others' findings, and query the combined state with algorithms. ArcFlow is that shared substrate: agent A observes and writes, agent B queries and reasons, agent C runs PageRank on the combined graph. No message broker. No coordination framework. The graph IS the shared state.
 
 Three surfaces, no overlap:
 

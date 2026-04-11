@@ -1,6 +1,6 @@
 ---
 title: "Platforms"
-description: "Native graph engine — scales from a single process to an autonomous mesh"
+description: "The same world model engine from laptop to autonomous agent mesh — single process for one agent, distributed sync for agent swarms, same WorldCypher query language throughout."
 section: "platform"
 order: 1
 since: "10.0.0"
@@ -9,7 +9,9 @@ status: "stable"
 
 # Platforms
 
-ArcFlow is a native graph engine. It runs at full speed on your machine, auto-detects GPU hardware, and scales from a single process to an autonomous mesh of nodes. Every deployment (desktop, server, mobile, edge) runs the same engine with the same query language and the same algorithms.
+ArcFlow is a native graph engine. It runs at full speed on your machine, auto-detects GPU hardware, and scales from a single process to an autonomous mesh of nodes. Every deployment — desktop, server, mobile, edge — runs the same engine with the same WorldCypher query language and the same algorithms.
+
+As agentic systems grow from one agent to agent swarms, the world model layer scales with them. A single agent starts with `openInMemory()`. A team of agents shares a persistent graph via filesystem. A distributed swarm syncs across nodes via CDC. You don't rearchitect. You don't swap tools. The world model that works in a single process works for a hundred agents querying and mutating shared state at the edge of a mesh.
 
 ---
 

@@ -20,10 +20,12 @@ Your application processes documents, conversations, or data feeds and needs to:
 
 ## Why ArcFlow
 
+The knowledge graph is the world model. When an agent extracts a fact, it writes to the same engine it queries from. When a second agent reads that fact, it gets the confidence score, the provenance edge, and the temporal history — not a chunk of text. When you run PageRank, you're running it over the same graph that answers your semantic search. No pipeline between systems. No consistency gap.
+
 - **Single engine** — graph storage, vector search, full-text search, and algorithms in one process
-- **No infrastructure** — no separate graph database, vector database, or search engine to manage
-- **In-process speed** — no network roundtrips between your app and the database
-- **Fact-based modeling** — first-class confidence scores and provenance on relationships
+- **Multi-agent ready** — agent A writes observations, agent B queries them; no broker, no sync layer
+- **Fact-based, not chunk-based** — confidence scores and provenance on every relationship, not just on retrieved text
+- **Temporal** — query the knowledge graph as it existed at any point in time; track how entity understanding evolved
 
 ## Architecture
 
