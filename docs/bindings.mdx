@@ -1,6 +1,6 @@
 ---
 title: "Language Bindings"
-description: "Native bindings for Rust, Python, TypeScript, C, C++, Docker, and MCP — zero serialization overhead"
+description: "Native bindings for Rust, Python, TypeScript (napi-rs), C, C++, and Docker — one engine, every language, zero serialization overhead."
 section: "bindings"
 order: 1
 since: "10.0.0"
@@ -313,40 +313,7 @@ Volume-mount your data directory. The binary is fully static (musl libc). No dep
 
 ## MCP Server
 
-Model Context Protocol server — for frontier LLMs (Claude Code, Codex, Gemini CLI) that need to query ArcFlow over stdio JSON-RPC. **Not the right integration for application code** — use the napi-rs binding instead (see TypeScript section above).
-
-```bash
-npx arcflow-mcp
-npx arcflow-mcp --data-dir ./my-graph
-```
-
-### Tools
-
-| Tool | Description | Safety |
-|------|-------------|--------|
-| `get_schema` | Labels, relationship types, properties, indexes, constraints | Read |
-| `get_capabilities` | Available algorithms, procedures, functions | Read |
-| `read_query` | Execute read-only WorldCypher (MATCH, CALL, EXPLAIN) | Read |
-| `write_query` | Execute mutating WorldCypher (CREATE, SET, DELETE, MERGE) | Write |
-| `graph_rag` | Trusted GraphRAG pipeline with confidence scoring | Read |
-| `ingest_nodes` | Push node/edge deltas with content-hash dedup | Write |
-| `create_live_view` | Register a named standing query | Write |
-| `live_view_status` | Poll a live view's frontier and result count | Read |
-
-`read_query` rejects all mutations — CREATE, SET, DELETE, MERGE, REMOVE are refused. Use `write_query` for explicit write operations.
-
-### Claude Desktop Configuration
-
-```json
-{
-  "mcpServers": {
-    "arcflow": {
-      "command": "arcflow-mcp",
-      "args": []
-    }
-  }
-}
-```
+For cloud chat interfaces (ChatGPT, Claude.ai, Gemini web) that have no local shell. See [MCP Server](/mcp) for setup, tools, and configuration.
 
 ## Architecture
 

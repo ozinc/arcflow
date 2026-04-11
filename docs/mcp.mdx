@@ -1,68 +1,28 @@
 ---
 title: "MCP Server"
-description: "Cloud-to-local bridge for chat UIs — ChatGPT, Claude.ai, Gemini web. Not for CLI agents or application code."
+description: "ArcFlow's MCP server — the integration surface for cloud chat interfaces (ChatGPT, Claude.ai, Gemini web) that have no local shell."
 section: "capabilities"
 status: "stable"
 ---
 
 # MCP Server
 
-## Three surfaces — no overlap
+The MCP server is the integration surface for cloud chat interfaces — ChatGPT, Claude.ai, Gemini web, Copilot Chat — that run in a browser or cloud sandbox with no local filesystem access.
 
-| Consumer | Integration | Why |
-|---|---|---|
-| **BASAL broker, watcher daemon** | napi-rs in-process | Microseconds, same memory |
-| **Claude Code, Codex, Gemini CLI** | `arcflow` CLI binary | Shell-native, composable, &lt;10ms, no config |
-| **ChatGPT, Claude.ai, Gemini web** | MCP server | No local shell — MCP is the only bridge |
-| **Python / shell pipelines** | `arcflow` CLI binary | Same as CLI agents |
+**If you have a shell, use the CLI binary instead.** Claude Code, Codex CLI, and Gemini CLI all have shell tools. The `arcflow` binary exits in under 10ms, needs no configuration, and is fully composable with `grep`, `jq`, and `git`. MCP adds a protocol layer that those agents don't need.
 
-**napi-rs** is the in-process interface. **CLI** is the local-to-local interface. **MCP** is the cloud-to-local bridge for chat UIs with no shell access. These don't overlap — pick the one that matches your execution context.
-
-## MCP — for cloud chat interfaces
-
-ChatGPT, Claude.ai, Gemini web, Copilot Chat — these run in a browser or cloud sandbox. They have no shell, no filesystem, no way to run `arcflow symbol login`. MCP's stdio-over-process model is the only way to give them tool access, and the latency doesn't matter because the user is already waiting for a chat response.
-
-That's the correct scope for MCP. It's a cloud-to-local bridge. Nothing else.
-
-## CLI binary — for shell-capable agents
-
-Claude Code, Codex CLI, Gemini CLI already have a shell tool. They call `arcflow` exactly like `grep` or `ls`:
-
-```bash
-arcflow query "MATCH (f:Function {name: 'login'}) RETURN f.file_path, f.line_start"
-arcflow impact fn_login --depth 4   # → affected symbols, hop distance
-arcflow slice src/auth.ts 12 35     # → exact source lines
-arcflow symbol login                # → file_path, line_start, line_end
-arcflow query "CALL algo.pageRank()" --json | jq '.rows'
-```
-
-Each command exits in under 10ms. No registration. No daemon. No config file. Fully composable with `grep`, `jq`, `git`.
-
-## napi-rs binding — for application code
-
-For any code you control that runs in Node.js alongside ArcFlow:
-
-```typescript
-import { openInMemory } from 'arcflow'
-import { CodeGraph } from 'arcflow'
-
-const db = openInMemory()
-const cg = new CodeGraph(db)
-
-// Microseconds. Same memory. No process boundary.
-const impact = cg.impactSubgraph(['fn-abc'], ['Calls', 'Imports'], 3)
-```
+MCP is correct when there is no shell. That is its exact scope.
 
 ---
 
 ## Setup
 
 ```bash
-npx arcflow-mcp
-npx arcflow-mcp --data-dir ./my-graph   # Persistent data
+npx arcflow-mcp                              # In-memory (ephemeral)
+npx arcflow-mcp --data-dir ./my-graph        # Persistent graph
 ```
 
-### Claude.ai / ChatGPT plugin config
+### Claude Desktop / Claude.ai
 
 ```json
 {
@@ -75,6 +35,21 @@ npx arcflow-mcp --data-dir ./my-graph   # Persistent data
 }
 ```
 
+### With persistent data
+
+```json
+{
+  "mcpServers": {
+    "arcflow": {
+      "command": "npx",
+      "args": ["arcflow-mcp", "--data-dir", "./my-graph"]
+    }
+  }
+}
+```
+
+---
+
 ## Tools
 
 | Tool | Description | Read/Write |
@@ -84,23 +59,41 @@ npx arcflow-mcp --data-dir ./my-graph   # Persistent data
 | `read_query` | Execute read-only WorldCypher (MATCH, CALL algo.*, CALL db.*) | Read |
 | `write_query` | Execute mutations (CREATE, SET, DELETE, MERGE) | Write |
 | `graph_rag` | Trusted GraphRAG — answer questions from the knowledge graph | Read |
-| `ingest_nodes` | Push node/edge batches with idempotent dedup (content-hash aware) | Write |
-| `create_live_view` | Register a standing query as a named live view for change tracking | Write |
-| `live_view_status` | Poll a live view's current result set, frontier, and query text | Read |
+| `ingest_nodes` | Push node/edge batches with idempotent content-hash dedup | Write |
+| `create_live_view` | Register a standing query as a named live view | Write |
+| `live_view_status` | Poll a live view's current result set and frontier | Read |
 
-### ingest_nodes
+`read_query` rejects all mutations — CREATE, SET, DELETE, MERGE, REMOVE are refused at the tool level. Use `write_query` for explicit write operations.
+
+---
+
+## Tool details
+
+### `read_query` and `write_query`
+
+```
+read_query("MATCH (e:Entity) WHERE e._confidence > 0.85 RETURN e.id, e.x, e.y")
+write_query("MATCH (e:Entity {id: $id}) SET e._confidence = $conf", {id: "unit-01", conf: 0.97})
+```
+
+### `ingest_nodes`
 
 Push structured node/edge deltas. Content-hash dedup means calling the same delta twice is safe — already-ingested nodes are silently skipped.
 
 ```json
 {
   "added_nodes": [
-    { "label": "Person", "id": "alice", "content_hash": "abc123", "properties": { "name": "Alice" } }
+    {
+      "label": "Entity",
+      "id": "unit-01",
+      "content_hash": "abc123",
+      "properties": { "x": 12.4, "y": 8.7, "_observation_class": "observed", "_confidence": 0.94 }
+    }
   ],
-  "removed_node_ids": ["old-node-id"],
-  "updated_nodes": [{ "id": "alice", "properties": { "age": 31 } }],
+  "removed_node_ids": [],
+  "updated_nodes": [],
   "added_edges": [
-    { "kind": "KNOWS", "from_id": "alice", "to_id": "bob" }
+    { "kind": "DETECTS", "from_id": "unit-01", "to_id": "contact-x" }
   ],
   "removed_edge_ids": []
 }
@@ -108,13 +101,42 @@ Push structured node/edge deltas. Content-hash dedup means calling the same delt
 
 Returns `{ nodes_added, nodes_removed, nodes_updated, edges_added, edges_removed, wal_bytes_written }`.
 
-### create_live_view + live_view_status
+### `create_live_view` and `live_view_status`
 
-Register a view once, poll repeatedly:
+Register a view once, poll for changes:
 
 ```
-create_live_view("high_risk", "MATCH (n) WHERE n.risk > 0.8 RETURN n.name, n.risk ORDER BY n.risk DESC")
-live_view_status("high_risk")  // → { frontier: 47, row_count: 3, query_text: "..." }
+create_live_view("high_risk", "MATCH (e:Entity) WHERE e._confidence < 0.4 RETURN e.id, e._confidence ORDER BY e._confidence ASC")
+live_view_status("high_risk")
+// → { frontier: 47, row_count: 3, query_text: "..." }
 ```
 
-The `frontier` is a monotonically increasing mutation sequence number. If it hasn't changed, the result set hasn't changed.
+The `frontier` is a monotonically increasing mutation sequence number. If it has not changed since the last poll, the result set has not changed.
+
+### `graph_rag`
+
+Ask a natural language question answered from the knowledge graph with confidence filtering:
+
+```
+graph_rag("Which entities have been observed with confidence above 0.9 in the last 5 minutes?")
+```
+
+---
+
+## Latency
+
+MCP operates over stdio JSON-RPC. Each tool call has ~100ms of overhead from process boundary, serialization, and JSON-RPC round-trip. This is acceptable for cloud chat interfaces where the user is already waiting for a response. It is not acceptable for application code or shell agent loops.
+
+| Surface | Latency | Use when |
+|---|---|---|
+| napi-rs in-process | ~1 µs | Application code in Node.js |
+| `arcflow` CLI binary | < 10 ms | Shell-capable agents (Claude Code, Codex, Gemini CLI) |
+| MCP server | ~100 ms | Cloud chat UIs with no local shell |
+
+---
+
+## See Also
+
+- [CLI](/cli) — the `arcflow` binary for shell-capable agents and developers
+- [Language Bindings](/bindings) — napi-rs (Node.js), Python, Rust, C, C++
+- [Agent-Native](/agent-native) — filesystem workspace, batch execution, watch mode

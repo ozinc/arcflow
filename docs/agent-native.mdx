@@ -24,53 +24,11 @@ Three surfaces, no overlap:
 | **ChatGPT, Claude.ai, Gemini web** | MCP server | **~100 ms** | No local shell — MCP is the only bridge |
 | **Python / shell pipelines** | `arcflow` CLI binary | **< 10 ms** | Same as CLI agents |
 
-## napi-rs binding — for application code
+For the full reference on each surface:
 
-If your software runs in Node.js alongside ArcFlow, the napi-rs binding is zero-overhead: the Rust engine runs in-process, operations are function calls, no process boundary, no serialization.
-
-```typescript
-import { openInMemory } from 'arcflow'
-import { CodeGraph } from 'arcflow'
-
-const db = openInMemory()
-const cg = new CodeGraph(db)
-
-// Microseconds. Same memory. No pipes.
-const impact = cg.impactSubgraph(['fn-abc'], ['Calls', 'Imports'], 3)
-db.mutate("CREATE (n:Symbol {id: 'fn-xyz', kind: 'function'})")
-const result = db.query("CALL algo.pageRank()")
-```
-
-Use this for: broker daemons, watcher processes, ingestion pipelines, session caches, any code you control running in Node.js or Rust.
-
-## CLI binary — for AI coding agents
-
-CLI-native agents already have a tool for running shell commands. They call `arcflow` exactly like `grep` or `ls` — no protocol, no handshake, no daemon, no config:
-
-```bash
-# Symbol lookup
-arcflow query "MATCH (f:Function {name: 'login'}) RETURN f.file_path, f.line_start, f.line_end"
-
-# Blast radius: what does changing login() break?
-arcflow impact fn_login --depth 4
-
-# Slice exact source lines from the graph
-arcflow slice src/auth.ts 12 35
-
-# Full WorldCypher query
-arcflow query "CALL algo.pageRank()" --json
-
-# Composable with standard tools
-arcflow query "MATCH (f:Function) RETURN f.file_path" --json | jq '.rows[].file_path' | sort -u
-```
-
-Each command exits in under 10ms. The agent calls it, reads stdout, moves on.
-
-**Why CLI beats MCP for these agents:**
-- **Composable** — pipe into `grep`, `jq`, `git`, `awk`
-- **Inspectable** — agent sees raw output, no abstraction layer
-- **Zero config** — no MCP registration, no `claude_desktop_config.json`
-- **~2ms startup** — linked Rust binary, not a Node.js daemon
+- **napi-rs** — see [Language Bindings](/bindings#typescript--nodejs) for API, types, and patterns
+- **CLI binary** — see [CLI](/cli) for commands, flags, watch mode, and batch execution
+- **MCP server** — see [MCP Server](/mcp) for setup, tools, and configuration
 
 ### File-based batch workflows
 
