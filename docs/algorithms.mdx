@@ -1,6 +1,6 @@
 ---
 title: "Graph Algorithms"
-description: "27 built-in graph algorithms — centrality, community detection, pathfinding, similarity, graph metrics, and 6 incremental via LIVE CALL"
+description: "27 graph algorithms operating over a confidence-scored, temporally-versioned world model — from entity resolution to contradiction detection, 6 running incrementally as standing queries"
 section: "algorithms"
 order: 1
 since: "4.0.0"
@@ -9,9 +9,9 @@ status: "stable"
 
 # Graph Algorithms
 
-154M PageRank nodes/sec. 29.6x GPU speedup on community detection. 19.8x on triangle count. 27 algorithms ship as built-in `CALL` procedures -- no plugins, no extensions, no separate analytics service. Six of them run incrementally via `LIVE CALL`, maintaining results as the graph mutates.
+27 graph algorithms built into the world model — no projection lifecycle, no separate analytics service, no plugin installation. Every algorithm operates over the same confidence-scored, temporally-versioned graph that your queries run against. Centrality rankings respect observation class. Community detection propagates across fact confidence. Contradiction detection surfaces conflicting beliefs in the knowledge graph. Six algorithms run incrementally via `LIVE CALL`, maintaining results as standing queries that update with every mutation.
 
-All algorithms run in-process with zero serialization overhead. GPU acceleration is automatic when hardware is available: same query, same syntax, automatic routing (see [GPU Acceleration](/gpu)).
+154M PageRank nodes/sec on CPU. 29.6x GPU speedup on community detection. 19.8x on triangle count. GPU acceleration is automatic when hardware is available: same query, same syntax, automatic routing (see [GPU Acceleration](/gpu)).
 
 ## Centrality
 

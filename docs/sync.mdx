@@ -1,13 +1,13 @@
 ---
 title: "Sync"
-description: "Local-first sync — mutations replicate to cloud automatically. Browser, Node.js, edge."
+description: "Local-first synchronization of the persistent world model — spatial positions, temporal history, and confidence scores all replicate to cloud automatically with conflict resolution"
 section: "capabilities"
 status: "stable"
 ---
 
 # Sync
 
-ArcFlow runs locally — in-process, in-browser, at the edge — and the world model replicates to cloud automatically. Local operations are instant (no round-trip, no network dependency). Sync is eventual, conflict-resolved, and resumable: the local world model stays authoritative, cloud stays consistent.
+The full persistent world model — spatial positions, temporal history, confidence scores, observation classes — runs locally and replicates to cloud automatically. Local operations are instant: no round-trip, no network dependency, no blocking. Sync is eventual, conflict-resolved by confidence and temporal precedence, and resumable. The local world model stays authoritative. Cloud stays consistent. Multiple agents can each maintain their own local world model and converge on shared state without central coordination.
 
 ```
 Local instance              Cloud

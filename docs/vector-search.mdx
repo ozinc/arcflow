@@ -1,6 +1,6 @@
 ---
 title: "Vector Search"
-description: "HNSW vector indexes with cosine, euclidean, and dot product similarity — 25K queries/sec at 128d"
+description: "Semantic search over node embeddings — cosine, euclidean, or dot-product similarity built into the world model, composing with graph traversal and temporal queries in one GQL statement"
 section: "vector-search"
 order: 1
 since: "6.0.0"
@@ -9,9 +9,9 @@ status: "stable"
 
 # Vector Search
 
-**HNSW vector search built into the graph database — 25,000 queries/sec at 128d, zero serialization between graph traversal and similarity search.**
+**Embeddings are first-class properties of the world model — semantic dimensions queryable alongside graph relationships, confidence scores, and temporal state.**
 
-No dedicated vector database, no separate similarity service. ArcFlow indexes vectors in the same process as your graph nodes, so you can combine graph traversal with vector similarity in a single query without network hops. GPU acceleration delivers 4.2x additional speedup when available.
+No dedicated vector database. No separate similarity service. An embedding lives on a node the same way a position, a confidence score, or an observation class does — queryable with the same GQL that traverses the graph. Combine semantic similarity with graph structure and temporal snapshots in one query, one process. 25,000 queries/sec at 128d. GPU acceleration delivers 4.2x additional speedup when available.
 
 ```cypher
 -- Vector search + graph traversal in one query, one process
