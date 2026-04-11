@@ -2,9 +2,11 @@
 
 **The World Model database.** Spatial-temporal, confidence-scored, embedded.
 
-Every autonomous system needs a model of its world — what entities exist, where they are, how confident we are in each fact, and what the world looked like at any previous moment. That model has always had to be assembled from separate systems: a spatial database for positions, a time-series store for history, a graph database for relationships, application code for confidence scoring. Each boundary introduces latency, consistency risk, and operational complexity.
+AI systems can now perceive, reason, and act. The missing piece is memory — a persistent, spatially grounded, temporally accurate model of the world that every agent, robot, and autonomous system can read from and write to. Not a vector index. Not a document store. A world model: what entities exist, where they are, how confident we are in each fact, and what the world looked like at any previous moment.
 
-ArcFlow collapses this into one in-process engine. No server. No round-trip. Space and time are first-class dimensions, not extensions. Every mutation is versioned. Every fact carries an observation class and a confidence score. The entire history of the world model is queryable with ISO GQL — in the same syntax as the current state.
+That infrastructure hasn't existed as a product. It's been assembled from pieces — a spatial system for positions, a time-series store for history, a graph layer for relationships, application code for confidence scoring. Each boundary introduces latency, consistency risk, and complexity that compounds at scale.
+
+ArcFlow is the world model layer. One in-process engine. No server. No round-trip. Space and time are first-class dimensions, not extensions. Every mutation is versioned. Every fact carries an observation class and a confidence score. The entire history of the world model is queryable with ISO GQL — in the same syntax as the current state.
 
 **[Try it — arcflow.dev/engine](https://arcflow.dev/engine)** — runs in your browser, zero install.
 
@@ -140,19 +142,23 @@ A safety system running on confidence thresholds is fundamentally different from
 
 ## One engine, no stack
 
+Building a world model without ArcFlow means assembling infrastructure piece by piece:
+
 ```
-Traditional stack                ArcFlow
-─────────────────                ──────────────────────────────────
-Neo4j (graph)                →   GQL graph store (ISO/IEC 39075, Cypher-compatible)
-Separate spatial DB          →   R*-tree spatial index, composable with graph traversal
-Time-series DB               →   Every mutation versioned, AS OF seq N on the same graph
-Redis (cache)                →   In-memory, zero-copy
-Pinecone (vector DB)         →   HNSW vector index, 27 built-in graph algorithms
-Kafka/NATS (streaming)       →   CDC + standing queries, no external broker
-Temporal (workflows)         →   Graph-native durable workflows
+What the fragmented approach requires      What ArcFlow provides
+──────────────────────────────────────     ──────────────────────────────────────────
+A graph layer for entity relationships  →  GQL graph store (ISO/IEC 39075, Cypher-compatible)
+A spatial system for positions          →  R*-tree spatial index, composable with graph traversal
+A time-series store for history         →  Every mutation versioned — AS OF seq N on the same graph
+An in-memory layer for hot state        →  In-memory, zero-copy
+A vector database for embeddings        →  HNSW vector index, 27 built-in graph algorithms
+A message broker for streaming updates  →  CDC + standing queries, no external broker
+A workflow engine for durable pipelines →  Graph-native durable workflows
 ```
 
-All in one `GraphStore`. One process. Zero serialization between them.
+Each system in the left column has its own consistency model, its own failure modes, its own operational surface. Queries that cross two of them require a join with no atomicity guarantee.
+
+ArcFlow collapses all of it into one `GraphStore`. One process. Zero serialization between modules.
 
 ---
 
@@ -209,7 +215,7 @@ Pre-built native binaries for macOS (Apple Silicon + Intel), Linux (x64 + ARM64)
 | [World Model](docs/concepts/world-model.mdx) | What a world model is and why it matters |
 | [Building a World Model](docs/guides/world-model.mdx) | Step-by-step: entities, spatial queries, temporal memory, reactive monitoring |
 | [GQL / WorldCypher](docs/worldcypher.mdx) | Query language reference (ISO/IEC 39075, Cypher-compatible) |
-| [GQL Conformance](docs/reference/gql-conformance.mdx) | Standards lineage, TCK results, comparison with Neo4j/Memgraph/FalkorDB |
+| [GQL Conformance](docs/reference/gql-conformance.mdx) | Standards lineage, TCK results, full ISO GQL V2 conformance details |
 | [Autonomous Systems](docs/use-cases/autonomous-systems.mdx) | Robot fleets, UAVs, self-driving vehicles |
 | [Digital Twins](docs/use-cases/digital-twins.mdx) | Live spatial replicas of physical facilities |
 | [Robotics & Perception](docs/use-cases/robotics.mdx) | Sensor fusion, ROS integration, track lifecycle |
