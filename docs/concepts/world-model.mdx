@@ -25,7 +25,7 @@ Most databases store facts. A world model stores facts *plus* the spatial contex
 | **Provenance** | Absent or logged separately | Built-in — every edge records which sensor, model, or process produced it |
 | **Observation class** | Not modeled | First-class: `observed`, `inferred`, or `predicted` on every node |
 | **Relationships** | Foreign keys, derived at query time | First-class edges with properties — the connection is a stored fact |
-| **Reactivity** | Poll for changes | `LIVE MATCH` — standing queries fire on every relevant mutation |
+| **Always-current** | Poll for changes | `LIVE MATCH` — standing queries maintain continuous truth without polling |
 
 These aren't checkboxes. They're the minimum requirements for a system that needs to reason about the world.
 

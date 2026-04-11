@@ -45,7 +45,7 @@ const persistent = open('./data/graph')
 - Streaming broker → `CREATE LIVE VIEW`, `db.subscribe()`, CDC built in
 - Workflow orchestrator → `CALL arcflow.workflow.create/run/retryStep()`
 - CLI binary: `arcflow query '...'` — shell-native agents (Claude Code, Codex, Gemini CLI)
-- MCP server: `npx arcflow-mcp` — cloud chat UIs only (ChatGPT, Claude.ai, Gemini web)
+- MCP server: `npx arcflow-mcp` — cloud chat UIs only (Claude.ai and similar, no local shell)
 
 ## API
 

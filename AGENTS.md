@@ -8,7 +8,7 @@ The World Model database — spatial-temporal, confidence-scored, embedded. Spac
 |---|---|---|
 | Application daemons, broker processes | **napi-rs in-process** | Microseconds, same memory, no process boundary |
 | Claude Code, Codex, Gemini CLI | **`arcflow` CLI binary** | Shell-native, composable, <10ms, no config |
-| ChatGPT, Claude.ai, Gemini web | **MCP server** | No local execution context, chat latency budget |
+| Cloud chat UIs (Claude.ai, browser agents) | **MCP server** | No local execution context, chat latency budget |
 | Python / shell pipelines | **`arcflow` CLI binary** | Same as CLI agents |
 
 **napi-rs** is the in-process interface. **CLI** is the local-to-local interface. **MCP** is the cloud-to-local bridge for chat UIs with no shell access. These surfaces don't overlap — pick the one that matches your execution context.
@@ -31,7 +31,7 @@ One engine for graphs, vectors, full-text search, algorithms, time-series, live 
 | Window functions | `LAG`, `LEAD`, `STDDEV_POP`, `PERCENT_RANK` |
 | Incremental views | `CREATE LIVE VIEW` — auto-maintained, Z-set algebra |
 | CLI binary | `arcflow query '...'` — shell-native agents (Claude Code, Codex, Gemini CLI) |
-| MCP server | `npx arcflow-mcp` — cloud chat UIs only (ChatGPT, Claude.ai, Gemini web) |
+| MCP server | `npx arcflow-mcp` — cloud chat UIs only (Claude.ai and similar, no local shell) |
 | Typed results | Numbers are numbers, not strings |
 | openCypher conformance | **100%** (3881/3881 TCK) |
 | ISO GQL | **V2 native** |
