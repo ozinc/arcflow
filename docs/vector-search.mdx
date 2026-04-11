@@ -184,3 +184,10 @@ CREATE VECTOR INDEX user_item_vec
 -- Find items closest to a user's embedding
 CALL algo.vectorSearch('user_item_vec', [0.2, 0.8, -0.1, ...], 20)
 ```
+
+## See Also
+
+- [Graph Algorithms](/algorithms) — `algo.node2vec()`, `algo.graphSAGE()`, `algo.similarNodes()` for embedding generation
+- [Trusted RAG](/trusted-rag) — hybrid vector + graph retrieval with confidence scoring
+- [RAG Pipeline Guide](/guides/rag-pipeline) — full GraphRAG pipeline implementation
+- [Algorithms Reference](/worldcypher/algorithms) — `algo.vectorSearch()` and `algo.hybridSearch()` signatures
