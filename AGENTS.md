@@ -271,7 +271,7 @@ CREATE LIVE VIEW stats AS MATCH (n:DailyBar) RETURN n.sector, count(*), avg(n.cl
 MATCH (row) FROM VIEW stats RETURN row
 ```
 
-### 30+ algorithms (no projection setup)
+### 27 algorithms (no projection setup)
 ```cypher
 CALL algo.pageRank()
 CALL algo.louvain()

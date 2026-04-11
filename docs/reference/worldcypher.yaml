@@ -169,7 +169,7 @@ temporal_procedures:
   - temporal.trajectory
   - temporal.velocity
 
-reactive:
+live_queries:
   - { name: LIVE_MATCH, syntax: "LIVE MATCH (n:Person) RETURN n" }
   - { name: LIVE_CALL, syntax: "LIVE CALL algo.pageRank()" }
   - { name: CREATE_LIVE_VIEW, syntax: "CREATE LIVE VIEW name AS ..." }
