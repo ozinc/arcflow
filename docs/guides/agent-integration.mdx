@@ -17,9 +17,9 @@ ArcFlow is designed to be used directly by coding agents — not as infrastructu
 
 | Agent type | Interface | Latency |
 |---|---|---|
-| Claude Code, Codex CLI, Gemini CLI | `arcflow` binary | < 10ms |
+| Shell-native agents (Claude Code, Codex CLI, etc.) | `arcflow` binary | < 10ms |
 | Python agents, shell pipelines | `arcflow` binary | < 10ms |
-| ChatGPT, Claude.ai web | MCP server | ~100ms |
+| Cloud chat UIs (Claude.ai, browser-only agents) | MCP server | ~100ms |
 
 For any agent with shell access, the CLI binary is always the right choice — no configuration, no MCP registration, no daemon.
 

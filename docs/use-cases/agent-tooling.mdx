@@ -159,7 +159,7 @@ The agent builds a graph in the browser, the user reviews it visually, then the 
 
 ## CLI binary — shell-native agents
 
-Claude Code, Codex CLI, Gemini CLI, and similar tools already have a shell tool. Give them the `arcflow` binary and they call it exactly like `grep` or `git` — no protocol, no handshake, no session:
+Shell-native agents call `arcflow` directly — the world model is a CLI tool, same invocation pattern as any other shell command. No protocol, no handshake, no session. The difference: every call returns from a confidence-scored, temporally-versioned graph, not a flat file:
 
 ```bash
 # Symbol lookup — exits in <10ms
@@ -182,10 +182,10 @@ The agent calls these commands, reads stdout, and acts on structured results. No
 
 ## MCP — cloud chat interfaces only
 
-MCP is the right integration when the agent runs in a browser or cloud sandbox with no local shell — ChatGPT, Claude.ai, Gemini web. These interfaces cannot run `arcflow` as a binary, so MCP is the only way to give them graph tool access:
+MCP is the right integration when the agent runs in a browser or cloud sandbox with no local shell — Claude.ai and similar cloud chat UIs. These interfaces cannot run `arcflow` as a binary, so MCP is the only way to give them graph tool access:
 
 ```json
-// Claude.ai / ChatGPT plugin configuration — NOT for Claude Code
+// Cloud chat UI configuration (Claude.ai, etc.) — NOT for Claude Code
 {
   "mcpServers": {
     "arcflow": {
@@ -206,7 +206,7 @@ Available tools: `get_schema`, `read_query`, `write_query`, `graph_rag`. Latency
 | Zero cleanup | Graph disappears on `close()` — no Docker containers to stop |
 | Browser WASM | Agent can verify queries in a live playground |
 | CLI binary | CLI agents query the graph directly via shell — `arcflow query`, `arcflow impact` |
-| MCP server | Cloud chat UIs (ChatGPT, Claude.ai) that have no local shell |
+| MCP server | Cloud chat UIs that have no local shell (Claude.ai, browser-only agents) |
 | Sync | Ephemeral graph can optionally persist to cloud |
 | Typed results | Agent doesn't have to parse strings — numbers are numbers |
 | Structured errors | Agent can pattern-match on error codes and self-correct |
