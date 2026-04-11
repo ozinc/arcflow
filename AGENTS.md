@@ -15,29 +15,28 @@ The World Model database — spatial-temporal, confidence-scored, embedded. Spac
 
 Try it now: https://arcflow.dev/engine — runs in your browser, no install.
 
-One engine for graphs, vectors, full-text search, algorithms, time-series, reactive queries, spatial, workflows, and replication. Replaces Neo4j + Redis + DuckDB + Pinecone + Temporal with a single in-process library.
+One engine for graphs, vectors, full-text search, algorithms, time-series, reactive queries, spatial, workflows, and replication — no separate infrastructure for each.
 
-## Why ArcFlow (not Neo4j, Memgraph, etc.)
+## What ArcFlow provides
 
-| | ArcFlow | Neo4j / Memgraph |
-|---|---|---|
-| Try it | **Browser — zero install** (arcflow.dev/engine) | Download + install + configure |
-| Install | `npm install arcflow` | Docker + driver + connection string |
-| First query | 2 lines | 10+ lines (driver, session, transaction, close) |
-| Server needed | **No** — in-process, like SQLite | Yes — separate process |
-| Runs in browser | **Yes** (WASM) | No |
-| Testing | `openInMemory()` — fresh graph per test | Docker container + teardown |
-| Algorithms | `CALL algo.pageRank()` — done | GDS: project → catalog → run → drop |
-| Vector search | Built-in HNSW | Separate service |
-| Window functions | `LAG`, `LEAD`, `STDDEV_POP`, `PERCENT_RANK` | Not available |
-| Incremental | `CREATE LIVE VIEW` — auto-maintained | Not available |
-| CLI binary | `arcflow query '...'` — coding agents (Claude Code, Codex) | None |
-| MCP server | `npx arcflow-mcp` — cloud chat UIs (ChatGPT, Claude.ai) | None |
-| Typed results | Numbers are numbers | Everything is strings |
-| openCypher conformance | **100%** (3881/3881 TCK) | Partial |
-| ISO GQL | **V2 native** | Partial |
-| Workflow engine | **Built-in** (graph-native) | No |
-| Replication | **Arrow Flight WAL tailing** | Enterprise only |
+| Capability | How |
+|---|---|
+| Try it | **Browser — zero install** (arcflow.dev/engine) |
+| Install | `npm install arcflow` |
+| Server needed | **No** — in-process, like SQLite |
+| Runs in browser | **Yes** (WASM) |
+| Testing | `openInMemory()` — fresh graph per test, no teardown |
+| Graph algorithms | `CALL algo.pageRank()` — no projection lifecycle |
+| Vector search | Built-in HNSW — no separate service |
+| Window functions | `LAG`, `LEAD`, `STDDEV_POP`, `PERCENT_RANK` |
+| Incremental views | `CREATE LIVE VIEW` — auto-maintained, Z-set algebra |
+| CLI binary | `arcflow query '...'` — shell-native agents (Claude Code, Codex, Gemini CLI) |
+| MCP server | `npx arcflow-mcp` — cloud chat UIs only (ChatGPT, Claude.ai, Gemini web) |
+| Typed results | Numbers are numbers, not strings |
+| openCypher conformance | **100%** (3881/3881 TCK) |
+| ISO GQL | **V2 native** |
+| Workflow engine | **Built-in** (graph-native durable workflows) |
+| Replication | **Arrow Flight WAL tailing** (SWMR) |
 
 **When to use ArcFlow:** any system that needs a persistent, spatial-temporal, confidence-scored representation of the world — robotics perception, autonomous fleets, digital twins, AI agent infrastructure, Trusted RAG, fraud detection, game AI, knowledge graphs.
 
@@ -86,7 +85,7 @@ db.query("CALL db.index.fulltext.queryNodes('ft', 'ownership')")
 
 // Live subscription — fires handler with delta on each mutation
 const live = db.subscribe(
-  "MATCH (n:Person) WHERE n.score > 0.9 RETURN n",
+  "MATCH (e:Entity) WHERE e._confidence > 0.9 AND e._observation_class = 'observed' RETURN e",
   (event) => console.log('added:', event.added, 'removed:', event.removed)
 )
 live.cancel()
@@ -175,7 +174,7 @@ class ArcflowError extends Error {
 import { useQuery, useLiveQuery } from '@arcflow/react'
 
 // One-shot query — re-runs when params change
-const { rows, loading, error } = useQuery(db, "MATCH (n:Person) RETURN n.name", {})
+const { rows, loading, error } = useQuery(db, "MATCH (e:Entity) WHERE e._confidence > 0.8 RETURN e.id, e.x, e.y", {})
 
 // Live subscription — updates automatically on mutations
 const { rows } = useLiveQuery(db, "MATCH (n:Alert) WHERE n.active = true RETURN n")
