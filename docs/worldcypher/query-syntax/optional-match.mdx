@@ -5,6 +5,13 @@ section: "worldcypher/query-syntax"
 order: 4
 since: "0.9.0"
 status: "stable"
+playground:
+  seed: world
+  query: |-
+    MATCH (s:Sensor)
+    OPTIONAL MATCH (s)-[d:DETECTED]->(r:Robot)
+    RETURN s.name AS sensor, s.type, s.reliability, s.x AS sensor_x, s.y AS sensor_y, r.name AS robot_in_view, r.task AS robot_task, d.confidence AS detection_trust, d.method AS detection_method ORDER BY s.reliability DESC
+
 ---
 
 # OPTIONAL MATCH

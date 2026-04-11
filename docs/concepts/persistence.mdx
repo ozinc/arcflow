@@ -3,6 +3,13 @@ title: "Persistence & WAL"
 description: "The world model persists across restarts — WAL journaling with MVCC lock-free reads, crash recovery, and deterministic replay built in."
 section: "concepts"
 status: "stable"
+playground:
+  query: |-
+    MERGE (r:Robot {id: 'r1', name: 'Atlas-01', x: 18.0, y: 8.5, speed: 1.2, task: 'assembly', battery: 87, status: 'active'})
+    SET r.battery = 92, r.status = 'charging', r.dock_seq = 310, r.updated = true
+    
+    MATCH (r:Robot {id: 'r1'}) RETURN r.name, r.task, r.battery, r.speed, r.status, r.dock_seq, r.x, r.y
+
 ---
 
 # Persistence & WAL
@@ -91,3 +98,12 @@ db.close()
 ```
 
 After closing, all operations will throw an `ArcflowError` with code `DB_CLOSED`.
+
+---
+
+## See Also
+
+- [Persistence & WAL](/server/persistence) — server-mode persistence and WAL configuration
+- [Snapshot & Restore](/cli/snapshot-restore) — graph backup and migration
+- [Event Sourcing](/event-sourcing) — every mutation as a temporal fact in the WAL
+- [Temporal Queries](/temporal) — `AS OF seq N` queries over the persisted history

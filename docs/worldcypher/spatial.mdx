@@ -3,6 +3,13 @@ title: "WorldCypher: Spatial Queries"
 description: "Exact spatial predicates, KNN, frustum, live geofencing — backed by a dynamic R*-tree, no approximate indexing"
 section: "worldcypher"
 status: "stable"
+playground:
+  seed: world
+  query: |-
+    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone)
+    WITH s, d, r, z, s.reliability * d.confidence AS composite_trust, (r.x - s.x) * (r.x - s.x) + (r.y - s.y) * (r.y - s.y) AS dist_sq
+    RETURN s.name AS sensor, s.type, s.x AS sensor_x, s.y AS sensor_y, s.reliability, d.method, d.confidence, composite_trust, dist_sq AS proximity_sq, r.name AS robot, r.x AS robot_x, r.y AS robot_y, r.task, z.name AS zone ORDER BY composite_trust DESC
+
 ---
 
 # WorldCypher: Spatial Queries
@@ -163,3 +170,12 @@ CALL arcflow.spatial.trigger_stats()
 - **Bulk ingest:** Sort-Tile-Recursive packing via `ingestUsdPrims()` — 500K prims in under 1 second, 5–10× faster than incremental insert
 
 The index is dynamic. No rebuild required on updates.
+
+---
+
+## See Also
+
+- [Spatial Queries](/spatial-knowledge) — spatial capability overview and use cases
+- [Algorithms Reference](/worldcypher/algorithms) — `algo.nearestNodes()` and spatial algorithm signatures
+- [GPU Acceleration](/gpu) — GPU-dispatched BVH spatial index for large entity sets
+- [Use Case: Robotics & Perception](/use-cases/robotics) — spatial queries for sensor fusion and tracking

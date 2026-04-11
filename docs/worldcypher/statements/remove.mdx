@@ -5,6 +5,12 @@ section: "worldcypher/statements"
 order: 5
 since: "0.8.0"
 status: "stable"
+playground:
+  seed: |-
+    MERGE (r:Robot {id: 'r1', name: 'Atlas-01', x: 18.0, y: 8.5, speed: 1.2, task: 'assembly', status: 'active', battery: 87, legacy_id: 'BOT-0091', deprecated_field: 'v1-format'})
+  query: |-
+    MATCH (r:Robot {id: 'r1'}) REMOVE r.legacy_id, r.deprecated_field RETURN r.name, r.task, r.battery, r.status, r.x, r.y, r.speed
+
 ---
 
 # REMOVE

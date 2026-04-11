@@ -5,6 +5,14 @@ section: "trusted-rag"
 order: 1
 since: "4.0.0"
 status: "stable"
+playground:
+  seed: world
+  query: |-
+    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone)
+    WHERE s.reliability >= 0.91 AND d.confidence >= 0.88
+    WITH s, d, r, z, s.reliability * d.confidence AS composite_trust
+    RETURN composite_trust, s.name AS evidence_source, s.type AS sensor_modality, s.reliability AS source_reliability, d.method AS observation_method, d.confidence AS detection_confidence, r.name AS grounded_entity, r.task, r.x AS world_x, r.y AS world_y, r.battery, z.name AS spatial_context, z.hazard ORDER BY composite_trust DESC
+
 ---
 
 # Trusted RAG

@@ -3,6 +3,17 @@ title: "Behavior Graphs"
 description: "Behavior trees grounded in a persistent world model — trees tick against live spatial-temporal state, survive restarts, and coordinate across agents without external infrastructure."
 section: "guides"
 status: "stable"
+playground:
+  query: |-
+    MERGE (coord:Agent {id: 'coord', name: 'Coordinator', role: 'orchestrator', priority: 0, active: true})
+    MERGE (planner:Agent {id: 'planner', name: 'Planner', role: 'planning', priority: 1, active: true})
+    MERGE (executor:Agent {id: 'executor', name: 'Executor', role: 'execution', priority: 2, active: true})
+    MERGE (guardian:Agent {id: 'guardian', name: 'Guardian', role: 'safety', priority: 0, active: true})
+    MATCH (c:Agent {id: 'coord'}), (p:Agent {id: 'planner'}) MERGE (c)-[:DELEGATES_TO {on_event: 'detection', threshold: 0.85, priority: 1}]->(p)
+    MATCH (c:Agent {id: 'coord'}), (g:Agent {id: 'guardian'}) MERGE (c)-[:DELEGATES_TO {on_event: 'hazard_alert', threshold: 0.70, priority: 0}]->(g)
+    MATCH (p:Agent {id: 'planner'}), (e:Agent {id: 'executor'}) MERGE (p)-[:DELEGATES_TO {on_event: 'plan_ready', threshold: 0.80, priority: 2}]->(e)
+    MATCH (a:Agent)-[d:DELEGATES_TO]->(b:Agent) RETURN a.name AS from_agent, a.role, d.on_event, d.threshold AS confidence_gate, d.priority, b.name AS to_agent, b.role ORDER BY d.priority
+
 ---
 
 # Behavior Graphs

@@ -3,6 +3,14 @@ title: "MCP Server"
 description: "ArcFlow's MCP server — the integration surface for cloud chat interfaces (Claude.ai and similar) that have no local shell. For CLI agents, use the arcflow binary directly."
 section: "capabilities"
 status: "stable"
+playground:
+  seed: world
+  query: |-
+    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone)
+    WHERE d.confidence > 0.82
+    WITH s, d, r, z, s.reliability * d.confidence AS composite_trust
+    RETURN composite_trust, r.name AS entity_id, r.task AS entity_type, r.x AS world_x, r.y AS world_y, r.battery AS energy_pct, r.speed AS velocity, z.name AS spatial_context, z.hazard AS context_hazard, d.method AS observation_source, s.name AS sensor_id, s.reliability AS sensor_trust ORDER BY composite_trust DESC
+
 ---
 
 # MCP Server

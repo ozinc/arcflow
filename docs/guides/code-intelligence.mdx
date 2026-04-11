@@ -5,6 +5,20 @@ section: "guides"
 order: 9
 since: "8.0.0"
 status: "stable"
+playground:
+  query: |-
+    MERGE (m1:Module {id: 'mod-auth', name: 'auth', path: 'src/auth.ts', loc: 320, coverage: 0.91})
+    MERGE (m2:Module {id: 'mod-db', name: 'database', path: 'src/db/client.ts', loc: 180, coverage: 0.73})
+    MERGE (f1:Function {id: 'fn-login', name: 'login', module: 'auth', line: 42, complexity: 4, tested: true})
+    MERGE (f2:Function {id: 'fn-validate', name: 'validateToken', module: 'auth', line: 28, complexity: 2, tested: true})
+    MERGE (f3:Function {id: 'fn-query', name: 'executeQuery', module: 'database', line: 15, complexity: 3, tested: false})
+    MATCH (m1:Module {id: 'mod-auth'}), (f1:Function {id: 'fn-login'}) MERGE (m1)-[:CONTAINS {exported: true}]->(f1)
+    MATCH (m1:Module {id: 'mod-auth'}), (f2:Function {id: 'fn-validate'}) MERGE (m1)-[:CONTAINS {exported: false}]->(f2)
+    MATCH (m2:Module {id: 'mod-db'}), (f3:Function {id: 'fn-query'}) MERGE (m2)-[:CONTAINS {exported: true}]->(f3)
+    MATCH (f1:Function {id: 'fn-login'}), (f2:Function {id: 'fn-validate'}) MERGE (f1)-[:CALLS {hot_path: true, call_site: 42}]->(f2)
+    MATCH (f2:Function {id: 'fn-validate'}), (f3:Function {id: 'fn-query'}) MERGE (f2)-[:CALLS {hot_path: false, call_site: 31}]->(f3)
+    MATCH (m:Module)-[:CONTAINS]->(caller:Function)-[c:CALLS]->(dep:Function) RETURN m.name AS module, m.coverage AS test_coverage, caller.name AS function, caller.complexity, c.hot_path, dep.name AS calls, dep.tested ORDER BY caller.complexity DESC
+
 ---
 
 # Code Intelligence
@@ -270,3 +284,12 @@ let nodes = vec![AstNode {
 let delta = extract_file("src/auth.rs", "rust", &nodes);
 ingester.ingest_code_delta(delta)?;
 ```
+
+---
+
+## See Also
+
+- [Agent-Native Database](/agent-native) — filesystem workspace and CLI binary patterns
+- [ArcFlow for Coding Agents](/guides/agent-integration) — structured errors, batch execution, and impact analysis
+- [Graph Algorithms](/algorithms) — PageRank and community detection for codebase importance ranking
+- [Use Case: Agent Tooling](/use-cases/agent-tooling) — ad-hoc graph processing for coding agents

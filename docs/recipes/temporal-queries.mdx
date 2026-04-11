@@ -3,6 +3,11 @@ title: "Recipe: Temporal Queries"
 description: "Time-travel queries using AS OF seq N to snapshot the graph, plus temporal decay and velocity metrics."
 section: "recipes"
 status: "stable"
+playground:
+  seed: world
+  query: |-
+    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH r, s, z, d, r.speed AS velocity, r.battery AS energy, s.reliability * d.confidence AS observation_trust RETURN r.name AS entity, r.task, r.x AS pos_x, r.y AS pos_y, velocity, energy, energy * velocity AS kinetic_index, observation_trust, d.confidence AS last_confidence, z.name AS zone ORDER BY velocity DESC
+
 ---
 
 # Recipe: Temporal Queries
@@ -47,3 +52,11 @@ const trajectory = db.query("CALL temporal.trajectory()")
 ```typescript
 const changes = db.query("CALL db.changesSince")
 ```
+
+---
+
+## See Also
+
+- [Temporal Queries](/temporal) — `AS OF`, `db.changesSince()`, and time-travel in depth
+- [Event Sourcing](/event-sourcing) — every mutation as a temporal fact
+- [Sync](/sync) — delta sync built on the same temporal log

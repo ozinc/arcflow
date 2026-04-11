@@ -5,6 +5,15 @@ section: "worldcypher/composition"
 order: 4
 since: "0.22.0"
 status: "stable"
+playground:
+  seed: world
+  query: |-
+    MATCH (r:Robot) RETURN r.name AS entity, 'robot' AS kind, r.battery AS health, r.task AS role, r.x AS world_x, r.y AS world_y
+    UNION
+    MATCH (s:Sensor) RETURN s.name AS entity, 'sensor' AS kind, s.reliability AS health, s.type AS role, s.x AS world_x, s.y AS world_y
+    UNION
+    MATCH (z:Zone) RETURN z.name AS entity, 'zone' AS kind, 1.0 - z.hazard AS health, z.id AS role, z.x AS world_x, z.y AS world_y
+
 ---
 
 # UNION

@@ -3,6 +3,28 @@ title: "Project Setup"
 description: "Embed the world model layer in any project — Node.js, Python, Rust, monorepo, test suite. Shared graph state across async workers, durable across restarts, one API everywhere."
 section: "get-started"
 status: "stable"
+playground:
+  query: |-
+    MERGE (z1:Zone {id: 'hall-a', name: 'Assembly Hall', x: 28.0, y: 8.0, radius: 22.0, hazard: 0.15})
+    MERGE (z2:Zone {id: 'bay-s', name: 'Storage Bay', x: -24.0, y: -12.0, radius: 18.0, hazard: 0.05})
+    MERGE (z3:Zone {id: 'ctrl', name: 'Control Room', x: 0.0, y: 0.0, radius: 5.0, hazard: 0.0})
+    MERGE (r1:Robot {id: 'asm-01', name: 'Assembler-01', task: 'assembly', x: 25.0, y: 7.0, speed: 1.1, battery: 88, status: 'active'})
+    MERGE (r2:Robot {id: 'asm-02', name: 'Assembler-02', task: 'assembly', x: 30.0, y: 9.5, speed: 1.0, battery: 74, status: 'active'})
+    MERGE (r3:Robot {id: 'ret-01', name: 'Retriever-01', task: 'retrieval', x: -22.0, y: -10.0, speed: 0.7, battery: 61, status: 'low-battery'})
+    MERGE (op1:Operator {id: 'supervisor', name: 'Dr. Kim', clearance: 5, x: 0.5, y: 1.0, certified: true, shift: 'day'})
+    MERGE (s1:Sensor {id: 's-cam-a', name: 'Cam-Assembly', type: 'camera', x: 16.0, y: 4.0, reliability: 0.96})
+    MERGE (s2:Sensor {id: 's-lidar-b', name: 'Lidar-Storage', type: 'lidar', x: -14.0, y: -6.0, reliability: 0.93})
+    MERGE (s3:Sensor {id: 's-rfid', name: 'RFID-Gate', type: 'rfid', x: 1.0, y: 9.0, reliability: 0.99})
+    MATCH (s1:Sensor {id: 's-cam-a'}), (r1:Robot {id: 'asm-01'}) MERGE (s1)-[:DETECTED {confidence: 0.95, method: 'vision'}]->(r1)
+    MATCH (s1:Sensor {id: 's-cam-a'}), (r2:Robot {id: 'asm-02'}) MERGE (s1)-[:DETECTED {confidence: 0.91, method: 'vision'}]->(r2)
+    MATCH (s2:Sensor {id: 's-lidar-b'}), (r3:Robot {id: 'ret-01'}) MERGE (s2)-[:DETECTED {confidence: 0.88, method: 'lidar'}]->(r3)
+    MATCH (s3:Sensor {id: 's-rfid'}), (op1:Operator {id: 'supervisor'}) MERGE (s3)-[:DETECTED {confidence: 0.99, method: 'rfid'}]->(op1)
+    MATCH (r1:Robot {id: 'asm-01'}), (z1:Zone {id: 'hall-a'}) MERGE (r1)-[:OCCUPIES {entered_seq: 1}]->(z1)
+    MATCH (r2:Robot {id: 'asm-02'}), (z1:Zone {id: 'hall-a'}) MERGE (r2)-[:OCCUPIES {entered_seq: 2}]->(z1)
+    MATCH (r3:Robot {id: 'ret-01'}), (z2:Zone {id: 'bay-s'}) MERGE (r3)-[:OCCUPIES {entered_seq: 1}]->(z2)
+    MATCH (op1:Operator {id: 'supervisor'}), (z3:Zone {id: 'ctrl'}) MERGE (op1)-[:OCCUPIES {entered_seq: 1}]->(z3)
+    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) RETURN z.name AS zone, z.hazard, r.name AS entity, r.task, r.battery, r.status, d.confidence AS trust, d.method, s.name AS sensor, s.reliability ORDER BY z.name, d.confidence DESC
+
 ---
 
 # Project Setup
@@ -115,3 +137,12 @@ Add to `.gitignore`:
 ```
 data/graph/
 ```
+
+---
+
+## See Also
+
+- [Quickstart](/quickstart) — first world model query in 5 minutes
+- [Installation](/installation) — pre-built binaries for all platforms
+- [Agent-Native Database](/agent-native) — filesystem workspace layout and CLI usage
+- [Language Bindings](/bindings) — Node.js, Python, Rust, Go, WASM

@@ -5,6 +5,18 @@ section: "guides"
 order: 2
 since: "0.3.0"
 status: "stable"
+playground:
+  seed: world
+  query: |-
+    MERGE (skill:Skill {id: 'entity-tracker', name: 'EntityTracker', version: 3, min_confidence: 0.82, active: true})
+    MERGE (s1:Sensor {id: 'cam-1', name: 'Cam-LabA', type: 'camera', reliability: 0.95})
+    MERGE (s2:Sensor {id: 'lidar-1', name: 'Lidar-LabB', type: 'lidar', reliability: 0.91})
+    MERGE (agent:Agent {id: 'tracker-agent', name: 'TrackerPrime', role: 'tracking', active: true})
+    MATCH (sk:Skill {id: 'entity-tracker'}), (s1:Sensor {id: 'cam-1'}) MERGE (sk)-[:APPLIED_TO {confidence_floor: 0.85, freq_hz: 25}]->(s1)
+    MATCH (sk:Skill {id: 'entity-tracker'}), (s2:Sensor {id: 'lidar-1'}) MERGE (sk)-[:APPLIED_TO {confidence_floor: 0.80, freq_hz: 10}]->(s2)
+    MATCH (ag:Agent {id: 'tracker-agent'}), (sk:Skill {id: 'entity-tracker'}) MERGE (ag)-[:EXECUTES {since_seq: 1, priority: 1}]->(sk)
+    MATCH (a:Agent)-[:EXECUTES]->(sk:Skill)-[ap:APPLIED_TO]->(s:Sensor)-[d:DETECTED]->(r:Robot) RETURN a.name AS agent, sk.name AS skill, sk.version, ap.confidence_floor AS min_confidence, ap.freq_hz AS poll_rate, s.name AS sensor, s.type, s.reliability, d.confidence AS live_detection_confidence, d.method, r.name AS tracked_entity ORDER BY d.confidence DESC
+
 ---
 
 # Using Constructors

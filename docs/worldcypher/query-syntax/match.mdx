@@ -8,6 +8,13 @@ status: "stable"
 related:
   - "/worldcypher/query-syntax/where"
   - "/worldcypher/query-syntax/return"
+playground:
+  seed: world
+  query: |-
+    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone)
+    WITH s, d, r, z, s.reliability * d.confidence AS composite_trust
+    RETURN s.name AS sensor, s.type AS modality, s.x AS sensor_x, s.y AS sensor_y, d.method, d.confidence, composite_trust, r.name AS robot, r.task, r.x AS robot_x, r.y AS robot_y, r.battery, z.name AS zone, z.hazard ORDER BY composite_trust DESC
+
 ---
 
 # MATCH

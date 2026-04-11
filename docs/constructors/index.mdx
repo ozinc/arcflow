@@ -5,6 +5,20 @@ section: "constructors"
 order: 1
 since: "0.2.0"
 status: "stable"
+playground:
+  seed: world
+  query: |-
+    MERGE (sk:Skill {id: 'zone-watch', name: 'ZoneWatch', version: 3, min_confidence: 0.82, radius: 25.0, active: true})
+    MERGE (a1:Agent {id: 'agent-01', name: 'Scout-Alpha', role: 'observer', active: true, zone: 'lab-a'})
+    MERGE (a2:Agent {id: 'agent-02', name: 'Scout-Beta', role: 'observer', active: true, zone: 'lab-b'})
+    MERGE (s1:Sensor {id: 'cam-1', name: 'Cam-LabA', type: 'camera', reliability: 0.95})
+    MERGE (s2:Sensor {id: 'lidar-1', name: 'Lidar-LabB', type: 'lidar', reliability: 0.91})
+    MATCH (sk:Skill {id: 'zone-watch'}), (a1:Agent {id: 'agent-01'}) MERGE (sk)-[:GOVERNS {since_seq: 1, priority: 1}]->(a1)
+    MATCH (sk:Skill {id: 'zone-watch'}), (a2:Agent {id: 'agent-02'}) MERGE (sk)-[:GOVERNS {since_seq: 1, priority: 2}]->(a2)
+    MATCH (a1:Agent {id: 'agent-01'}), (s1:Sensor {id: 'cam-1'}) MERGE (a1)-[:MONITORS {freq_hz: 25, since_seq: 1}]->(s1)
+    MATCH (a2:Agent {id: 'agent-02'}), (s2:Sensor {id: 'lidar-1'}) MERGE (a2)-[:MONITORS {freq_hz: 10, since_seq: 1}]->(s2)
+    MATCH (sk:Skill)-[g:GOVERNS]->(a:Agent)-[m:MONITORS]->(s:Sensor) RETURN sk.name AS constructor, sk.version, sk.min_confidence, g.priority, a.name AS agent, a.role, m.freq_hz AS sensor_poll_hz, s.name AS sensor, s.type, s.reliability ORDER BY g.priority
+
 ---
 
 # Constructor Operations
@@ -18,3 +32,12 @@ Constructors turn static graphs into self-building systems. Register rules, proc
 | [CREATE CONSTRUCTOR](/constructors/create-constructor) | Register a new constructor |
 | [PROCESS NODE](/constructors/process-node) | Execute constructors against nodes |
 | [REPROCESS EDGES](/constructors/reprocess-edges) | Re-evaluate low-confidence edges |
+
+---
+
+## See Also
+
+- [Using Constructors](/guides/using-constructors) — step-by-step guide with real examples
+- [Observations & Evidence](/concepts/observations) — the observation model that constructors write to
+- [Confidence & Provenance](/concepts/confidence-and-provenance) — how constructor edges carry confidence scores
+- [Use Case: Knowledge Management](/use-cases/knowledge-management) — constructors in an entity extraction pipeline

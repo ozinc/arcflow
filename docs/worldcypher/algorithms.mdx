@@ -3,6 +3,11 @@ title: "WorldCypher: Graph Algorithms"
 description: "Built-in graph algorithms including PageRank, community detection, vector search, and GraphRAG with confidence propagation."
 section: "worldcypher"
 status: "stable"
+playground:
+  seed: world
+  query: |-
+    CALL algo.pageRank()
+
 ---
 
 # WorldCypher: Graph Algorithms
@@ -90,3 +95,12 @@ for (const row of pr.rows) {
 // Live (incrementally maintained)
 const live = db.query("LIVE CALL algo.pageRank()")
 ```
+
+---
+
+## See Also
+
+- [Graph Algorithms](/algorithms) — full algorithm catalog with signatures and output schemas
+- [GPU Acceleration](/gpu) — automatic Metal/CUDA dispatch for large graphs
+- [Live Queries](/live-queries) — `LIVE CALL algo.pageRank()` for continuously maintained algorithm results
+- [Trusted RAG](/trusted-rag) — `algo.graphRAG()` in a confidence-filtered retrieval pipeline

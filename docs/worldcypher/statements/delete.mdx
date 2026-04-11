@@ -5,6 +5,16 @@ section: "worldcypher/statements"
 order: 7
 since: "0.2.0"
 status: "stable"
+playground:
+  seed: |-
+    MERGE (o:Observation {id: 'obs-ghost-1', label: 'ghost_silhouette', confidence: 0.12, source: 'cam-1', seq: 1001})
+    MERGE (o2:Observation {id: 'obs-ghost-2', label: 'reflection_artifact', confidence: 0.08, source: 'lidar-1', seq: 1002})
+    MERGE (o3:Observation {id: 'obs-valid', label: 'robot_confirmed', confidence: 0.94, source: 'cam-1', seq: 1003})
+  query: |-
+    MATCH (o:Observation) WHERE o.confidence < 0.25 DETACH DELETE o
+    
+    MATCH (o:Observation) RETURN o.id, o.label, o.confidence AS trust, o.source ORDER BY o.confidence DESC
+
 ---
 
 # DELETE

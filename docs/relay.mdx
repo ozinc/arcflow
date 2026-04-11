@@ -3,6 +3,17 @@ title: "Intent Relay"
 description: "Contribute world model features without source code access — describe what you want, the relay builds it and routes it to the right integration surface."
 section: "capabilities"
 status: "stable"
+playground:
+  query: |-
+    MERGE (ctrl:Agent {id: 'ctrl', name: 'ControlCenter', role: 'hub', hops: 0})
+    MERGE (fa:Agent {id: 'field-a', name: 'FieldAgent-Alpha', role: 'field', lat_ms: 12, hops: 1, zone: 'lab-a'})
+    MERGE (fb:Agent {id: 'field-b', name: 'FieldAgent-Beta', role: 'field', lat_ms: 14, hops: 1, zone: 'lab-b'})
+    MERGE (sa:Agent {id: 'sub-a', name: 'SubAgent-A1', role: 'subagent', lat_ms: 28, hops: 2, zone: 'lab-a'})
+    MATCH (ctrl:Agent {id: 'ctrl'}), (fa:Agent {id: 'field-a'}) MERGE (ctrl)-[:RELAYS_TO {intent: 'patrol', priority: 1, channel: 'primary', reliability: 0.99}]->(fa)
+    MATCH (ctrl:Agent {id: 'ctrl'}), (fb:Agent {id: 'field-b'}) MERGE (ctrl)-[:RELAYS_TO {intent: 'inspect', priority: 2, channel: 'primary', reliability: 0.99}]->(fb)
+    MATCH (fa:Agent {id: 'field-a'}), (sa:Agent {id: 'sub-a'}) MERGE (fa)-[:RELAYS_TO {intent: 'monitor', priority: 1, channel: 'local', reliability: 0.95}]->(sa)
+    MATCH (src:Agent)-[r:RELAYS_TO]->(dst:Agent) RETURN src.name AS from_agent, src.role, r.intent, r.priority, r.channel, r.reliability, dst.name AS to_agent, dst.role, dst.lat_ms AS latency_ms, dst.hops ORDER BY dst.hops, r.priority
+
 ---
 
 # Intent Relay
@@ -145,3 +156,11 @@ arcflow-relay verify     # Verify artifact signature
 ## A2A Protocol
 
 The relay uses the Agent-to-Agent (A2A) protocol for communication. Each intent is wrapped in an A2A Message with structured Parts (text description, test cases, context).
+
+---
+
+## See Also
+
+- [Agent-Native Database](/agent-native) — the integration surfaces the relay routes to
+- [MCP Server](/mcp) — cloud chat UI integration for agents without local shell access
+- [Constructors](/concepts/constructors) — declarative relationship rules: another way to add world model features

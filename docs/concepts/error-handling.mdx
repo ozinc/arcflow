@@ -3,6 +3,11 @@ title: "Error Handling"
 description: "Structured errors with machine-readable codes and recovery hints — so agents and applications can self-correct without fragile string matching."
 section: "concepts"
 status: "stable"
+playground:
+  seed: world
+  query: |-
+    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot) WITH s, d, r, s.reliability * d.confidence AS composite_trust RETURN s.name AS sensor, s.type, s.reliability AS sensor_quality, d.confidence AS detection_confidence, composite_trust, r.name AS entity, r.task, CASE WHEN composite_trust < 0.80 THEN 'ERROR - below threshold, verify reading' WHEN composite_trust < 0.90 THEN 'WARN - moderate confidence, monitor' ELSE 'OK - high-confidence observation' END AS diagnostic ORDER BY composite_trust ASC
+
 ---
 
 # Error Handling
@@ -114,3 +119,11 @@ if (!db.isHealthy()) {
   // Reinitialize or alert
 }
 ```
+
+---
+
+## See Also
+
+- [Error Codes](/reference/errors) — complete typed error model and recovery hints
+- [ArcFlow for Coding Agents](/guides/agent-integration) — how agents pattern-match on error codes
+- [Parameters](/concepts/parameters) — `$param` placeholders prevent injection errors

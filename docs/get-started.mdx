@@ -3,6 +3,13 @@ title: "Get Started"
 description: "ArcFlow is the World Model database — spatial-temporal, confidence-scored, embedded. Runs in browser, Node.js, Python, Rust, and Docker with no server needed."
 section: "get-started"
 status: "stable"
+playground:
+  seed: world
+  query: |-
+    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone)
+    WITH s, d, r, z, s.reliability * d.confidence AS composite_trust
+    RETURN s.name AS sensor, s.type AS modality, s.reliability AS sensor_reliability, d.method AS detection_method, d.confidence AS detection_confidence, composite_trust, r.name AS robot, r.task, r.battery, r.x AS world_x, r.y AS world_y, z.name AS zone, z.hazard AS zone_hazard ORDER BY composite_trust DESC
+
 ---
 
 # Get Started

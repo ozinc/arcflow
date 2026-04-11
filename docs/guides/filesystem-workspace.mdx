@@ -1,10 +1,23 @@
 ---
 title: "Filesystem Workspace"
-description: "How ArcFlow stores data on disk, how to connect Claude Code, and how AI agents interact with persistent graph state"
+description: "The world model on disk — storage layout, WAL configuration, Claude Code setup, and how shell-native agents read and write persistent graph state."
 section: "guides"
 order: 4
 since: "10.0.0"
 status: "stable"
+playground:
+  query: |-
+    MERGE (f1:File {id: 'src/main.ts', name: 'main.ts', type: 'entrypoint', loc: 85, critical: true})
+    MERGE (f2:File {id: 'src/lib/db.ts', name: 'db.ts', type: 'library', loc: 240, critical: true})
+    MERGE (f3:File {id: 'src/lib/auth.ts', name: 'auth.ts', type: 'library', loc: 320, critical: true})
+    MERGE (f4:File {id: 'src/api/routes.ts', name: 'routes.ts', type: 'api', loc: 155, critical: false})
+    MERGE (f5:File {id: 'src/utils/logger.ts', name: 'logger.ts', type: 'utility', loc: 60, critical: false})
+    MATCH (f1:File {id: 'src/main.ts'}), (f2:File {id: 'src/lib/db.ts'}) MERGE (f1)-[:IMPORTS {static: true}]->(f2)
+    MATCH (f1:File {id: 'src/main.ts'}), (f3:File {id: 'src/lib/auth.ts'}) MERGE (f1)-[:IMPORTS {static: true}]->(f3)
+    MATCH (f4:File {id: 'src/api/routes.ts'}), (f2:File {id: 'src/lib/db.ts'}) MERGE (f4)-[:IMPORTS {static: true}]->(f2)
+    MATCH (f3:File {id: 'src/lib/auth.ts'}), (f5:File {id: 'src/utils/logger.ts'}) MERGE (f3)-[:IMPORTS {static: false}]->(f5)
+    MATCH (f:File)-[:IMPORTS]->(dep:File) WITH dep.name AS dependency, dep.type, dep.loc, dep.critical, count(f) AS dependents RETURN dependency, type, loc, critical, dependents ORDER BY dependents DESC
+
 ---
 
 # Filesystem Workspace
@@ -342,3 +355,12 @@ arcflow --http 8080 --data-dir .arcflow/data
 - **Version control:** Add `.arcflow/config.yaml` to git. Add `.arcflow/data/` to `.gitignore`.
 - **Inspect the data:** `cat .arcflow/data/worldcypher.snapshot.json | python3 -m json.tool`
 - **Export for other tools:** Use `:export graphml graph.xml` for Gephi, yEd, or Cytoscape.
+
+---
+
+## See Also
+
+- [Agent-Native Database](/agent-native) — filesystem workspace architecture and multi-agent coordination
+- [CLI](/cli) — full command reference, flags, watch mode, and batch execution
+- [ArcFlow for Coding Agents](/guides/agent-integration) — structured errors, dry-run validation, and schema discovery
+- [Swarm & Multi-Agent](/guides/swarm-agents) — sharing a workspace across multiple agents

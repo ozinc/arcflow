@@ -5,6 +5,11 @@ section: "reference"
 order: 2
 since: "0.1.0"
 status: "stable"
+playground:
+  seed: world
+  query: |-
+    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot) WITH s, d, r, s.reliability * d.confidence AS composite_trust RETURN s.name AS sensor, s.reliability AS sensor_quality, d.confidence AS detection_confidence, composite_trust, r.name AS entity, r.task, CASE WHEN composite_trust < 0.75 THEN 'E_TRUST_LOW - below minimum threshold' WHEN s.reliability < 0.85 THEN 'W_SENSOR_DEGRADED - sensor reliability nominal' WHEN d.confidence < 0.80 THEN 'W_DETECTION_WEAK - confidence marginal' ELSE 'OK - observation accepted' END AS error_code ORDER BY composite_trust ASC
+
 ---
 
 # Errors
@@ -90,3 +95,11 @@ Telemetry flows through the same sync channel that ArcFlow Cloud uses for fragme
 OZ's AIOps team monitors telemetry across the fleet continuously. If your engine hits a pattern that's been seen (and solved) elsewhere, you benefit from that fix faster. If your deployment surfaces a new edge case, the engineering team sees it before it becomes a problem. You're not debugging alone.
 
 You can disable telemetry at any time. The engine runs identically with or without it.
+
+---
+
+## See Also
+
+- [Error Handling](/concepts/error-handling) — structured errors with machine-readable codes and recovery hints
+- [TypeScript API Reference](/reference/api) — `db.query()` and `db.mutate()` error surfaces
+- [ArcFlow for Coding Agents](/guides/agent-integration) — how agents pattern-match on error codes and self-correct

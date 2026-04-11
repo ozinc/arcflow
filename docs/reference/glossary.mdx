@@ -1,8 +1,13 @@
 ---
 title: "Glossary"
-description: "Definitions for graph, GQL, and ArcFlow-specific terms"
+description: "Graph, GQL, and world model terms — definitions for ArcFlow's core concepts."
 section: "reference"
 status: "stable"
+playground:
+  seed: world
+  query: |-
+    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH s, d, r, z, s.reliability * d.confidence AS composite_trust RETURN s.name AS sensor, s.reliability AS sensor_reliability, d.confidence AS detection_confidence, d.method AS observation_method, composite_trust AS composite_trust_definition, r.name AS entity, r.task, r.x AS world_x, r.y AS world_y, z.name AS zone, z.hazard AS hazard_level ORDER BY composite_trust DESC
+
 ---
 
 # Glossary

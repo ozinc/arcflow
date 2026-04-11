@@ -1,10 +1,26 @@
 ---
 title: "Behavior Graph"
-description: "Behavior Trees backed by a knowledge graph — persistent, temporal, queryable"
+description: "Behavior trees embedded in the world model — persistent, temporal, and queryable with full GQL. The tree IS the graph."
 section: "behavior-graph"
 order: 1
 since: "10.0.0"
 status: "preview"
+playground:
+  seed: world
+  query: |-
+    MERGE (coord:Agent {id: 'coord', name: 'Coordinator', role: 'orchestrator', active: true})
+    MERGE (plan:Agent {id: 'planner', name: 'Planner', role: 'planning', active: true})
+    MERGE (exec:Agent {id: 'executor', name: 'Executor', role: 'execution', active: true})
+    MERGE (guard:Agent {id: 'guardian', name: 'Guardian', role: 'safety', active: true})
+    MERGE (s1:Sensor {id: 'cam-1', name: 'Cam-LabA', type: 'camera', reliability: 0.95})
+    MERGE (s2:Sensor {id: 'lidar-1', name: 'Lidar-LabB', type: 'lidar', reliability: 0.91})
+    MATCH (coord:Agent {id: 'coord'}), (plan:Agent {id: 'planner'}) MERGE (coord)-[:DELEGATES_TO {on_event: 'detection', threshold: 0.85, priority: 1}]->(plan)
+    MATCH (coord:Agent {id: 'coord'}), (guard:Agent {id: 'guardian'}) MERGE (coord)-[:DELEGATES_TO {on_event: 'hazard_alert', threshold: 0.70, priority: 0}]->(guard)
+    MATCH (plan:Agent {id: 'planner'}), (exec:Agent {id: 'executor'}) MERGE (plan)-[:DELEGATES_TO {on_event: 'plan_ready', threshold: 0.80, priority: 2}]->(exec)
+    MATCH (plan:Agent {id: 'planner'}), (s1:Sensor {id: 'cam-1'}) MERGE (plan)-[:MONITORS {since_seq: 1, freq_hz: 10}]->(s1)
+    MATCH (guard:Agent {id: 'guardian'}), (s2:Sensor {id: 'lidar-1'}) MERGE (guard)-[:MONITORS {since_seq: 1, freq_hz: 25}]->(s2)
+    MATCH (a:Agent)-[d:DELEGATES_TO]->(b:Agent) RETURN a.name AS from_agent, a.role, d.on_event, d.threshold AS confidence_threshold, d.priority, b.name AS to_agent, b.role ORDER BY d.priority
+
 ---
 
 # ArcFlow Behavior Graph
@@ -315,7 +331,7 @@ This isn't a new engine — it's a thin orchestration layer over existing ArcFlo
 | Blackboard | `GraphStore` |
 | Conditions | GQL queries (row count > 0 = SUCCESS) |
 | Actions | GQL mutations |
-| Reactivity | Live queries + subscriptions |
+| Live conditions | Live queries + subscriptions |
 | Memory | Temporal `AS OF` queries |
 | Trust | Confidence scores + provenance |
 
@@ -332,3 +348,13 @@ ArcFlow's behavior graphs serve as the coordination layer for autonomous systems
 **Autonomous systems with safety boundaries.** Behavior graphs driving real-world actuators (robots, vehicles, industrial controls) support formal safety constraints: invariant checks that halt a behavior tree before it can violate a safety property, with the full temporal log available for post-incident analysis.
 
 **Spatial-temporal fusion.** Behavior trees that reason over spatial state (sensor data, positions, zones) and temporal state (what happened, when, in what order) in a single query language. This is the foundation for robotics mission planning and autonomous vehicle decision-making.
+
+---
+
+## See Also
+
+- [Use Case: Behavior Graphs](/use-cases/behavior-graphs) — lightweight implementation sketch and architecture overview
+- [Use Case: Autonomous Systems](/use-cases/autonomous-systems) — multi-agent fleet coordination with behavior trees
+- [Live Queries](/live-queries) — `LIVE MATCH` for condition nodes that fire on world model state changes
+- [Temporal Queries](/temporal) — `AS OF seq N` to replay agent decision history
+- [Spatial Queries](/worldcypher/spatial) — spatial condition checks (proximity, zones, sensor ranges)

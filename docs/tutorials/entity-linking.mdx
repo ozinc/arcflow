@@ -3,6 +3,17 @@ title: "Tutorial: Entity Linking"
 description: "Merge records that refer to the same real-world entity — confidence-scored SAME_AS edges, fact nodes with provenance, batch pipeline pattern."
 section: "tutorials"
 status: "stable"
+playground:
+  query: |-
+    MERGE (robot:Robot {id: 'r1', name: 'Atlas-01', canonical: true, x: 18.0, y: 8.5, battery: 87, task: 'assembly'})
+    MERGE (obs_cam:Observation {id: 'obs-cam-r1', source: 'cam-1', label: 'Robot-Silhouette-34', confidence: 0.96})
+    MERGE (obs_lidar:Observation {id: 'obs-lidar-r1', source: 'lidar-1', label: 'Object-3D-12', confidence: 0.89})
+    MERGE (obs_rfid:Observation {id: 'obs-rfid-r1', source: 'rfid-1', label: 'Tag-F3A2', confidence: 0.99})
+    MATCH (robot:Robot {id: 'r1'}), (obs_cam:Observation {id: 'obs-cam-r1'}) MERGE (obs_cam)-[:RESOLVES_TO {method: 'vision-match', verified: true, strength: 0.96}]->(robot)
+    MATCH (robot:Robot {id: 'r1'}), (obs_lidar:Observation {id: 'obs-lidar-r1'}) MERGE (obs_lidar)-[:RESOLVES_TO {method: 'geometry-match', verified: false, strength: 0.89}]->(robot)
+    MATCH (robot:Robot {id: 'r1'}), (obs_rfid:Observation {id: 'obs-rfid-r1'}) MERGE (obs_rfid)-[:RESOLVES_TO {method: 'rfid-tag', verified: true, strength: 0.99}]->(robot)
+    MATCH (obs:Observation)-[r:RESOLVES_TO]->(entity:Robot) RETURN obs.source AS sensor, obs.label AS raw_observation, obs.confidence AS raw_confidence, r.method AS linking_method, r.verified, r.strength AS link_strength, entity.name AS resolved_entity, entity.task, entity.x, entity.y ORDER BY r.strength DESC
+
 ---
 
 # Tutorial: Entity Linking
@@ -135,3 +146,12 @@ function projectBatch(db: ArcflowDB, entities: EntityRecord[]) {
   }
 }
 ```
+
+---
+
+## See Also
+
+- [Knowledge Graph Tutorial](/tutorials/knowledge-graph) — build the world model these entities live in
+- [Use Case: Knowledge Management](/use-cases/knowledge-management) — entity extraction in production pipelines
+- [Constructors](/concepts/constructors) — declarative rules that link entities automatically
+- [Confidence & Provenance](/concepts/confidence-and-provenance) — scoring links you infer

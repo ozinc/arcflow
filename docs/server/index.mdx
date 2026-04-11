@@ -5,6 +5,11 @@ section: "server"
 order: 1
 since: "0.11.0"
 status: "stable"
+playground:
+  seed: world
+  query: |-
+    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z, r, d, s RETURN z.name AS zone, z.hazard, count(r) AS robot_count, avg(d.confidence) AS avg_detection_quality, avg(s.reliability * d.confidence) AS composite_coverage ORDER BY composite_coverage DESC
+
 ---
 
 # Server & Access Layers
@@ -410,7 +415,7 @@ Returns available algorithms, procedures, built-in functions, observation classe
 {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"get_capabilities","arguments":{}}}
 ```
 
-Response includes: 20 graph algorithms (pageRank, louvain, dijkstra, graphRAG, etc.), 68 procedures, 81 built-in functions, observation classes (observed, inferred, predicted), and all supported query clauses.
+Response includes: 27 graph algorithms (pageRank, louvain, dijkstra, graphRAG, etc.), full CALL procedure suite, 83 built-in functions, observation classes (observed, inferred, predicted), and all supported query clauses.
 
 #### `read_query`
 

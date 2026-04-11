@@ -3,6 +3,11 @@ title: "Use Case: Sports Analytics"
 description: "Sports analytics as a world model problem — spatial-temporal player tracking, confidence-scored events, formation algorithms, and real-time queries in one engine"
 section: "use-cases"
 status: "stable"
+playground:
+  seed: world
+  query: |-
+    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z, count(r) AS entity_count, avg(r.battery) AS avg_battery, avg(r.speed) AS avg_speed, avg(d.confidence) AS avg_detection_trust, avg(s.reliability * d.confidence) AS avg_composite_trust, count(s) AS active_sensors RETURN z.name AS zone, z.hazard, entity_count, avg_battery, avg_speed, avg_composite_trust AS sensor_coverage_quality, active_sensors, CASE WHEN avg_composite_trust >= 0.9 THEN 'high coverage' WHEN avg_composite_trust >= 0.75 THEN 'adequate coverage' ELSE 'coverage gaps' END AS zone_observability ORDER BY avg_composite_trust DESC
+
 ---
 
 # Use Case: Sports Analytics

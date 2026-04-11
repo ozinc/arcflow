@@ -1,8 +1,13 @@
 ---
 title: "Use Case: Grounded Neural Objects"
-description: "Grounded neural objects model with spatial position, per-dimension confidence, temporal history, and live view relations."
+description: "Lift detections into the world model — persistent entities with spatial position, per-dimension confidence, temporal history, and live view relations."
 section: "use-cases"
 status: "stable"
+playground:
+  seed: world
+  query: |-
+    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH s, d, r, z, s.reliability * d.confidence AS grounding_confidence, (r.x - s.x) * (r.x - s.x) + (r.y - s.y) * (r.y - s.y) AS spatial_distance_sq RETURN r.name AS gno_id, r.task AS entity_type, r.x AS world_x, r.y AS world_y, r.speed AS velocity, r.battery AS energy, grounding_confidence, spatial_distance_sq, d.method AS perception_modality, z.name AS spatial_context, z.hazard AS hazard_level, CASE WHEN grounding_confidence >= 0.90 THEN 'grounded - high fidelity' WHEN grounding_confidence >= 0.80 THEN 'partially grounded - acceptable' ELSE 'ungrounded - needs verification' END AS grounding_state ORDER BY grounding_confidence DESC
+
 ---
 
 # Use Case: Grounded Neural Objects

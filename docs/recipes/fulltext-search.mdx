@@ -3,6 +3,11 @@ title: "Recipe: Full-Text Search"
 description: "BM25-scored full-text search over node properties with multi-property indexing and parameterized queries."
 section: "recipes"
 status: "stable"
+playground:
+  seed: world
+  query: |-
+    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WHERE r.name CONTAINS 'las' OR r.task CONTAINS 'inspect' WITH s, d, r, z, s.reliability * d.confidence AS composite_trust RETURN r.name AS robot, r.task, r.battery, composite_trust, d.method AS detected_by, s.name AS sensor, z.name AS zone ORDER BY composite_trust DESC
+
 ---
 
 # Recipe: Full-Text Search
@@ -44,3 +49,11 @@ db.mutate("CREATE FULLTEXT INDEX doc_search FOR (n:Document) ON (n.title, n.body
 ```typescript
 const indexes = db.query("CALL db.fulltextIndexes")
 ```
+
+---
+
+## See Also
+
+- [Vector Search](/vector-search) — semantic (embedding-based) search alongside full-text
+- [Trusted RAG](/trusted-rag) — confidence-filtered retrieval combining full-text and graph
+- [Indexes](/worldcypher/schema/indexes) — index creation and management

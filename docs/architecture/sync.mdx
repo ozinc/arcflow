@@ -3,6 +3,11 @@ title: "Sync Architecture"
 description: "Local-first sync — browser/edge instances sync to cloud via HTTPS using WAL deltas and Z-set conflict resolution"
 section: "operations"
 status: "stable"
+playground:
+  seed: world
+  query: |-
+    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS entities, avg(s.reliability * d.confidence) AS sync_quality RETURN zone, hazard, entities, sync_quality, CASE WHEN sync_quality >= 0.88 THEN 'push - authoritative' WHEN sync_quality >= 0.70 THEN 'pull - verify' ELSE 'stale - resync' END AS sync_directive ORDER BY sync_quality DESC
+
 ---
 
 # Sync Architecture
@@ -241,3 +246,11 @@ GET    /v1/graphs/:id/status    — sync status, peer count, lag
 - Optional: per-peer write permissions (read-only replicas)
 - Fingerprint verification prevents tampering
 - WAL ops are signed with peer_id for provenance
+
+---
+
+## See Also
+
+- [Sync](/sync) — capability overview: WAL delta, conflict resolution, and `db.changesSince()`
+- [Cloud Architecture](/cloud-architecture) — edge mesh, WAL segment shipping, and CDC delta sync
+- [Architecture](/architecture) — in-process engine architecture and storage model

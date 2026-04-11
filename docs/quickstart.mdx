@@ -3,6 +3,13 @@ title: "Quickstart"
 description: "First world model in ArcFlow — entities in space, confidence-scored observations, spatial proximity queries, temporal replay. One process, no server."
 section: "get-started"
 status: "stable"
+playground:
+  seed: world
+  query: |-
+    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone)
+    WITH z.name AS zone, z.hazard AS hazard, z.radius AS zone_radius, count(r) AS robots_present, avg(r.battery) AS avg_battery, avg(r.speed) AS avg_speed, avg(s.reliability * d.confidence) AS composite_coverage
+    RETURN zone, hazard, zone_radius, robots_present, avg_battery, avg_speed, composite_coverage, CASE WHEN composite_coverage >= 0.90 THEN 'fully-monitored' WHEN composite_coverage >= 0.80 THEN 'monitored' ELSE 'blind-spot' END AS coverage_status ORDER BY composite_coverage DESC
+
 ---
 
 # Quickstart

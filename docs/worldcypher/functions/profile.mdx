@@ -5,6 +5,13 @@ section: "worldcypher/functions"
 order: 6
 since: "0.22.0"
 status: "stable"
+playground:
+  seed: world
+  query: |-
+    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone)
+    WITH s, d, r, z, s.reliability * d.confidence AS composite_trust, d.confidence * r.battery AS operational_score
+    RETURN s.name AS sensor, s.type, s.reliability, d.method, composite_trust, r.name AS robot, r.task, r.battery, operational_score, z.name AS zone, z.hazard ORDER BY composite_trust DESC
+
 ---
 
 # PROFILE

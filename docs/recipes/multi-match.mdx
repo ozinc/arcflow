@@ -3,6 +3,11 @@ title: "Recipe: Multi-MATCH Patterns"
 description: "Multiple independent MATCH patterns with alias resolution and optional matches for cross-join and left-join semantics."
 section: "recipes"
 status: "stable"
+playground:
+  seed: world
+  query: |-
+    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH s, d, r, z, s.reliability * d.confidence AS composite_trust, (r.x - s.x) * (r.x - s.x) + (r.y - s.y) * (r.y - s.y) AS range_sq RETURN s.name AS sensor, s.type, d.method AS detection_method, composite_trust, range_sq, r.name AS robot, r.task, r.battery, z.name AS zone, z.hazard ORDER BY composite_trust DESC
+
 ---
 
 # Recipe: Multi-MATCH Patterns
@@ -63,3 +68,11 @@ const result = db.query(`
 `, { id: 'p1' })
 // If person has no WORKS_AT, oName is null
 ```
+
+---
+
+## See Also
+
+- [OPTIONAL MATCH reference](/worldcypher/query-syntax/optional-match) — nullable match patterns
+- [WITH reference](/worldcypher/composition/with) — chaining multiple MATCH stages
+- [Graph Patterns](/concepts/graph-patterns) — path expressions and variable-length traversals

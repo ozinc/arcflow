@@ -5,6 +5,11 @@ section: "worldcypher/functions"
 order: 9
 since: "0.4.0"
 status: "stable"
+playground:
+  seed: world
+  query: |-
+    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) RETURN z.name AS zone, z.hazard, count(r) AS robot_count, avg(r.battery) AS avg_battery, avg(r.speed) AS avg_speed, avg(s.reliability * d.confidence) AS avg_detection_quality ORDER BY avg_detection_quality DESC
+
 ---
 
 # Aggregations & Window Functions

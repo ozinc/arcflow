@@ -3,6 +3,11 @@ title: "Recipe: GraphRAG"
 description: "Retrieval-augmented generation combining vector search, graph traversal, and LLM context generation."
 section: "recipes"
 status: "stable"
+playground:
+  seed: world
+  query: |-
+    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WHERE s.reliability >= 0.9 AND d.confidence >= 0.88 WITH s, d, r, z, s.reliability * d.confidence AS composite_trust RETURN composite_trust, s.name AS evidence_source, s.type AS modality, d.method AS observation_method, r.name AS entity, r.task, r.x AS subject_x, r.y AS subject_y, r.battery, z.name AS spatial_context, z.hazard AS context_hazard, CASE WHEN composite_trust >= 0.93 THEN 'tier-1 - inject as fact' WHEN composite_trust >= 0.88 THEN 'tier-2 - inject with source' ELSE 'tier-3 - summarize only' END AS rag_tier ORDER BY composite_trust DESC
+
 ---
 
 # Recipe: GraphRAG
@@ -94,3 +99,12 @@ const vectorResults = db.query(
 
 // Merge results and feed to LLM
 ```
+
+---
+
+## See Also
+
+- [Trusted RAG](/trusted-rag) — confidence-filtered retrieval with observation classes and provenance
+- [Vector Search](/vector-search) — HNSW index setup and hybrid search configuration
+- [Graph Algorithms](/algorithms) — `algo.graphRAG()`, `algo.pageRank()` for importance ranking
+- [Use Case: Knowledge Management](/use-cases/knowledge-management) — full knowledge world model pipeline

@@ -7,6 +7,14 @@ since: "0.2.0"
 status: "stable"
 related:
   - "/worldcypher/query-syntax/match"
+playground:
+  seed: world
+  query: |-
+    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone)
+    WHERE d.confidence > 0.88 AND s.reliability >= 0.91 AND r.battery >= 60 AND z.hazard < 0.2
+    WITH s, d, r, z, s.reliability * d.confidence AS composite_trust
+    RETURN s.name AS sensor, s.reliability, d.confidence, composite_trust, d.method, r.name AS robot, r.task, r.battery, z.name AS zone ORDER BY composite_trust DESC
+
 ---
 
 # WHERE

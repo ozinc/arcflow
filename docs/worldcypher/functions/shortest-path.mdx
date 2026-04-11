@@ -5,6 +5,12 @@ section: "worldcypher/functions"
 order: 10
 since: "0.6.0"
 status: "stable"
+playground:
+  seed: world
+  query: |-
+    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[occ:OCCUPIES]->(z:Zone)
+    RETURN s.name AS path_origin, s.type AS sensor_type, s.reliability AS origin_reliability, d.method AS detection_method, d.confidence AS detection_confidence, r.name AS via_robot, r.task, r.x AS robot_x, r.y AS robot_y, occ.entered_seq AS zone_entry_seq, z.name AS path_destination, z.hazard AS destination_hazard ORDER BY d.confidence DESC
+
 ---
 
 # shortestPath

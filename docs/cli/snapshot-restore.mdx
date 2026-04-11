@@ -5,6 +5,12 @@ section: "cli"
 order: 3
 since: "0.2.0"
 status: "stable"
+playground:
+  seed: world
+  query: |-
+    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone)
+    RETURN r.name AS robot, r.task, r.battery, r.speed, r.x, r.y, s.name AS sensor, s.type, d.confidence AS trust, d.method, z.name AS zone ORDER BY r.name
+
 ---
 
 # Snapshot & Restore

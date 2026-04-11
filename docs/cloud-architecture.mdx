@@ -1,9 +1,14 @@
 ---
 title: "Cloud Architecture"
-description: "ArcFlow Edge Mesh — a distributed graph database that runs everywhere, not just one data center"
+description: "The world model at every edge — browser, Cloudflare Workers, mobile, and a GPU-accelerated origin, synced by WAL delta, no centralized server required."
 section: "cloud-architecture"
 order: 1
 since: "10.1.0"
+playground:
+  seed: world
+  query: |-
+    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH s, d, r, z, s.reliability * d.confidence AS replication_quality RETURN z.name AS zone, z.hazard AS hazard, r.name AS robot, r.task, r.battery AS battery_level, replication_quality, d.confidence AS detection_quality, s.name AS sensor, s.reliability ORDER BY replication_quality DESC
+
 ---
 
 # ArcFlow Cloud: Edge-Native Graph Mesh
@@ -187,3 +192,12 @@ ArcFlow Cloud is not a cheaper managed graph database. It's a different architec
 The graph database market is \$5.3B and growing 24% annually. Every player offers the same thing: a centralized cloud database. ArcFlow is the only engine that can run at every edge PoP worldwide, sync to a GPU-accelerated origin, and also run offline in the browser.
 
 That's not a feature improvement. It's a category shift.
+
+---
+
+## See Also
+
+- [Sync](/sync) — WAL-based delta sync, conflict resolution, and `db.changesSince()`
+- [Sync Protocol (Deep Dive)](/architecture/sync) — sequence numbers, vector clocks, and merge strategies
+- [Platform](/platform) — browser WASM, Docker, Cloudflare Workers, and mobile runtimes
+- [Agent-Native Database](/agent-native) — multi-agent coordination on shared world model state

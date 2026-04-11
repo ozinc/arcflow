@@ -1,128 +1,148 @@
 ---
 title: "Agent-Native Database"
-description: "The world model layer for AI agents — persistent, spatial-temporal, confidence-scored. Single agents use it as working memory. Agent swarms use it as a shared substrate for coordinated action without message brokers."
+description: "The world model as files — query it like grep, version it like git, share it like a directory. Shell-native agents don't need a protocol bridge to their own machine."
 section: "agent-native"
 order: 1
 since: "8.0.0"
 status: "stable"
+playground:
+  seed: world
+  query: |-
+    MERGE (dir:Agent {id: 'director', name: 'Director', role: 'orchestrator', active: true})
+    MERGE (per:Agent {id: 'perceiver', name: 'Perceiver', role: 'perception', active: true})
+    MERGE (pln:Agent {id: 'planner', name: 'Planner', role: 'planning', active: true})
+    MERGE (s1:Sensor {id: 'cam-1', name: 'Cam-LabA', type: 'camera', reliability: 0.95})
+    MERGE (s2:Sensor {id: 'lidar-1', name: 'Lidar-LabB', type: 'lidar', reliability: 0.91})
+    MATCH (dir:Agent {id: 'director'}), (per:Agent {id: 'perceiver'}) MERGE (dir)-[:DELEGATES_TO {task: 'monitor', confidence_floor: 0.85, seq: 1}]->(per)
+    MATCH (dir:Agent {id: 'director'}), (pln:Agent {id: 'planner'}) MERGE (dir)-[:DELEGATES_TO {task: 'plan', confidence_floor: 0.90, seq: 2}]->(pln)
+    MATCH (per:Agent {id: 'perceiver'}), (s1:Sensor {id: 'cam-1'}) MERGE (per)-[:MONITORS {since_seq: 1, priority: 1}]->(s1)
+    MATCH (per:Agent {id: 'perceiver'}), (s2:Sensor {id: 'lidar-1'}) MERGE (per)-[:MONITORS {since_seq: 2, priority: 2}]->(s2)
+    MATCH (ag:Agent)-[m:MONITORS]->(s:Sensor) RETURN ag.name AS agent, ag.role, m.since_seq, m.priority, s.name AS sensor, s.type, s.reliability ORDER BY m.priority
+
 ---
 
-# Agent-Native Database
+# The World Model as Files
 
-LLMs have context windows, not memory. They process what you give them in a session, then lose it. For an agent doing complex, multi-session work — analyzing a codebase, maintaining a world model, tracking relationships between entities across time — that's not a solvable problem with a bigger context window. The architecture is wrong.
+Shell-native agents changed the question.
 
-The answer is a persistent world model — spatial-temporal, confidence-scored, graph-structured — that the agent writes to, reads from, and traverses, session after session. Not a vector store (which finds similar things) — a world model (which captures what connects, where it is, when it changed, and how reliably we know it). The difference matters when the question is relational: *what depends on this?* *who is connected to whom through what path?* *what changed since last week?* Those are world model questions. They require world model infrastructure.
+Before Claude Code, Codex CLI, and Cursor, most AI agents were cloud chat interfaces — no filesystem, no shell, no persistent state. The right tooling for that world was MCP: a protocol bridge from the chat UI to local resources. That world still exists. But it's no longer the whole world.
 
-ArcFlow is that engine. It runs in-process, starts in two lines of code, and surfaces to agents through three interfaces.
+When an agent has a shell, it already has the world's most battle-tested query interface. `grep`, `cat`, `jq`, `git`. These aren't new skills — LLMs have ingested billions of examples of Unix tooling from every codebase ever written. You're not teaching the model a new interface. You're letting it apply mastery it already has to more powerful data underneath.
 
-When a single agent needs working memory, a bigger context window helps. When multiple agents need coordinated action on shared world state — robot swarms, multi-agent pipelines, distributed code analysis — context windows become irrelevant. Each agent needs to write observations, read others' findings, and query the combined state with algorithms. ArcFlow is that shared substrate: agent A observes and writes, agent B queries and reasons, agent C runs PageRank on the combined graph. No message broker. No coordination framework. The graph IS the shared state.
+The question shifts from *"how do we give agents access to data?"* to *"what's in the filesystem that makes the data worth querying?"*
 
-Three surfaces, no overlap:
+With ArcFlow: a spatial-temporal, confidence-scored world model. Graph traversal, vector search, 27 algorithms — all of it accessible as files. The agent writes a `.cypher` query. The CLI executes it. The result appears as `.json`. The agent reads it. **No protocol. No tokens. No round-trip. The filesystem is the API.**
 
-| Consumer | Integration | Latency | Why |
+---
+
+## The Problem with Protocol Tooling
+
+MCP was designed for chat interfaces — environments with no shell, no local filesystem, no persistent state. For those environments, it's exactly right: a standardized bridge from a cloud chat UI to local resources.
+
+But protocol tooling carries costs that compound with every call:
+
+- **Token overhead** — tool schema, marshaling, and response formatting consume context on every invocation
+- **Round-trip latency** — JSON-RPC adds 5–50ms per call; N queries requires N round-trips
+- **No persistence** — session-scoped results that vanish when the conversation ends
+- **No version control** — you can't `git add queries/` or diff results across runs
+- **No batch execution** — 5 queries requires 5 tool calls, not 1 CLI invocation
+- **No offline** — MCP requires a running server; the filesystem works without a network
+
+Using MCP for a coding agent that already has a shell is like using a WebSocket to call `grep`. The protocol layer exists to solve a problem the agent doesn't have.
+
+The architectural error is subtle: protocol tooling is built on assumptions about what the agent will need. The filesystem is anti-fragile — it lets the agent discover what it needs. When you're guessing what context to pre-fetch, you get brittle pipelines. When you give the agent a filesystem and a query language, you get adaptive intelligence.
+
+---
+
+## Three Surfaces, No Overlap
+
+ArcFlow exposes the world model through three surfaces. The choice depends entirely on where the agent runs — not on preference or familiarity.
+
+| Consumer | Surface | Latency | Why |
 |---|---|---|---|
-| **Application daemons, broker processes** | napi-rs in-process | **~1 µs** | Same memory, zero process boundary |
-| **Claude Code, Codex, Gemini CLI** | `arcflow` CLI binary | **< 10 ms** | Shell-native, composable, linked Rust binary |
-| **ChatGPT, Claude.ai, Gemini web** | MCP server | **~100 ms** | No local shell — MCP is the only bridge |
+| **Application daemons, services** | napi-rs in-process | **~1 µs** | Same memory, zero boundary |
+| **Claude Code, Codex, Cursor, shell scripts** | `arcflow` CLI binary | **< 10 ms** | Shell-native, composable, linked Rust binary |
+| **Claude.ai, ChatGPT, Gemini web** | MCP server | **~100 ms** | No local shell — protocol is the only bridge |
 | **Python / shell pipelines** | `arcflow` CLI binary | **< 10 ms** | Same as CLI agents |
 
-For the full reference on each surface:
+**If your agent has a shell, use the CLI.** There is no scenario where adding a protocol layer to a shell-capable agent is the right call. MCP is the right choice for exactly one context: cloud chat interfaces with no local execution environment.
 
-- **napi-rs** — see [Language Bindings](/bindings#typescript--nodejs) for API, types, and patterns
-- **CLI binary** — see [CLI](/cli) for commands, flags, watch mode, and batch execution
-- **MCP server** — see [MCP Server](/mcp) for setup, tools, and configuration
-
-### File-based batch workflows
-
-For processing many queries at once:
-
-```bash
-# The agent writes a query file
-echo 'MATCH (n:Person)-[:KNOWS]->(m) RETURN n.name, m.name' > query.cypher
-
-# ArcFlow CLI executes it
-arcflow --data-dir ./project-graph --exec query.cypher --output results.json
-
-# The agent reads the result
-cat results.json
-```
-
-That's it. No MCP server. No WebSocket bridge. No JSON-RPC. The filesystem IS the protocol.
+For the full API, see [Language Bindings](/bindings). For CLI commands, see [CLI Reference](/cli). For MCP setup, see [MCP Server](/mcp).
 
 ---
 
-## Filesystem Workspace
+## The Filesystem Workspace
 
-An ArcFlow agent workspace is a directory:
+An ArcFlow agent workspace is a directory — inspectable, version-controllable, and shareable like any other directory:
 
 ```
 project-graph/
-├── arcflow.db              # The graph (WAL + data)
+├── arcflow.db              # The world model (WAL + data)
 ├── queries/
 │   ├── schema.cypher       # CALL db.schema()
 │   ├── find-deps.cypher    # MATCH (a)-[:DEPENDS_ON]->(b) RETURN a, b
 │   └── pagerank.cypher     # CALL algo.pageRank()
 ├── results/
-│   ├── schema.json         # Schema output
-│   ├── find-deps.json      # Dependency results
-│   └── pagerank.json       # Algorithm output
+│   ├── schema.json
+│   ├── find-deps.json
+│   └── pagerank.json
 ├── imports/
-│   ├── codebase.csv        # Import data
-│   └── architecture.json   # Snapshot to restore
+│   └── codebase.csv
 └── arcflow.toml            # Configuration
 ```
 
-The agent creates queries as files. The CLI processes them. Results appear as files. The agent reads results. No protocol layer. No token overhead. Zero latency beyond disk I/O.
+The agent creates query files. The CLI executes them. Results appear as JSON files. The agent reads them. No protocol layer. No token overhead. Zero latency beyond disk I/O.
 
-### Batch Execution
+Crucially, this pattern mirrors exactly how agents already work. They write code to files. They read output from files. They compose commands with pipes. ArcFlow gives them a graph database that works the same way — because it's built on the same substrate.
 
-The agent can queue multiple queries and execute them in one shot:
+### One-Shot Batch Execution
+
+Five queries in, five results out, one CLI call:
 
 ```bash
-# Agent writes 5 queries to a directory
+# Agent writes queries
 ls queries/
 # analyze.cypher  dependencies.cypher  metrics.cypher  pagerank.cypher  schema.cypher
 
 # Execute all at once
 arcflow --data-dir ./project-graph --exec-dir queries/ --output-dir results/
 
-# All results appear as JSON files
+# All results appear as JSON
 ls results/
 # analyze.json  dependencies.json  metrics.json  pagerank.json  schema.json
 ```
 
-One CLI invocation. Five queries executed. Five result files. Zero protocol overhead per query.
+One invocation. Five graph queries executed. Five typed result files. This is what zero protocol overhead looks like.
 
 ### Watch Mode
 
 For interactive agent sessions, the CLI watches a directory and executes queries as they appear:
 
 ```bash
-# Start in watch mode
 arcflow --data-dir ./project-graph --watch queries/ --output-dir results/
-
-# Agent writes a query file → result appears automatically
-echo 'MATCH (n) RETURN count(*)' > queries/count.cypher
-# results/count.json appears within milliseconds
 ```
 
-The agent doesn't wait for tool calls. It writes files. Results appear. The filesystem is the API.
+The agent writes a query file. The result appears within milliseconds. The filesystem is the event loop.
+
+### Inline Execution
+
+For one-off queries, skip the file:
+
+```bash
+arcflow --data-dir ./graph --exec "MATCH (n:Person)-[:KNOWS]->(m) RETURN n.name, m.name" --json
+```
 
 ---
 
 ## CLI-Native Tooling
 
-ArcFlow's CLI is designed for agents, not just humans:
+The CLI is designed for agents, not just humans. Every output format, exit code, and error message is machine-readable by design.
 
 ### Structured Output
 
-Every CLI command supports `--json` for machine-readable output:
+Every command supports `--json`:
 
 ```bash
-# Human-readable
-arcflow --data-dir ./graph --exec "MATCH (n) RETURN count(*)"
-# => 10,234 nodes
-
 # Agent-readable
 arcflow --data-dir ./graph --exec "MATCH (n) RETURN count(*)" --json
 # => {"columns":["count(*)"],"rows":[{"count(*)":"10234"}],"count":1}
@@ -132,18 +152,15 @@ arcflow --data-dir ./graph --exec "MATCH (n) RETURN count(*)" --json
 
 ```
 0 — Success
-1 — Query error (syntax, missing label, etc.)
+1 — Query error (syntax, missing label)
 2 — System error (file not found, permission denied)
 3 — Validation error (constraint violation)
 ```
 
-The agent checks `$?` and knows exactly what happened. No parsing error messages.
+The agent checks `$?`. No string parsing.
 
 ### Structured Errors with Recovery Hints
 
-```bash
-arcflow --exec "METCH (n) RETURN n" --json 2>&1
-```
 ```json
 {
   "ok": false,
@@ -153,7 +170,7 @@ arcflow --exec "METCH (n) RETURN n" --json 2>&1
 }
 ```
 
-The agent reads `recovery_suggestion` and fixes the query. No guessing. No retry loop.
+The agent reads `recovery_suggestion` and self-corrects. No retry loop.
 
 ### Schema Discovery
 
@@ -161,128 +178,129 @@ The agent reads `recovery_suggestion` and fixes the query. No guessing. No retry
 arcflow --data-dir ./graph --exec "CALL db.schema()" --json
 ```
 
-Returns every label, relationship type, property key, index, and constraint. The agent knows the shape of the graph before writing a single query.
+Returns every label, relationship type, property key, index, and constraint. The agent knows the shape of the world model before writing a single query.
 
-### Query Validation (Dry Run)
+### Dry-Run Validation
 
 ```bash
 arcflow --data-dir ./graph --validate "MATCH (n:Person) RETURN n.name"
 # => Valid (read-only)
-
-arcflow --data-dir ./graph --validate "CREATE (n:Person {name: 'test'})"
-# => Valid (mutating)
 ```
 
-The agent checks if a query is valid before executing. No wasted mutations.
+The agent checks before executing. No wasted mutations.
 
 ---
 
-## Why Filesystem Beats MCP
+## Filesystem vs. Protocol: The Full Picture
 
-| | Filesystem | MCP |
+| Dimension | Filesystem | Protocol (MCP) |
 |---|---|---|
-| **Latency** | Disk I/O (~0.1ms) | JSON-RPC round-trip (~5-50ms) |
-| **Token cost** | Zero (file read, not tool call) | ~100-500 tokens per call (schema, marshaling) |
+| **Latency** | Disk I/O (~0.1ms) | JSON-RPC round-trip (~5–50ms) |
+| **Token cost** | Zero | ~100–500 tokens per call |
 | **Batch queries** | One CLI call for N queries | N tool calls, N round-trips |
+| **Persistence** | Queries and results are durable files | Session-scoped, ephemeral |
+| **Version control** | `git add queries/` — commit your world model | Not possible |
+| **Offline** | Works without a connection | Requires running server |
+| **Debugging** | `cat results/query.json`, `diff` | Inspect MCP logs |
 | **Agent compatibility** | Every agent reads files | Only MCP-native agents |
-| **Debugging** | `cat results/query.json` | Inspect MCP logs |
-| **Persistence** | Queries and results are files | Ephemeral (session-scoped) |
-| **Version control** | `git add queries/` | Not possible |
-| **Offline** | Works without connection | Requires running server |
+| **CI/CD** | Graph queries as build steps | Requires live session |
 
-The filesystem approach means:
-- Queries are version-controlled (commit your `.cypher` files)
-- Results are cacheable (don't re-run if input hasn't changed)
-- Multiple agents can share the same workspace
-- Debugging is `cat` and `diff`, not log parsing
-- CI/CD can run graph queries as build steps
-
----
-
-## MCP Server (cloud chat UIs only)
-
-MCP is for ChatGPT, Claude.ai, Gemini web, and other cloud chat interfaces that have no local shell. In those environments, MCP is the only available bridge. Latency doesn't matter — the user is waiting for a chat response anyway.
-
-For Claude Code, Codex CLI, and Gemini CLI: use the `arcflow` binary directly. They have shell tools. MCP would be slower and requires configuration.
-
-```bash
-npx arcflow-mcp --data-dir ./my-graph
-```
-
-See [MCP Server](/mcp) for setup and tool reference.
+The filesystem wins on every dimension that matters for shell-native agents. Protocol wins on exactly one: compatibility with chat UIs that have no shell. That's the only case where MCP belongs.
 
 ---
 
 ## Agent Workflows
 
-### Claude Code: Codebase Knowledge Graph
+### Claude Code: Codebase Intelligence
 
 ```bash
-# 1. Agent creates the workspace
+# 1. Create workspace
 mkdir -p project-graph/queries
 
-# 2. Agent builds the graph from codebase analysis
-echo "CREATE (c:Crate {name: 'wc-core', loc: 5500, tests: 120})" > project-graph/queries/01-create.cypher
-echo "CREATE (c:Crate {name: 'wc-runtime', loc: 17000, tests: 467})" >> project-graph/queries/01-create.cypher
-echo "CREATE (a)-[:DEPENDS_ON]->(b)" >> project-graph/queries/01-create.cypher
+# 2. Build the world model from codebase analysis
+cat > project-graph/queries/01-create.cypher << 'EOF'
+CREATE (c:Crate {name: 'wc-core', loc: 5500, tests: 120})
+CREATE (c:Crate {name: 'wc-runtime', loc: 17000, tests: 467})
+MATCH (a:Crate {name: 'wc-runtime'}) MATCH (b:Crate {name: 'wc-core'})
+CREATE (a)-[:DEPENDS_ON]->(b)
+EOF
 
-# 3. Agent runs queries against the graph
+# 3. Query the world model
 echo "CALL algo.pageRank()" > project-graph/queries/02-analyze.cypher
 echo "MATCH (c:Crate) RETURN c.name, c.loc ORDER BY c.loc DESC" > project-graph/queries/03-report.cypher
 
-# 4. Execute all
+# 4. Execute all — one call
 arcflow --data-dir project-graph --exec-dir project-graph/queries/ --output-dir project-graph/results/ --json
 
-# 5. Agent reads results
+# 5. Read results
 cat project-graph/results/02-analyze.json
 ```
 
-### Cursor Agent: Impact Analysis
+The agent gets graph intelligence with the same operations it uses for everything else: write a file, run a command, read a file.
+
+### Impact Analysis Before Editing
 
 ```bash
-# Agent writes impact query before editing a file
-echo "MATCH (f:File {path: 'src/lib.rs'})-[:IMPORTS*1..3]->(d) RETURN d.path" \
+# Before touching src/auth.ts, understand what breaks
+echo "MATCH (f:File {path: 'src/auth.ts'})-[:IMPORTS*1..3]->(d) RETURN d.path" \
   > project-graph/queries/impact.cypher
 
 arcflow --data-dir project-graph --exec project-graph/queries/impact.cypher --json
-# Agent reads results and knows which files are affected before making changes
+
+# Agent reads the affected files before making changes
 ```
 
 ### Multi-Agent Coordination
 
-Multiple agents share the same filesystem workspace. Each writes queries. Each reads results. The graph is the shared state. No message passing. No coordination protocol. Just files.
+Multiple agents share the same filesystem workspace. Each writes queries, reads results. The world model is the shared state. No message broker. No coordination protocol. Just files.
 
 ```
 project-graph/
-├── arcflow.db
-├── agent-a/
-│   ├── queries/    # Agent A's queries
-│   └── results/    # Agent A's results
-├── agent-b/
-│   ├── queries/    # Agent B's queries
-│   └── results/    # Agent B's results
-└── shared/
-    └── results/    # Cross-agent shared results
+├── arcflow.db              # Shared world model
+├── agent-a/queries/        # Agent A queries
+├── agent-a/results/        # Agent A results
+├── agent-b/queries/        # Agent B queries
+├── agent-b/results/        # Agent B results
+└── shared/results/         # Cross-agent outputs
 ```
+
+Agent A writes observations. Agent B queries them. Agent C runs algorithms. The filesystem IS the coordination protocol.
+
+---
+
+## MCP: When You Need It
+
+MCP is for Claude.ai, ChatGPT web, Gemini web, and other cloud chat interfaces that have no local shell. In those environments, protocol is the only bridge. Latency is acceptable — the user is waiting for a chat response anyway.
+
+For those environments:
+
+```bash
+npx arcflow-mcp --data-dir ./my-graph
+```
+
+Available tools: `get_schema`, `read_query`, `write_query`, `graph_rag`. See [MCP Server](/mcp) for setup and configuration.
+
+**If your agent has a shell, do not use MCP.** It adds a protocol layer that exists to solve a problem you don't have.
 
 ---
 
 ## Vision
 
-Every AI coding agent deserves a persistent, queryable knowledge graph as its working memory — and the interface is the filesystem it already knows.
+Every shell-native AI agent deserves a persistent, queryable knowledge graph as its working memory — accessible through the same interface it already uses for everything else.
 
-**Agent memory as files.** Most agents lose context between sessions. ArcFlow's filesystem workspace persists across sessions, across agents, across machines. The graph IS the agent's long-term memory, stored as files it can read, write, query, and version-control.
+**The world model as files.** Most agents lose context between sessions. ArcFlow's filesystem workspace persists across sessions, across agents, across machines. The graph is the agent's long-term memory, stored as files it can read, write, query, and version-control. Commit your world model. Diff it between runs. Share it across a team.
 
-**Zero-overhead agent tooling.** MCP was a necessary step — it standardized tool calling. But the future is tighter integration: agents that read and write files at filesystem speed, with graph queries as natural as `grep` or `find`. ArcFlow's CLI is designed for this future.
+**Zero-overhead agent tooling.** MCP was a necessary step — it standardized tool calling for agents without shells. The next step is tighter: agents that read and write files at filesystem speed, with graph queries as natural as `grep`. Not because it's simpler — because it's *aligned with how agents already work.*
 
-**Multi-agent graph intelligence.** When multiple agents share an ArcFlow workspace, the graph becomes a coordination substrate. Agent A writes facts. Agent B queries them. Agent C runs algorithms. No message broker. No orchestration framework. The filesystem is the protocol. The graph is the shared brain.
+**The filesystem as the coordination substrate.** When multiple agents share an ArcFlow workspace, the graph becomes the coordination layer. No message broker. No orchestration framework. No shared memory API. Agent A writes facts. Agent B queries them. Agent C runs PageRank on the combined graph. The filesystem is the protocol. The world model is the shared brain.
 
 ---
 
 ## See Also
 
 - [Swarm & Multi-Agent](/guides/swarm-agents) — multi-agent coordination patterns, durable workflows, named sessions
-- [Building a World Model](/guides/world-model) — step-by-step guide: entities in space, temporal memory, live monitoring
-- [Live Queries](/live-queries) — `LIVE MATCH`, `CREATE LIVE VIEW`, and `db.subscribe()` for always-current agent state
-- [Temporal Queries](/temporal) — `AS OF seq N` for replay, debugging, and session reconstruction
+- [Building a World Model](/guides/world-model) — step-by-step: entities in space, temporal memory, live monitoring
 - [ArcFlow for Coding Agents](/guides/agent-integration) — CLI patterns, structured errors, batch execution, and checkpointing
+- [Live Queries](/live-queries) — `LIVE MATCH` and `CREATE LIVE VIEW` for always-current agent state
+- [Temporal Queries](/temporal) — `AS OF seq N` for replay, debugging, and session reconstruction
+- [MCP Server](/mcp) — cloud chat UI integration (Claude.ai and similar)

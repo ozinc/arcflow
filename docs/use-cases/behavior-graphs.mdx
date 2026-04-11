@@ -3,6 +3,20 @@ title: "Use Case: Behavior Graphs"
 description: "Behavior trees embedded in a world model — the tree IS the graph, with confidence-scored transitions, execution provenance, and temporal history"
 section: "use-cases"
 status: "stable"
+playground:
+  seed: world
+  query: |-
+    MERGE (director:Agent {id: 'director', name: 'DirectorAgent', role: 'orchestrator', active: true})
+    MERGE (planner1:Agent {id: 'plan-a', name: 'PlannerAlpha', role: 'planning', zone: 'lab-a', active: true})
+    MERGE (planner2:Agent {id: 'plan-b', name: 'PlannerBeta', role: 'planning', zone: 'lab-b', active: true})
+    MERGE (s1:Sensor {id: 'cam-1', name: 'Cam-LabA', type: 'camera', reliability: 0.95})
+    MERGE (s2:Sensor {id: 'lidar-1', name: 'Lidar-LabB', type: 'lidar', reliability: 0.91})
+    MATCH (d:Agent {id: 'director'}), (p1:Agent {id: 'plan-a'}) MERGE (d)-[:DELEGATES_TO {intent: 'monitor', priority: 1, confidence_floor: 0.85}]->(p1)
+    MATCH (d:Agent {id: 'director'}), (p2:Agent {id: 'plan-b'}) MERGE (d)-[:DELEGATES_TO {intent: 'inspect', priority: 2, confidence_floor: 0.80}]->(p2)
+    MATCH (p1:Agent {id: 'plan-a'}), (s1:Sensor {id: 'cam-1'}) MERGE (p1)-[:MONITORS {freq_hz: 25}]->(s1)
+    MATCH (p2:Agent {id: 'plan-b'}), (s2:Sensor {id: 'lidar-1'}) MERGE (p2)-[:MONITORS {freq_hz: 10}]->(s2)
+    MATCH (dir:Agent)-[del:DELEGATES_TO]->(planner:Agent)-[mon:MONITORS]->(sensor:Sensor)-[det:DETECTED]->(robot:Robot) RETURN dir.name AS director, del.intent, del.priority, del.confidence_floor, planner.name AS planner, sensor.name AS monitoring_sensor, det.confidence AS live_confidence, det.method, robot.name AS target_robot, robot.task ORDER BY del.priority
+
 ---
 
 # Use Case: Behavior Graphs

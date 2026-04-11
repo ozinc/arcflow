@@ -3,6 +3,13 @@ title: "WorldCypher: Temporal Queries"
 description: "Temporal queries with AS OF seq N snapshots, velocity/decay metrics, change tracking, and live monitoring."
 section: "worldcypher"
 status: "stable"
+playground:
+  seed: world
+  query: |-
+    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[occ:OCCUPIES]->(z:Zone)
+    WITH s, d, r, occ, z, r.speed AS velocity, r.battery AS energy, s.reliability * d.confidence AS observation_quality
+    RETURN r.name AS entity, r.task, r.x AS pos_x, r.y AS pos_y, velocity, energy, occ.entered_seq AS entry_seq, observation_quality, d.method AS detection_method, z.name AS current_zone ORDER BY velocity DESC
+
 ---
 
 # WorldCypher: Temporal Queries
@@ -89,3 +96,12 @@ LIVE MATCH (n:Person) WHERE n.score > 0.9 RETURN n.name, n.score
 - **Temporal analytics** — "How has the network evolved over time?"
 - **Event sourcing** — replay graph mutations for debugging
 - **Regulatory compliance** — point-in-time reporting
+
+---
+
+## See Also
+
+- [Temporal Queries](/temporal) — temporal capability overview with patterns and examples
+- [Event Sourcing](/event-sourcing) — WAL-backed mutation history
+- [Persistence & WAL](/concepts/persistence) — how the WAL stores every mutation
+- [Use Case: Autonomous Systems](/use-cases/autonomous-systems) — temporal reasoning in autonomous agents

@@ -3,6 +3,11 @@ title: "Tutorial: Graph Algorithms"
 description: "Graph algorithms over the world model — no projection lifecycle, no catalog. PageRank, community detection, shortest path, and centrality run in one query against your live graph."
 section: "tutorials"
 status: "stable"
+playground:
+  seed: world
+  query: |-
+    CALL algo.pageRank()
+
 ---
 
 # Tutorial: Graph Algorithms
@@ -139,3 +144,12 @@ for (const row of similar.rows) {
 ## Available algorithms
 
 See the full list in the [Compatibility Matrix](/reference/compatibility).
+
+---
+
+## See Also
+
+- [Graph Algorithms](/algorithms) — full procedure reference with signatures and output schemas
+- [Algorithms Reference](/worldcypher/algorithms) — GQL syntax for all 27 procedures
+- [GPU Acceleration](/gpu) — automatic Metal/CUDA dispatch for large graphs
+- [Use Case: Knowledge Management](/use-cases/knowledge-management) — algorithms over a knowledge world model

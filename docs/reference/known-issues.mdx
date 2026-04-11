@@ -3,6 +3,13 @@ title: "Known Issues"
 description: "Known issues and workarounds for Metal GPU hangs, pnpm binary sync, multi-MATCH naming collisions, and parameter coercion."
 section: "reference"
 status: "stable"
+playground:
+  seed: world
+  query: |-
+    MATCH (r:Robot) SET r.tier = CASE WHEN r.battery >= 85 THEN 'optimal' WHEN r.battery >= 65 THEN 'nominal' ELSE 'low-power' END
+    
+    MATCH (r:Robot)-[:OCCUPIES]->(z:Zone) RETURN r.name AS robot, r.task, r.battery, r.tier, r.x AS world_x, r.y AS world_y, z.name AS zone, z.hazard ORDER BY r.battery DESC
+
 ---
 
 # Known Issues
@@ -74,3 +81,10 @@ This only affects multi-MATCH with same-named properties. Traversal queries (`MA
 ## Parameter values are string-coerced
 
 All query parameters are internally converted to strings before substitution. This works transparently for most cases, but be aware when comparing types in WHERE clauses.
+
+---
+
+## See Also
+
+- [Error Codes](/reference/errors) — typed error model and recovery suggestions
+- [Compatibility Matrix](/reference/compatibility) — feature support across platforms and versions

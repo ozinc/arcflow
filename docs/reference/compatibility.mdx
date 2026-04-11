@@ -1,8 +1,13 @@
 ---
 title: "GQL & WorldCypher Reference"
-description: "Complete GQL compatibility matrix — supported syntax, ArcFlow extensions, and implementation status"
+description: "GQL compatibility matrix for the world model engine — ISO/IEC 39075 supported syntax, ArcFlow extensions, and implementation status."
 section: "reference"
 status: "stable"
+playground:
+  seed: world
+  query: |-
+    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[occ:OCCUPIES]->(z:Zone) WITH s, d, r, occ, z, s.reliability * d.confidence AS composite_trust RETURN s.name AS sensor, s.type, s.reliability, d.confidence AS detection_confidence, d.method AS detection_method, composite_trust, occ.entered_seq AS occupancy_seq, r.name AS robot, r.task, r.x AS pos_x, r.y AS pos_y, z.name AS zone, z.hazard ORDER BY composite_trust DESC
+
 ---
 
 # GQL & WorldCypher Reference
@@ -256,3 +261,11 @@ Run directly — no projection lifecycle needed.
 | `swarm.agents` | List active swarm agents |
 | `swarm.register` | Register new agent |
 | `swarm.agentCount` | Count active agents |
+
+---
+
+## See Also
+
+- [GQL Conformance](/reference/gql-conformance) — ISO/IEC 39075 standards compliance and TCK results
+- [Graph Algorithms](/algorithms) — full algorithm catalog
+- [Known Issues](/reference/known-issues) — active workarounds and edge cases

@@ -3,6 +3,11 @@ title: "GQL Conformance"
 description: "ArcFlow's conformance to ISO/IEC 39075 GQL and the openCypher TCK — standards coverage, lineage, and extensions beyond the specification"
 section: "reference"
 status: "stable"
+playground:
+  seed: world
+  query: |-
+    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z, count(r) AS robots, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS avg_composite_trust, count(s) AS sensor_count RETURN z.name AS zone, z.hazard, robots, avg_battery, avg_composite_trust AS avg_detection_quality, sensor_count ORDER BY avg_composite_trust DESC
+
 ---
 
 # GQL Conformance

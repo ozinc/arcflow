@@ -5,6 +5,17 @@ section: "Guides"
 order: 10
 since: "4.0.0"
 status: "stable"
+playground:
+  query: |-
+    MERGE (src:System {id: 'neo4j-prod', name: 'Neo4j Production', type: 'graph-db', migrated: true})
+    MERGE (etl:System {id: 'arcflow-etl', name: 'ArcFlow ETL', type: 'pipeline', migrated: true})
+    MERGE (tgt:System {id: 'arcflow-prod', name: 'ArcFlow Production', type: 'arcflow', migrated: true})
+    MERGE (consumer:System {id: 'analytics', name: 'Analytics Layer', type: 'downstream', migrated: false})
+    MATCH (src:System {id: 'neo4j-prod'}), (etl:System {id: 'arcflow-etl'}) MERGE (src)-[:FEEDS {confidence: 0.99, method: 'bulk-export', verified: true, records: 2840000}]->(etl)
+    MATCH (etl:System {id: 'arcflow-etl'}), (tgt:System {id: 'arcflow-prod'}) MERGE (etl)-[:FEEDS {confidence: 0.98, method: 'schema-migration', verified: true, records: 2840000}]->(tgt)
+    MATCH (tgt:System {id: 'arcflow-prod'}), (consumer:System {id: 'analytics'}) MERGE (tgt)-[:FEEDS {confidence: 0.87, method: 'streaming', verified: false, records: 0}]->(consumer)
+    MATCH (src:System)-[r:FEEDS]->(tgt:System) RETURN src.name AS from, src.type, r.method, r.confidence AS step_confidence, r.verified, r.records AS records_transferred, tgt.name AS to, tgt.type ORDER BY r.confidence DESC
+
 ---
 
 # Migration Guide
@@ -233,6 +244,6 @@ CALL algo.pageRank()
 ## See Also
 
 - [QuickStart](/quickstart) -- get running in 5 minutes
-- [Built-in Functions](/worldcypher/functions/built-in) -- all 81 functions
-- [Procedures](/worldcypher/functions/procedures) -- all 68 procedures
+- [Built-in Functions](/worldcypher/functions/built-in) -- 83 built-in GQL functions
+- [Procedures](/worldcypher/functions/procedures) -- full CALL procedure reference
 - [RAG Pipeline](/guides/rag-pipeline) -- building RAG with ArcFlow

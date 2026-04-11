@@ -3,6 +3,11 @@ title: "Deployment: Docker"
 description: "Docker deployment with volume mounts, environment configuration, and HTTP API exposure for containerized graph databases."
 section: "deployment"
 status: "stable"
+playground:
+  query: |-
+    MERGE (r:Robot {id: 'r1', name: 'Atlas-01', task: 'assembly', battery: 87})
+    MATCH (r:Robot) RETURN r.name, r.task, r.battery
+
 ---
 
 # Deployment: Docker
@@ -75,3 +80,12 @@ docker run -v ./my-data:/data ghcr.io/oz-global/arcflow:latest
 | `ARCFLOW_DATA_DIR` | `/data` | Data directory |
 | `ARCFLOW_LOG_LEVEL` | `info` | Log level (debug, info, warn, error) |
 | `ARCFLOW_METAL_FORCE_UNAVAILABLE` | `false` | Disable Metal GPU |
+
+---
+
+## See Also
+
+- [Platform](/platform) — all runtime environments: Node.js, Python, Rust, WASM, Docker
+- [Installation](/installation) — pre-built binaries and npm/pip/cargo install
+- [Server Modes](/server) — in-process, HTTP, TCP, and MCP server configuration
+- [Architecture](/architecture) — how storage, query, and algorithms share a process

@@ -3,6 +3,11 @@ title: "Query Language (GQL)"
 description: "ArcFlow queries use GQL — the ISO standard for graph query languages. If you know Cypher, you already know it."
 section: "concepts"
 status: "stable"
+playground:
+  seed: world
+  query: |-
+    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH s, d, r, z, s.reliability * d.confidence AS composite_trust, (r.x - s.x) * (r.x - s.x) + (r.y - s.y) * (r.y - s.y) AS proximity_sq RETURN s.name AS sensor, s.type, d.method AS detection_method, composite_trust, proximity_sq, r.name AS entity, r.task, r.x AS world_x, r.y AS world_y, z.name AS zone, CASE WHEN composite_trust >= 0.90 THEN 'authoritative' WHEN composite_trust >= 0.75 THEN 'confirmed' ELSE 'uncertain' END AS trust_tier ORDER BY composite_trust DESC
+
 ---
 
 # Query Language (GQL)
@@ -149,3 +154,12 @@ CREATE LIVE VIEW top_people AS MATCH (n:Person) WHERE n.score > 0.9 RETURN n.nam
 ```
 
 See the [GQL & WorldCypher Reference](../reference/compatibility.mdx) for the complete feature table.
+
+---
+
+## See Also
+
+- [GQL / WorldCypher Reference](/worldcypher) — full syntax overview
+- [MATCH reference](/worldcypher/query-syntax/match) — pattern matching in depth
+- [Graph Patterns](/concepts/graph-patterns) — path expressions and variable-length traversals
+- [GQL Conformance](/reference/gql-conformance) — ISO/IEC 39075 standards lineage

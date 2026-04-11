@@ -1,8 +1,13 @@
 ---
 title: "API Reference"
-description: "Complete TypeScript SDK API reference covering db.query(), db.mutate(), LiveQuery subscriptions, cursors, and delta ingestion."
+description: "TypeScript API for the world model engine — db.query(), db.mutate(), live subscriptions, cursors, and delta ingestion."
 section: "reference"
 status: "stable"
+playground:
+  seed: world
+  query: |-
+    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH s, d, r, z, s.reliability * d.confidence AS composite_trust RETURN r.name AS robot, r.task, r.battery, r.x AS world_x, r.y AS world_y, d.confidence AS detection_confidence, d.method AS detection_method, composite_trust, s.name AS sensor, s.type AS sensor_modality, s.reliability AS sensor_reliability, z.name AS zone, z.hazard AS zone_risk ORDER BY composite_trust DESC
+
 ---
 
 # API Reference

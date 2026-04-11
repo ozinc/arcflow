@@ -3,6 +3,11 @@ title: "Observations & Evidence"
 description: "Confidence-scored, provenance-tracked observations with three classes: observed, inferred, predicted"
 section: "concepts"
 status: "stable"
+playground:
+  seed: world
+  query: |-
+    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot) WITH s, d, r, s.reliability * d.confidence AS composite_trust RETURN s.name AS observer, s.type AS modality, s.reliability AS sensor_quality, d.confidence AS detection_confidence, composite_trust, r.name AS observed_entity, r.task, r.battery ORDER BY composite_trust DESC
+
 ---
 
 # Observations & Evidence
@@ -90,3 +95,12 @@ CALL db.causalChain
 - **Debugging** — when a result is wrong, trace back to which observation or inference caused it.
 - **Regulatory** — audit trails showing exactly how a conclusion was reached.
 - **Agent safety** — LLM agents can distinguish hard facts from guesses before acting on them.
+
+---
+
+## See Also
+
+- [Confidence & Provenance](/concepts/confidence-and-provenance) — `_confidence` scores and provenance edges in depth
+- [Proof Artifacts & Gates](/concepts/proof-artifacts) — cryptographic state proofs built from observation history
+- [Trusted RAG](/trusted-rag) — confidence-filtered retrieval that surfaces observation class alongside facts
+- [Constructors](/concepts/constructors) — rules that infer new edges from observed nodes

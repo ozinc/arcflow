@@ -5,6 +5,11 @@ section: "reference"
 order: 1
 since: "0.1.0"
 status: "stable"
+playground:
+  query: |-
+    MERGE (r:Robot {id: 'r1', name: 'Atlas-01', task: 'assembly', battery: 87, speed: 1.2, x: 18.0, y: 8.5, status: 'active', certified: true})
+    MATCH (r:Robot {id: 'r1'}) RETURN r.name AS string_prop, r.battery AS integer_prop, r.speed AS float_prop, r.certified AS boolean_prop, r.x AS float_coord, r.y AS float_coord2, r.status AS string_enum, r.task AS string_task
+
 ---
 
 # Types
@@ -156,3 +161,11 @@ interface ImpactSubgraph {
   nodes: ImpactNode[]
 }
 ```
+
+---
+
+## See Also
+
+- [TypeScript API Reference](/reference/api) — methods that accept and return these types
+- [Data Types](/worldcypher/data-types) — GQL-level types (Integer, Float, String, List, Map)
+- [Error Codes](/reference/errors) — typed error model with `ErrorClass` and recovery hints

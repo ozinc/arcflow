@@ -5,6 +5,13 @@ section: "bindings"
 order: 1
 since: "10.0.0"
 status: "stable"
+playground:
+  seed: world
+  query: |-
+    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone)
+    WITH s, d, r, z, s.reliability * d.confidence AS composite_trust
+    RETURN s.name AS sensor, d.confidence, composite_trust, r.name AS robot, r.task, r.battery, z.name AS zone ORDER BY composite_trust DESC
+
 ---
 
 # Language Bindings
@@ -334,3 +341,12 @@ All bindings target one engine. Pick the layer that matches your use case:
 ```
 
 One engine. No protocol translation. Function calls go directly into the Rust engine. For the browser, the WASM build runs the same engine with zero serialization via the WASM memory model.
+
+---
+
+## See Also
+
+- [Installation](/installation) — pre-built binaries for all platforms
+- [Platform](/platform) — runtime environments: browser WASM, Docker, Cloudflare Workers, mobile
+- [Agent-Native Database](/agent-native) — integration surfaces: napi-rs, CLI binary, MCP server
+- [MCP Server](/mcp) — cloud chat UI integration (the fourth binding surface)

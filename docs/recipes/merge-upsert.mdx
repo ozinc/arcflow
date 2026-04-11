@@ -3,6 +3,14 @@ title: "Recipe: MERGE (Upsert)"
 description: "MERGE upsert pattern for idempotent data pipelines that find matching nodes or create them on first run."
 section: "recipes"
 status: "stable"
+playground:
+  query: |-
+    MERGE (r:Robot {id: 'r-upsert', name: 'Prototype-X', x: 0.0, y: 0.0})
+    ON CREATE SET r.battery = 100, r.task = 'standby', r.created = true, r.version = 1, r.speed = 0.5
+    ON MATCH SET r.battery = 88, r.task = 'active', r.updated = true, r.version = 2, r.speed = 1.1
+    
+    MATCH (r:Robot {id: 'r-upsert'}) RETURN r.name, r.task, r.battery, r.speed, r.created, r.updated, r.version
+
 ---
 
 # Recipe: MERGE (Upsert)
@@ -49,3 +57,11 @@ db.mutate("MATCH (a:Person {id: 'p1'}) MATCH (b:Org {id: 'o1'}) MERGE (a)-[:WORK
 ```
 
 **Note:** MERGE on relationships matches by type and endpoints. Properties on the MERGE pattern are used for matching, not just creation.
+
+---
+
+## See Also
+
+- [MERGE reference](/worldcypher/statements/merge) — full MERGE syntax and ON CREATE / ON MATCH
+- [CRUD Recipe](/recipes/crud) — CREATE, READ, UPDATE, DELETE patterns
+- [Confidence & Provenance](/concepts/confidence-and-provenance) — adding `_confidence` to merged facts

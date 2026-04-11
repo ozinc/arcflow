@@ -5,6 +5,10 @@ section: "platform"
 order: 1
 since: "10.0.0"
 status: "stable"
+playground:
+  query: |-
+    MERGE (n:Node {id: 'platform-demo', name: 'ArcFlow', runtime: 'wasm', version: '2.0', portable: true, modes: 3}) RETURN n.name, n.runtime, n.version, n.portable, n.modes
+
 ---
 
 # Platforms
@@ -219,3 +223,12 @@ arcflow --data-dir ./my-graph
 | **Max graph** | RAM | RAM | Device RAM | Instance memory | ~50MB |
 | **Sync** | Origin or replica | Origin or replica | Fragment (CDC to oz.com/world) | Replica (CDC) | Fragment (CDC to oz.com/world) |
 | **Performance** | Full | Full | Near-native | WASM speed | WASM speed |
+
+---
+
+## See Also
+
+- [Installation](/installation) — install for your platform
+- [Language Bindings](/bindings) — Node.js, Python, Rust, Go, WASM, CLI
+- [Cloud Architecture](/cloud-architecture) — edge mesh, WAL segment shipping, CDC sync
+- [Agent-Native Database](/agent-native) — integration surfaces: napi-rs, CLI, MCP

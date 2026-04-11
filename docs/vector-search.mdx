@@ -5,6 +5,18 @@ section: "vector-search"
 order: 1
 since: "6.0.0"
 status: "stable"
+playground:
+  query: |-
+    MERGE (wm:Document {id: 'doc-world-model', title: 'ArcFlow World Model', category: 'core', relevance: 0.98, chunks: 12})
+    MERGE (sq:Document {id: 'doc-spatial', title: 'Spatial Query Primitives', category: 'query', relevance: 0.91, chunks: 8})
+    MERGE (cs:Document {id: 'doc-confidence', title: 'Confidence Scoring in Live Graphs', category: 'ai', relevance: 0.87, chunks: 6})
+    MERGE (rg:Document {id: 'doc-rag', title: 'Trusted RAG Pipelines', category: 'ai', relevance: 0.83, chunks: 9})
+    MERGE (mg:Document {id: 'doc-migration', title: 'SQL to WorldCypher Migration', category: 'migration', relevance: 0.41, chunks: 4})
+    MATCH (wm:Document {id: 'doc-world-model'}), (sq:Document {id: 'doc-spatial'}) MERGE (wm)-[:RELATED_TO {strength: 0.94, method: 'semantic'}]->(sq)
+    MATCH (wm:Document {id: 'doc-world-model'}), (cs:Document {id: 'doc-confidence'}) MERGE (wm)-[:RELATED_TO {strength: 0.89, method: 'semantic'}]->(cs)
+    MATCH (cs:Document {id: 'doc-confidence'}), (rg:Document {id: 'doc-rag'}) MERGE (cs)-[:RELATED_TO {strength: 0.92, method: 'semantic'}]->(rg)
+    MATCH (doc:Document) WHERE doc.relevance > 0.80 RETURN doc.title AS document, doc.category, doc.relevance AS relevance_score, doc.chunks ORDER BY doc.relevance DESC
+
 ---
 
 # Vector Search

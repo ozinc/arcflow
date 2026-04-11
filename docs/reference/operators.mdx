@@ -1,10 +1,15 @@
 ---
 title: "All Operators"
-description: "Complete operator reference — 72+ WorldCypher operators"
+description: "WorldCypher operator reference — 72+ operators for world model queries: comparison, logical, math, string, list, and map."
 section: "reference"
 order: 3
 since: "0.26.0"
 status: "stable"
+playground:
+  seed: world
+  query: |-
+    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WHERE r.battery >= 60 AND r.speed > 0.5 AND d.confidence > 0.85 AND s.reliability >= 0.88 WITH r, s, d, z, s.reliability * d.confidence AS composite_trust, (r.x - s.x) * (r.x - s.x) + (r.y - s.y) * (r.y - s.y) AS range_sq RETURN r.name AS robot, r.task, r.battery, r.speed, composite_trust, range_sq, z.name AS zone, z.hazard ORDER BY composite_trust DESC
+
 ---
 
 # All Operators
@@ -132,3 +137,11 @@ status: "stable"
 |---|---|
 | EXPLAIN | 0.7.0 |
 | PROFILE | 0.22.0 |
+
+---
+
+## See Also
+
+- [Built-in Functions](/worldcypher/functions/built-in) — 83 built-in GQL functions
+- [WHERE reference](/worldcypher/query-syntax/where) — filtering with operators in practice
+- [EXPLAIN](/worldcypher/functions/explain) — see which operators appear in the query plan

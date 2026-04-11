@@ -3,6 +3,12 @@ title: "Recipe: Batch Projection"
 description: "Idempotent batch projection into the world model — high-throughput entity and relationship loading with MERGE semantics so replays never create duplicates."
 section: "recipes"
 status: "stable"
+playground:
+  query: |-
+    UNWIND ['Assembly-East', 'Inspection-West', 'Storage-Bay', 'Maintenance-Hub'] AS area_name
+    MERGE (z:Zone {id: area_name, name: area_name, active: true, hazard: 0.05, radius: 12.0})
+    RETURN z.name AS zone, z.active, z.hazard, z.radius ORDER BY z.name
+
 ---
 
 # Recipe: Batch Projection
@@ -82,3 +88,11 @@ function projectBatch(db: ArcflowDB, entities: PipelineEntity[], relations: Pipe
 - `batchMutate` executes all queries under a single write lock — no per-query locking overhead
 - MERGE is safe for re-runs — idempotent by design
 - For very large batches (10K+), split into chunks of ~1000 mutations
+
+---
+
+## See Also
+
+- [MERGE reference](/worldcypher/statements/merge) — upsert semantics for idempotent writes
+- [CRUD Recipe](/recipes/crud) — basic create, read, update, delete patterns
+- [Use Case: Knowledge Management](/use-cases/knowledge-management) — batch ingest in an entity extraction pipeline

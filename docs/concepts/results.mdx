@@ -3,6 +3,11 @@ title: "Query Results"
 description: "World model query results as typed rows — numbers are numbers, not strings. ISO GQL status codes, mutation statistics, and structured access patterns."
 section: "concepts"
 status: "stable"
+playground:
+  seed: world
+  query: |-
+    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z, count(r) AS entity_count, avg(r.battery) AS avg_energy, avg(d.confidence) AS avg_detection_confidence, avg(s.reliability * d.confidence) AS avg_composite_trust RETURN z.name AS zone, z.hazard AS zone_risk, entity_count, avg_energy, avg_detection_confidence, avg_composite_trust, CASE WHEN avg_composite_trust >= 0.9 THEN 'fully observed' WHEN avg_composite_trust >= 0.75 THEN 'partially observed' ELSE 'low coverage' END AS observability ORDER BY avg_composite_trust DESC
+
 ---
 
 # Query Results
@@ -118,3 +123,11 @@ result2.gqlstatus() // "00000" — rows were returned
 const result = db.query("CALL algo.pageRank()")
 console.log(`PageRank computed in ${result.computeMs.toFixed(1)}ms`)
 ```
+
+---
+
+## See Also
+
+- [Parameters](/concepts/parameters) — always use `$params` placeholders for world model queries
+- [TypeScript API Reference](/reference/api) — full method signatures and return types
+- [Error Handling](/concepts/error-handling) — what `db.query()` throws and when

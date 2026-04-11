@@ -5,6 +5,11 @@ section: "gpu"
 order: 1
 since: "9.0.0"
 status: "stable"
+playground:
+  seed: world
+  query: |-
+    CALL algo.connectedComponents()
+
 ---
 
 # GPU Acceleration
@@ -294,3 +299,12 @@ ArcFlow provides a complete GraphBLAS runtime where the entire algorithm suite r
 **Fused kernel pipelines.** Beyond per-algorithm SpMV sequences, fused kernel pipelines run multiple operations in a single GPU kernel launch — PageRank + triangle count + community detection in one pass through the graph, sharing the CSR representation.
 
 **Adaptive precision.** FP16 on GPU for algorithms where full precision isn't needed (BFS, reachability) and FP64 where it is (PageRank convergence, shortest path weights). Half-precision doubles throughput on modern GPUs.
+
+---
+
+## See Also
+
+- [Graph Algorithms](/algorithms) — full algorithm catalog with signatures and output schemas
+- [Algorithms Reference](/worldcypher/algorithms) — GQL syntax for all 27 procedures
+- [Architecture](/architecture) — how the query engine, storage, and algorithm dispatch share memory
+- [Spatial Queries](/worldcypher/spatial) — GPU-dispatched spatial queries and the BVH index

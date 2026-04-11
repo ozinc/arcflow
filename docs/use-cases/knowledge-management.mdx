@@ -3,6 +3,20 @@ title: "Use Case: Knowledge Management"
 description: "Build a persistent world model from documents, conversations, and data feeds — confidence-scored entities, provenance-tracked relationships, semantic and graph search in one engine"
 section: "use-cases"
 status: "stable"
+playground:
+  query: |-
+    MERGE (auth1:Author {id: 'auth-wm', name: 'Dr. Chen', org: 'OZ Labs', reputation: 0.94})
+    MERGE (auth2:Author {id: 'auth-sp', name: 'Dr. Park', org: 'MIT', reputation: 0.91})
+    MERGE (d1:Document {id: 'doc-wm', title: 'World Models at Scale', category: 'research', relevance: 0.96, citations: 142})
+    MERGE (d2:Document {id: 'doc-sp', title: 'Spatial Graph Indexing', category: 'systems', relevance: 0.88, citations: 89})
+    MERGE (d3:Document {id: 'doc-conf', title: 'Confidence-Weighted Retrieval', category: 'ai', relevance: 0.83, citations: 47})
+    MATCH (auth1:Author {id: 'auth-wm'}), (d1:Document {id: 'doc-wm'}) MERGE (auth1)-[:AUTHORED {peer_reviewed: true}]->(d1)
+    MATCH (auth2:Author {id: 'auth-sp'}), (d2:Document {id: 'doc-sp'}) MERGE (auth2)-[:AUTHORED {peer_reviewed: true}]->(d2)
+    MATCH (auth2:Author {id: 'auth-sp'}), (d3:Document {id: 'doc-conf'}) MERGE (auth2)-[:AUTHORED {peer_reviewed: false}]->(d3)
+    MATCH (d1x:Document {id: 'doc-wm'}), (d2x:Document {id: 'doc-sp'}) MERGE (d1x)-[:CITES {strength: 0.88, essential: true}]->(d2x)
+    MATCH (d1x:Document {id: 'doc-wm'}), (d3x:Document {id: 'doc-conf'}) MERGE (d1x)-[:CITES {strength: 0.74, essential: false}]->(d3x)
+    MATCH (auth:Author)-[aw:AUTHORED]->(doc:Document)-[c:CITES]->(ref:Document) WITH auth, doc, aw, c, ref, auth.reputation * doc.relevance AS composite_authority RETURN auth.name AS author, auth.org, auth.reputation, doc.title AS document, doc.citations, aw.peer_reviewed, c.strength AS citation_strength, c.essential, ref.title AS cites, composite_authority ORDER BY composite_authority DESC
+
 ---
 
 # Use Case: Knowledge Management
