@@ -6,9 +6,9 @@ status: "stable"
 playground:
   seed: world
   query: |-
-    MERGE (director:Agent {id: 'director', name: 'DirectorAgent', role: 'orchestrator', active: true})
-    MERGE (planner1:Agent {id: 'plan-a', name: 'PlannerAlpha', role: 'planning', zone: 'lab-a', active: true})
-    MERGE (planner2:Agent {id: 'plan-b', name: 'PlannerBeta', role: 'planning', zone: 'lab-b', active: true})
+    MERGE (director:Agent {id: 'director', name: 'DirectorAgent', role: 'orchestrator', active: 1})
+    MERGE (planner1:Agent {id: 'plan-a', name: 'PlannerAlpha', role: 'planning', zone: 'lab-a', active: 1})
+    MERGE (planner2:Agent {id: 'plan-b', name: 'PlannerBeta', role: 'planning', zone: 'lab-b', active: 1})
     MERGE (s1:Sensor {id: 'cam-1', name: 'Cam-LabA', type: 'camera', reliability: 0.95})
     MERGE (s2:Sensor {id: 'lidar-1', name: 'Lidar-LabB', type: 'lidar', reliability: 0.91})
     MATCH (d:Agent {id: 'director'}), (p1:Agent {id: 'plan-a'}) MERGE (d)-[:DELEGATES_TO {intent: 'monitor', priority: 1, confidence_floor: 0.85}]->(p1)

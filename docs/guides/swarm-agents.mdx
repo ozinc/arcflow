@@ -6,10 +6,10 @@ status: "stable"
 playground:
   seed: world
   query: |-
-    MERGE (leader:Agent {id: 'swarm-lead', name: 'Alpha-Lead', role: 'leader', active: true, x: 0.0, y: 0.0})
-    MERGE (f1:Agent {id: 'swarm-f1', name: 'Follower-01', role: 'follower', active: true, x: 18.0, y: 8.5})
-    MERGE (f2:Agent {id: 'swarm-f2', name: 'Follower-02', role: 'follower', active: true, x: -17.0, y: -9.0})
-    MERGE (f3:Agent {id: 'swarm-f3', name: 'Follower-03', role: 'follower', active: true, x: 2.0, y: 1.5})
+    MERGE (leader:Agent {id: 'swarm-lead', name: 'Alpha-Lead', role: 'leader', active: 1, x: 0.0, y: 0.0})
+    MERGE (f1:Agent {id: 'swarm-f1', name: 'Follower-01', role: 'follower', active: 1, x: 18.0, y: 8.5})
+    MERGE (f2:Agent {id: 'swarm-f2', name: 'Follower-02', role: 'follower', active: 1, x: -17.0, y: -9.0})
+    MERGE (f3:Agent {id: 'swarm-f3', name: 'Follower-03', role: 'follower', active: 1, x: 2.0, y: 1.5})
     MERGE (s1:Sensor {id: 'cam-1', name: 'Cam-LabA', type: 'camera', reliability: 0.95})
     MERGE (s2:Sensor {id: 'lidar-1', name: 'Lidar-LabB', type: 'lidar', reliability: 0.91})
     MATCH (l:Agent {id: 'swarm-lead'}), (f1:Agent {id: 'swarm-f1'}) MERGE (l)-[:COORDINATES {intent: 'patrol', priority: 1, confidence_floor: 0.88}]->(f1)

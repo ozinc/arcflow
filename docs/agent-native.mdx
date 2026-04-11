@@ -7,15 +7,15 @@ since: "8.0.0"
 status: "stable"
 playground:
   query: |-
-    MERGE (auth:Module {id: 'auth', name: 'auth.ts', path: 'src/auth.ts', loc: 320, critical: true})
-    MERGE (db:Module {id: 'db', name: 'db.ts', path: 'src/db/client.ts', loc: 180, critical: true})
-    MERGE (api:Module {id: 'api', name: 'routes.ts', path: 'src/api/routes.ts', loc: 155, critical: false})
-    MERGE (utils:Module {id: 'utils', name: 'logger.ts', path: 'src/utils/logger.ts', loc: 60, critical: false})
-    MATCH (auth:Module {id: 'auth'}), (db:Module {id: 'db'}) MERGE (auth)-[:IMPORTS {static: true, critical: true}]->(db)
-    MATCH (api:Module {id: 'api'}), (auth:Module {id: 'auth'}) MERGE (api)-[:IMPORTS {static: true, critical: true}]->(auth)
-    MATCH (api:Module {id: 'api'}), (db:Module {id: 'db'}) MERGE (api)-[:IMPORTS {static: true, critical: true}]->(db)
-    MATCH (auth:Module {id: 'auth'}), (utils:Module {id: 'utils'}) MERGE (auth)-[:IMPORTS {static: false, critical: false}]->(utils)
-    MATCH (m:Module)-[i:IMPORTS]->(dep:Module) RETURN m.name AS file, m.path, m.loc AS lines, i.critical AS critical_dep, dep.name AS depends_on, dep.critical AS dep_critical ORDER BY m.loc DESC
+    MERGE (auth:File {id: 'auth', name: 'auth.ts', path: 'src/auth.ts', lines: 320, layer: 'data'})
+    MERGE (db:File {id: 'db', name: 'db.ts', path: 'src/db.ts', lines: 240, layer: 'data'})
+    MERGE (api:File {id: 'api', name: 'routes.ts', path: 'src/api/routes.ts', lines: 155, layer: 'api'})
+    MERGE (main:File {id: 'main', name: 'main.ts', path: 'src/main.ts', lines: 85, layer: 'app'})
+    MATCH (auth:File {id: 'auth'}), (db:File {id: 'db'}) MERGE (auth)-[:IMPORTS {seq: 1}]->(db)
+    MATCH (main:File {id: 'main'}), (auth:File {id: 'auth'}) MERGE (main)-[:IMPORTS {seq: 2}]->(auth)
+    MATCH (api:File {id: 'api'}), (auth:File {id: 'auth'}) MERGE (api)-[:IMPORTS {seq: 3}]->(auth)
+    MATCH (main:File {id: 'main'}), (db:File {id: 'db'}) MERGE (main)-[:IMPORTS {seq: 4}]->(db)
+    MATCH (f:File)-[i:IMPORTS]->(dep:File) RETURN f.name AS file, f.path, f.lines, f.layer, dep.name AS imports, dep.layer AS dep_layer, i.seq ORDER BY f.lines DESC
 
 ---
 

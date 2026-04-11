@@ -7,7 +7,7 @@ since: "0.2.0"
 status: "stable"
 playground:
   query: |-
-    MERGE (sk:Skill {id: 'zone-watch', name: 'ZoneWatch', version: 3, min_confidence: 0.82, active: true})
+    MERGE (sk:Skill {id: 'zone-watch', name: 'ZoneWatch', version: 3, min_confidence: 0.82, active: 1})
     MERGE (s1:Sensor {id: 'cam-1', name: 'Cam-LabA', type: 'camera', reliability: 0.95})
     MERGE (s2:Sensor {id: 'lidar-1', name: 'Lidar-LabB', type: 'lidar', reliability: 0.91})
     MERGE (s3:Sensor {id: 'rfid-1', name: 'RFID-Gate', type: 'rfid', reliability: 0.99})

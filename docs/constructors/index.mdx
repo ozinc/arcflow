@@ -8,9 +8,9 @@ status: "stable"
 playground:
   seed: world
   query: |-
-    MERGE (sk:Skill {id: 'zone-watch', name: 'ZoneWatch', version: 3, min_confidence: 0.82, radius: 25.0, active: true})
-    MERGE (a1:Agent {id: 'agent-01', name: 'Scout-Alpha', role: 'observer', active: true, zone: 'lab-a'})
-    MERGE (a2:Agent {id: 'agent-02', name: 'Scout-Beta', role: 'observer', active: true, zone: 'lab-b'})
+    MERGE (sk:Skill {id: 'zone-watch', name: 'ZoneWatch', version: 3, min_confidence: 0.82, radius: 25.0, active: 1})
+    MERGE (a1:Agent {id: 'agent-01', name: 'Scout-Alpha', role: 'observer', active: 1, zone: 'lab-a'})
+    MERGE (a2:Agent {id: 'agent-02', name: 'Scout-Beta', role: 'observer', active: 1, zone: 'lab-b'})
     MERGE (s1:Sensor {id: 'cam-1', name: 'Cam-LabA', type: 'camera', reliability: 0.95})
     MERGE (s2:Sensor {id: 'lidar-1', name: 'Lidar-LabB', type: 'lidar', reliability: 0.91})
     MATCH (sk:Skill {id: 'zone-watch'}), (a1:Agent {id: 'agent-01'}) MERGE (sk)-[:GOVERNS {since_seq: 1, priority: 1}]->(a1)
