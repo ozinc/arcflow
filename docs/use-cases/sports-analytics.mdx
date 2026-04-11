@@ -31,8 +31,8 @@ const db = open('./match-data')
 
 // Create players with positions
 db.batchMutate([
-  "CREATE (p:Player {id: 'p1', name: 'Alice', team: 'home', number: 10, position: point({x: 52.3, y: 34.1}), speed: 7.2})",
-  "CREATE (p:Player {id: 'p2', name: 'Bob', team: 'home', number: 7, position: point({x: 65.0, y: 20.5}), speed: 4.1})",
+  "CREATE (p:Player {id: 'p1', name: 'Player-10', team: 'home', number: 10, position: point({x: 52.3, y: 34.1}), speed: 7.2})",
+  "CREATE (p:Player {id: 'p2', name: 'Player-07', team: 'home', number: 7, position: point({x: 65.0, y: 20.5}), speed: 4.1})",
   "CREATE (ball:Ball {id: 'ball', position: point({x: 50.0, y: 33.5}), speed: 12.4})",
 ])
 

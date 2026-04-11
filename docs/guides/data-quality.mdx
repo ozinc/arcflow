@@ -11,7 +11,7 @@ status: "stable"
 
 **Write your logic once. Run it as batch, incremental delta stream, point-in-time snapshot, or frozen replay — same query, same result, mathematically proven.**
 
-BI teams have lived with a fundamental gap for decades: ML infrastructure had Great Expectations, dbt tests, feature stores with lineage tracking, and expectation frameworks with drill-through. BI had pivot tables, manual spot checks, and Excel. ArcFlow closes that gap. Live views, confidence scoring, temporal snapshots, and graph-native lineage tracking give BI the same data quality infrastructure that ML teams have had — with zero infrastructure overhead, embedded in the same database that serves your queries.
+A world model is only as reliable as the facts it contains. Stale observations, contradicting signals, and lineage gaps don't show up as errors — they show up as wrong decisions. ArcFlow treats data quality as a first-class concern: live views maintain expectations continuously, confidence scores surface degrading facts before they corrupt downstream queries, and the temporal layer lets you replay exactly what the model knew at any point in time. No separate pipeline. No separate framework. The same engine that serves your queries enforces their integrity.
 
 ---
 

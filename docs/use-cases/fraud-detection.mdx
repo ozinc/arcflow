@@ -17,11 +17,11 @@ ArcFlow's World Model approach gives you a persistent, confidence-scored financi
 
 ```cypher
 -- Accounts as entities in the world
-CREATE (a1:Account {id: 'ACC-001', owner: 'Alice Chen', created_at: '2024-01-15'})
-CREATE (a2:Account {id: 'ACC-002', owner: 'Bob Marsh', created_at: '2024-01-16'})
-CREATE (a3:Account {id: 'ACC-003', owner: 'Carol Kim', created_at: '2024-01-16'})
-CREATE (a4:Account {id: 'ACC-004', owner: 'Dave Lund', created_at: '2024-01-17'})
-CREATE (a5:Account {id: 'ACC-005', owner: 'Eve Park', created_at: '2024-01-17'})
+CREATE (a1:Account {id: 'ACC-001', owner_id: 'cust_7f2a', created_at: '2024-01-15'})
+CREATE (a2:Account {id: 'ACC-002', owner_id: 'cust_3b9c', created_at: '2024-01-16'})
+CREATE (a3:Account {id: 'ACC-003', owner_id: 'cust_1e4d', created_at: '2024-01-16'})
+CREATE (a4:Account {id: 'ACC-004', owner_id: 'cust_8a5f', created_at: '2024-01-17'})
+CREATE (a5:Account {id: 'ACC-005', owner_id: 'cust_2c6b', created_at: '2024-01-17'})
 
 -- Identity attributes as shared graph nodes
 -- When two accounts share a phone, they share a node — the link is structural
@@ -54,7 +54,7 @@ Fraud rings are circular paths. In the world model, the question is: does a path
 ```cypher
 -- Find circular money flows (rings of 2–10 hops)
 MATCH (a:Account)-[:SENT*2..10]->(a)
-RETURN a.id, a.owner
+RETURN a.id, a.owner_id
 
 -- Get the full ring structure
 MATCH p = (a:Account)-[:SENT*2..10]->(a)
@@ -93,7 +93,7 @@ Because the world model records when entities were created and when events occur
 -- Accounts that sent money within 24 hours of creation
 MATCH (a:Account)-[r:SENT]->(:Account)
 WHERE duration.between(datetime(a.created_at), datetime(r.at)).hours < 24
-RETURN a.id, a.owner, a.created_at, r.amount, r.at
+RETURN a.id, a.owner_id, a.created_at, r.amount, r.at
 ORDER BY a.created_at
 ```
 
@@ -130,7 +130,7 @@ Mule accounts are structurally central — many transaction paths pass through t
 CALL algo.pageRank()
 YIELD nodeId, score
 MATCH (a:Account) WHERE id(a) = nodeId AND score > 0.5
-RETURN a.id, a.owner, score
+RETURN a.id, a.owner_id, score
 ORDER BY score DESC LIMIT 20
 ```
 
@@ -149,10 +149,10 @@ const db = open('./data/financial-world-model')
 const monitor = db.subscribe(
   `MATCH (a:Account)-[:SENT*2..6]->(a)
    WHERE NOT a.flagged
-   RETURN a.id, a.owner`,
+   RETURN a.id, a.owner_id`,
   (event) => {
     for (const row of event.added) {
-      const id = row.get('id')
+      const id = row.get('a.id')
       console.log(`Ring closed: ${id}`)
       db.mutate(`MATCH (a:Account {id: $id}) SET a.flagged = true, a.risk = 'high'`, { id })
     }

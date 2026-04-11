@@ -1,6 +1,6 @@
 ---
 title: "Using Constructors"
-description: "Add dynamic, confidence-scored relationships to your graph"
+description: "Constructors dynamically derive confidence-scored relationships from world model entities — pattern detection, co-location, and inference materialized as first-class graph edges."
 section: "guides"
 order: 2
 since: "0.3.0"
@@ -15,18 +15,18 @@ Build a self-building graph: register a proximity rule, process nodes, and watch
 
 ```cypher
 CREATE SKILL ProximityDetector
-  FROM PROMPT 'Determine if two Person nodes are in the same city'
-  ALLOWED ON [Person]
+  FROM PROMPT 'Determine if two Entity nodes are in the same city'
+  ALLOWED ON [Entity]
   TIER SYMBOLIC
 ```
 
 ## Step 2: Process nodes
 
 ```cypher
-PROCESS NODE (n:Person)
+PROCESS NODE (n:Entity)
 ```
 
-The engine evaluates `ProximityDetector` against all Person nodes. For each pair
+The engine evaluates `ProximityDetector` against all Entity nodes. For each pair
 in the same city, it materializes a `NEAR` relationship with confidence and provenance.
 
 ## Step 3: Query dynamic edges
