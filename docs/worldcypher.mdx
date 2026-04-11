@@ -20,6 +20,8 @@ ArcFlow's implementation is called **WorldCypher**. It passes 100% of the openCy
 
 **WorldCypher extensions beyond the standard:** `AS OF` temporal snapshots, `LIVE MATCH` standing queries, `CREATE LIVE VIEW`, confidence filtering (`WHERE r._confidence > 0.8`), spatial predicates, `CREATE SKILL`, `PROCESS NODE`.
 
+WorldCypher is a language for world models. A single query can express all three dimensions of agent reasoning simultaneously: spatial (what's near me, what's in this zone), temporal (what was true at sequence N, what changed since), and relational (what connects these entities, through what paths, with what confidence). That composability is what separates world model queries from SQL or key-value lookups.
+
 ## Operator Summary
 
 | Category | Operators |

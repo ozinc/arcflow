@@ -11,6 +11,8 @@ status: "stable"
 
 **Time is a first-class dimension of the world model — not a log, not an audit table, not a framework to integrate. Every state the graph has ever been in is directly queryable.**
 
+For autonomous systems, this is the difference between learning and guessing. A robot that made a wrong navigation decision can reconstruct its exact world model state at the moment of the decision — not a log entry, not a diff, the full spatial-temporal graph as it existed then. That is what makes safety analysis, model debugging, and decision auditing tractable rather than speculative.
+
 Every mutation in ArcFlow is versioned and preserved. The world model at any previous moment is accessible with a single `AS OF seq N` clause on any `MATCH` — no schema changes, no separate tables, no event-sourcing pipeline. Point-in-time queries, deterministic replay, temporal comparison, and clock domain merging are built into the query language itself.
 
 ```cypher
