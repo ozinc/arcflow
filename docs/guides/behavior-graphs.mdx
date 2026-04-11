@@ -1,86 +1,73 @@
 ---
 title: "Behavior Graphs"
-description: "Model behavior trees as graph structures for game AI, robotics, and autonomous agents"
+description: "Behavior trees grounded in a persistent world model — trees tick against live spatial-temporal state, survive restarts, and coordinate across agents without external infrastructure."
 section: "guides"
 status: "stable"
 ---
 
 # Behavior Graphs
 
-ArcFlow models behavior trees as graph subgraphs — nodes are graph nodes, execution order is edge traversal, and the blackboard is node properties. No external BT library needed.
+A behavior tree is only as good as the world model it reads from. A tree that ticks against stale state makes decisions on stale information. A tree that crashes loses its context. A tree that coordinates with other agents needs a shared medium.
 
-## Why graph-native behavior trees
+ArcFlow solves all three: behavior trees as graph subgraphs, ticking against a live, persistent, spatial-temporal world model. The tree's decisions are grounded in real sensor state — position, confidence, observation class — and its execution history is queryable with the same GQL used for everything else.
 
-Traditional BT libraries maintain a separate tree structure disconnected from game/world state. In ArcFlow, the behavior tree IS the world graph:
+## How it works
 
-- **Runtime modification** — add/remove/rewire behaviors with MERGE/DELETE
-- **Shared blackboard** — node properties ARE the state
-- **Persistent** — behavior state survives restarts (WAL-backed)
-- **Algorithms** — use PageRank on behavior nodes, community detection for behavior clustering
-- **Queryable** — MATCH patterns over behavior structure
+In ArcFlow, the behavior tree IS the world graph. Nodes are graph nodes. Execution order is edge traversal. The blackboard is node properties. The world state the tree reads from is the same graph it lives in.
+
+What this gives you:
+
+- **Live world state** — conditions read `_observation_class`, `_confidence`, spatial position directly from the graph
+- **Runtime modification** — add, remove, or rewire behaviors with `MERGE`/`DELETE` at runtime
+- **Persistent** — behavior state survives process restarts (WAL-backed)
+- **Temporal audit** — `AS OF seq N` shows what the tree's blackboard looked like at any past tick
+- **Multi-agent** — multiple agents share one world model; their trees coordinate through shared graph state
 
 ## Define a behavior tree
 
 ```cypher
--- Sequence: execute children in order, fail on first failure
+-- Root: execute children in order, fail on first failure
 CREATE (root:BT_Sequence {name: 'patrol', status: 'idle'})
 
--- Condition: check a predicate
-CREATE (check:BT_Condition {name: 'is_enemy_visible', status: 'idle'})
+-- Condition: checks the world model for a specific state
+CREATE (check:BT_Condition {
+  name: 'obstacle_ahead',
+  query: 'MATCH (o:Obstacle) WHERE o._observation_class = "observed" AND o._confidence > 0.8 AND distance(o.position, ego.position) < 5.0 RETURN o',
+  status: 'idle'
+})
 
--- Actions: perform work
-CREATE (move:BT_Action {name: 'move_to_waypoint', status: 'idle', waypoint: 'wp_3'})
-CREATE (attack:BT_Action {name: 'attack_enemy', status: 'idle'})
+-- Actions: perform work or modify the world model
+CREATE (navigate:BT_Action {name: 'navigate_to_waypoint', status: 'idle', waypoint: 'wp_3'})
+CREATE (avoid:BT_Action {name: 'avoid_obstacle', status: 'idle'})
+CREATE (alert:BT_Action {name: 'send_alert', status: 'idle'})
 
--- Wire the tree via CHILD edges with order
+-- Wire the tree
 MATCH (root:BT_Sequence {name: 'patrol'})
-MATCH (check:BT_Condition {name: 'is_enemy_visible'})
+MATCH (check:BT_Condition {name: 'obstacle_ahead'})
 MERGE (root)-[:CHILD {order: 0}]->(check)
 
 MATCH (root:BT_Sequence {name: 'patrol'})
-MATCH (move:BT_Action {name: 'move_to_waypoint'})
-MERGE (root)-[:CHILD {order: 1}]->(move)
+MATCH (navigate:BT_Action {name: 'navigate_to_waypoint'})
+MERGE (root)-[:CHILD {order: 1}]->(navigate)
 
--- Conditional branch
-MATCH (check:BT_Condition {name: 'is_enemy_visible'})
-MATCH (attack:BT_Action {name: 'attack_enemy'})
-MERGE (check)-[:ON_SUCCESS]->(attack)
+-- Conditional branch on obstacle detection
+MATCH (check:BT_Condition {name: 'obstacle_ahead'})
+MATCH (avoid:BT_Action {name: 'avoid_obstacle'})
+MERGE (check)-[:ON_SUCCESS]->(avoid)
+
+MATCH (check:BT_Condition {name: 'obstacle_ahead'})
+MATCH (alert:BT_Action {name: 'send_alert'})
+MERGE (avoid)-[:ON_FAILURE]->(alert)
 ```
 
-## Tick the behavior tree
-
-```cypher
--- Execute one tick across all behavior trees
-CALL behavior.tick()
-
--- Check status of all behavior nodes
-CALL behavior.status()
-
--- List all behavior nodes
-CALL behavior.nodes()
-```
-
-## SDK usage
+## Tick against live world state
 
 ```typescript
 import { open } from 'arcflow'
 
-const db = open('./game-state')
+const db = open('./data/world-model')
 
-// Define behavior tree
-db.batchMutate([
-  "CREATE (root:BT_Sequence {name: 'patrol', status: 'idle'})",
-  "CREATE (scan:BT_Condition {name: 'scan_area', status: 'idle'})",
-  "CREATE (move:BT_Action {name: 'move_to_cover', status: 'idle'})",
-])
-
-// Wire tree
-db.batchMutate([
-  "MATCH (r:BT_Sequence {name: 'patrol'}) MATCH (s:BT_Condition {name: 'scan_area'}) MERGE (r)-[:CHILD {order: 0}]->(s)",
-  "MATCH (r:BT_Sequence {name: 'patrol'}) MATCH (m:BT_Action {name: 'move_to_cover'}) MERGE (r)-[:CHILD {order: 1}]->(m)",
-])
-
-// Game loop
+// Tick reads live world model state — positions, confidence, observation class
 function tick() {
   db.query("CALL behavior.tick()")
   const status = db.query("CALL behavior.status()")
@@ -89,19 +76,96 @@ function tick() {
   }
 }
 
-// Dynamic modification at runtime
-db.mutate("CREATE (heal:BT_Action {name: 'heal_self', status: 'idle'})")
-db.mutate("MATCH (r:BT_Sequence {name: 'patrol'}) MATCH (h:BT_Action {name: 'heal_self'}) MERGE (r)-[:CHILD {order: 2}]->(h)")
+// Run at 20Hz — behavior tree ticks against current world model state each time
+setInterval(tick, 50)
 ```
+
+The world model is updated by sensors independently. When the spatial index changes (a new obstacle enters range), the next tick's condition check reflects it automatically.
+
+## Conditions that read world model state
+
+Behavior conditions can query the world model directly — confidence, observation class, spatial proximity:
+
+```cypher
+-- Is there a high-confidence observed obstacle within 5 meters?
+MATCH (ego:Robot {id: $robot_id})
+CALL algo.nearestNodes(point({x: ego.x, y: ego.y}), 'Obstacle', 5)
+  YIELD node AS obs, distance
+WHERE distance < 5.0
+  AND obs._observation_class = 'observed'
+  AND obs._confidence > 0.80
+RETURN count(obs) AS blocking_count
+
+-- Is the target zone clear?
+MATCH (z:Zone {id: $target_zone})
+MATCH (e:Entity)
+WHERE e._observation_class IN ['observed', 'inferred']
+  AND distance(point({x: e.x, y: e.y}), point({x: z.x, y: z.y})) < 10.0
+RETURN count(e) AS zone_occupancy
+```
+
+These queries fire inside the behavior tree tick — the tree sees the world at the exact moment of decision.
+
+## Dynamic modification at runtime
+
+```typescript
+// Enemy detected — inject an attack behavior without restarting
+db.mutate("CREATE (attack:BT_Action {name: 'engage_target', status: 'idle', target_id: $id})", { id: contactId })
+db.mutate(`
+  MATCH (root:BT_Sequence {name: 'patrol'})
+  MATCH (attack:BT_Action {name: 'engage_target'})
+  MERGE (root)-[:CHILD {order: 0}]->(attack)
+`)
+
+// Objective complete — remove the completed action
+db.mutate("MATCH (a:BT_Action {name: 'engage_target'}) DETACH DELETE a")
+```
+
+## Temporal audit — what did the tree decide and why?
+
+Every tick is versioned in the world model:
+
+```cypher
+-- What was the tree's blackboard state at tick 5000?
+MATCH (n:BT_Sequence) AS OF seq 5000
+RETURN n.name, n.status
+
+-- What was the world model state when the tree failed?
+MATCH (e:Entity) AS OF seq 4821
+RETURN e.name, e.x, e.y, e._observation_class, e._confidence
+```
+
+Post-incident analysis: replay the exact world state at the moment a decision was made. No log reconstruction — query the versioned graph directly.
+
+## Multi-agent behavior coordination
+
+Multiple agents share one world model. Their trees read the same ground truth:
+
+```cypher
+-- Formation members sorted by position
+MATCH (r:Robot)-[m:MEMBER_OF]->(f:Formation {name: 'Alpha'})
+RETURN r.id, r.x, r.y, m.position
+ORDER BY m.position
+
+-- Assign the nearest idle robot to a task
+MATCH (task:Task {status: 'pending'})
+CALL algo.nearestNodes(point({x: task.x, y: task.y}), 'Robot', 5)
+  YIELD node AS robot, distance
+WHERE robot.status = 'idle'
+WITH robot, task ORDER BY distance LIMIT 1
+SET robot.status = 'assigned', task.status = 'assigned'
+```
+
+No message bus between agents. No shared-state synchronization layer. The world model is the shared state.
 
 ## Node types
 
-| Type | Purpose | Example |
+| Type | Purpose | World Model integration |
 |---|---|---|
-| `BT_Sequence` | Execute children left-to-right, fail on first failure | `patrol`, `attack_sequence` |
-| `BT_Selector` | Try children until one succeeds | `find_cover_or_retreat` |
-| `BT_Condition` | Check a predicate | `is_enemy_visible`, `health_low` |
-| `BT_Action` | Perform actual work | `move_to_waypoint`, `fire_weapon` |
+| `BT_Sequence` | Execute children left-to-right, fail on first failure | Reads spatial, confidence, observation class |
+| `BT_Selector` | Try children until one succeeds | Falls back on lower-confidence information |
+| `BT_Condition` | Check a predicate against the world model | Direct GQL query on graph state |
+| `BT_Action` | Perform work or mutate the world model | Writes back sensor readings, updates positions |
 
 ## Edge types
 
@@ -113,7 +177,14 @@ db.mutate("MATCH (r:BT_Sequence {name: 'patrol'}) MATCH (h:BT_Action {name: 'hea
 
 ## Use cases
 
-- **Game AI** — NPC decision-making, enemy behavior, companion logic
-- **Robotics** — task planning, sensor-reactive behaviors, recovery sequences
-- **Autonomous agents** — LLM-driven agents with structured decision trees
-- **Simulation** — population behavior modeling, traffic flow, crowd dynamics
+- **Autonomous robots** — task planning, obstacle avoidance, sensor-reactive recovery sequences grounded in live world model state
+- **UAV fleets** — formation maintenance, mission assignment, reactive waypoint navigation
+- **Game AI** — NPC decision-making that reads spatial proximity, inventory, and social state from a unified graph
+- **Simulation** — population behavior modeling with persistent history and temporal replay
+
+## See Also
+
+- [Building a World Model](/guides/world-model) — the spatial-temporal foundation behavior trees read from
+- [Autonomous Systems](/use-cases/autonomous-systems) — behavior trees in multi-robot coordination
+- [Reactive Queries](/reactive) — standing queries that trigger tree re-evaluation
+- [Constructors](/concepts/constructors) — dynamic edge materialization from behavior outcomes

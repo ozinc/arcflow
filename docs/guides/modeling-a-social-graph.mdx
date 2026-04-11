@@ -1,112 +1,130 @@
 ---
-title: "Modeling a Social Graph"
-description: "First graph in ArcFlow: nodes, directed relationships, multi-hop traversal, shortest path, and PageRank — under 2 minutes."
+title: "Graph Model Fundamentals"
+description: "The core primitives of every world model: nodes, labeled relationships, multi-hop traversal, pattern filtering, and graph algorithms."
 section: "guides"
 order: 1
 since: "0.2.0"
 status: "stable"
 ---
 
-# Modeling a Social Graph
+# Graph Model Fundamentals
 
-A social network is a world model of human connection — who knows whom, how many hops apart they are, and which nodes carry the most influence. This guide builds one from scratch: nodes with properties, directed relationships, multi-hop traversals, shortest path, and centrality scores.
+Every world model is built from the same primitives: nodes representing entities, labeled edges representing relationships, and pattern queries that traverse both. Before building a spatial-temporal world model with confidence scoring and temporal replay, you need to understand these mechanics.
 
-Under 2 minutes. All in GQL.
+This guide builds a minimal entity graph — agents with roles, communication links, and formation membership — and shows the traversal and algorithm patterns that carry through to every real world model.
 
-## Create people
+## Create entities
 
 ```cypher
-CREATE (alice:Person {name: 'Alice', age: 30, city: 'London'})
-CREATE (bob:Person {name: 'Bob', age: 25, city: 'Berlin'})
-CREATE (carol:Person {name: 'Carol', age: 35, city: 'London'})
-CREATE (dave:Person {name: 'Dave', age: 28, city: 'Paris'})
+CREATE (a1:Agent {name: 'Scout-01', role: 'scout', status: 'active'})
+CREATE (a2:Agent {name: 'Scout-02', role: 'scout', status: 'active'})
+CREATE (a3:Agent {name: 'Relay-01', role: 'relay', status: 'active'})
+CREATE (a4:Agent {name: 'Command-01', role: 'command', status: 'idle'})
 ```
+
+Every node has a label (`Agent`) and properties. Properties are schema-optional — add them per-node as needed, no migration required.
 
 ## Create relationships
 
-Relationships are first-class objects — not foreign keys derived at query time, but stored edges with direction and properties.
+Relationships are first-class objects, not foreign keys computed at query time. They have a type, a direction, and their own properties.
 
 ```cypher
-MATCH (a:Person {name: 'Alice'}), (b:Person {name: 'Bob'})
-CREATE (a)-[:KNOWS]->(b)
+-- Communication links
+MATCH (a1:Agent {name: 'Scout-01'}), (a2:Agent {name: 'Scout-02'})
+CREATE (a1)-[:COMMS_WITH {latency_ms: 12, signal_strength: 0.95}]->(a2)
 
-MATCH (b:Person {name: 'Bob'}), (c:Person {name: 'Carol'})
-CREATE (b)-[:KNOWS]->(c)
+MATCH (a1:Agent {name: 'Scout-01'}), (a3:Agent {name: 'Relay-01'})
+CREATE (a1)-[:COMMS_WITH {latency_ms: 45, signal_strength: 0.72}]->(a3)
 
-MATCH (a:Person {name: 'Alice'}), (d:Person {name: 'Dave'})
-CREATE (a)-[:KNOWS]->(d)
+MATCH (a3:Agent {name: 'Relay-01'}), (a4:Agent {name: 'Command-01'})
+CREATE (a3)-[:REPORTS_TO {priority: 1}]->(a4)
+
+-- Formation membership
+CREATE (f:Formation {name: 'Alpha', pattern: 'wedge'})
+
+MATCH (a1:Agent {name: 'Scout-01'}), (f:Formation {name: 'Alpha'})
+CREATE (a1)-[:MEMBER_OF {position: 'lead'}]->(f)
+
+MATCH (a2:Agent {name: 'Scout-02'}), (f:Formation {name: 'Alpha'})
+CREATE (a2)-[:MEMBER_OF {position: 'wing'}]->(f)
 ```
 
-## Who does Alice know directly?
+## Traverse: who does Scout-01 communicate with directly?
 
 ```cypher
-MATCH (a:Person {name: 'Alice'})-[:KNOWS]->(friend)
-RETURN friend.name
+MATCH (a:Agent {name: 'Scout-01'})-[:COMMS_WITH]->(peer:Agent)
+RETURN peer.name, peer.role
 ```
 
-## Friends of friends (2 hops)
+## Traverse: 2-hop communication paths
 
 ```cypher
-MATCH (a:Person {name: 'Alice'})-[:KNOWS*2..2]->(fof)
-RETURN DISTINCT fof.name
+MATCH (a:Agent {name: 'Scout-01'})-[:COMMS_WITH*2..2]->(remote:Agent)
+RETURN DISTINCT remote.name, remote.role
 ```
 
-The `*2..2` is a variable-length path — match exactly 2 hops. `*1..3` would match 1, 2, or 3 hops. No recursion needed, no self-join.
+`*2..2` matches exactly 2 hops. `*1..3` matches 1, 2, or 3. Variable-length paths — no recursive CTE, no self-join.
 
-## Shortest path between two people
+## Filter: all active agents in the Alpha formation
+
+```cypher
+MATCH (a:Agent {status: 'active'})-[:MEMBER_OF]->(f:Formation {name: 'Alpha'})
+RETURN a.name, a.role
+```
+
+Combine property filters with graph traversal in a single pattern.
+
+## Shortest path through the communication graph
 
 ```cypher
 MATCH p = shortestPath(
-  (a:Person {name: 'Alice'})-[:KNOWS*]-(c:Person {name: 'Carol'})
+  (a:Agent {name: 'Scout-01'})-[:COMMS_WITH|REPORTS_TO*]-(c:Agent {name: 'Command-01'})
 )
 RETURN length(p), [n IN nodes(p) | n.name] AS path
 ```
 
-## Filter: people in London over 25
+## Aggregate: fleet status
 
 ```cypher
-MATCH (n:Person)
-WHERE n.city = 'London' AND n.age > 25
-RETURN n.name, n.age
+MATCH (a:Agent)
+RETURN a.status, count(*) AS count
+ORDER BY count DESC
 ```
 
-## Aggregate statistics
-
-```cypher
-MATCH (n:Person)
-RETURN count(n) AS total, avg(n.age) AS avg_age, collect(n.city) AS cities
-```
-
-## PageRank — who has the most influence?
+## Graph algorithm: communication centrality
 
 ```cypher
 CALL algo.pageRank()
 YIELD nodeId, score
-MATCH (p:Person) WHERE id(p) = nodeId
-RETURN p.name, score
+MATCH (a:Agent) WHERE id(a) = nodeId
+RETURN a.name, a.role, score
 ORDER BY score DESC
 ```
 
-PageRank measures structural influence — which person, if removed, would most disconnect the network. In a larger graph this answers questions no property filter can.
+PageRank on the communication graph surfaces which agents are most critical to information flow — if Scout-01 drops out, which messages can still reach Command-01? This structural question has no answer in entity properties alone.
 
-## Optional: people Alice may know (OPTIONAL MATCH)
+## Optional: agents with no direct command path
 
 ```cypher
-MATCH (a:Person {name: 'Alice'})
-OPTIONAL MATCH (a)-[:KNOWS*2..3]->(extended:Person)
-WHERE NOT (a)-[:KNOWS]->(extended)
-RETURN DISTINCT extended.name AS suggested_connection
+MATCH (a:Agent)
+OPTIONAL MATCH (a)-[:COMMS_WITH|REPORTS_TO*]->(c:Agent {role: 'command'})
+WHERE c IS NULL
+RETURN a.name, a.role AS unreachable_from_command
 ```
 
-## Snapshot for later
+## Snapshot
 
 ```
-:snapshot ./social-graph.json
+:snapshot ./agent-graph.json
 ```
+
+---
+
+These are the mechanics every world model builds on. The next step is adding what makes a world model a world model: spatial positions (R*-tree indexed), observation classes (`observed` / `inferred` / `predicted`), confidence scores, and temporal replay.
 
 ## See Also
 
+- [Building a World Model](/guides/world-model) — spatial positions, confidence scores, temporal memory
 - [SQL vs GQL](/concepts/sql-vs-gql) — why graph traversal replaces multi-hop JOINs
-- [Graph Patterns](/concepts/graph-patterns) — variable-length paths, OPTIONAL MATCH, and pattern composition
-- [Building a World Model](/guides/world-model) — entities in space with temporal memory and confidence
+- [Graph Patterns](/concepts/graph-patterns) — variable-length paths, OPTIONAL MATCH, pattern composition
 - [WorldCypher Reference](/worldcypher) — full query language

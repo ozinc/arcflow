@@ -41,23 +41,23 @@ db.query("CALL algo.nearestNodes(ball.position, 'Player', 5) YIELD node, distanc
 
 // Spatial: offside check — attacking players ahead of last defender
 db.query(`
-  CALL algo.nearestNodes(ball.position, 'Player', 22) YIELD node AS player, distance
-  MATCH (player)-[:PLAYS_FOR]->(team:Team {side: 'attacking'})
-  WHERE player.position.x > last_defender.position.x
-  RETURN player.name, player.position
+  MATCH (defender:Player)-[:PLAYS_FOR]->(defending:Team {side: 'defending'})
+  WITH max(defender.position.x) AS last_defender_x
+  MATCH (attacker:Player)-[:PLAYS_FOR]->(attacking:Team {side: 'attacking'})
+  WHERE attacker.position.x > last_defender_x
+  RETURN attacker.name, attacker.position.x AS attacker_x, last_defender_x
 `)
 
-// Live geofence: fires within 20ms when a player enters the penalty area
+// Live geofence: fires the instant a player enters or leaves the penalty area
 db.subscribe(
   `MATCH (p:Player)
    WHERE p.position.x >= 83 AND p.position.x <= 105
      AND p.position.y >= 13 AND p.position.y <= 55
    RETURN p.name, p.team`,
   (event) => {
-    for (const row of event.added)   console.log(`${row.name} entered penalty area`)
-    for (const row of event.removed) console.log(`${row.name} left penalty area`)
-  },
-  { pollIntervalMs: 20 }
+    for (const row of event.added)   console.log(`${row.get('name')} entered penalty area`)
+    for (const row of event.removed) console.log(`${row.get('name')} left penalty area`)
+  }
 )
 
 // Algorithms: passing network centrality
