@@ -15,14 +15,14 @@ It runs in-process. No server. No round-trip. Browser, Node.js, Python, Rust, or
 
 ## Try instantly — zero install
 
-Open **[ArcFlow Engine](https://arcflow.dev/engine)** in your browser. Paste any Cypher or GQL query — both work. Persistent storage. No install, no signup.
+Open **[ArcFlow Engine](https://arcflow.dev/engine)** in your browser. Paste any GQL query — persistent storage, no install, no signup.
 
 ```cypher
-CREATE (alice:Person {name: 'Alice', age: 30})
-CREATE (bob:Person {name: 'Bob', age: 35})
-CREATE (a:Person {name: 'Alice'})-[:KNOWS]->(b:Person {name: 'Bob'})
-MATCH (n:Person) RETURN n.name, n.age
-CALL algo.pageRank()
+CREATE (e:Entity {id: 'unit-01', x: 12.4, y: 8.7, _observation_class: 'observed', _confidence: 0.94})
+CREATE (e:Entity {id: 'contact-x', x: 80.0, y: 90.0, _observation_class: 'predicted', _confidence: 0.38})
+CALL algo.nearestNodes(point({x: 0, y: 0}), 'Entity', 5) YIELD node, distance RETURN node.id, distance
+MATCH (e:Entity) WHERE e._confidence > 0.8 RETURN e.id, e.x, e.y
+MATCH (e:Entity) AS OF seq 1 RETURN e.id, e._confidence
 ```
 
 ## Install
@@ -50,13 +50,21 @@ arcflow --playground
 
 ## Next
 
-- [Quickstart](/quickstart) — first query in 5 minutes
+- [Quickstart](/quickstart) — first world model query, step by step
 - [Installation](/installation) — all install methods in detail
 - [Project Setup](/project-setup) — Express, testing, monorepo
 
 ### Guides
 
-- [Data Quality](/guides/data-quality) — live DQ, batch==delta equivalence, pipeline prune
+- [Building a World Model](/guides/world-model) — entities in space, temporal memory, reactive monitoring
+- [Swarm & Multi-Agent](/guides/swarm-agents) — shared world model as coordination substrate for AI agent swarms
+- [Trusted RAG](/guides/rag-pipeline) — confidence-filtered retrieval, graph context, vector + graph + full-text
+- [Agent Integration](/guides/agent-integration) — CLI binary, MCP, and napi-rs — which surface fits your execution context
+- [Data Quality](/guides/data-quality) — live DQ, batch==delta equivalence, pipeline integrity
 - [Code Intelligence](/guides/code-intelligence) — queryable codebase graph for coding agents
-- [From SQL to GQL](/guides/sql-to-gql) — connect any PostgreSQL client to ArcFlow
-- [Agent Integration](/guides/agent-integration) — CLI binary, MCP, and napi-rs access patterns
+
+### Use cases
+
+- [Autonomous Systems](/use-cases/autonomous-systems) — robot fleets and UAV coordination on a shared world model
+- [Digital Twins](/use-cases/digital-twins) — live spatial replica of physical facilities
+- [Robotics & Perception](/use-cases/robotics) — sensor fusion, track lifecycle, ROS bridge
