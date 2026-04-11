@@ -1,6 +1,6 @@
 ---
 title: "Building a World Model"
-description: "Use ArcFlow as the state substrate for a spatial-temporal world model with confidence-scored observations"
+description: "Step-by-step: build the missing layer of the AI infrastructure stack — a persistent, spatial-temporal, confidence-scored representation of reality."
 section: "Guides"
 order: 2
 since: "10.0.0"
@@ -9,25 +9,41 @@ status: "stable"
 
 # Building a World Model
 
-Build a persistent, queryable world model where entities have spatial positions, velocities, and confidence-scored observations that evolve over time. By the end of this guide you'll have a scene with 20 entities, spatial proximity queries, temporal memory, and the ability to distinguish what was **observed** from what was **predicted**.
+Most AI systems can read the world. Few can remember it.
 
-This is the foundation for robotics perception, game AI, autonomous systems, digital twins, and active inference agents.
+They parse language. They embed text. They generate responses. But when the question is "Where was that entity 30 seconds ago? What does the sensor data say? How confident are we, and which instrument produced that reading?" — there is no standard infrastructure layer with an answer. The gap between foundation models and the physical world is not a model problem. It is a database problem.
+
+A **world model** is the solution: a persistent, queryable representation of physical or simulated reality — what entities exist, where they are, how they relate, how confident we are in each fact, and how all of this has evolved over time.
+
+This guide builds one from scratch. By the end you'll have:
+
+- 20 entities in 3D space, with velocities and epistemic states
+- Spatial proximity and frustum queries (R*-tree backed, ≥ 2000/s)
+- Temporal memory — query the world at any previous moment
+- Confidence-filtered decision making
+- Graph algorithms over the world structure
+- Reactive monitoring — the model tells you when anything changes
+
+This is the foundation for robotics perception, autonomous fleets, digital twins, game AI, and any system that needs to act on a continuously updated model of its environment.
 
 ---
 
-## Step 1: Create the Scene
+## 1. Entities in space
 
-A world model starts with entities in space. Each entity has a position, a velocity, and an observation class that records how the entity was detected.
+Space is not a column. A longitude/latitude pair stored as a float is not spatial infrastructure — it's a number. Spatial infrastructure means the database understands position natively: indexes it with a spatial tree, answers proximity queries without full scans, and composes distance predicates with graph traversal in a single query.
+
+In ArcFlow, every entity has a position. The `_observation_class` field records the epistemic status of the entity — how it was detected and how much to trust it.
 
 ```cypher
--- Observed entities (directly detected by sensors)
+-- Observed entities: directly detected by sensors
 CREATE (d1:Entity {
   name: 'Drone-Alpha',
   type: 'aerial',
   x: 34.2, y: 67.1, z: 12.0,
   vx: 2.1, vy: -0.8, vz: 0.0,
   energy: 87.5,
-  _observation_class: 'observed'
+  _observation_class: 'observed',
+  _confidence: 0.97
 })
 
 CREATE (d2:Entity {
@@ -36,17 +52,18 @@ CREATE (d2:Entity {
   x: 41.0, y: 52.3, z: 15.5,
   vx: -1.3, vy: 2.0, vz: -0.5,
   energy: 62.0,
-  _observation_class: 'observed'
+  _observation_class: 'observed',
+  _confidence: 0.94
 })
 
--- Ground vehicles
 CREATE (v1:Entity {
   name: 'Rover-01',
   type: 'ground',
   x: 20.0, y: 30.0, z: 0.0,
   vx: 1.5, vy: 0.3, vz: 0.0,
   energy: 94.0,
-  _observation_class: 'observed'
+  _observation_class: 'observed',
+  _confidence: 0.99
 })
 
 CREATE (v2:Entity {
@@ -55,138 +72,172 @@ CREATE (v2:Entity {
   x: 55.0, y: 70.0, z: 0.0,
   vx: -0.5, vy: 1.2, vz: 0.0,
   energy: 45.0,
-  _observation_class: 'observed'
+  _observation_class: 'observed',
+  _confidence: 0.98
 })
 
--- Predicted entity (inferred from radar, not directly visible)
+-- Predicted entity: inferred from radar, not directly visible
 CREATE (u1:Entity {
   name: 'Unknown-Contact',
   type: 'unknown',
   x: 80.0, y: 90.0, z: 5.0,
   vx: 0.0, vy: 0.0, vz: 0.0,
   energy: -1,
-  _observation_class: 'predicted'
+  _observation_class: 'predicted',
+  _confidence: 0.35
 })
 ```
 
-The `_observation_class` field is built into ArcFlow's node model. It distinguishes:
-- **observed** — directly measured by a sensor (highest trust)
-- **inferred** — derived from reasoning over observed facts
-- **predicted** — model output, statistical projection (lowest trust)
+Three epistemic states — not binary true/false, but a spectrum that maps to operational decisions:
 
-## Step 2: Build Relationships
+| State | Meaning | Operational consequence |
+|---|---|---|
+| `observed` | Directly measured — sensor contact, confirmed event | Trust it. Act on it. |
+| `inferred` | Derived from observed facts by reasoning | Verify before high-stakes action. |
+| `predicted` | Model output, statistical projection | Plan around it. Do not rely on it alone. |
 
-Entities in a world model don't exist in isolation. They have relationships: communication links, formation membership, line-of-sight, proximity alerts.
+The unknown contact has `_confidence: 0.35`. That number matters. Safety systems need thresholds, not flags.
+
+---
+
+## 2. Relationships — the structure of the world
+
+Physical reality is relational. Entities communicate, belong to formations, are detected by instruments, occupy zones, and interact along paths. A world model that stores only entity properties misses the structure that makes reasoning possible.
+
+ArcFlow stores relationships as first-class objects with their own properties, direction, and confidence. The detection edge carries provenance: which sensor, what range, what confidence, when.
 
 ```cypher
--- Communication links
+-- Communication topology
 CREATE (d1)-[:COMMS_WITH {latency_ms: 12, signal_strength: 0.95}]->(d2)
 CREATE (d1)-[:COMMS_WITH {latency_ms: 45, signal_strength: 0.72}]->(v1)
 
--- Formation membership
+-- Formation structure
 CREATE (f:Formation {name: 'Alpha-Squad', pattern: 'diamond'})
 CREATE (d1)-[:MEMBER_OF {position: 'lead'}]->(f)
 CREATE (d2)-[:MEMBER_OF {position: 'wing'}]->(f)
 CREATE (v1)-[:MEMBER_OF {position: 'tail'}]->(f)
 
--- Sensor detection (with confidence)
-CREATE (d1)-[:DETECTS {confidence: 0.35, sensor: 'radar', range: 120.0}]->(u1)
+-- Sensor detection edge — provenance built in
+CREATE (d1)-[:DETECTS {
+  confidence: 0.35,
+  sensor: 'radar',
+  range: 120.0,
+  at: timestamp()
+}]->(u1)
 ```
 
-Note the confidence score on the `:DETECTS` edge: 0.35. The unknown contact was detected by radar with low confidence. ArcFlow stores this as a provenance-tracked edge — you can query which sensor produced it and when.
+The detection edge is not a log entry. It is a first-class fact in the graph — queryable, traversable, confidence-filtered. When you ask "which sensor detected this contact and with what certainty?", the answer is already in the model.
 
-## Step 3: Spatial Queries
+---
 
-Query the world model spatially — find entities near a point, within a radius, or closest to each other.
+## 3. Querying space
+
+Once entities exist in space, proximity becomes a native query — not a computed join, not a spatial extension, not an external GIS call.
 
 ```cypher
 -- K-nearest: 5 entities closest to a point (R*-tree backed, ≥ 2000/s at 11K entities)
 CALL algo.nearestNodes(point({x: 40.0, y: 60.0}), 'Entity', 5)
   YIELD node, distance
-  RETURN node.name, node.type, distance
+RETURN node.name, node.type, distance
+ORDER BY distance
 
--- Radius: all entities within 30 units (compiler pushes distance() into R*-tree)
+-- Radius: all entities within 30 units
 MATCH (e:Entity)
 WHERE distance(e.position, point({x: 40.0, y: 60.0})) < 30.0
 RETURN e.name, e.type, e.x, e.y
 
--- Bounding box: entities in a rectangular zone
+-- Bounding box
 MATCH (e:Entity)
 WHERE e.x >= 20 AND e.x <= 60
   AND e.y >= 40 AND e.y <= 80
 RETURN e.name, e.type
 ```
 
-Spatial predicates compose with graph traversal — no need to join two systems:
+Spatial predicates compose with graph traversal in the same query:
 
 ```cypher
--- Entities within 50 units of the origin AND in the Alpha-Squad formation
+-- Entities within 50 units of the origin AND in Alpha-Squad
 CALL algo.nearestNodes(point({x: 0, y: 0}), 'Entity', 20)
   YIELD node AS e, distance
 WHERE distance < 50
 MATCH (e)-[:MEMBER_OF]->(f:Formation {name: 'Alpha-Squad'})
-RETURN e.name, distance
+RETURN e.name, distance, f.pattern
 ```
 
-## Step 4: Temporal Memory
+A query that combines spatial proximity, graph structure, and property filters — in a single statement, hitting a single system. No joins across databases. No pipeline between spatial and relational stores.
 
-Update entity positions as time progresses. ArcFlow records every mutation with a timestamp — you can query any previous state.
+---
+
+## 4. Time — the world remembers
+
+A world model that forgets is not a world model. It is a current-state cache.
+
+Every mutation in ArcFlow is versioned. The graph at any previous point in time is fully queryable — not from an audit log or a separate history table, but from the same graph, the same query language, with `AS OF seq N`.
 
 ```cypher
--- Time step: update positions based on velocity (one property per SET clause)
+-- Advance the world: update positions by one time step
 MATCH (e:Entity)
-SET e.x = e.x + e.vx
-SET e.y = e.y + e.vy
-SET e.z = e.z + e.vz
-
--- 10 ticks later, update again
-MATCH (e:Entity)
-SET e.x = e.x + e.vx * 10
-SET e.y = e.y + e.vy * 10
+SET e.x = e.x + e.vx,
+    e.y = e.y + e.vy,
+    e.z = e.z + e.vz
 ```
 
 Now query the past:
 
 ```cypher
--- Where was Drone-Alpha 5 seconds ago?
-MATCH (d:Entity {name: 'Drone-Alpha'}) AS OF (timestamp() - 5000)
+-- Where was Drone-Alpha at the previous sequence checkpoint?
+MATCH (d:Entity {name: 'Drone-Alpha'}) AS OF seq 100
 RETURN d.x, d.y, d.z
 
--- Compare current position to position 10 seconds ago
-CALL db.temporalCompare(
-  'MATCH (d:Entity {name: "Drone-Alpha"}) RETURN d.x, d.y',
-  'MATCH (d:Entity {name: "Drone-Alpha"}) RETURN d.x, d.y'
-)
+-- Replay the entire world at a past moment
+MATCH (e:Entity) AS OF (timestamp() - 5000)
+RETURN e.name, e.x, e.y, e.z, e._observation_class
+
+-- Reconstruct the world at the moment of an incident
+MATCH (e:Entity) AS OF seq 4821
+RETURN e.name, e.type, e.x, e.y, e._observation_class, e._confidence
 ```
 
-This is what makes ArcFlow a world model — not just current state, but **temporal knowledge**. The system remembers every state it has ever been in.
+Incident reconstruction is a real operational requirement: something happened, you need to know exactly what the world looked like at that moment. Not approximate state inferred from logs — exact state, same query language, from the same graph.
 
-## Step 5: Confidence-Filtered Queries
+---
 
-Not all knowledge is equally reliable. Filter by observation class and confidence to get only trusted facts.
+## 5. Confidence — what you know versus what you believe
+
+Not all knowledge is equal. The unknown contact has a `_confidence` of 0.35. Drone-Alpha's position is `_confidence: 0.97`. These are not decorative metadata — they are operational filters.
 
 ```cypher
--- Only observed entities (ignore predictions)
+-- Trusted entities only: high-confidence, directly observed
 MATCH (e:Entity)
 WHERE e._observation_class = 'observed'
+  AND e._confidence > 0.85
 RETURN e.name, e.type, e.x, e.y
 
--- Only high-confidence detections
+-- Only high-confidence detection edges
 MATCH (a)-[r:DETECTS]->(b)
 WHERE r.confidence >= 0.7
 RETURN a.name, b.name, r.confidence, r.sensor
 
--- Confidence-weighted PageRank (trusted entities rank higher)
+-- Flag low-confidence predictions for verification
+MATCH ()-[r:DETECTS]->(contact:Entity)
+WHERE contact._observation_class = 'predicted'
+  AND r.confidence < 0.5
+RETURN contact.name, r.sensor, r.confidence
+ORDER BY r.confidence ASC
+
+-- Confidence-weighted centrality: most trusted entities rank highest
 CALL algo.confidencePageRank()
 YIELD nodeId, score
-RETURN nodeId, score ORDER BY score DESC
+RETURN nodeId, score ORDER BY score DESC LIMIT 10
 ```
 
-The unknown contact with 0.35 confidence is filtered out of trusted queries. As more sensor readings arrive and confidence increases, it automatically enters the trusted result set.
+As more sensors detect the unknown contact and confidence rises above the threshold, it automatically enters trusted result sets. No application logic. No polling. The model maintains this.
 
-## Step 6: Run Algorithms Over the World Model
+---
 
-Graph algorithms reveal structure in the world model that isn't visible from individual entities.
+## 6. Structure the world doesn't show you
+
+Individual entity properties tell you what something is. Graph algorithms tell you where it sits in the world's structure: which entities are critical to communication, whether the fleet is cohesive or fragmented, what the shortest path through the navigable network is.
 
 ```cypher
 -- Which entities are most central to the communication network?
@@ -194,23 +245,89 @@ CALL algo.pageRank()
 YIELD nodeId, score
 RETURN nodeId, score ORDER BY score DESC LIMIT 5
 
--- Are there isolated groups?
+-- Is the fleet in one connected piece, or fragmented?
 CALL algo.connectedComponents()
+YIELD componentId, nodeCount
+ORDER BY nodeCount DESC
 
--- Formation cohesion: how tightly clustered are squad members?
+-- How tightly clustered is the formation?
 CALL algo.clusteringCoefficient()
+YIELD nodeId, coefficient
 
--- Find the shortest communication path between two entities
+-- Shortest communication path between two entities
 MATCH p = shortestPath(
   (a:Entity {name: 'Drone-Alpha'}),
   (b:Entity {name: 'Rover-02'})
 )
-RETURN p
+RETURN length(p), nodes(p)
 ```
 
-## Step 7: Vector Embeddings for Semantic Search
+A fleet that appears healthy in individual status checks may have a fragmented communication graph. A formation that looks cohesive in position data may have a low clustering coefficient. These are structural facts about the world that only graph algorithms can surface.
 
-Add embeddings to entities for semantic similarity search — useful when you need to find entities by description, not just by properties.
+---
+
+## 7. Reactive monitoring — the world tells you
+
+Polling is not a world model. It is a sampling strategy — and it introduces latency proportional to the polling interval.
+
+ArcFlow's reactive layer inverts this: you declare what you care about, and the model notifies you the moment it changes.
+
+```typescript
+import { open } from 'arcflow'
+
+const db = open('./data/world-model')
+
+// Emergency: any observed entity within 5 units (fires on every mutation that changes the result)
+const safetyMonitor = db.subscribe(
+  `CALL algo.nearestNodes(point({x: 0, y: 0}), 'Entity', 10)
+   YIELD node AS e, distance
+   WHERE distance < 5.0
+     AND e._observation_class = 'observed'
+     AND e._confidence > 0.8
+   RETURN e.name, e.type, distance`,
+  (event) => {
+    if (event.added.length > 0) {
+      triggerEmergencyStop(event.added[0].get('e.name'))
+    }
+  }
+)
+
+// Track new predicted contacts — schedule verification
+const contactMonitor = db.subscribe(
+  `MATCH ()-[r:DETECTS]->(contact:Entity)
+   WHERE contact._observation_class = 'predicted'
+     AND r.confidence < 0.5
+   RETURN contact.name, r.sensor, r.confidence`,
+  (event) => {
+    for (const row of event.added) {
+      scheduleVerification({
+        entity: row.get('contact.name'),
+        sensor: row.get('r.sensor'),
+        confidence: row.get('r.confidence')
+      })
+    }
+  }
+)
+
+// Live view: fleet health maintained continuously (zero-cost reads)
+db.mutate(`
+  CREATE LIVE VIEW fleet_health AS
+  MATCH (e:Entity)
+  WHERE e._observation_class = 'observed'
+  RETURN e.name, e.type, e.energy, e._confidence
+  ORDER BY e.energy ASC
+`)
+
+const health = db.query("MATCH (row) FROM VIEW fleet_health RETURN row")
+```
+
+The standing queries fire on every relevant mutation. The live view is maintained incrementally — reads are free. No scheduler, no polling loop, no batch job.
+
+---
+
+## 8. Semantic search across the world
+
+Add embeddings to entities for semantic search — find by what something means, not just what its properties say. Useful when entities have descriptions, behavioral histories, or text-derived features.
 
 ```cypher
 CREATE VECTOR INDEX entity_embeddings
@@ -218,74 +335,107 @@ CREATE VECTOR INDEX entity_embeddings
   DIMENSIONS 128
   SIMILARITY cosine
 
--- Add embeddings (from your model)
+-- Add embedding (from your model)
 MATCH (e:Entity {name: 'Drone-Alpha'})
-SET e.embedding = [0.12, -0.34, 0.56, ...]  -- 128d vector
+SET e.embedding = [0.12, -0.34, 0.56, ...]
 
--- Find semantically similar entities
-CALL algo.vectorSearch('entity_embeddings', 3, [0.12, -0.34, 0.56, ...])
+-- Find entities semantically similar to a description
+CALL algo.vectorSearch('entity_embeddings', 3, queryVector)
 YIELD node, score
-RETURN node.name, score
+RETURN node.name, node.type, score
 ```
 
----
-
-## The Complete World Model
-
-You now have a world model with:
-
-| Capability | What it enables |
-|---|---|
-| **Spatial entities** | Position, velocity, energy — 3D scene representation |
-| **Typed relationships** | Communication links, formations, sensor detections |
-| **Observation classes** | Distinguish observed facts from predictions |
-| **Confidence scores** | Filter unreliable knowledge from trusted queries |
-| **Temporal memory** | Query any previous state with `AS OF seq N` |
-| **Graph algorithms** | Discover structure (centrality, components, clustering) |
-| **Vector search** | Semantic similarity across entities |
-| **Provenance** | Every edge knows which sensor produced it and when |
-
-This is the foundation for:
-- **Robotics perception** — the robot's understanding of its environment
-- **Game AI** — NPCs that remember, reason spatially, and coordinate
-- **Digital twins** — live spatial replicas of physical systems
-- **Active inference agents** — entities maintaining belief distributions over their environment
-- **Autonomous systems** — vehicles, drones, and fleets sharing a spatial knowledge graph
+Vector search composes with all other query types — filter by label, confidence, observation class, then rank by similarity.
 
 ---
 
-## Step 8: OpenUSD Scene Export and Physics Queries
+## 9. USD scene export and physics queries
 
-If your world model represents a USD stage (robotics, digital twins, game engines), ArcFlow can export and query it using USD semantics directly:
+For world models representing USD stages (Isaac Sim, Omniverse, game engines, digital twin platforms), ArcFlow exports and queries using USD semantics directly:
 
 ```cypher
--- Export the entire graph as USD ASCII (USDA format)
+-- Export the world model as USD ASCII
 CALL arcflow.scene.toUsda() YIELD usda
 
--- Resolve a USD prim path to a graph node ID
+-- Resolve a USD prim path to a graph node
 CALL arcflow.scene.primId('/World/Drones/Drone-Alpha') YIELD prim_path, prim_id
 
--- Frustum query (6-plane containment) — what does this camera see?
--- Args: origin (x,y,z), direction (dx,dy,dz), fovDeg, nearZ, farZ
+-- Frustum query — what does this camera see?
 CALL arcflow.scene.frustumQuery(0, 0, 15, 0, 1, 0, 90, 1, 200)
   YIELD node_id, label, x, y, z
 
--- Line-of-sight check between two node IDs
-CALL arcflow.scene.lineOfSight(drone_id, rover_id) YIELD has_los, note
+-- Line-of-sight between two nodes
+CALL arcflow.scene.lineOfSight(drone_id, rover_id)
+  YIELD has_los, note
 
--- Collision contacts for a node (physics boundary facts)
-CALL arcflow.scene.collisions(rover_id) YIELD from_id, to_id, impulse, at_time
+-- Collision contacts from physics simulation
+CALL arcflow.scene.collisions(rover_id)
+  YIELD from_id, to_id, impulse, at_time
 
--- Neighborhood in local coordinate space (relative to a prim's transform)
+-- Neighborhood in a node's local coordinate space
 CALL arcflow.scene.queryInLocalSpace(drone_id, 50.0)
   YIELD node_id, local_x, local_y, local_z
 ```
 
 ---
 
-## Next Steps
+## The compound effect
 
-- [Behavior Graph](/behavior-graph) — add tick-based evaluation to your world model
-- [Trusted RAG](/trusted-rag) — query the world model with confidence filtering
-- [Spatial Knowledge Graph](/spatial-knowledge) — deep dive on spatial primitives
-- [GPU Acceleration](/gpu) — why spatial algorithms are fast (GraphBLAS + Metal/CUDA)
+Each capability above is useful on its own. The compound effect is what makes a world model different from a database.
+
+```cypher
+-- A query no other single system can answer:
+-- In the last 10 seconds, which high-confidence observed entities
+-- were within 30 units of the formation lead — but are now gone?
+
+MATCH (lead:Entity {name: 'Drone-Alpha'}) AS OF (timestamp() - 10000)
+CALL algo.nearestNodes(point({x: lead.x, y: lead.y}), 'Entity', 20)
+  YIELD node AS e_past, distance AS d_past
+WHERE d_past < 30.0
+  AND e_past._observation_class = 'observed'
+  AND e_past._confidence > 0.85
+
+WITH e_past
+
+MATCH (e_current:Entity {name: e_past.name})
+WHERE NOT EXISTS {
+  CALL algo.nearestNodes(point({x: 0, y: 0}), 'Entity', 20)
+  YIELD node AS nearby, distance
+  WHERE nearby.name = e_current.name AND distance < 30.0
+}
+
+RETURN e_past.name, e_past.type, e_past.x AS x_then, e_past.y AS y_then
+```
+
+Spatial + temporal + confidence + graph traversal — in a single GQL statement. The alternative is writing a join across four systems with no consistency guarantee between them.
+
+---
+
+## What you've built
+
+| Capability | What it gives you |
+|---|---|
+| Spatial entities (R*-tree) | Proximity queries at ≥ 2000/s — no external spatial system |
+| Three epistemic states | Operational trust levels — not boolean, not decorative |
+| Confidence scores | Safety thresholds that compose with any query |
+| Sensor provenance | Every edge knows its source, range, and time |
+| Temporal memory | Replay any past state — `AS OF seq N` on the same graph |
+| Reactive standing queries | Zero-latency notification — no polling, no scheduler |
+| Live materialized views | Fleet health at zero read cost, maintained incrementally |
+| Graph algorithms | Network structure visible, not just entity properties |
+| Vector search | Semantic similarity composing with everything else |
+| USD integration | The world model IS the scene graph — export or query natively |
+
+This is the infrastructure layer the AI stack has been missing. Foundation models handle language. Vector databases handle similarity. ArcFlow handles *what the world is, was, and will be* — with spatial precision measured in coordinates, temporal fidelity measured in sequence numbers, and epistemic honesty tracked on every fact.
+
+---
+
+## Next steps
+
+- [Autonomous Systems](/use-cases/autonomous-systems) — robot fleets and UAV coordination on a shared world model
+- [Digital Twins](/use-cases/digital-twins) — live spatial replicas of physical facilities
+- [Robotics & Perception](/use-cases/robotics) — sensor fusion pipeline and ROS integration
+- [Reactive Queries](/reactive) — standing queries and live views in depth
+- [Temporal Queries](/worldcypher/temporal) — `AS OF seq N` and temporal comparison
+- [Spatial Queries](/spatial-knowledge) — R*-tree, frustum, line-of-sight reference
+- [Confidence & Provenance](/concepts/confidence-and-provenance) — scoring and tracing every fact
