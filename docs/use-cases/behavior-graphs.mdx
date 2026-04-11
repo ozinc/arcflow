@@ -66,3 +66,11 @@ db.mutate("MATCH (root:BT_Sequence {name: 'patrol'}) MATCH (heal:BT_Action {name
 // Remove a behavior
 db.mutate("MATCH (n:BT_Action {name: 'attack_enemy'}) DETACH DELETE n")
 ```
+
+## See Also
+
+- [Behavior Graph](/behavior-graph) — behavior trees in depth: confidence-scored transitions, execution provenance
+- [Building a World Model](/guides/world-model) — the world model the behavior tree reads from
+- [Live Queries](/live-queries) — `LIVE MATCH` for condition nodes that fire on state changes
+- [Autonomous Systems](/use-cases/autonomous-systems) — multi-agent fleet coordination with behavior trees
+- [Spatial Queries](/worldcypher/spatial) — spatial condition checks in behavior tree conditions
