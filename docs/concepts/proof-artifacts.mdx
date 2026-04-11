@@ -45,7 +45,7 @@ console.log(`Before: ${before.rows[0].get('fingerprint')}`)
 
 // Run a pipeline
 db.batchMutate([
-  "MERGE (p:Person {id: 'p1', name: 'Alice'})",
+  "MERGE (e:Entity {id: 'e1', name: 'Entity_01', _observation_class: 'observed', _confidence: 0.95})",
   "MERGE (f:Fact {uuid: 'f1', predicate: 'employment', confidence: 0.95})",
 ])
 
