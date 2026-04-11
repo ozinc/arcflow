@@ -285,7 +285,7 @@ A scout that crashes and restarts opens the same named session — its task queu
 | Coordination need | Traditional approach | ArcFlow World Model |
 |---|---|---|
 | Shared state | Message bus + sync | First-class graph — every agent reads the same model |
-| Task queue | External broker (Redis, RabbitMQ) | `:Task` nodes with status edges — queryable, auditable |
+| Task queue | External message broker | `:Task` nodes with status edges — queryable, auditable |
 | Reactive assignment | Polling | `db.subscribe()` — fires on task creation, zero latency |
 | Temporal audit | Log files + reconstruction | `AS OF seq N` — same graph, same queries |
 | Confidence weighting | Application logic | `_confidence` on every observation — built in |

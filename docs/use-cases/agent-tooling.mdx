@@ -18,7 +18,7 @@ When a coding agent is working on a task, it often needs to:
 - **Process structured data** temporarily (parse a CSV, build a graph, extract insights)
 - **Prototype** a knowledge graph before committing to a schema
 
-With Neo4j or Memgraph, the agent would need to ask the user to start a database server. With ArcFlow, the agent just does it:
+With a graph database server, the agent would need to ask the user to provision and start it. With ArcFlow, the agent just does it:
 
 ```typescript
 const db = openInMemory()  // instant, no permission needed
@@ -211,4 +211,4 @@ Available tools: `get_schema`, `read_query`, `write_query`, `graph_rag`. Latency
 | Typed results | Agent doesn't have to parse strings — numbers are numbers |
 | Structured errors | Agent can pattern-match on error codes and self-correct |
 
-This is why coding agents prefer ArcFlow over Neo4j/Memgraph: **it's a tool they can use directly, not infrastructure they have to ask the user to provision.**
+**ArcFlow is a tool agents can use directly — not infrastructure they have to ask the user to provision.**

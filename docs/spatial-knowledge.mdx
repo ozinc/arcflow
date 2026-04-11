@@ -27,16 +27,16 @@ ORDER BY distance
 
 ## Why R*-tree
 
-Most graph databases use the wrong spatial index:
+Most spatial indexes in the graph database world are built for the wrong problem:
 
-| System | Index | Exact? |
+| Index type | Designed for | Exact? |
 |---|---|---|
-| Memgraph | USearch (HNSW) | No — approximate, tuned for embedding similarity |
-| Neo4j GDS | Random-walk sampling | No — misses answers, controlled by `sampleRate` |
-| PostGIS | GIST R-tree | Yes |
-| **ArcFlow** | **R\*-tree** | **Yes** |
+| HNSW (vector similarity) | Embedding nearest-neighbor — approximate by design | No |
+| Random-walk sampling | Graph connectivity estimation — misses answers | No |
+| GIST R-tree | 2D geometry containment | Yes |
+| **R\*-tree (ArcFlow)** | **2D/3D spatial containment, KNN, proximity** | **Yes** |
 
-HNSW finds "approximately similar" embeddings. For exact containment, bounding-box overlap, and dynamic 2D/3D boundaries it adds false positives and has no structural advantage. Random-walk sampling is explicitly approximate.
+HNSW finds "approximately similar" embeddings. For exact containment, bounding-box overlap, and dynamic 2D/3D boundaries it produces false positives and has no structural advantage over a spatial tree. Random-walk sampling is explicitly approximate — controlled by a `sampleRate` parameter that trades correctness for speed.
 
 The R\*-tree uses **forced reinsertion on node overflow** — instead of immediately splitting a full node, it removes ~30% of entries and reinserts them. This stochastic restructuring minimises bounding-box overlap and dead space, giving 2–5× faster queries than a basic R-tree on clustered data.
 
@@ -383,8 +383,8 @@ RETURN a.name, b.name, distance(a.position, b.position)
 ### PostGIS / Relational Spatial Extensions
 PostGIS has richer geometry types (LineString, Polygon, MultiPolygon) and mature GIS tooling. ArcFlow's advantage: spatial predicates compose directly with graph traversal — no join between a spatial table and a graph database. If you need complex polygon operations without graph structure, PostGIS is the better choice. If you need "find entities near X, then traverse their relationships," ArcFlow eliminates the two-system join.
 
-### Memgraph / Neo4j Spatial
-Memgraph uses HNSW (approximate — tuned for embeddings, not exact geometry). Neo4j GDS uses random-walk sampling (approximate, misses answers). For containment queries, bounding-box overlap, and correctness-critical applications — offside detection, collision avoidance, delivery routing — approximation is not acceptable.
+### Approximate spatial in graph databases
+Most graph databases reach for vector similarity indexes (HNSW) or random-walk sampling when asked to do spatial work. Both are approximate by design — they trade correctness for speed in a way that is appropriate for embedding search but wrong for geometric queries. Offside detection, collision avoidance, and delivery routing require exact answers. A false positive in proximity detection is not a search quality issue — it is a safety failure.
 
 ### ROS2 / Nav2
 ArcFlow complements Nav2: Nav2 handles real-time path planning with hard latency guarantees; ArcFlow provides the persistent spatial knowledge layer — mission planning, post-incident replay, spatial-temporal reasoning. The multi-clock domain system maps directly to ROS2's multi-rate sensor model.

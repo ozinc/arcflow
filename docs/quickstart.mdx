@@ -229,13 +229,13 @@ arcflow-mcp
 
 | Traditional Stack | ArcFlow Equivalent |
 |---|---|
-| Neo4j (graph DB) | Built-in graph store |
-| Redis (cache) | In-memory, zero-copy |
-| DuckDB (analytics) | Columnar scans, window functions |
-| Kafka/NATS (streaming) | CDC + standing queries |
-| Vector DB (embeddings) | HNSW vector index |
-| Temporal (workflows) | Graph-native durable workflows |
-| Separate spatial DB | R*-tree indexed, composable with graph traversal |
+| Graph database | Built-in graph store |
+| In-memory cache | In-memory, zero-copy |
+| Columnar analytics engine | Columnar scans, window functions |
+| Streaming broker | CDC + standing queries |
+| Vector database | HNSW vector index |
+| Workflow orchestrator | Graph-native durable workflows |
+| Separate spatial database | R*-tree indexed, composable with graph traversal |
 
 All share one `GraphStore` in unified memory. No serialization. No network hops.
 
