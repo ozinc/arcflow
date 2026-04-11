@@ -128,8 +128,8 @@
       "items": [
         { "slug": "guides/agent-quickstart", "title": "Agent Integration", "order": 1 },
         { "slug": "guides/world-model", "title": "World Model", "order": 2 },
-        { "slug": "guides/modeling-a-social-graph", "title": "Social Graph", "order": 3 },
-        { "slug": "guides/rag-pipeline", "title": "RAG Pipeline", "order": 4 },
+        { "slug": "guides/modeling-a-social-graph", "title": "Graph Model Fundamentals", "order": 3 },
+        { "slug": "guides/rag-pipeline", "title": "Trusted RAG", "order": 4 },
         { "slug": "guides/using-constructors", "title": "Using Constructors", "order": 5 },
         { "slug": "guides/behavior-graphs", "title": "Behavior Graphs", "order": 6 },
         { "slug": "guides/swarm-agents", "title": "Swarm & Multi-Agent", "order": 7 },

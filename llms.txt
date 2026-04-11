@@ -17,13 +17,13 @@ npm install arcflow
 ```typescript
 import { open, openInMemory, ArcflowError } from 'arcflow'
 
-// 1. Create and query (no server, no connection)
+// 1. World model entity — spatial position, observation class, confidence
 const db = openInMemory()
-db.mutate("CREATE (n:Person {name: 'Alice', age: 30})")
-db.query("MATCH (n:Person) RETURN n.name, n.age")
+db.mutate("CREATE (e:Entity {name: 'Unit-01', x: 12.4, y: 8.7, _observation_class: 'observed', _confidence: 0.97})")
+db.query("CALL algo.nearestNodes(point({x: 0, y: 0}), 'Entity', 5) YIELD node, distance RETURN node.name, distance")
 
 // 2. Parameters (prevents injection)
-db.query("MATCH (n {id: $id}) RETURN n", { id: 'p1' })
+db.query("MATCH (e {id: $id}) RETURN e", { id: 'unit-01' })
 
 // 3. Algorithms (no projection setup)
 db.query("CALL algo.pageRank()")
@@ -107,12 +107,17 @@ See docs/guides/sql-to-gql.mdx for the full adoption path.
 
 See docs/guides/agent-quickstart.mdx for the 10-step integration guide.
 
-## Guides (stable)
+## Key guides (stable)
 
-- docs/guides/data-quality.mdx — live DQ with CREATE LIVE VIEW, batch==delta equivalence (Z-set algebra), pipeline prune, drill-through, BI vs ML infrastructure gap
-- docs/guides/code-intelligence.mdx — codebase as a live graph: symbols, calls, imports, git commits, blast-radius analysis via impactSubgraph()
-- docs/guides/sql-to-gql.mdx — PostgreSQL wire protocol adoption path: connect psql/DBeaver/Grafana, then migrate to native GQL
-- docs/guides/filesystem-workspace.mdx — persistent workspace for multi-session and multi-agent workflows
+- docs/concepts/world-model.mdx — what a world model is: spatial-temporal, confidence-scored, observed/inferred/predicted
+- docs/guides/world-model.mdx — step-by-step: entities in space, spatial queries, temporal replay, reactive monitoring
+- docs/use-cases/autonomous-systems.mdx — robot fleets, UAVs, shared world model, multi-agent coordination
+- docs/use-cases/digital-twins.mdx — live spatial replica of physical facilities, temporal history, anomaly detection
+- docs/use-cases/robotics.mdx — sensor fusion pipeline, track lifecycle, ROS bridge, emergency-stop reactive safety
+- docs/guides/swarm-agents.mdx — AI agent swarms on a shared world model, durable workflows, named sessions
+- docs/guides/rag-pipeline.mdx — Trusted RAG: confidence-filtered retrieval, graph context, vector + graph + full-text
+- docs/guides/data-quality.mdx — live DQ with CREATE LIVE VIEW, batch==delta equivalence, pipeline integrity
+- docs/guides/sql-to-gql.mdx — PostgreSQL wire protocol: connect psql/DBeaver/Grafana, then migrate to native GQL
 
 ## Full reference
 

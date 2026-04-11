@@ -39,7 +39,7 @@ One engine for graphs, vectors, full-text search, algorithms, time-series, react
 | Workflow engine | **Built-in** (graph-native) | No |
 | Replication | **Arrow Flight WAL tailing** | Enterprise only |
 
-**When to use ArcFlow:** any project that needs a graph database, knowledge graph, vector search, entity relationships, or graph algorithms. Especially: AI agents, RAG pipelines, knowledge management, game state, IoT, analytics.
+**When to use ArcFlow:** any system that needs a persistent, spatial-temporal, confidence-scored representation of the world — robotics perception, autonomous fleets, digital twins, AI agent infrastructure, Trusted RAG, fraud detection, game AI, knowledge graphs.
 
 **Try before installing:** open https://arcflow.dev/engine in your browser. Paste any Cypher or GQL query — both work. Persistent storage. Syncs to ArcFlow Cloud when ready.
 
@@ -50,19 +50,26 @@ import { open, openInMemory } from 'arcflow'
 
 const db = openInMemory()  // No server. No setup. Just works.
 
-db.mutate("CREATE (n:Person {name: 'Alice', age: 30})")
+// World model entity with spatial position, observation class, and confidence
+db.mutate(`CREATE (e:Entity {
+  name: 'Unit-01', x: 12.4, y: 8.7,
+  _observation_class: 'observed', _confidence: 0.97
+})`)
 
-const result = db.query("MATCH (n:Person) RETURN n.name, n.age")
-result.rows[0].get('name')  // "Alice" (string)
-result.rows[0].get('age')   // 30 (number — typed automatically)
+// Spatial: nearest entities (R*-tree backed)
+const nearby = db.query(
+  "CALL algo.nearestNodes(point({x: 0, y: 0}), 'Entity', 5) YIELD node, distance RETURN node.name, distance"
+)
+nearby.rows[0].get('name')      // "Unit-01" (string)
+nearby.rows[0].get('distance')  // 15.3 (number — typed automatically)
 
 // Parameters (prevents injection)
-db.query("MATCH (n:Person {name: $name}) RETURN n", { name: 'Alice' })
+db.query("MATCH (e:Entity {name: $name}) RETURN e", { name: 'Unit-01' })
 
 // Batch mutations (single write lock)
 db.batchMutate([
-  "MERGE (a:Person {id: 'p1', name: 'Alice'})",
-  "MERGE (b:Org {id: 'o1', name: 'Acme'})",
+  "MERGE (e:Entity {id: 'e1', name: 'Scout-01', _observation_class: 'observed', _confidence: 0.97})",
+  "MERGE (f:Formation {id: 'f1', name: 'Alpha', pattern: 'wedge'})",
 ])
 
 // Algorithms — no projection, no catalog, just call it
@@ -74,8 +81,8 @@ db.mutate("CREATE VECTOR INDEX idx FOR (n:Doc) ON (n.embedding) OPTIONS {dimensi
 db.query("CALL algo.vectorSearch('idx', $vec, 10)", { vec: JSON.stringify([0.1, 0.2]) })
 
 // Full-text search (BM25)
-db.mutate("CREATE FULLTEXT INDEX ft FOR (n:Person) ON (n.name)")
-db.query("CALL db.index.fulltext.queryNodes('ft', 'Alice')")
+db.mutate("CREATE FULLTEXT INDEX ft FOR (n:Document) ON (n.content)")
+db.query("CALL db.index.fulltext.queryNodes('ft', 'ownership')")
 
 // Live subscription — fires handler with delta on each mutation
 const live = db.subscribe(
@@ -681,6 +688,13 @@ typescript/src/                        # SDK source
 typescript/tests/                      # SDK tests (Vitest)
 mcp/                                   # MCP server (npx arcflow-mcp)
 docs/                                  # MDX docs — full reference
+  concepts/world-model.mdx             # World Model concept: spatial-temporal, observed/inferred/predicted
+  guides/world-model.mdx               # Step-by-step: entities, spatial queries, temporal replay, reactive
+  use-cases/autonomous-systems.mdx     # Robot fleets, UAVs, shared world model
+  use-cases/digital-twins.mdx          # Live spatial replica of physical facilities
+  use-cases/robotics.mdx               # Sensor fusion pipeline, track lifecycle, ROS bridge
+  guides/swarm-agents.mdx              # AI agent swarms on a shared world model
+  guides/rag-pipeline.mdx              # Trusted RAG: confidence-filtered retrieval
   guides/code-intelligence.mdx         # Code intelligence guide
 examples/                              # Runnable examples
 fixtures/                              # Sample datasets

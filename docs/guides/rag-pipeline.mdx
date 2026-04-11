@@ -1,271 +1,262 @@
 ---
-title: "RAG Pipeline"
-description: "Building a Retrieval-Augmented Generation pipeline with ArcFlow — vector search, graph context, trusted RAG"
+title: "Trusted RAG"
+description: "Build a RAG pipeline where every retrieved fact carries a confidence score, provenance trail, and observation class — vector similarity, graph traversal, and confidence filtering composing in one engine."
 section: "Guides"
-order: 11
+order: 4
 since: "5.0.0"
 status: "stable"
 ---
 
-# Building a RAG Pipeline with ArcFlow
+# Trusted RAG
 
-Build a RAG pipeline with confidence scoring and provenance in 6 steps. Unlike flat-chunk retrieval, ArcFlow adds a third dimension: graph context. You retrieve nodes *and their relationships*, so the LLM gets structured knowledge about how concepts connect -- plus confidence scores that tell it which facts to trust. Every retrieved edge carries provenance back to its source.
+Standard RAG retrieves flat chunks. The LLM gets text — no confidence level, no provenance trail, no structure showing how facts connect.
 
-## Architecture Overview
+Trusted RAG runs on a world model. Every document and fact is a graph node with a confidence score (`_confidence`), an observation class (`_observation_class: 'observed' | 'inferred' | 'predicted'`), and a provenance edge back to its source. Retrieval follows relationship paths, not just vector proximity. The LLM receives not just what was found but how confident the system is in it — and why.
+
+ArcFlow handles the retrieval side: vector search, graph traversal, and confidence filtering compose in one engine, one query, no joins across services.
 
 ```
-User Query
-    |
-    v
-[1. Embed query] -----> Embedding model (OpenAI, local, etc.)
-    |
-    v
-[2. Vector search] ---> ArcFlow HNSW index
-    |
-    v
-[3. Graph context] ---> Traverse neighbors, confidence filter
-    |
-    v
-[4. Assemble prompt] -> Query + retrieved context
-    |
-    v
-[5. LLM generation] --> Response with citations
+User query
+    │
+    ▼
+[1] Embed query ────────────────────────► Embedding model (external)
+    │
+    ▼
+[2] Vector search ──────────────────────► ArcFlow HNSW index
+    │
+    ▼
+[3] Graph context + confidence filter ──► Traverse relationships, filter by _confidence
+    │
+    ▼
+[4] Assemble prompt ────────────────────► Context with confidence scores + citations
+    │
+    ▼
+[5] LLM generation ─────────────────────► Response grounded in trusted facts
 ```
 
-ArcFlow handles steps 2 and 3. The embedding model and LLM are external. CLI agents use `arcflow query`; cloud chat UIs connect via the MCP server.
+ArcFlow owns steps 2 and 3. Steps 1, 4, and 5 are external.
 
-## Step 1: Store Documents as Nodes
+---
 
-Each document (or chunk) becomes a node with an embedding property. Store the embedding as a list of floats.
+## Step 1: Store documents as confidence-scored nodes
+
+Each document (or chunk) is a graph node with an embedding, a confidence score, and an observation class:
 
 ```cypher
 CREATE (d:Document {
-  title: 'Rust Ownership',
-  content: 'Rust uses ownership rules to manage memory...',
+  title: 'Rust Ownership Model',
+  content: 'Rust uses ownership rules to manage memory without garbage collection...',
   source: 'rust-book-ch4',
-  embedding: [0.12, -0.34, 0.56, 0.78, -0.91, ...]
+  _confidence: 0.98,
+  _observation_class: 'observed',
+  embedding: [0.12, -0.34, 0.56, 0.78, -0.91]
 })
 ```
 
-For chunked documents, create a structure:
+For chunked documents, create a parent-child structure:
 
 ```cypher
 -- Parent document
-CREATE (doc:Document {title: 'Rust Book Chapter 4', source: 'rust-book'})
+CREATE (doc:Document {
+  title: 'Rust Book Chapter 4',
+  source: 'rust-book',
+  _confidence: 0.99,
+  _observation_class: 'observed'
+})
 
 -- Chunks with embeddings
 CREATE (c1:Chunk {
   text: 'Each value in Rust has a variable that is its owner...',
   position: 0,
-  embedding: [0.12, -0.34, 0.56, ...]
+  _confidence: 0.98,
+  _observation_class: 'observed',
+  embedding: [0.12, -0.34, 0.56]
 })
+
 CREATE (c2:Chunk {
   text: 'When the owner goes out of scope, the value is dropped...',
   position: 1,
-  embedding: [0.15, -0.28, 0.61, ...]
+  _confidence: 0.97,
+  _observation_class: 'observed',
+  embedding: [0.15, -0.28, 0.61]
 })
 
--- Link chunks to document
-MATCH (doc:Document {title: 'Rust Book Chapter 4'}), (c:Chunk)
-WHERE c.position >= 0
-CREATE (doc)-[:HAS_CHUNK]->(c)
+-- Link chunks to document with provenance
+MATCH (doc:Document {title: 'Rust Book Chapter 4'}), (c1:Chunk {position: 0}), (c2:Chunk {position: 1})
+CREATE (doc)-[:HAS_CHUNK]->(c1)
+CREATE (doc)-[:HAS_CHUNK]->(c2)
 ```
 
-Connect related concepts with edges:
+Link related concepts across chunks — this is what makes graph retrieval different from flat retrieval:
 
 ```cypher
-MATCH (c1:Chunk), (c2:Chunk)
-WHERE c1.text CONTAINS 'ownership' AND c2.text CONTAINS 'borrowing'
+MATCH (c1:Chunk {position: 0}), (c2:Chunk {position: 1})
 CREATE (c1)-[:RELATED_TO {weight: 0.85}]->(c2)
 ```
 
-## Step 2: Create an HNSW Vector Index
-
-Create a vector index on the embedding property. ArcFlow uses HNSW (Hierarchical Navigable Small World) for approximate nearest neighbor search.
+## Step 2: Create a vector index
 
 ```cypher
-CREATE VECTOR INDEX ON :Document(embedding)
+CREATE VECTOR INDEX chunk_embeddings
+  ON :Chunk(embedding)
+  DIMENSIONS 1536
+  SIMILARITY cosine
 ```
+
+The index is built in-memory, persisted via WAL, and supports cosine similarity, euclidean distance, and dot product. Same engine as the graph — no separate service.
+
+## Step 3: Retrieve by vector similarity
 
 ```cypher
-CREATE VECTOR INDEX ON :Chunk(embedding)
+-- Find the 10 chunks most similar to a query vector
+CALL algo.vectorSearch('chunk_embeddings', $queryVector, 10)
+  YIELD node AS chunk, score
+WHERE chunk._confidence > 0.7
+  AND chunk._observation_class IN ['observed', 'inferred']
+RETURN chunk.text, score, chunk._confidence, chunk._observation_class
+ORDER BY score DESC
 ```
 
-The index is built in-memory and persisted via WAL. It supports cosine similarity, euclidean distance, and dot product.
+Confidence filter composes directly with vector search — single query, no post-processing join.
 
-## Step 3: Query with Vector Similarity
+## Step 4: Enrich with graph context
 
-Search for nodes similar to a query vector:
+After finding similar chunks, traverse the graph to collect structured context:
 
 ```cypher
-CALL algo.vectorSearch()
+-- For each matched chunk, collect neighbors and their confidence
+CALL algo.vectorSearch('chunk_embeddings', $queryVector, 5)
+  YIELD node AS chunk, score
+
+OPTIONAL MATCH (chunk)-[:RELATED_TO]->(related:Chunk)
+OPTIONAL MATCH (doc:Document)-[:HAS_CHUNK]->(chunk)
+
+RETURN
+  chunk.text AS match,
+  score AS similarity,
+  chunk._confidence AS chunk_confidence,
+  doc.title AS source,
+  doc.source AS source_id,
+  collect(related.text) AS related_context
+ORDER BY score DESC
 ```
 
-This searches the HNSW index and returns the k nearest neighbors by vector distance.
+The LLM receives the matched chunk, its parent document (provenance), and related chunks (context). Not just text — structure.
 
-For more control, use `algo.similarNodes()`:
+## Step 5: Confidence-filtered retrieval
+
+For safety-critical or high-stakes retrieval, filter to only `observed` facts above a confidence threshold:
 
 ```cypher
-CALL algo.similarNodes()
+-- Only retrieve high-confidence observed facts
+CALL algo.vectorSearch('chunk_embeddings', $queryVector, 20)
+  YIELD node AS chunk, score
+
+WHERE chunk._observation_class = 'observed'
+  AND chunk._confidence > 0.85
+
+OPTIONAL MATCH (doc:Document)-[:HAS_CHUNK]->(chunk)
+
+RETURN
+  chunk.text,
+  score,
+  chunk._confidence,
+  doc.title AS source,
+  doc.source AS citation
+ORDER BY (score * chunk._confidence) DESC
+LIMIT 5
 ```
 
-Returns nodes ranked by similarity score.
+Ranking by `score * _confidence` surfaces results that are both semantically similar and epistemically trustworthy.
 
-## Step 4: Enrich with Graph Context
+## Step 6: Full-text + vector + graph in one query
 
-This is where ArcFlow differs from flat vector databases. After finding similar nodes, traverse the graph to gather structured context.
+ArcFlow's three search modalities compose in a single query:
 
 ```cypher
--- Find similar chunks, then get their parent documents and related chunks
-MATCH (c:Chunk)-[:RELATED_TO]->(related:Chunk)
-RETURN c.text AS match, related.text AS relatedContext, type(r) AS relation
+-- Full-text match for exact term, vector for semantic similarity, graph for context
+CALL db.index.fulltext.queryNodes('chunk_ft', $term)
+  YIELD node AS ft_result, score AS ft_score
+
+CALL algo.vectorSearch('chunk_embeddings', $queryVector, 10)
+  YIELD node AS vec_result, score AS vec_score
+
+WITH ft_result, ft_score, vec_result, vec_score
+WHERE ft_result.id = vec_result.id  -- same chunk matched both ways
+
+OPTIONAL MATCH (doc:Document)-[:HAS_CHUNK]->(ft_result)
+
+RETURN
+  ft_result.text,
+  ft_score,
+  vec_score,
+  ft_result._confidence,
+  doc.title AS source
+ORDER BY (ft_score + vec_score) DESC
 ```
 
-Use `algo.graphRAGContext()` to automate context extraction:
+## Step 7: Connect to agents
 
-```cypher
-CALL algo.graphRAGContext()
-```
-
-This returns not just the matching nodes but their neighborhood: connected nodes, relationship types, and metadata.
-
-## Step 5: Trusted RAG with Confidence Filtering
-
-ArcFlow's confidence scoring enables trusted RAG. Every node has a confidence score (0.0-1.0) and an observation class (observed, inferred, predicted).
-
-```cypher
--- Create nodes with confidence metadata
-CREATE (f:Fact {
-  claim: 'Rust prevents data races at compile time',
-  embedding: [0.23, -0.45, 0.67, ...],
-  source: 'rust-reference'
-})
-```
-
-Use `algo.graphRAGTrusted()` to filter results by confidence:
-
-```cypher
-CALL algo.graphRAGTrusted()
-```
-
-This returns context with confidence scores, filtering out low-trust paths. The LLM receives only information from trusted sources.
-
-Query confidence directly:
-
-```cypher
-MATCH (n:Fact)
-WHERE confidence(n) > 0.8 AND observationClass(n) = 'observed'
-RETURN n.claim, confidence(n) AS trust
-ORDER BY trust DESC
-```
-
-## Step 6: Connect to AI Agents
-
-Three integration surfaces — pick the one that matches your execution context:
-
-### napi-rs (Node.js application code)
-
-The fastest path. ArcFlow runs in-process inside your Node.js app — no process boundary, no serialization:
+### napi-rs (Node.js — fastest path)
 
 ```typescript
 import { open } from 'arcflow'
 
-const db = open('./my-graph')
-const result = db.query("CALL algo.graphRAGTrusted('Rust ownership concepts')")
-// result is in-process — microseconds, no network
+const db = open('./data/knowledge-graph')
+
+async function trustedRetrieval(queryVector: number[], minConfidence = 0.8) {
+  return db.query(
+    `CALL algo.vectorSearch('chunk_embeddings', $vec, 10)
+       YIELD node AS chunk, score
+     WHERE chunk._observation_class = 'observed'
+       AND chunk._confidence > $minConf
+     OPTIONAL MATCH (doc:Document)-[:HAS_CHUNK]->(chunk)
+     RETURN chunk.text, score, chunk._confidence, doc.title AS source
+     ORDER BY (score * chunk._confidence) DESC
+     LIMIT 5`,
+    { vec: JSON.stringify(queryVector), minConf: minConfidence }
+  )
+}
 ```
 
-### CLI binary (coding agents — Claude Code, Codex, Gemini CLI)
-
-Coding agents already have a shell tool. Give them the `arcflow` binary and they call it like `grep` — each command exits in <10ms:
+### CLI (coding agents — Claude Code, Codex, Gemini CLI)
 
 ```bash
-# Run the full GraphRAG pipeline from the shell
-arcflow query "CALL algo.graphRAGTrusted('Rust ownership concepts')"
-
-# Query the graph directly
-arcflow query "MATCH (n:Concept) RETURN n.name, confidence(n) AS trust ORDER BY trust DESC"
-
-# Get schema for agent orientation
-arcflow query "CALL db.schema()"
+arcflow query "
+  CALL algo.vectorSearch('chunk_embeddings', $vec, 10)
+  YIELD node AS chunk, score
+  WHERE chunk._confidence > 0.8
+  RETURN chunk.text, score, chunk._confidence
+  ORDER BY score DESC
+" --param vec='[0.12, -0.34, 0.56]'
 ```
 
-The agent reads stdout and acts on structured JSON results. No daemon, no session, no protocol.
-
-### MCP server (cloud chat interfaces — ChatGPT, Claude.ai, Gemini web)
-
-For LLMs running in cloud chat interfaces that have no local shell, MCP is the bridge. The MCP server exposes 8 tools including `get_schema`, `read_query`, `write_query`, and `graph_rag`:
+### MCP (cloud chat UIs — ChatGPT, Claude.ai)
 
 ```bash
-npx arcflow-mcp --data-dir ./my-graph
+npx arcflow-mcp --data-dir ./data/knowledge-graph
 ```
 
-Configure in your cloud chat UI's plugin or tool settings. The LLM then queries the graph directly without generating code.
+The MCP server's `graph_rag` tool runs the full retrieval pipeline. The LLM queries it directly without generating code.
 
-```
-Agent: "What are the key concepts related to Rust ownership?"
-[MCP: graph_rag → ArcFlow returns context with confidence scores]
-Agent: "Based on the knowledge graph (confidence: 0.95)..."
-```
-
-## Complete Pipeline Example
-
-Putting it all together -- a knowledge base with vector search, graph context, and confidence scoring:
-
-```cypher
--- 1. Create the knowledge graph
-CREATE (rust:Topic {name: 'Rust', embedding: [0.1, 0.2, ...]})
-CREATE (ownership:Concept {
-  name: 'Ownership',
-  description: 'Memory management without garbage collection',
-  embedding: [0.15, 0.25, ...]
-})
-CREATE (borrowing:Concept {
-  name: 'Borrowing',
-  description: 'References that do not take ownership',
-  embedding: [0.18, 0.22, ...]
-})
-CREATE (lifetimes:Concept {
-  name: 'Lifetimes',
-  description: 'Annotations ensuring references remain valid',
-  embedding: [0.12, 0.28, ...]
-})
-
--- 2. Build relationships
-CREATE (rust)-[:COVERS]->(ownership)
-CREATE (rust)-[:COVERS]->(borrowing)
-CREATE (rust)-[:COVERS]->(lifetimes)
-CREATE (ownership)-[:ENABLES]->(borrowing)
-CREATE (borrowing)-[:REQUIRES]->(lifetimes)
-
--- 3. Create vector index
-CREATE VECTOR INDEX ON :Concept(embedding)
-
--- 4. Query: "How does Rust manage memory?"
--- Vector search finds: Ownership (closest), Borrowing, Lifetimes
-CALL algo.vectorSearch()
-
--- 5. Graph context enriches the results:
--- Ownership --ENABLES--> Borrowing --REQUIRES--> Lifetimes
--- The LLM receives not just the chunks but the concept graph
-CALL algo.graphRAGTrusted()
-```
+---
 
 ## Tips
 
-**Chunk size**: 256-512 tokens per chunk works well. Smaller chunks give more precise retrieval; larger chunks give more context per result.
+**Confidence thresholds**: Start at 0.7 for general retrieval. Raise to 0.85+ when precision matters more than recall. For safety-critical domains, only retrieve `observed` facts.
 
-**Embedding dimensions**: ArcFlow's HNSW index works with any dimensionality. Common choices: 384 (MiniLM), 768 (BERT), 1536 (OpenAI ada-002), 3072 (OpenAI text-embedding-3-large).
+**Observation class filtering**: `observed` = direct source extraction; `inferred` = derived by reasoning; `predicted` = model output. For legal, medical, or financial RAG, restrict to `observed` only.
 
-**Graph structure matters**: The value of graph RAG over flat vector search scales with the richness of your graph. Invest in meaningful relationships between nodes.
+**Graph structure scales value**: The gap between flat vector retrieval and graph retrieval grows with relationship richness. A chunk graph with `RELATED_TO`, `CITES`, `CONTRADICTS`, and `SUPPORTS` edges gives the LLM reasoning structure that a chunk array cannot.
 
-**Confidence thresholds**: Start with 0.7 for trusted RAG. Lower if recall is too low; raise if precision matters more.
+**Embedding dimensions**: ArcFlow's HNSW index supports any dimensionality: 384 (MiniLM), 768 (BERT), 1536 (OpenAI ada-002), 3072 (text-embedding-3-large).
 
-**GPU acceleration**: On large graphs (10K+ nodes), vector search and PageRank automatically dispatch to GPU (CUDA or Metal) when available. No code changes needed.
+**GPU acceleration**: On large graphs, vector search dispatches automatically to CUDA or Metal when available. No code changes.
 
 ## See Also
 
-- [Procedures](/worldcypher/functions/procedures) -- algo.vectorSearch, algo.graphRAG, algo.graphRAGTrusted
-- [Built-in Functions](/worldcypher/functions/built-in) -- confidence(), observationClass()
-- [Architecture](/architecture) -- SoC modular monolith design
-- [Agent Integration](/guides/agent-integration) -- connecting ArcFlow to AI agents
+- [Trusted RAG](/trusted-rag) — capability reference with confidence algebra and evidence chains
+- [Vector Search](/vector-search) — HNSW index configuration and query patterns
+- [Procedures](/worldcypher/functions/procedures) — `algo.vectorSearch`, `algo.graphRAGTrusted`, `algo.graphRAGContext`
+- [Confidence & Provenance](/concepts/confidence-and-provenance) — scoring model and provenance edges
+- [Building a World Model](/guides/world-model) — the foundational pattern
