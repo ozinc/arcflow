@@ -11,7 +11,7 @@ playground:
 
     MERGE (s:Sensor {id: 'repl-cam', name: 'REPL-Cam', type: 'camera', reliability: 0.99, x: 1.0, y: 2.0})
 
-    MATCH (s:Sensor {id: 'repl-cam'}), (r:Robot {id: 'repl-bot'}) MERGE (s)-[:DETECTED {confidence: 0.99, method: 'vision'}]->(r)
+    MERGE (s:Sensor {id: 'repl-cam'})-[:DETECTED {confidence: 0.99, method: 'vision'}]->(r:Robot {id: 'repl-bot'})
 
     MATCH (s:Sensor)-[d:DETECTED]->(r:Robot) RETURN s.name AS sensor, s.reliability, d.confidence AS trust, r.name AS robot, r.task, r.battery, r.status
 

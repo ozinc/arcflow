@@ -13,11 +13,11 @@ playground:
 
     MERGE (dd:Document {id: 'doc-rag', title: 'Trusted RAG Pipelines', category: 'ai', relevance: 0.79, tokens: 870})
 
-    MATCH (a:Document {id: 'doc-wm'}), (b:Document {id: 'doc-sp'}) MERGE (a)-[:RELATED_TO {strength: 0.92}]->(b)
+    MERGE (a:Document {id: 'doc-wm'})-[:RELATED_TO {strength: 0.92}]->(b:Document {id: 'doc-sp'})
 
-    MATCH (a:Document {id: 'doc-wm'}), (b:Document {id: 'doc-conf'}) MERGE (a)-[:RELATED_TO {strength: 0.85}]->(b)
+    MERGE (a:Document {id: 'doc-wm'})-[:RELATED_TO {strength: 0.85}]->(b:Document {id: 'doc-conf'})
 
-    MATCH (a:Document {id: 'doc-conf'}), (b:Document {id: 'doc-rag'}) MERGE (a)-[:RELATED_TO {strength: 0.88}]->(b)
+    MERGE (a:Document {id: 'doc-conf'})-[:RELATED_TO {strength: 0.88}]->(b:Document {id: 'doc-rag'})
 
     MATCH (doc:Document)-[r:RELATED_TO]->(related:Document) WHERE doc.relevance > 0.78 RETURN doc.title AS document, doc.category, doc.relevance AS vector_score, doc.tokens, related.title AS related_document, r.strength AS graph_strength, doc.relevance * r.strength AS combined_score ORDER BY combined_score DESC
 

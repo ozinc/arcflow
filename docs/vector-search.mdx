@@ -17,11 +17,11 @@ playground:
 
     MERGE (mg:Document {id: 'doc-migration', title: 'SQL to WorldCypher Migration', category: 'migration', relevance: 0.41, chunks: 4})
 
-    MATCH (wm:Document {id: 'doc-world-model'}), (sq:Document {id: 'doc-spatial'}) MERGE (wm)-[:RELATED_TO {strength: 0.94, method: 'semantic'}]->(sq)
+    MERGE (wm:Document {id: 'doc-world-model'})-[:RELATED_TO {strength: 0.94, method: 'semantic'}]->(sq:Document {id: 'doc-spatial'})
 
-    MATCH (wm:Document {id: 'doc-world-model'}), (cs:Document {id: 'doc-confidence'}) MERGE (wm)-[:RELATED_TO {strength: 0.89, method: 'semantic'}]->(cs)
+    MERGE (wm:Document {id: 'doc-world-model'})-[:RELATED_TO {strength: 0.89, method: 'semantic'}]->(cs:Document {id: 'doc-confidence'})
 
-    MATCH (cs:Document {id: 'doc-confidence'}), (rg:Document {id: 'doc-rag'}) MERGE (cs)-[:RELATED_TO {strength: 0.92, method: 'semantic'}]->(rg)
+    MERGE (cs:Document {id: 'doc-confidence'})-[:RELATED_TO {strength: 0.92, method: 'semantic'}]->(rg:Document {id: 'doc-rag'})
 
     MATCH (doc:Document) WHERE doc.relevance > 0.80 RETURN doc.title AS document, doc.category, doc.relevance AS relevance_score, doc.chunks ORDER BY doc.relevance DESC
 

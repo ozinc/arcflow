@@ -17,13 +17,13 @@ playground:
 
     MERGE (f5:File {id: 'src/utils/logger.ts', name: 'logger.ts', type: 'utility', loc: 60, critical: 0})
 
-    MATCH (f1:File {id: 'src/main.ts'}), (f2:File {id: 'src/lib/db.ts'}) MERGE (f1)-[:IMPORTS {static: 1}]->(f2)
+    MERGE (f1:File {id: 'src/main.ts'})-[:IMPORTS {static: 1}]->(f2:File {id: 'src/lib/db.ts'})
 
-    MATCH (f1:File {id: 'src/main.ts'}), (f3:File {id: 'src/lib/auth.ts'}) MERGE (f1)-[:IMPORTS {static: 1}]->(f3)
+    MERGE (f1:File {id: 'src/main.ts'})-[:IMPORTS {static: 1}]->(f3:File {id: 'src/lib/auth.ts'})
 
-    MATCH (f4:File {id: 'src/api/routes.ts'}), (f2:File {id: 'src/lib/db.ts'}) MERGE (f4)-[:IMPORTS {static: 1}]->(f2)
+    MERGE (f4:File {id: 'src/api/routes.ts'})-[:IMPORTS {static: 1}]->(f2:File {id: 'src/lib/db.ts'})
 
-    MATCH (f3:File {id: 'src/lib/auth.ts'}), (f5:File {id: 'src/utils/logger.ts'}) MERGE (f3)-[:IMPORTS {static: 0}]->(f5)
+    MERGE (f3:File {id: 'src/lib/auth.ts'})-[:IMPORTS {static: 0}]->(f5:File {id: 'src/utils/logger.ts'})
 
     MATCH (f:File)-[:IMPORTS]->(dep:File) WITH dep.name AS dependency, dep.type, dep.loc, dep.critical, count(f) AS dependents RETURN dependency, type, loc, critical, dependents ORDER BY dependents DESC
 
