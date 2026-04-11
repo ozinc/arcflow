@@ -1,101 +1,228 @@
 ---
 title: "Swarm & Multi-Agent"
-description: "Register, coordinate, and query multiple agents operating on a shared graph"
+description: "A shared world model as the coordination substrate for AI agent swarms — persistent shared state, reactive task assignment, temporal audit, and confidence-weighted knowledge."
 section: "guides"
 status: "stable"
 ---
 
 # Swarm & Multi-Agent
 
-ArcFlow provides built-in procedures for managing multiple agents that share a graph. Agents register themselves, maintain state as graph nodes, and coordinate through the shared graph structure.
+The coordination problem in multi-agent systems is not a communication problem. It is a world model problem.
 
-## Register an agent
+When multiple agents operate independently — LLM agents running in parallel, a robot fleet navigating shared space, a pipeline of workers processing tasks — they need a shared answer to one question: *what does the collective know, right now, and how confident is it?* Solving that with a message bus gives you delivery. Solving it with a vector store gives you similarity. Neither gives you a persistent, queryable, spatially grounded, temporally accurate world model that every agent reads from and writes to without coordination overhead.
+
+That is what ArcFlow provides as the coordination substrate. The world model is the swarm's shared mind. Agents register, write observations, claim tasks, and query the combined knowledge of every other agent — with full temporal history, confidence scoring, and reactive notification when anything changes.
+
+---
+
+## Registering agents
+
+Each agent has an identity in the world model — a node it owns, a session it can resume, and a record of what it has observed.
 
 ```cypher
--- Register a new agent with an ID
+-- Register a new agent
 CALL swarm.register('agent-1')
 
--- List all active agents
+-- List all active agents and their state
 CALL swarm.agents
 
 -- Count active agents
 CALL swarm.agentCount
 ```
 
-## SDK usage
-
 ```typescript
 import { open } from 'arcflow'
 
-const db = open('./swarm-graph')
+const db = open('./data/swarm-world-model')
 
-// Register agents
+// Register all agents at startup
 db.query("CALL swarm.register('worker-1')")
 db.query("CALL swarm.register('worker-2')")
 db.query("CALL swarm.register('coordinator')")
 
-// Check agent count
 const count = db.query("CALL swarm.agentCount")
 console.log(`Active agents: ${count.rows[0].get('count')}`)
-
-// List all agents
-const agents = db.query("CALL swarm.agents")
-for (const row of agents.rows) {
-  console.log(`Agent: ${row.get('agent_id')}`)
-}
 ```
 
-## Coordination patterns
+---
 
-### Task assignment via graph
+## Shared observations — building collective knowledge
+
+Agents write what they observe. Other agents read the combined world model — they see not just their own observations, but every agent's observations, with full provenance.
 
 ```typescript
-// Coordinator creates task nodes
-db.mutate("CREATE (t:Task {id: 'task-1', type: 'process', status: 'pending', data: 'batch-42'})")
-
-// Worker claims a task
-db.mutate("MATCH (t:Task {status: 'pending'}) SET t.status = 'claimed' SET t.worker = 'worker-1'")
-
-// Worker completes task
-db.mutate("MATCH (t:Task {id: 'task-1'}) SET t.status = 'done' SET t.result = 'processed'")
-
-// Coordinator queries progress
-const done = db.query("MATCH (t:Task {status: 'done'}) RETURN count(*) AS completed")
-```
-
-### Shared blackboard
-
-Agents read and write to shared graph nodes — no message bus needed:
-
-```typescript
-// Agent writes observation
-db.mutate("MERGE (obs:Observation {key: 'enemy_pos', x: 52.3, y: 34.1, reporter: 'scout-1', ts: $ts})", {
-  ts: Date.now()
+// Agent writes an observation with provenance
+db.mutate(`
+  MERGE (obs:Observation {key: 'target_pos'})
+  SET obs.x = $x,
+      obs.y = $y,
+      obs.reporter = $agent,
+      obs.at = timestamp(),
+      obs._observation_class = 'observed',
+      obs._confidence = $conf
+`, {
+  x: 52.3, y: 34.1,
+  agent: 'scout-1',
+  conf: 0.91
 })
 
-// Other agents read observations
-const obs = db.query("MATCH (o:Observation) WHERE o.ts > $since RETURN o.key, o.x, o.y, o.reporter", {
-  since: Date.now() - 5000  // last 5 seconds
-})
+// Any agent reads the current world state
+const observations = db.query(`
+  MATCH (o:Observation)
+  WHERE o.at > $since
+    AND o._confidence > 0.7
+  RETURN o.key, o.x, o.y, o.reporter, o._confidence
+  ORDER BY o._confidence DESC
+`, { since: Date.now() - 5000 })
 ```
 
-### Live views for coordination
+The world model is the blackboard. No message bus. No serialization. No delivery guarantees to manage — ArcFlow's MVCC engine handles concurrent reads and writes from all agents simultaneously.
+
+---
+
+## Task assignment via graph
+
+Tasks are nodes. Agents are nodes. Assignment is an edge. The state of the entire task queue is a live graph query — no separate job queue, no external broker.
 
 ```cypher
--- Create a live view of pending tasks (auto-maintained)
-CREATE LIVE VIEW pending_tasks AS
-  MATCH (t:Task {status: 'pending'}) RETURN t.id, t.type, t.data
+-- Coordinator creates tasks
+CREATE (t:Task {
+  id: 'task-001',
+  type: 'process',
+  status: 'pending',
+  priority: 3,
+  data: 'batch-42'
+})
 
--- Agents poll the live view (zero-cost read)
-MATCH (row) FROM VIEW pending_tasks RETURN row
+-- Worker claims the highest-priority available task
+MATCH (t:Task {status: 'pending'})
+WITH t ORDER BY t.priority DESC LIMIT 1
+SET t.status = 'claimed', t.worker = 'worker-1', t.claimed_at = timestamp()
+RETURN t.id, t.type
+
+-- Worker marks task complete
+MATCH (t:Task {id: 'task-001'})
+SET t.status = 'done', t.result = 'processed', t.done_at = timestamp()
+
+-- Coordinator queries fleet-wide progress
+MATCH (t:Task)
+RETURN t.status, count(*) AS task_count
 ```
 
-## Durable Workflows (Built-in Orchestration)
+Task claim and completion are atomic writes. No worker can claim the same task twice — the `MATCH`+`SET` on `status = 'pending'` is a serialized mutation in ArcFlow's single-writer model.
 
-For multi-step agent pipelines that need durability, retries, and cancellation — use ArcFlow's built-in workflow engine. Workflows are stored as `:Workflow` and `:WorkflowStep` graph nodes, so they're fully queryable and MVCC-safe.
+---
+
+## Reactive coordination — subscribe, not poll
+
+Polling introduces latency proportional to the polling interval. Every agent checking "are there new tasks?" every 100ms is 10 round-trips per second per agent. With 20 agents and a 50ms interval: 400 round-trips per second for zero new information.
+
+ArcFlow's reactive layer inverts this:
 
 ```typescript
-// Create a workflow with named steps
+// Worker subscribes to pending tasks — fires the instant one appears
+const taskSubscription = db.subscribe(
+  `MATCH (t:Task {status: 'pending'})
+   RETURN t.id, t.type, t.priority, t.data
+   ORDER BY t.priority DESC`,
+  (event) => {
+    for (const row of event.added) {
+      // New task available — claim it immediately
+      db.mutate(
+        `MATCH (t:Task {id: $id, status: 'pending'})
+         SET t.status = 'claimed', t.worker = $worker`,
+        { id: row.get('t.id'), worker: workerId }
+      )
+    }
+  }
+)
+
+// Coordinator subscribes to failures — requeue immediately
+const failureMonitor = db.subscribe(
+  `MATCH (t:Task {status: 'failed'})
+   WHERE t.retries < 3
+   RETURN t.id, t.retries`,
+  (event) => {
+    for (const row of event.added) {
+      db.mutate(
+        `MATCH (t:Task {id: $id})
+         SET t.status = 'pending', t.retries = t.retries + 1`,
+        { id: row.get('t.id') }
+      )
+    }
+  }
+)
+
+// Live view: fleet health — auto-maintained, zero-cost reads
+db.mutate(`
+  CREATE LIVE VIEW swarm_status AS
+  MATCH (t:Task)
+  RETURN t.status, count(*) AS count
+`)
+```
+
+Standing queries fire on every relevant mutation. Workers wake when tasks appear. Coordinators respond when tasks fail. No polling loop anywhere in the stack.
+
+---
+
+## Temporal audit — what did the swarm know, and when?
+
+Every mutation is versioned. The full history of the swarm's collective knowledge is queryable — not from a log file, but from the same graph, the same query language.
+
+```cypher
+-- Replay the world model at a past moment — what did all agents know then?
+MATCH (o:Observation) AS OF seq 5000
+RETURN o.key, o.x, o.y, o.reporter, o._confidence
+
+-- When did a task transition from pending to claimed?
+MATCH (t:Task {id: 'task-001'}) AS OF seq 4800
+RETURN t.status, t.worker, t.claimed_at
+
+-- Which agent's observation was current at the moment of a decision?
+MATCH (o:Observation {key: 'target_pos'}) AS OF (timestamp() - 30000)
+RETURN o.x, o.y, o.reporter, o._confidence, o.at
+```
+
+Post-hoc audit answers: which agent made which observation, which version of the world model a decision was based on, and what confidence level the swarm had at the time. Not reconstructed from logs — queried directly from the versioned world model.
+
+---
+
+## Confidence filtering — weighted collective knowledge
+
+Not all agents observe with equal accuracy. A scout using lidar produces higher-confidence observations than an agent reasoning from indirect signals. ArcFlow's confidence model flows through the world model:
+
+```cypher
+-- Only act on high-confidence observations (consensus-grade)
+MATCH (o:Observation)
+WHERE o._observation_class = 'observed'
+  AND o._confidence > 0.85
+RETURN o.key, o.x, o.y, o.reporter
+ORDER BY o._confidence DESC
+
+-- Flag low-confidence observations for secondary verification
+MATCH (o:Observation)
+WHERE o._confidence < 0.5
+  AND o._observation_class = 'predicted'
+RETURN o.key, o.reporter, o._confidence
+ORDER BY o._confidence ASC
+
+-- Confidence-weighted centrality: most trusted agents rank highest
+CALL algo.confidencePageRank()
+YIELD nodeId, score
+MATCH (a) WHERE id(a) = nodeId AND 'Agent' IN labels(a)
+RETURN a.id, score ORDER BY score DESC
+```
+
+Agents with consistently accurate observations naturally rise in the confidence-weighted graph. Agents whose predictions fail to materialize decay. The world model reflects the epistemic state of the swarm — not just what was reported, but how much to trust each reporter.
+
+---
+
+## Durable workflows — multi-step pipelines with retries
+
+For agent pipelines that must survive crashes, require ordered steps, and need audit history, ArcFlow's built-in workflow engine stores pipeline state as graph nodes — queryable, versioned, and MVCC-safe.
+
+```typescript
+// Create a named pipeline
 db.mutate(`
   CALL arcflow.workflow.create(
     'agent-pipeline',
@@ -103,51 +230,73 @@ db.mutate(`
   )
 `)
 
-// List all workflows and their status
-const wfs = db.query("CALL arcflow.workflow.list() YIELD workflow_id, name, status, step_count")
-
-// Run a workflow
+// Run the pipeline
 db.mutate("CALL arcflow.workflow.run($id)", { id: workflowId })
 
 // Retry a failed step
 db.mutate("CALL arcflow.workflow.retryStep($id, 'enrich')", { id: workflowId })
 
-// Cancel a running workflow
+// Cancel
 db.mutate("CALL arcflow.workflow.cancel($id)", { id: workflowId })
 ```
 
-Query workflow state directly via graph — no separate dashboard needed:
+Workflow state is live in the graph — no separate dashboard, no external orchestration UI:
 
 ```cypher
 -- All running workflows
 MATCH (w:Workflow {status: 'running'}) RETURN w.name, w.started_at
 
--- Steps that failed
+-- Steps that failed and their errors
 MATCH (w:Workflow)-[:HAS_STEP]->(s:WorkflowStep {status: 'failed'})
 RETURN w.name, s.name, s.error
+
+-- Full pipeline audit: every step, every transition
+MATCH (w:Workflow {id: $id})-[:HAS_STEP]->(s:WorkflowStep)
+RETURN s.name, s.status, s.started_at, s.done_at
+ORDER BY s.started_at
 ```
 
-## Named Sessions
+---
 
-Named sessions let agents resume work across restarts without losing context. Each session tracks its query history.
+## Named sessions — persistent agent identity
+
+Named sessions let agents resume across restarts without losing context. Each session is a first-class node in the world model.
 
 ```typescript
-// Open a named session (creates if not exists, resumes if it does)
-const sess = db.query("CALL arcflow.session.open('scout-agent-1') YIELD session_id, name, query_count")
+// Open or resume a named session
+const sess = db.query(
+  "CALL arcflow.session.open('scout-agent-1') YIELD session_id, name, query_count"
+)
 const sessionId = sess.rows[0].get('session_id')
 
-// List active sessions
+// List active sessions across the swarm
 db.query("CALL arcflow.session.list() YIELD session_id, name, query_count, created_at")
 
 // Close when done
 db.mutate("CALL arcflow.session.close($id)", { id: sessionId })
 ```
 
-Use named sessions when agents need persistent identity — e.g., a scout that runs continuously and should resume its task queue after a crash.
+A scout that crashes and restarts opens the same named session — its task queue, its observations, and its position in any ongoing workflow are all preserved in the world model it left behind.
 
-## Use cases
+---
 
-- **AI agent orchestration** — multiple LLM agents sharing a knowledge graph with durable workflow coordination
-- **Game AI** — NPC teams, squad coordination, shared perception
-- **Robotics** — multi-robot task allocation, shared world model
-- **Distributed processing** — worker pools with graph-based task queues and built-in retry
+## The swarm as a world model
+
+| Coordination need | Traditional approach | ArcFlow World Model |
+|---|---|---|
+| Shared state | Message bus + sync | First-class graph — every agent reads the same model |
+| Task queue | External broker (Redis, RabbitMQ) | `:Task` nodes with status edges — queryable, auditable |
+| Reactive assignment | Polling | `db.subscribe()` — fires on task creation, zero latency |
+| Temporal audit | Log files + reconstruction | `AS OF seq N` — same graph, same queries |
+| Confidence weighting | Application logic | `_confidence` on every observation — built in |
+| Pipeline orchestration | External orchestrator | Built-in workflow engine, stored as graph nodes |
+| Agent identity | External registry | Named sessions — persistent across restarts |
+
+## See Also
+
+- [Autonomous Systems](/use-cases/autonomous-systems) — multi-robot world model coordination
+- [Robotics & Perception](/use-cases/robotics) — sensor fusion into a shared world model
+- [Reactive Queries](/reactive) — standing queries and live views in depth
+- [Temporal Queries](/worldcypher/temporal) — replay and audit across the swarm
+- [Building a World Model](/guides/world-model) — the foundational guide
+- [Agent-Native](/agent-native) — ArcFlow designed for AI agent workloads

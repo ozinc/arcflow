@@ -1,6 +1,6 @@
 ---
 title: "Modeling a Social Graph"
-description: "Build a social network with nodes, relationships, and traversal"
+description: "First graph in ArcFlow: nodes, directed relationships, multi-hop traversal, shortest path, and PageRank — under 2 minutes."
 section: "guides"
 order: 1
 since: "0.2.0"
@@ -9,11 +9,13 @@ status: "stable"
 
 # Modeling a Social Graph
 
-Build a social network graph, traverse friendships, and run PageRank -- all in under 2 minutes. By the end of this guide, you will have nodes with properties, directed relationships, multi-hop traversals, and centrality scores.
+A social network is a world model of human connection — who knows whom, how many hops apart they are, and which nodes carry the most influence. This guide builds one from scratch: nodes with properties, directed relationships, multi-hop traversals, shortest path, and centrality scores.
+
+Under 2 minutes. All in GQL.
 
 ## Create people
 
-```sql
+```cypher
 CREATE (alice:Person {name: 'Alice', age: 30, city: 'London'})
 CREATE (bob:Person {name: 'Bob', age: 25, city: 'Berlin'})
 CREATE (carol:Person {name: 'Carol', age: 35, city: 'London'})
@@ -22,40 +24,78 @@ CREATE (dave:Person {name: 'Dave', age: 28, city: 'Paris'})
 
 ## Create relationships
 
-```sql
-CREATE (a:Person {name: 'Alice'})-[:KNOWS]->(b:Person {name: 'Bob'})
-CREATE (b:Person {name: 'Bob'})-[:KNOWS]->(c:Person {name: 'Carol'})
-CREATE (a:Person {name: 'Alice'})-[:KNOWS]->(d:Person {name: 'Dave'})
+Relationships are first-class objects — not foreign keys derived at query time, but stored edges with direction and properties.
+
+```cypher
+MATCH (a:Person {name: 'Alice'}), (b:Person {name: 'Bob'})
+CREATE (a)-[:KNOWS]->(b)
+
+MATCH (b:Person {name: 'Bob'}), (c:Person {name: 'Carol'})
+CREATE (b)-[:KNOWS]->(c)
+
+MATCH (a:Person {name: 'Alice'}), (d:Person {name: 'Dave'})
+CREATE (a)-[:KNOWS]->(d)
 ```
 
-## Query: who does Alice know?
+## Who does Alice know directly?
 
-```sql
-MATCH (a:Person {name: 'Alice'})-[:KNOWS]->(friend) RETURN friend.name
+```cypher
+MATCH (a:Person {name: 'Alice'})-[:KNOWS]->(friend)
+RETURN friend.name
 ```
 
-## Query: friends of friends
+## Friends of friends (2 hops)
 
-```sql
-MATCH (a:Person {name: 'Alice'})-[:KNOWS*2..2]->(fof) RETURN fof.name
+```cypher
+MATCH (a:Person {name: 'Alice'})-[:KNOWS*2..2]->(fof)
+RETURN DISTINCT fof.name
 ```
 
-## Query: shortest path
+The `*2..2` is a variable-length path — match exactly 2 hops. `*1..3` would match 1, 2, or 3 hops. No recursion needed, no self-join.
 
-```sql
-shortestPath (a:Person {name: 'Alice'}), (c:Person {name: 'Carol'})
+## Shortest path between two people
+
+```cypher
+MATCH p = shortestPath(
+  (a:Person {name: 'Alice'})-[:KNOWS*]-(c:Person {name: 'Carol'})
+)
+RETURN length(p), [n IN nodes(p) | n.name] AS path
 ```
 
-## Query: people in London over 25
+## Filter: people in London over 25
 
-```sql
-MATCH (n:Person) WHERE n.city = 'London' AND n.age > 25 RETURN n.name, n.age
+```cypher
+MATCH (n:Person)
+WHERE n.city = 'London' AND n.age > 25
+RETURN n.name, n.age
 ```
 
-## Query: statistics
+## Aggregate statistics
 
-```sql
-MATCH (n:Person) RETURN count(n) AS total, avg(n.age) AS avg_age, collect(n.city) AS cities
+```cypher
+MATCH (n:Person)
+RETURN count(n) AS total, avg(n.age) AS avg_age, collect(n.city) AS cities
+```
+
+## PageRank — who has the most influence?
+
+```cypher
+CALL algo.pageRank()
+YIELD nodeId, score
+MATCH (p:Person) WHERE id(p) = nodeId
+RETURN p.name, score
+ORDER BY score DESC
+```
+
+PageRank measures structural influence — which person, if removed, would most disconnect the network. In a larger graph this answers questions no property filter can.
+
+## Optional: people Alice may know (OPTIONAL MATCH)
+
+```cypher
+MATCH (a:Person {name: 'Alice'})
+OPTIONAL MATCH (a)-[:KNOWS*2..3]->(extended:Person)
+WHERE NOT (a)-[:KNOWS]->(extended)
+RETURN DISTINCT extended.name AS suggested_connection
 ```
 
 ## Snapshot for later
@@ -66,5 +106,7 @@ MATCH (n:Person) RETURN count(n) AS total, avg(n.age) AS avg_age, collect(n.city
 
 ## See Also
 
-- [Using Constructors](/guides/using-constructors) — add dynamic relationships
+- [SQL vs GQL](/concepts/sql-vs-gql) — why graph traversal replaces multi-hop JOINs
+- [Graph Patterns](/concepts/graph-patterns) — variable-length paths, OPTIONAL MATCH, and pattern composition
+- [Building a World Model](/guides/world-model) — entities in space with temporal memory and confidence
 - [WorldCypher Reference](/worldcypher) — full query language
