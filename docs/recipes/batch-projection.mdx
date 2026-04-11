@@ -1,13 +1,13 @@
 ---
 title: "Recipe: Batch Projection"
-description: "Batch mutation patterns for high-throughput entity and relationship loading with MERGE-based idempotency."
+description: "Idempotent batch projection into the world model — high-throughput entity and relationship loading with MERGE semantics so replays never create duplicates."
 section: "recipes"
 status: "stable"
 ---
 
 # Recipe: Batch Projection
 
-High-throughput data loading pattern for pipelines.
+Project entities and relationships into the world model at scale. MERGE semantics make every batch idempotent — replay the same data and the graph converges, never duplicates.
 
 ## Basic batch
 

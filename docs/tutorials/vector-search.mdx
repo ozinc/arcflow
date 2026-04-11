@@ -1,13 +1,13 @@
 ---
 title: "Tutorial: Vector Search"
-description: "HNSW vector index setup with embeddings, k-NN similarity search, and hybrid vector-graph traversal for semantic retrieval."
+description: "Semantic dimensions as first-class properties of the world model — store embeddings on nodes, run k-NN similarity, compose with graph traversal in one query."
 section: "tutorials"
 status: "stable"
 ---
 
 # Tutorial: Vector Search
 
-Add semantic similarity search to your graph using vector embeddings.
+Embeddings are first-class node properties in ArcFlow — stored in the world model alongside confidence scores and relationships, searchable with the same GQL used for everything else.
 
 ## Overview
 
@@ -40,7 +40,7 @@ db.mutate(
 ```
 
 **Options:**
-- `dimensions` — must match your embedding size (e.g., 1536 for OpenAI, 384 for MiniLM)
+- `dimensions` — must match your embedding size (e.g., 1536, 768, or 384 depending on your model)
 - `similarity` — `'cosine'` (recommended) or `'euclidean'`
 
 ## 3. Search by similarity

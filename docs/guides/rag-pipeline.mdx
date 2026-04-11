@@ -249,7 +249,7 @@ The MCP server's `graph_rag` tool runs the full retrieval pipeline. The LLM quer
 
 **Graph structure scales value**: The gap between flat vector retrieval and graph retrieval grows with relationship richness. A chunk graph with `RELATED_TO`, `CITES`, `CONTRADICTS`, and `SUPPORTS` edges gives the LLM reasoning structure that a chunk array cannot.
 
-**Embedding dimensions**: ArcFlow's HNSW index supports any dimensionality: 384 (MiniLM), 768 (BERT), 1536 (OpenAI ada-002), 3072 (text-embedding-3-large).
+**Embedding dimensions**: ArcFlow's HNSW index supports any dimensionality: 384 (small sentence models), 768 (BERT-size models), 1536 (large text embedding models), 3072 (extended embedding models).
 
 **GPU acceleration**: On large graphs, vector search dispatches automatically to CUDA or Metal when available. No code changes.
 
