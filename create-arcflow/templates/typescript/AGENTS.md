@@ -14,7 +14,7 @@ const db = openInMemory()                          // No server. No Docker.
 db.mutate("CREATE (n:Person {name: $name})", { name: 'Alice' })
 db.query("MATCH (n:Person) RETURN n.name, n.age")  // Typed: age is number
 db.batchMutate(["MERGE (a:X {id: '1'})", "MERGE (b:X {id: '2'})"])
-db.query("CALL algo.pageRank()")                   // 30+ algorithms
+db.query("CALL algo.pageRank()")                   // 27 algorithms
 db.query("CALL algo.vectorSearch('idx', $v, 10)")  // Vector search
 db.stats()                                         // { nodes, relationships, indexes }
 db.close()
