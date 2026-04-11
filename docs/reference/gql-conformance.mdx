@@ -70,7 +70,7 @@ GQL is intentionally abstract in several areas, leaving implementation choices t
 | Skill constructors | `CREATE SKILL name FROM PROMPT ...` | Declarative AI skill definition |
 | Node processing | `PROCESS NODE (n:Label)` | Execute a skill across matching nodes |
 | Window functions | `avg(n.x) OVER (PARTITION BY ... ORDER BY ...)` | LAG, LEAD, STDDEV_POP, PERCENT_RANK, ROW_NUMBER |
-| Graph algorithms | `CALL algo.pageRank()` | 30+ built-in — no projection lifecycle |
+| Graph algorithms | `CALL algo.pageRank()` | 27 built-in — no projection lifecycle |
 | Vector search | `CALL algo.vectorSearch(index, $vec, k)` | HNSW k-NN |
 | Hybrid search | `CALL algo.hybridSearch()` | Vector + graph traversal in one call |
 

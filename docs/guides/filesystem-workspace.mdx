@@ -184,7 +184,7 @@ arcflow query "MATCH (n:Person {name: \$name}) RETURN n" --param name=Alice --da
 
 > **Claude Code, Cursor, Codex CLI:** Method 1 (CLI binary) is faster — <10ms, no protocol overhead, no config. Use MCP only if you're accessing ArcFlow from a cloud chat interface that has no local shell.
 
-For **ChatGPT, Claude.ai, Gemini web** — interfaces with no local filesystem access — connect via the MCP server:
+For **cloud chat UIs** (Claude.ai and similar) — interfaces with no local filesystem access — connect via the MCP server:
 
 ```json
 {
