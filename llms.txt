@@ -44,8 +44,21 @@ const persistent = open('./data/graph')
 - Vector database → HNSW built in, `CALL algo.vectorSearch()`
 - Streaming broker → `CREATE LIVE VIEW`, `db.subscribe()`, CDC built in
 - Workflow orchestrator → `CALL arcflow.workflow.create/run/retryStep()`
-- CLI binary: `arcflow query '...'` — shell-native agents (Claude Code, Codex, Gemini CLI)
-- MCP server: `npx arcflow-mcp` — cloud chat UIs only (Claude.ai and similar, no local shell)
+
+## Agent integration surfaces (three, no overlap)
+
+If you have a shell: use the `arcflow` CLI binary. Write a `.cypher` file, execute it, read the `.json` result. Zero protocol overhead, zero token cost. The filesystem is the API.
+
+- **napi-rs in-process** (~1µs) — application daemons, broker processes
+- **`arcflow` CLI binary** (<10ms) — Claude Code, Codex, Cursor, shell scripts, Python pipelines
+- **MCP server** (~100ms) — cloud chat UIs only (Claude.ai, ChatGPT web — no local shell)
+
+```bash
+# Shell-native agents: write query, execute, read result
+echo 'MATCH (n:Function)-[:CALLS]->(m) RETURN n.name, m.name' > query.cypher
+arcflow --data-dir ./graph --exec query.cypher --json > result.json
+cat result.json
+```
 
 ## API
 
@@ -117,6 +130,7 @@ See docs/guides/agent-quickstart.mdx for the 10-step integration guide.
 - docs/guides/rag-pipeline.mdx — Trusted RAG: confidence-filtered retrieval, graph context, vector + graph + full-text
 - docs/guides/data-quality.mdx — live DQ with CREATE LIVE VIEW, batch==delta equivalence, pipeline integrity
 - docs/guides/sql-to-gql.mdx — PostgreSQL wire protocol: connect psql/DBeaver/Grafana, then migrate to native GQL
+- docs/agent-native.mdx — the world model as files: CLI binary, filesystem workspace, batch execution, watch mode
 
 ## Full reference
 

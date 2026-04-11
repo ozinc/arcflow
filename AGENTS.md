@@ -13,6 +13,8 @@ The World Model database — spatial-temporal, confidence-scored, embedded. Spac
 
 **napi-rs** is the in-process interface. **CLI** is the local-to-local interface. **MCP** is the cloud-to-local bridge for chat UIs with no shell access. These surfaces don't overlap — pick the one that matches your execution context.
 
+**If you have a shell, use the CLI.** LLMs are trained on billions of file and shell examples. The CLI makes the world model work like the filesystem: write a `.cypher` query file, execute it, read the `.json` result. No protocol overhead, no token cost, no round-trip. The filesystem is the API.
+
 Try it now: https://oz.com/engine — runs in your browser, no install.
 
 One engine for graphs, vectors, full-text search, algorithms, time-series, live queries, spatial, workflows, and replication — no separate infrastructure for each.

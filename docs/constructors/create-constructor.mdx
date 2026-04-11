@@ -15,7 +15,7 @@ playground:
     MATCH (sk:Skill {id: 'prox-detect'}), (s1:Sensor {id: 'cam-1'}) MERGE (sk)-[:GOVERNS {confidence_floor: 0.85, freq_hz: 25}]->(s1)
     MATCH (sk:Skill {id: 'prox-detect'}), (s2:Sensor {id: 'lidar-1'}) MERGE (sk)-[:GOVERNS {confidence_floor: 0.80, freq_hz: 10}]->(s2)
     MATCH (sk:Skill {id: 'prox-detect'}), (s3:Sensor {id: 'rfid-1'}) MERGE (sk)-[:GOVERNS {confidence_floor: 0.95, freq_hz: 1}]->(s3)
-    MATCH (sk:Skill)-[g:GOVERNS]->(s:Sensor)-[d:DETECTED]->(r:Robot) WHERE d.confidence >= g.confidence_floor RETURN sk.name AS constructor, sk.version, sk.radius, g.confidence_floor AS trust_gate, g.freq_hz AS poll_hz, s.name AS sensor, s.type, s.reliability, d.confidence AS live_confidence, d.method, r.name AS entity_in_range, r.task ORDER BY d.confidence DESC
+    MATCH (sk:Skill)-[g:GOVERNS]->(s:Sensor) RETURN sk.name AS constructor, sk.version, sk.radius, g.confidence_floor AS trust_gate, g.freq_hz AS poll_hz, s.name AS sensor, s.type, s.reliability ORDER BY g.freq_hz DESC
 
 ---
 
