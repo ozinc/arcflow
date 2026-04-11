@@ -34,7 +34,7 @@ MATCH (o:Order {id: 'ORD-001'}) AS OF (timestamp() - 3600000) RETURN o.status  -
 | Snapshot | `AS OF` temporal queries | Point-in-time snapshot of any entity |
 | Replay | `db.temporalReplay()` | Deterministic replay with seeded randomness |
 | Saga / Process Manager | Workflow steps | WAL-durable, retry policies, dead letter queues |
-| CQRS Read Model | Live queries + subscriptions | Reactive, auto-updating read models |
+| CQRS Read Model | Live queries + subscriptions | Always-current, live read models |
 
 ---
 

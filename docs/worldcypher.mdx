@@ -1,6 +1,6 @@
 ---
 title: "GQL / WorldCypher"
-description: "ArcFlow's graph query language — ISO/IEC 39075 GQL with full Cypher compatibility and extensions for temporal, spatial, reactive, and AI workloads"
+description: "ArcFlow's graph query language — ISO/IEC 39075 GQL with full Cypher compatibility and extensions for temporal, spatial, live queries, and AI workloads"
 section: "worldcypher"
 order: 1
 since: "0.2.0"
@@ -18,7 +18,7 @@ ArcFlow's implementation is called **WorldCypher**. It passes 100% of the openCy
 | openCypher TCK | ✅ 100% — 3881/3881 scenarios |
 | ISO GQL V2 (ISO/IEC 39075) | ✅ Full — GQLSTATUS codes, `IS LABELED`, `ELEMENT_ID`, `NEXT WHEN/THEN/ELSE/END`, `UNIQUE`/`PRIMARY KEY` constraints, transaction control |
 
-**WorldCypher extensions beyond the standard:** `AS OF` temporal snapshots, `LIVE MATCH` reactive queries, `CREATE LIVE VIEW`, confidence filtering (`WHERE r._confidence > 0.8`), spatial predicates, `CREATE SKILL`, `PROCESS NODE`.
+**WorldCypher extensions beyond the standard:** `AS OF` temporal snapshots, `LIVE MATCH` standing queries, `CREATE LIVE VIEW`, confidence filtering (`WHERE r._confidence > 0.8`), spatial predicates, `CREATE SKILL`, `PROCESS NODE`.
 
 ## Operator Summary
 

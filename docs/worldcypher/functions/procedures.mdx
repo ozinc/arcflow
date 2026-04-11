@@ -1,6 +1,6 @@
 ---
 title: "Procedures"
-description: "100+ CALL procedures — database introspection, graph algorithms, embedding, knowledge graph, temporal, reactive, system, auth, extensions, behavior"
+description: "100+ CALL procedures — database introspection, graph algorithms, embedding, knowledge graph, temporal, live queries, system, auth, extensions, behavior"
 section: "Reference"
 order: 5
 since: "0.19.0"
@@ -11,7 +11,7 @@ status: "stable"
 
 > This reference is designed for both human developers and AI coding agents. Every entry includes complete CALL syntax and return columns that can be used directly in queries.
 
-100+ CALL procedures: Database Introspection (20), Graph Algorithms (27), Embedding (5), Knowledge Graph (6), Temporal (9), Reactive (5), System (14), Auth (7), Health (3), Extensions (5), and Behavior Graph (3). All return tabular results.
+100+ CALL procedures: Database Introspection (20), Graph Algorithms (27), Embedding (5), Knowledge Graph (6), Temporal (9), Live Queries (5), System (14), Auth (7), Health (3), Extensions (5), and Behavior Graph (3). All return tabular results.
 
 ```cypher
 CALL db.procedures()
@@ -243,9 +243,9 @@ RETURN n.name
 
 Note: `AS OF` is a query modifier, not a CALL procedure.
 
-## Reactive (5)
+## Live Queries (5)
 
-Procedures for the reactive fabric: topics, subscriptions, live queries, and causal chains.
+Procedures for live queries: topics, subscriptions, live views, and causal chains.
 
 | Procedure | Return Columns | Description | Since |
 |---|---|---|---|

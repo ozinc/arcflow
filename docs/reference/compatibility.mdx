@@ -7,7 +7,7 @@ status: "stable"
 
 # GQL & WorldCypher Reference
 
-ArcFlow implements [ISO/IEC 39075 GQL](https://www.iso.org/standard/76120.html) as **WorldCypher** — its native query dialect. All standard GQL syntax works as specified. WorldCypher adds extensions for temporal snapshots, reactive queries, confidence scoring, and graph algorithms that GQL leaves to implementations.
+ArcFlow implements [ISO/IEC 39075 GQL](https://www.iso.org/standard/76120.html) as **WorldCypher** — its native query dialect. All standard GQL syntax works as specified. WorldCypher adds extensions for temporal snapshots, live queries, confidence scoring, and graph algorithms that GQL leaves to implementations.
 
 **Standards conformance:**
 
@@ -178,7 +178,7 @@ Run directly — no projection lifecycle needed.
 | `temporal.trajectory()` | Entity trajectory over time |
 | `temporal.velocity(days)` | Rate of change |
 
-## Reactive / Live Queries
+## Live Queries
 
 | Feature | Status | Syntax | Notes |
 |---|---|---|---|
@@ -220,7 +220,7 @@ Run directly — no projection lifecycle needed.
 | `db.proofGates` | Proof gate information |
 | `db.provenance` | Data provenance |
 
-## Reactive System
+## Live Query System
 
 | Procedure | Description |
 |---|---|

@@ -127,7 +127,7 @@ YIELD nodeId, score
 RETURN nodeId, score ORDER BY score DESC LIMIT 10
 ```
 
-## Reactive monitoring — fire on state change
+## Live monitoring — always current
 
 ```typescript
 import { open } from 'arcflow'
@@ -210,7 +210,7 @@ CALL arcflow.scene.queryInLocalSpace(robot_id, 10.0)
 | Entity history | Time-series DB + join | `AS OF seq N` on same graph |
 | Confidence scoring | Application logic | `_confidence` on every fact |
 | Observation class | Not modeled | `_observation_class` built-in |
-| Reactive alerts | Message broker + CDC | `db.subscribe()` in-process |
+| Live alerts | Message broker + CDC | `db.subscribe()` in-process |
 | Graph algorithms | External tool | `CALL algo.pageRank()` built-in |
 | Fleet relationships | Relational DB + joins | First-class edges with properties |
 | USD integration | Separate scene graph | `arcflow.scene.*` procedures |
@@ -220,6 +220,6 @@ CALL arcflow.scene.queryInLocalSpace(robot_id, 10.0)
 - [Building a World Model](/guides/world-model) — step-by-step with spatial, temporal, and confidence
 - [Spatial Queries](/spatial-knowledge) — R*-tree, frustum, line-of-sight
 - [Temporal Queries](/worldcypher/temporal) — `AS OF seq N`, replay, comparison
-- [Reactive Queries](/reactive) — live subscriptions and materialized views
+- [Live Queries](/live-queries) — standing queries and live views
 - [Grounded Neural Objects](/use-cases/grounded-neural-objects) — lifting detections into persistent entities
 - [Digital Twins](/use-cases/digital-twins) — live mirror of physical systems

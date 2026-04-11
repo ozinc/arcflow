@@ -120,7 +120,7 @@ An open specification of the Cypher query language, originally developed at Neo4
 
 ## WorldCypher
 
-**ArcFlow.** ArcFlow's implementation of ISO GQL, extended with temporal snapshots, reactive queries, confidence scoring, spatial predicates, constructors, and graph algorithm procedures. All standard GQL syntax works; WorldCypher adds what the standard leaves to implementations.
+**ArcFlow.** ArcFlow's implementation of ISO GQL, extended with temporal snapshots, live queries, confidence scoring, spatial predicates, constructors, and graph algorithm procedures. All standard GQL syntax works; WorldCypher adds what the standard leaves to implementations.
 
 ---
 
@@ -176,7 +176,7 @@ RETURN a.name, b.name
 
 ## Live view
 
-**ArcFlow.** A named, incrementally maintained query result. Created with `CREATE LIVE VIEW`, updated automatically as the underlying graph changes. Zero-cost reads — the result is pre-computed. Equivalent to a materialized view in SQL, but reactive.
+**ArcFlow.** A named, incrementally maintained query result. Created with `CREATE LIVE VIEW`, updated automatically as the underlying graph changes. Zero-cost reads — the result is pre-computed. Equivalent to a materialized view in SQL, but live — always current.
 
 ```cypher
 CREATE LIVE VIEW active_users AS
@@ -186,7 +186,7 @@ RETURN u.id, u.name
 
 ---
 
-## Reactive query
+## Live query
 
 **ArcFlow.** A standing query that re-evaluates when the graph changes. Written as `LIVE MATCH` or registered via `db.subscribe()`. The engine pushes deltas (added/removed rows) to the subscriber rather than requiring polling.
 

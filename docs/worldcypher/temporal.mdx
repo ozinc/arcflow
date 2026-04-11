@@ -1,6 +1,6 @@
 ---
 title: "WorldCypher: Temporal Queries"
-description: "Temporal queries with AS OF seq N snapshots, velocity/decay metrics, change tracking, and reactive LIVE monitoring."
+description: "Temporal queries with AS OF seq N snapshots, velocity/decay metrics, change tracking, and live monitoring."
 section: "worldcypher"
 status: "stable"
 ---
@@ -74,9 +74,9 @@ CALL db.temporalReplay
 CALL db.nodesAsOf
 ```
 
-## Reactive temporal queries
+## Temporal live queries
 
-Combine temporal with reactive for live monitoring:
+Combine temporal with live queries for continuous monitoring:
 
 ```cypher
 -- Continuously watch for new high-value nodes

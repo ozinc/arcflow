@@ -52,7 +52,7 @@ const past = db.query(`
   RETURN e.name, e.x, e.y, e._confidence
 `)
 
-// Reactive: fire the instant anything enters a 5m radius
+// Live: standing query fires the instant anything enters a 5m radius
 db.subscribe(
   `CALL algo.nearestNodes(point({x: 0, y: 0}), 'Entity', 10)
      YIELD node AS e, distance
@@ -129,7 +129,7 @@ A safety system running on confidence thresholds is fundamentally different from
 
 | | Why ArcFlow |
 |---|---|
-| **Robotics perception** | Sensor fusion pipeline — observed/predicted tracks, lidar provenance, confidence-filtered spatial queries, emergency-stop reactive monitoring |
+| **Robotics perception** | Sensor fusion pipeline — observed/predicted tracks, lidar provenance, confidence-filtered spatial queries, emergency-stop live monitoring |
 | **Autonomous fleets** | Shared world model across all agents — spatial task assignment, formation coordination, temporal audit |
 | **Digital twins** | Live spatial replica of a physical facility — temporal history, anomaly detection, downstream topology |
 | **AI agent infrastructure** | Persistent working memory across sessions — confidence-scored observations, multi-agent coordination, durable workflows |
@@ -179,7 +179,7 @@ WHERE distance < 20.0
 MATCH (e)-[:MEMBER_OF]->(f:Formation {name: 'Alpha'})
 RETURN e.name, distance, f.pattern
 
--- Reactive: standing query fires on every relevant mutation
+-- Live: standing query fires on every relevant mutation
 CREATE LIVE VIEW trusted_contacts AS
   MATCH (e:Entity)
   WHERE e._observation_class = 'observed' AND e._confidence > 0.85
@@ -213,7 +213,7 @@ Pre-built native binaries for macOS (Apple Silicon + Intel), Linux (x64 + ARM64)
 | | |
 |---|---|
 | [World Model](docs/concepts/world-model.mdx) | What a world model is and why it matters |
-| [Building a World Model](docs/guides/world-model.mdx) | Step-by-step: entities, spatial queries, temporal memory, reactive monitoring |
+| [Building a World Model](docs/guides/world-model.mdx) | Step-by-step: entities, spatial queries, temporal memory, live monitoring |
 | [GQL / WorldCypher](docs/worldcypher.mdx) | Query language reference (ISO/IEC 39075, Cypher-compatible) |
 | [GQL Conformance](docs/reference/gql-conformance.mdx) | Standards lineage, TCK results, full ISO GQL V2 conformance details |
 | [Autonomous Systems](docs/use-cases/autonomous-systems.mdx) | Robot fleets, UAVs, self-driving vehicles |

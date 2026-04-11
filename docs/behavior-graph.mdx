@@ -39,7 +39,7 @@ If you've used behavior trees before, everything maps directly:
 | Selector / Fallback | `StepKind::Conditional` | Graph-pattern predicates, not just booleans |
 | Parallel Node | `StepKind::Parallel` with barriers | All/Any/N completion modes |
 | Decorator (Retry, Timeout) | RetryPolicy, throttle config | Rate limiting, dead letter queues |
-| Reactive Sequence | Live queries + subscriptions | GQL-based reactivity |
+| Reactive Sequence | Live queries + subscriptions | GQL-based live queries |
 | Subtree | Nested `WorkflowDef` | Partition-isolated scope |
 
 ---

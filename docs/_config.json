@@ -21,7 +21,7 @@
         { "slug": "algorithms", "title": "Graph Algorithms", "order": 2 },
         { "slug": "sync", "title": "Sync", "order": 3 },
         { "slug": "mcp", "title": "MCP Server (AI Agents)", "order": 4 },
-        { "slug": "reactive", "title": "Reactive & Live Queries", "order": 5 },
+        { "slug": "live-queries", "title": "Live Queries", "order": 5 },
         { "slug": "temporal", "title": "Temporal", "order": 6 },
         { "slug": "spatial-knowledge", "title": "Spatial", "order": 7 },
         { "slug": "trusted-rag", "title": "Trusted RAG", "order": 8 },

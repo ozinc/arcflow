@@ -470,7 +470,7 @@ CALL arcflow.spatial.dispatch_stats()
   YIELD lane_chosen, estimated_candidates, actual_candidates,
         prefilter_us, rtree_us, gpu_transfer_us, kernel_us, total_us
 
--- Reactive trigger metrics
+-- Live trigger metrics
 CALL arcflow.spatial.trigger_stats()
   YIELD query_name, node_id, predicate_type, evaluation_us, fired
 ```
@@ -479,7 +479,7 @@ Point types: `point({x, y})` (2D), `point({x, y, z})` (3D), `point({latitude, lo
 Inserts/updates/deletes: O(log N), no rebuild. Bulk ingest (USD prims): 500K in < 1s via Sort-Tile-Recursive.
 GPU dispatch automatic above candidate thresholds; FlatSpatialIndex used for GPU path.
 
-### Reactive
+### Live Queries
 ```cypher
 LIVE MATCH (n:Person) WHERE n.score > 0.9 RETURN n
 LIVE CALL algo.pageRank()

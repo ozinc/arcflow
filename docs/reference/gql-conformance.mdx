@@ -62,7 +62,7 @@ GQL is intentionally abstract in several areas, leaving implementation choices t
 | Extension | Syntax | What it does |
 |---|---|---|
 | Temporal snapshots | `MATCH (n) AS OF seq N` | Query the graph at a past checkpoint |
-| Reactive queries | `LIVE MATCH (n:Label) RETURN n` | Standing query, re-evaluates on change |
+| Live queries | `LIVE MATCH (n:Label) RETURN n` | Standing query, re-evaluates on change |
 | Live algorithms | `LIVE CALL algo.pageRank()` | Incrementally maintained graph algorithm |
 | Persistent live views | `CREATE LIVE VIEW name AS ...` | CDC-maintained materialized view |
 | Confidence filtering | `WHERE r._confidence > 0.8` | Per-edge confidence score predicate |
@@ -78,7 +78,7 @@ GQL is intentionally abstract in several areas, leaving implementation choices t
 
 | Implementation | openCypher TCK | ISO GQL V2 | Notes |
 |---|---|---|---|
-| **ArcFlow (WorldCypher)** | ✅ 100% (3881/3881) | ✅ Full | Plus temporal, reactive, and AI extensions |
+| **ArcFlow (WorldCypher)** | ✅ 100% (3881/3881) | ✅ Full | Plus temporal, live queries, and AI extensions |
 | Neo4j (Cypher) | ✅ Full | ⚠️ Majority of mandatory features; partial optional; [actively working on gaps](https://neo4j.com/docs/cypher-manual/current/appendix/gql-conformance/) |
 | Microsoft Fabric | — | ⚠️ Partial — [long list of unsupported features](https://learn.microsoft.com/en-us/fabric/graph/limitations#gql-conformance) | Preview; many mandatory features still in progress |
 | Memgraph | ✅ Full | ⚠️ Partial | openCypher-native; GQL V2 in progress |

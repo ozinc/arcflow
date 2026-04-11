@@ -136,7 +136,7 @@ ORDER BY score DESC LIMIT 20
 
 Central accounts in a transaction graph that are young and share identity attributes with other accounts are the highest-priority investigation targets.
 
-## Live monitoring: reactive world model
+## Live monitoring: the world model is always current
 
 The world model is live. When a new transaction completes a ring, the alert fires immediately:
 
@@ -160,7 +160,7 @@ const monitor = db.subscribe(
 )
 ```
 
-No polling. No batch job. The moment a `SENT` edge that completes a ring is written, the reactive layer fires.
+No polling. No batch job. The moment a `SENT` edge that completes a ring is written, the standing query fires.
 
 ## Querying the past
 
@@ -186,7 +186,7 @@ Auditors get a full timeline, not just current state. Investigators can replay e
 | Shared identity | Separate table per attribute type | Structural — shared nodes |
 | Velocity | Scheduled batch job | Temporal query on the live model |
 | Evidence quality | Binary (flagged / not flagged) | Confidence score [0.0, 1.0] on every fact |
-| Ring detection latency | Minutes to hours | Milliseconds — reactive pattern |
+| Ring detection latency | Minutes to hours | Milliseconds — standing query |
 | Historical audit | Audit log table | `AS OF seq N` on the graph itself |
 | Algorithm (centrality) | External tool or manual impl | `CALL algo.pageRank()` in one query |
 
@@ -198,5 +198,5 @@ The fundamental shift: instead of writing rules that fire on individual events, 
 - [Graph Patterns](/concepts/graph-patterns) — how pattern matching works
 - [SQL vs GQL](/concepts/sql-vs-gql) — why the mental model shift matters
 - [Confidence & Provenance](/concepts/confidence-and-provenance) — scoring evidence quality
-- [Reactive Queries](/reactive) — live monitoring without polling
+- [Live Queries](/live-queries) — live monitoring without polling
 - [Temporal Queries](/worldcypher/temporal) — querying historical state

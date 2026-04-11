@@ -109,10 +109,10 @@ See docs/guides/agent-quickstart.mdx for the 10-step integration guide.
 ## Key guides (stable)
 
 - docs/concepts/world-model.mdx — what a world model is: spatial-temporal, confidence-scored, observed/inferred/predicted
-- docs/guides/world-model.mdx — step-by-step: entities in space, spatial queries, temporal replay, reactive monitoring
+- docs/guides/world-model.mdx — step-by-step: entities in space, spatial queries, temporal replay, live monitoring
 - docs/use-cases/autonomous-systems.mdx — robot fleets, UAVs, shared world model, multi-agent coordination
 - docs/use-cases/digital-twins.mdx — live spatial replica of physical facilities, temporal history, anomaly detection
-- docs/use-cases/robotics.mdx — sensor fusion pipeline, track lifecycle, ROS bridge, emergency-stop reactive safety
+- docs/use-cases/robotics.mdx — sensor fusion pipeline, track lifecycle, ROS bridge, emergency-stop live safety monitoring
 - docs/guides/swarm-agents.mdx — AI agent swarms on a shared world model, durable workflows, named sessions
 - docs/guides/rag-pipeline.mdx — Trusted RAG: confidence-filtered retrieval, graph context, vector + graph + full-text
 - docs/guides/data-quality.mdx — live DQ with CREATE LIVE VIEW, batch==delta equivalence, pipeline integrity

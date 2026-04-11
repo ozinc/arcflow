@@ -1,6 +1,6 @@
 ---
 title: "Swarm & Multi-Agent"
-description: "A shared world model as the coordination substrate for AI agent swarms — persistent shared state, reactive task assignment, temporal audit, and confidence-weighted knowledge."
+description: "A shared world model as the coordination substrate for AI agent swarms — persistent shared state, live task assignment, temporal audit, and confidence-weighted knowledge."
 section: "guides"
 status: "stable"
 ---
@@ -11,7 +11,7 @@ The coordination problem in multi-agent systems is not a communication problem. 
 
 When multiple agents operate independently — LLM agents running in parallel, a robot fleet navigating shared space, a pipeline of workers processing tasks — they need a shared answer to one question: *what does the collective know, right now, and how confident is it?* Solving that with a message bus gives you delivery. Solving it with a vector store gives you similarity. Neither gives you a persistent, queryable, spatially grounded, temporally accurate world model that every agent reads from and writes to without coordination overhead.
 
-That is what ArcFlow provides as the coordination substrate. The world model is the swarm's shared mind. Agents register, write observations, claim tasks, and query the combined knowledge of every other agent — with full temporal history, confidence scoring, and reactive notification when anything changes.
+That is what ArcFlow provides as the coordination substrate. The world model is the swarm's shared mind. Agents register, write observations, claim tasks, and query the combined knowledge of every other agent — with full temporal history, confidence scoring, and live notification the moment anything changes.
 
 ---
 
@@ -113,11 +113,11 @@ Task claim and completion are atomic writes. No worker can claim the same task t
 
 ---
 
-## Reactive coordination — subscribe, not poll
+## Live coordination — declare, not poll
 
 Polling introduces latency proportional to the polling interval. Every agent checking "are there new tasks?" every 100ms is 10 round-trips per second per agent. With 20 agents and a 50ms interval: 400 round-trips per second for zero new information.
 
-ArcFlow's reactive layer inverts this:
+LIVE MATCH inverts this:
 
 ```typescript
 // Worker subscribes to pending tasks — fires the instant one appears
@@ -286,7 +286,7 @@ A scout that crashes and restarts opens the same named session — its task queu
 |---|---|---|
 | Shared state | Message bus + sync | First-class graph — every agent reads the same model |
 | Task queue | External message broker | `:Task` nodes with status edges — queryable, auditable |
-| Reactive assignment | Polling | `db.subscribe()` — fires on task creation, zero latency |
+| Live assignment | Polling | `db.subscribe()` — fires on task creation, zero latency |
 | Temporal audit | Log files + reconstruction | `AS OF seq N` — same graph, same queries |
 | Confidence weighting | Application logic | `_confidence` on every observation — built in |
 | Pipeline orchestration | External orchestrator | Built-in workflow engine, stored as graph nodes |
@@ -296,7 +296,7 @@ A scout that crashes and restarts opens the same named session — its task queu
 
 - [Autonomous Systems](/use-cases/autonomous-systems) — multi-robot world model coordination
 - [Robotics & Perception](/use-cases/robotics) — sensor fusion into a shared world model
-- [Reactive Queries](/reactive) — standing queries and live views in depth
+- [Live Queries](/live-queries) — standing queries and live views in depth
 - [Temporal Queries](/worldcypher/temporal) — replay and audit across the swarm
 - [Building a World Model](/guides/world-model) — the foundational guide
 - [Agent-Native](/agent-native) — ArcFlow designed for AI agent workloads

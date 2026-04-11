@@ -1,0 +1,372 @@
+---
+title: "Live Queries"
+description: "The world model is always current — standing queries, live views, and continuous algorithms that maintain truth as the graph mutates. No polling. No brokers. No stale state."
+section: "live-queries"
+order: 5
+since: "1.5.0"
+status: "stable"
+---
+
+# Live Queries
+
+Reality doesn't pause while your application isn't looking. Sensor readings arrive continuously. Agents act without waiting for a scheduler. Positions update, confidence scores shift, relationships form and dissolve — all in the present tense.
+
+A world model that requires polling is not a world model. It's a snapshot that expires the moment it's taken.
+
+ArcFlow's answer is the standing query: declare what you care about once, and the graph maintains the answer continuously. No poll loop. No webhook infrastructure. No gap between what the world model contains and what your application knows.
+
+```cypher
+-- Declare what matters. The graph maintains the truth.
+LIVE MATCH (e:Entity)
+  WHERE e.confidence > 0.9
+    AND distance(e.position, point({x: 0, y: 0})) < 50.0
+RETURN e.name, e.position, e.confidence
+```
+
+This query is not executed on a schedule. It is not triggered by an event. It is simply always true. When an entity's confidence drops below 0.9, it leaves the result. When one enters the radius, it joins. Your application receives the delta — what entered, what left — the moment the graph changes.
+
+---
+
+## The problem with the alternatives
+
+Before introducing the full surface, it is worth naming what standing queries replace and why.
+
+### Polling
+
+The most common approach. Query every N seconds. Accept that your application always knows what was true — never what is true. The poll interval is a floor on your latency. Shrinking it trades accuracy for compute: 100ms polls mean 100× the query volume, 100× the CPU, and still a 100ms window of staleness.
+
+For a world model tracking dozens of entities, polling is a structural lie: you're telling the application "this is the state of the world" when you mean "this was the state of the world when I last checked."
+
+### Webhooks + cache
+
+The alternative: write a service that listens for mutation events, invalidates a cache, and serves the cache to the application. You've now built a second system — an event pipeline, a cache, an invalidation strategy, an operational burden — to compensate for a database that doesn't understand time. The infrastructure solves the symptom. The world model never gets smarter; you just added plumbing around its ignorance.
+
+### External pub/sub
+
+Kafka, Redis Streams, NATS — these systems solve a different problem: cross-service fan-out across distributed processes. For in-process knowledge that lives in the same graph as your queries, routing mutations through an external broker adds network hops, serialization overhead, and operational surface area. You're connecting a fire hose to a garden.
+
+### The standing query
+
+ArcFlow runs standing queries in the same process as your graph. When a mutation occurs, the live query engine computes the delta — what entered, what left — and delivers it to subscribers within milliseconds. No second system. No poll. No broker.
+
+---
+
+## Three surfaces
+
+### LIVE MATCH — session-scoped standing query
+
+An anonymous query that runs for the lifetime of the session:
+
+```cypher
+LIVE MATCH (n:Alert) WHERE n.severity = 'critical' RETURN n.id, n.message
+```
+
+Results push to the subscriber as the graph mutates. When the session ends, the standing query is released.
+
+### CREATE LIVE VIEW — named, persistent, pre-computed
+
+A named view that persists across sessions and makes results available for instant reads:
+
+```cypher
+CREATE LIVE VIEW high_confidence_entities AS
+  MATCH (e:Entity)
+  WHERE e.confidence > 0.9
+    AND e._observation_class = 'observed'
+  RETURN e.id, e.name, e.position, e.confidence
+```
+
+The view is maintained continuously. Reads are zero-cost — the result is pre-computed:
+
+```cypher
+-- Instant read — no re-execution
+MATCH (row) FROM VIEW high_confidence_entities
+  WHERE row.confidence > 0.95
+  RETURN row.name, row.position
+```
+
+Use `CREATE LIVE VIEW` for results that multiple parts of the application need, for results that must persist across sessions, or for results that serve as inputs to other live views.
+
+### LIVE CALL — continuous algorithms
+
+Six graph algorithms run incrementally, maintaining their result as the graph mutates:
+
+```cypher
+LIVE CALL algo.pageRank({ damping: 0.85 })
+LIVE CALL algo.connectedComponents()
+LIVE CALL algo.louvain()
+LIVE CALL algo.leiden()
+LIVE CALL algo.triangleCount()
+LIVE CALL algo.clusteringCoefficient()
+```
+
+Each mutation produces a weighted delta (+1 insertion, -1 deletion) that propagates through the algorithm's state. Results are mathematically identical to a full recompute — without the recompute cost. See [Graph Algorithms](/algorithms) for the full algorithm reference.
+
+---
+
+## View chaining
+
+Live views compose. A view can read from another view, forming a DAG. Deltas propagate through the entire chain in topological order:
+
+```cypher
+-- First view: entities in the hot zone
+CREATE LIVE VIEW zone_entities AS
+  MATCH (e:Entity)
+  WHERE e.position.x >= 30 AND e.position.x <= 70
+    AND e.position.y >= 30 AND e.position.y <= 70
+    AND e.confidence > 0.8
+  RETURN e.id, e.name, e.position, e.confidence, e._observation_class
+
+-- Second view: aggregate the hot zone by observation class
+CREATE LIVE VIEW zone_summary AS
+  MATCH (row) FROM VIEW zone_entities
+  RETURN row._observation_class AS obs_class,
+         count(*) AS entity_count,
+         avg(row.confidence) AS avg_confidence
+```
+
+When an entity's position or confidence changes, the delta propagates through `zone_entities` and then through `zone_summary` — both views stay current in a single pass.
+
+---
+
+## The Live Delta Stack
+
+The correctness guarantee behind all live queries is Z-set algebra.
+
+Every row in the system carries an integer weight: **+1** for insertion, **−1** for deletion. Every relational operator has a delta rule that propagates changes correctly:
+
+| Operator | Class | Delta rule |
+|---|---|---|
+| Filter, Project | Linear | Stateless — pass delta through |
+| Join | Bilinear | Maintain left/right accumulators |
+| Count, Sum | Aggregate | Invertible state — no full recompute |
+| LAG, LEAD, rolling_stddev | Window | Ring buffer per partition |
+
+The mathematical consequence: results are identical whether computed from scratch or updated via deltas. There is no eventual consistency window. The view is either current or being updated — never wrong.
+
+### Evidence algebra
+
+When confidence scoring is active, every row weight carries a confidence score [0.0, 1.0] and observation class (Observed, Inferred, Predicted). Confidence propagates through operators:
+
+- **AND / intersection** uses min (weakest link)
+- **OR / union** uses max (strongest evidence)
+
+A join between a 0.97-confidence observed track and a 0.72-confidence inferred prediction produces a result with confidence = 0.72 — automatically, without application code.
+
+**Validated on 15.4M rows of financial data across 246M cells: 99.48% cell-by-cell match against DuckDB.** Batch and delta paths produce identical results.
+
+---
+
+## Topics and Change Data Capture
+
+### Topics
+
+Named channels for publishing structured events into the graph:
+
+```cypher
+-- Create a topic
+CREATE TOPIC sensor_readings
+
+-- Publish a structured event
+PUBLISH TO sensor_readings {value: 35.2, unit: 'celsius', sensor_id: 'S1', confidence: 0.97}
+
+-- Register a standing query against the topic
+SUBSCRIBE TO sensor_readings AS heat_alert
+  QUERY 'MATCH (a:Alert) WHERE a.threshold < 30 RETURN a.type, a.threshold'
+```
+
+Events are property maps — the same key-value structure used for node properties. They are recorded in the mutation log and trigger any matching standing queries.
+
+List active topics and subscriptions:
+
+```cypher
+CALL db.topics()
+CALL db.subscriptions()
+```
+
+### Change Data Capture
+
+The mutation log records every write: node creates, property updates, relationship changes, deletes. Query it directly:
+
+```cypher
+CALL db.mutations()
+```
+
+```
+| tick       | operation | target | details                                      |
+|------------|-----------|--------|----------------------------------------------|
+| 1700000001 | CREATE    | node   | :Entity {name: 'Unit-07', confidence: 0.95} |
+| 1700000002 | CREATE    | rel    | (:Entity)-[:TRACKS]->(:Entity)               |
+| 1700000003 | SET       | prop   | node 1: confidence = 0.87                    |
+```
+
+Get changes since a specific point — for incremental sync to downstream systems:
+
+```cypher
+-- Capture the current position
+CALL db.clock()                 -- returns tick = 1700000042
+
+-- Later: get only what changed
+CALL db.changesSince()          -- mutations from tick 1700000042 onward
+```
+
+CDC combined with `db.clock()` enables efficient incremental replication to external databases, search indexes, or analytics pipelines without re-reading the full graph.
+
+---
+
+## TypeScript SDK
+
+### db.subscribe()
+
+The TypeScript SDK wraps `CREATE LIVE VIEW` and delivers deltas to a handler:
+
+```typescript
+import { open } from 'arcflow'
+
+const db = open('./world-model')
+
+// Standing query: fires the moment a critical alert enters the graph
+const sub = db.subscribe(
+  `MATCH (e:Entity)-[:SUBJECT_OF]->(f:Fact {predicate: 'threat'})
+   WHERE f.confidence > 0.85 AND e._observation_class = 'observed'
+   RETURN e.id, e.name, e.position, f.confidence`,
+  (event) => {
+    // event.added    — entities that just became threats
+    // event.removed  — entities that are no longer threats
+    // event.current  — full current result set
+    // event.frontier — monotonic mutation sequence
+    for (const row of event.added) {
+      dispatch({ type: 'THREAT_ENTERED', entity: row.toObject() })
+    }
+    for (const row of event.removed) {
+      dispatch({ type: 'THREAT_CLEARED', entity: row.toObject() })
+    }
+  }
+)
+
+// Release the standing query when no longer needed
+sub.cancel()
+```
+
+### React hooks
+
+```typescript
+import { useQuery, useLiveQuery } from '@arcflow/react'
+
+// One-shot — re-runs when params change
+const { rows, loading } = useQuery(db, "MATCH (n:Entity) RETURN n.name", {})
+
+// Standing — updates automatically on every relevant mutation
+const { rows } = useLiveQuery(
+  db,
+  "MATCH (n:Entity) WHERE n.confidence > 0.9 AND n.active = true RETURN n"
+)
+```
+
+---
+
+## Real-world patterns
+
+### Geofence — entities entering a zone
+
+```cypher
+CREATE LIVE VIEW zone_breach AS
+  MATCH (e:Entity)
+  WHERE distance(e.position, point({x: 50.0, y: 50.0})) < 25.0
+    AND e._observation_class IN ['observed', 'inferred']
+  RETURN e.id, e.name, e.position, e.confidence, e._observation_class
+```
+
+The view is maintained by the R\*-tree. When an entity's position update crosses the 25-meter boundary, the view updates in the same mutation pass — no separate geofence evaluation cycle.
+
+### High-confidence fact surfacing
+
+```cypher
+CREATE LIVE VIEW confirmed_facts AS
+  MATCH (s)-[:SUBJECT_OF]->(f:Fact)-[:OBJECT_IS]->(o)
+  WHERE f.confidence > 0.9
+    AND f._observation_class = 'observed'
+  RETURN s.name AS subject, f.predicate, o.name AS object,
+         f.confidence, f.source
+  ORDER BY f.confidence DESC
+```
+
+### Continuous community detection
+
+```cypher
+-- Maintain Louvain community assignments as the graph evolves
+LIVE CALL algo.louvain()
+
+-- Query current community membership
+MATCH (e:Entity) RETURN e.name, e.community ORDER BY e.community
+```
+
+### Standing query for incremental sync
+
+```typescript
+// Deliver only changed entities to a downstream system — no full scan
+const sync = db.subscribe(
+  "MATCH (e:Entity) WHERE e.updated_at > $since RETURN e",
+  (event) => {
+    downstream.upsert(event.added.map(r => r.toObject()))
+    downstream.remove(event.removed.map(r => r.toObject()))
+  }
+)
+```
+
+---
+
+## Inspecting live state
+
+```cypher
+CALL db.liveViews()              -- All registered live views with status
+CALL db.liveAlgorithms()         -- Running incremental algorithms
+CALL db.viewStats('view_name')   -- Per-view memory and timing metrics
+CALL db.arrangements()           -- Shared index status across views
+CALL db.executionContext()       -- Active subscriptions and pending events
+CALL db.replicationStatus()     -- Live query layer replication state
+```
+
+---
+
+## Where it fits in the stack
+
+| Need | External infrastructure | ArcFlow |
+|---|---|---|
+| **Always-current result set** | Poll + cache + invalidation service | `CREATE LIVE VIEW` — maintained by the engine |
+| **In-process event routing** | Message broker (adds network hop) | `CREATE TOPIC` / `SUBSCRIBE` — zero overhead |
+| **Graph-aware events** | Payload is flat bytes | Events carry full graph context |
+| **Incremental algorithms** | Batch recompute job | `LIVE CALL` — delta propagation, no recompute |
+| **CDC for downstream sync** | CDC connector + streaming platform | `db.changesSince()` — built in |
+| **Cross-process fan-out** | Distributed streaming platforms | Not in scope — use a broker for that |
+
+**Use standing queries when** your application embeds ArcFlow and needs always-current results, in-process event routing, or incremental algorithms without external infrastructure.
+
+**Use an external broker when** you need cross-process messaging or distributed fan-out across services. ArcFlow's CDC (`db.changesSince()`) is the natural feed into an external pipeline when you need both.
+
+---
+
+## Workflow orchestration
+
+The live query layer is the foundation for graph-native workflow orchestration: behavior trees that tick, steps that retry, events that trigger actions. Workflows are stored as `:Workflow` / `:WorkflowStep` nodes with `:HAS_STEP` edges, managed via `CALL arcflow.workflow.*` procedures. Steps are MVCC-safe, idempotent, and support retry policies.
+
+```cypher
+CALL arcflow.workflow.create('ingest', '[
+  {"name":"load","type":"GraphMutation"},
+  {"name":"analyze","type":"GraphQuery"},
+  {"name":"notify","type":"ExternalCall"}
+]')
+CALL arcflow.workflow.run('ingest')
+CALL arcflow.workflow.retryStep(wf_id, 'load')
+```
+
+No external orchestration service. No separate state store. Workflow state lives in the same graph as your world model.
+
+---
+
+## See also
+
+- [Temporal Queries](/temporal) — `AS OF seq N` point-in-time snapshots; combining temporal and live queries
+- [Graph Algorithms](/algorithms) — full algorithm reference and `LIVE CALL` algorithm list
+- [Data Quality & Pipeline Integrity](/guides/data-quality) — live views for batch/delta equivalence, pipeline prune, drill-through
+- [Swarm & Multi-Agent](/guides/swarm-agents) — live coordination across agent swarms
+- [Spatial Queries](/worldcypher/spatial) — live geofencing and spatial trigger metrics

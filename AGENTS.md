@@ -15,7 +15,7 @@ The World Model database — spatial-temporal, confidence-scored, embedded. Spac
 
 Try it now: https://oz.com/engine — runs in your browser, no install.
 
-One engine for graphs, vectors, full-text search, algorithms, time-series, reactive queries, spatial, workflows, and replication — no separate infrastructure for each.
+One engine for graphs, vectors, full-text search, algorithms, time-series, live queries, spatial, workflows, and replication — no separate infrastructure for each.
 
 ## What ArcFlow provides
 
@@ -556,14 +556,14 @@ CALL arcflow.spatial.dispatch_stats()
   YIELD lane_chosen, estimated_candidates, actual_candidates,
         prefilter_us, rtree_us, gpu_transfer_us, kernel_us, total_us
 
--- Reactive trigger metrics
+-- Live trigger metrics
 CALL arcflow.spatial.trigger_stats()
   YIELD query_name, node_id, predicate_type, evaluation_us, fired
 ```
 
 Index is dynamic — inserts/updates/deletes are O(log N), no rebuild. Coarse grid pre-filter reduces candidate set ~95% before R*-tree evaluation. Bulk ingest (USD prims) uses Sort-Tile-Recursive packing — 500K prims in under 1 second.
 
-### Reactive
+### Live Queries
 ```cypher
 LIVE MATCH (n:Person) WHERE n.score > 0.9 RETURN n
 LIVE CALL algo.pageRank()
@@ -688,7 +688,7 @@ typescript/tests/                      # SDK tests (Vitest)
 mcp/                                   # MCP server (npx arcflow-mcp)
 docs/                                  # MDX docs — full reference
   concepts/world-model.mdx             # World Model concept: spatial-temporal, observed/inferred/predicted
-  guides/world-model.mdx               # Step-by-step: entities, spatial queries, temporal replay, reactive
+  guides/world-model.mdx               # Step-by-step: entities, spatial queries, temporal replay, live monitoring
   use-cases/autonomous-systems.mdx     # Robot fleets, UAVs, shared world model
   use-cases/digital-twins.mdx          # Live spatial replica of physical facilities
   use-cases/robotics.mdx               # Sensor fusion pipeline, track lifecycle, ROS bridge

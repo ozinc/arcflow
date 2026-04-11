@@ -22,7 +22,7 @@ This guide builds one from scratch. By the end you'll have:
 - Temporal memory — query the world at any previous moment
 - Confidence-filtered decision making
 - Graph algorithms over the world structure
-- Reactive monitoring — the model tells you when anything changes
+- Live monitoring — standing queries keep the model always current
 
 This is the foundation for robotics perception, autonomous fleets, digital twins, game AI, and any system that needs to act on a continuously updated model of its environment.
 
@@ -266,11 +266,11 @@ A fleet that appears healthy in individual status checks may have a fragmented c
 
 ---
 
-## 7. Reactive monitoring — the world tells you
+## 7. Live monitoring — the world is always current
 
 Polling is not a world model. It is a sampling strategy — and it introduces latency proportional to the polling interval.
 
-ArcFlow's reactive layer inverts this: you declare what you care about, and the model notifies you the moment it changes.
+LIVE MATCH inverts this: declare what you care about, and the model maintains the answer continuously. You receive the delta the moment the graph changes.
 
 ```typescript
 import { open } from 'arcflow'
@@ -420,7 +420,7 @@ Spatial + temporal + confidence + graph traversal — in a single GQL statement.
 | Confidence scores | Safety thresholds that compose with any query |
 | Sensor provenance | Every edge knows its source, range, and time |
 | Temporal memory | Replay any past state — `AS OF seq N` on the same graph |
-| Reactive standing queries | Zero-latency notification — no polling, no scheduler |
+| Standing live queries | Zero-latency notification — no polling, no scheduler |
 | Live materialized views | Fleet health at zero read cost, maintained incrementally |
 | Graph algorithms | Network structure visible, not just entity properties |
 | Vector search | Semantic similarity composing with everything else |
@@ -435,7 +435,7 @@ This is the infrastructure layer the AI stack has been missing. Foundation model
 - [Autonomous Systems](/use-cases/autonomous-systems) — robot fleets and UAV coordination on a shared world model
 - [Digital Twins](/use-cases/digital-twins) — live spatial replicas of physical facilities
 - [Robotics & Perception](/use-cases/robotics) — sensor fusion pipeline and ROS integration
-- [Reactive Queries](/reactive) — standing queries and live views in depth
+- [Live Queries](/live-queries) — standing queries and live views in depth
 - [Temporal Queries](/worldcypher/temporal) — `AS OF seq N` and temporal comparison
 - [Spatial Queries](/spatial-knowledge) — R*-tree, frustum, line-of-sight reference
 - [Confidence & Provenance](/concepts/confidence-and-provenance) — scoring and tracing every fact

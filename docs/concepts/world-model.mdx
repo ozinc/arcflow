@@ -101,9 +101,9 @@ MATCH p = shortestPath(
 RETURN p, length(p)
 ```
 
-## Continuous and reactive
+## Continuous and always-current
 
-A world model that requires polling is not continuous. ArcFlow's reactive layer means the model notifies subscribers when anything relevant changes — without polling, without batch jobs, without latency introduced by a scheduler.
+A world model that requires polling is not continuous. Standing queries mean the model is always current — what you declared you care about is maintained continuously, without polling, without batch jobs, without scheduler latency.
 
 ```typescript
 const db = open('./data/world-model')
@@ -153,5 +153,5 @@ Not a research prototype. Production infrastructure — deployed, operating, and
 - [Observations & Evidence](/concepts/observations) — the observation model in detail
 - [Spatial Knowledge Graph](/spatial-knowledge) — spatial primitives deep dive
 - [Temporal Queries](/worldcypher/temporal) — querying past states
-- [Reactive Queries](/reactive) — standing queries and live updates
+- [Live Queries](/live-queries) — standing queries and live views
 - [Fraud Detection](/use-cases/fraud-detection) — World Model applied to financial networks

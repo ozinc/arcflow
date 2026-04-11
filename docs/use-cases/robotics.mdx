@@ -20,7 +20,7 @@ lidar               nodes: entities             spatial queries
 camera              edges: relationships         temporal replay
 radar               _confidence scores           confidence filters
 IMU                 _observation_class           graph algorithms
-GPS                 spatial index (R*-tree)      reactive triggers
+GPS                 spatial index (R*-tree)      live triggers
 ```
 
 Every sensor reading flows into the world model as a versioned mutation. The history of every entity is preserved. Confidence is tracked per observation. The planning layer reads from a single, consistent source — not a patchwork of ROS topics and CSV logs.
@@ -109,7 +109,7 @@ MATCH (e:Entity) AS OF seq 4821
 RETURN e.track_id, e.class, e.x, e.y, e._observation_class, e._confidence
 ```
 
-## Reactive safety systems
+## Live safety systems
 
 ```typescript
 import { open } from 'arcflow'

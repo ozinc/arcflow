@@ -191,7 +191,7 @@ WHERE distance(p.position, point({x: 50, y: 50})) < 25.0
 RETURN p.name, p.position
 ```
 
-In TypeScript, subscribe to geofence enter/exit events via the reactive API:
+In TypeScript, subscribe to geofence enter/exit events via the live query API:
 
 ```typescript
 const lq = db.subscribe(
@@ -304,7 +304,7 @@ CALL arcflow.spatial.dispatch_stats()
 | `kernel_us` | GPU kernel execution time (μs; 0 for CPU lanes) |
 | `total_us` | End-to-end query latency (μs) |
 
-For reactive spatial trigger metrics:
+For live spatial trigger metrics:
 
 ```cypher
 CALL arcflow.spatial.trigger_stats()
