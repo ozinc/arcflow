@@ -24,8 +24,8 @@ ArcFlow's WAL automatically records every mutation as a temporal fact. You get p
 -- Current state
 MATCH (o:Order {id: 'ORD-001'}) RETURN o.status  -- "shipped"
 
--- State 1 hour ago (no projection needed — just query the past)
-MATCH (o:Order {id: 'ORD-001'}) AS OF (timestamp() - 3600000) RETURN o.status  -- "confirmed"
+-- Earlier state (no projection needed — just query the past)
+MATCH (o:Order {id: 'ORD-001'}) AS OF seq 100 RETURN o.status  -- "confirmed"
 ```
 
 ---
@@ -70,8 +70,8 @@ The WAL records every CREATE, SET, DELETE — you don't need to explicitly emit 
 MATCH (o:Order {id: 'ORD-001'}) RETURN o.status
 -- Result: "shipped"
 
--- State 1 hour ago
-MATCH (o:Order {id: 'ORD-001'}) AS OF (timestamp() - 3600000)
+-- Earlier state (before shipping)
+MATCH (o:Order {id: 'ORD-001'}) AS OF seq 200
 RETURN o.status
 -- Result: "confirmed"
 
@@ -122,8 +122,8 @@ RETURN a.balance, a.status, a._updated_at
 Track how metrics evolve over time without maintaining a separate time-series database:
 
 ```cypher
--- Snapshot state at daily intervals
-MATCH (o:Order) AS OF (timestamp() - 86400000)  -- yesterday
+-- Snapshot state at a past sequence checkpoint
+MATCH (o:Order) AS OF seq 5000  -- yesterday's checkpoint
 RETURN count(*) AS orders_yesterday
 
 MATCH (o:Order) RETURN count(*) AS orders_today
@@ -135,7 +135,7 @@ Since the full history is in the WAL, you can inspect any previous state and man
 
 ```cypher
 -- What was the value before the last change?
-MATCH (p:Product {sku: 'WP-100'}) AS OF (timestamp() - 60000)
+MATCH (p:Product {sku: 'WP-100'}) AS OF seq 300
 RETURN p.price AS previous_price
 ```
 
@@ -168,7 +168,7 @@ ArcFlow is a temporal data engine where time is a queryable dimension across eve
 
 ## See Also
 
-- [Temporal Queries](/temporal) — `AS OF seq N` for point-in-time replay and historical state access
+- [Temporal Queries](/worldcypher/temporal) — `AS OF seq N` for point-in-time replay and historical state access
 - [Live Queries](/live-queries) — CDC feed from live views into downstream event pipelines
 - [Data Quality & Pipeline Integrity](/guides/data-quality) — deterministic replay and drill-through for pipeline reconciliation
 - [Sync Architecture](/architecture/sync) — WAL protocol internals and the mutation log structure

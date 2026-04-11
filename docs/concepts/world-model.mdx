@@ -70,8 +70,8 @@ Space and time are not columns in ArcFlow — they are native dimensions.
 **Temporal**: every mutation is versioned. The graph at any previous point in time is fully queryable. Not from an audit log or a separate history table — from the same graph, the same queries, just `AS OF seq N`.
 
 ```cypher
--- Where were all entities 5 seconds ago?
-MATCH (e:Entity) AS OF (timestamp() - 5000)
+-- Where were all entities at a recent checkpoint?
+MATCH (e:Entity) AS OF seq 500
 RETURN e.name, e.x, e.y, e.z
 
 -- K-nearest entities to a point (R*-tree backed)

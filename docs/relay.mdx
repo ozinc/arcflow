@@ -6,19 +6,12 @@ status: "stable"
 playground:
   query: |-
     MERGE (ctrl:Agent {id: 'ctrl', name: 'ControlCenter', role: 'hub', hops: 0})
-
     MERGE (fa:Agent {id: 'field-a', name: 'FieldAgent-Alpha', role: 'field', lat_ms: 12, hops: 1, zone: 'lab-a'})
-
     MERGE (fb:Agent {id: 'field-b', name: 'FieldAgent-Beta', role: 'field', lat_ms: 14, hops: 1, zone: 'lab-b'})
-
     MERGE (sa:Agent {id: 'sub-a', name: 'SubAgent-A1', role: 'subagent', lat_ms: 28, hops: 2, zone: 'lab-a'})
-
-    MATCH (ctrl:Agent {id: 'ctrl'}), (fa:Agent {id: 'field-a'}) MERGE (ctrl)-[:RELAYS_TO {intent: 'patrol', priority: 1, channel: 'primary', reliability: 0.99}]->(fa)
-
-    MATCH (ctrl:Agent {id: 'ctrl'}), (fb:Agent {id: 'field-b'}) MERGE (ctrl)-[:RELAYS_TO {intent: 'inspect', priority: 2, channel: 'primary', reliability: 0.99}]->(fb)
-
-    MATCH (fa:Agent {id: 'field-a'}), (sa:Agent {id: 'sub-a'}) MERGE (fa)-[:RELAYS_TO {intent: 'monitor', priority: 1, channel: 'local', reliability: 0.95}]->(sa)
-
+    MATCH (ctrl:Agent {id: 'ctrl'}) MATCH (fa:Agent {id: 'field-a'}) MERGE (ctrl)-[:RELAYS_TO {intent: 'patrol', priority: 1, channel: 'primary', reliability: 0.99}]->(fa)
+    MATCH (ctrl:Agent {id: 'ctrl'}) MATCH (fb:Agent {id: 'field-b'}) MERGE (ctrl)-[:RELAYS_TO {intent: 'inspect', priority: 2, channel: 'primary', reliability: 0.99}]->(fb)
+    MATCH (fa:Agent {id: 'field-a'}) MATCH (sa:Agent {id: 'sub-a'}) MERGE (fa)-[:RELAYS_TO {intent: 'monitor', priority: 1, channel: 'local', reliability: 0.95}]->(sa)
     MATCH (src:Agent)-[r:RELAYS_TO]->(dst:Agent) RETURN src.name AS from_agent, src.role, r.intent, r.priority, r.channel, r.reliability, dst.name AS to_agent, dst.role, dst.lat_ms AS latency_ms, dst.hops ORDER BY dst.hops, r.priority
 
 ---

@@ -101,8 +101,8 @@ CALL arcflow.scene.lineOfSight(ego_id, track_002_id)
 ## Temporal replay and diagnosis
 
 ```cypher
--- Where was entity TRK-001 100ms ago?
-MATCH (e:Entity {track_id: 'TRK-001'}) AS OF (timestamp() - 100)
+-- Where was entity TRK-001 at a recent checkpoint?
+MATCH (e:Entity {track_id: 'TRK-001'}) AS OF seq 400
 RETURN e.x, e.y, e.vx, e.vy
 
 -- Trajectory over the last 2 seconds

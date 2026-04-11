@@ -80,5 +80,5 @@ CREATE REACTIVE SKILL auto_link ON :DailyBar WHEN CREATED RUN sector_linker
 
 CALL db.version
 CALL db.stats
-CALL db.reactiveSkills
+CALL db.liveSkills
 CALL db.liveViews

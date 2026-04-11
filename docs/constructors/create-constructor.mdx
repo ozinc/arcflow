@@ -9,19 +9,12 @@ playground:
   seed: world
   query: |-
     MERGE (sk:Skill {id: 'prox-detect', name: 'ProximityDetector', version: 4, radius: 30.0, active: 1})
-
     MERGE (s1:Sensor {id: 'cam-1', name: 'Cam-LabA', type: 'camera', reliability: 0.95})
-
     MERGE (s2:Sensor {id: 'lidar-1', name: 'Lidar-LabB', type: 'lidar', reliability: 0.91})
-
     MERGE (s3:Sensor {id: 'rfid-1', name: 'RFID-Gate', type: 'rfid', reliability: 0.99})
-
-    MATCH (sk:Skill {id: 'prox-detect'}), (s1:Sensor {id: 'cam-1'}) MERGE (sk)-[:GOVERNS {confidence_floor: 0.85, freq_hz: 25}]->(s1)
-
-    MATCH (sk:Skill {id: 'prox-detect'}), (s2:Sensor {id: 'lidar-1'}) MERGE (sk)-[:GOVERNS {confidence_floor: 0.80, freq_hz: 10}]->(s2)
-
-    MATCH (sk:Skill {id: 'prox-detect'}), (s3:Sensor {id: 'rfid-1'}) MERGE (sk)-[:GOVERNS {confidence_floor: 0.95, freq_hz: 1}]->(s3)
-
+    MATCH (sk:Skill {id: 'prox-detect'}) MATCH (s1:Sensor {id: 'cam-1'}) MERGE (sk)-[:GOVERNS {confidence_floor: 0.85, freq_hz: 25}]->(s1)
+    MATCH (sk:Skill {id: 'prox-detect'}) MATCH (s2:Sensor {id: 'lidar-1'}) MERGE (sk)-[:GOVERNS {confidence_floor: 0.80, freq_hz: 10}]->(s2)
+    MATCH (sk:Skill {id: 'prox-detect'}) MATCH (s3:Sensor {id: 'rfid-1'}) MERGE (sk)-[:GOVERNS {confidence_floor: 0.95, freq_hz: 1}]->(s3)
     MATCH (sk:Skill)-[g:GOVERNS]->(s:Sensor) RETURN sk.name AS constructor, sk.version, sk.radius, g.confidence_floor AS trust_gate, g.freq_hz AS poll_hz, s.name AS sensor, s.type, s.reliability ORDER BY g.freq_hz DESC
 
 ---

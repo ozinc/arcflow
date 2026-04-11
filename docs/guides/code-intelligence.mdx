@@ -7,26 +7,16 @@ since: "8.0.0"
 status: "stable"
 playground:
   query: |-
-    MERGE (m1:Module {id: 'mod-auth', name: 'auth', path: 'src/auth.ts', loc: 320, coverage: 0.91})
-
-    MERGE (m2:Module {id: 'mod-db', name: 'database', path: 'src/db/client.ts', loc: 180, coverage: 0.73})
-
+    MERGE (m1:Module {id: 'mod-auth', name: 'auth', filepath: 'src/auth.ts', loc: 320, coverage: 0.91})
+    MERGE (m2:Module {id: 'mod-db', name: 'database', filepath: 'src/db/client.ts', loc: 180, coverage: 0.73})
     MERGE (f1:Function {id: 'fn-login', name: 'login', module: 'auth', line: 42, complexity: 4, tested: 1})
-
     MERGE (f2:Function {id: 'fn-validate', name: 'validateToken', module: 'auth', line: 28, complexity: 2, tested: 1})
-
     MERGE (f3:Function {id: 'fn-query', name: 'executeQuery', module: 'database', line: 15, complexity: 3, tested: 0})
-
-    MATCH (m1:Module {id: 'mod-auth'}), (f1:Function {id: 'fn-login'}) MERGE (m1)-[:CONTAINS {exported: 1}]->(f1)
-
-    MATCH (m1:Module {id: 'mod-auth'}), (f2:Function {id: 'fn-validate'}) MERGE (m1)-[:CONTAINS {exported: 0}]->(f2)
-
-    MATCH (m2:Module {id: 'mod-db'}), (f3:Function {id: 'fn-query'}) MERGE (m2)-[:CONTAINS {exported: 1}]->(f3)
-
-    MATCH (f1:Function {id: 'fn-login'}), (f2:Function {id: 'fn-validate'}) MERGE (f1)-[:CALLS {hot_path: 1, call_site: 42}]->(f2)
-
-    MATCH (f2:Function {id: 'fn-validate'}), (f3:Function {id: 'fn-query'}) MERGE (f2)-[:CALLS {hot_path: 0, call_site: 31}]->(f3)
-
+    MATCH (m1:Module {id: 'mod-auth'}) MATCH (f1:Function {id: 'fn-login'}) MERGE (m1)-[:CONTAINS {exported: 1}]->(f1)
+    MATCH (m1:Module {id: 'mod-auth'}) MATCH (f2:Function {id: 'fn-validate'}) MERGE (m1)-[:CONTAINS {exported: 0}]->(f2)
+    MATCH (m2:Module {id: 'mod-db'}) MATCH (f3:Function {id: 'fn-query'}) MERGE (m2)-[:CONTAINS {exported: 1}]->(f3)
+    MATCH (f1:Function {id: 'fn-login'}) MATCH (f2:Function {id: 'fn-validate'}) MERGE (f1)-[:CALLS {hot_path: 1, call_site: 42}]->(f2)
+    MATCH (f2:Function {id: 'fn-validate'}) MATCH (f3:Function {id: 'fn-query'}) MERGE (f2)-[:CALLS {hot_path: 0, call_site: 31}]->(f3)
     MATCH (m:Module)-[:CONTAINS]->(caller:Function)-[c:CALLS]->(dep:Function) RETURN m.name AS module, m.coverage AS test_coverage, caller.name AS function, caller.complexity, c.hot_path, dep.name AS calls, dep.tested ORDER BY caller.complexity DESC
 
 ---

@@ -8,9 +8,8 @@ status: "stable"
 playground:
   query: |-
     MERGE (z:Zone {id: 'maintenance', name: 'Maintenance Bay', x: 0.0, y: -20.0, radius: 10.0})
-    ON CREATE SET z.created_seq = 100, z.hazard = 0.35, z.active = true, z.capacity = 2
-    ON MATCH SET z.updated_seq = 200, z.hazard = 0.30, z.active = true
-    
+    ON CREATE SET z.created_seq = 100, z.hazard = 0.35, z.active = 1, z.capacity = 2
+    ON MATCH SET z.updated_seq = 200, z.hazard = 0.30, z.active = 1
     MATCH (z:Zone) RETURN z.name, z.x, z.y, z.radius, z.hazard, z.active, z.capacity, z.created_seq, z.updated_seq ORDER BY z.hazard DESC
 
 ---

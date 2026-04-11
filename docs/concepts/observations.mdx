@@ -26,16 +26,16 @@ ArcFlow classifies every piece of knowledge by how it was obtained. This lets yo
 
 ```cypher
 -- All observed nodes (direct evidence)
-CALL db.nodesByObservation.observed
+CALL db.nodesByObservation.observed()
 
 -- All inferred nodes (derived knowledge)
-CALL db.nodesByObservation.inferred
+CALL db.nodesByObservation.inferred()
 
 -- All predicted nodes (forecasts)
-CALL db.nodesByObservation.predicted
+CALL db.nodesByObservation.predicted()
 
 -- List available observation classes
-CALL db.observationClasses
+CALL db.observationClasses()
 ```
 
 ## SDK usage
@@ -46,20 +46,20 @@ import { open } from 'arcflow'
 const db = open('./evidence-graph')
 
 // Create an observed entity (from sensor)
-db.mutate("CREATE (p:Person {id: 'det-42', observation: 'observed', confidence: 0.95, source: 'camera-3', x: 52.3, y: 34.1})")
+db.mutate("CREATE (p:Person {id: 'det-42', _observation_class: 'observed', _confidence: 0.95, source: 'camera-3', x: 52.3, y: 34.1})")
 
 // Create an inferred entity (from algorithm)
-db.mutate("CREATE (id:Identity {id: 'reid-alice', observation: 'inferred', confidence: 0.87, source: 'reid-model', person_id: 'det-42'})")
+db.mutate("CREATE (id:Identity {id: 'reid-alice', _observation_class: 'inferred', _confidence: 0.87, source: 'reid-model', person_id: 'det-42'})")
 
 // Create a predicted entity (from model)
-db.mutate("CREATE (pred:Position {id: 'pred-42-t2', observation: 'predicted', confidence: 0.72, source: 'kalman-filter', x: 53.0, y: 34.5, t_offset: 2})")
+db.mutate("CREATE (pred:Position {id: 'pred-42-t2', _observation_class: 'predicted', _confidence: 0.72, source: 'kalman-filter', x: 53.0, y: 34.5, t_offset: 2})")
 
 // Query only observed data (highest trust)
-const observed = db.query("CALL db.nodesByObservation.observed")
+const observed = db.query("CALL db.nodesByObservation.observed()")
 console.log(`Observed entities: ${observed.rowCount}`)
 
 // Query inferred data
-const inferred = db.query("CALL db.nodesByObservation.inferred")
+const inferred = db.query("CALL db.nodesByObservation.inferred()")
 ```
 
 ## Confidence propagation

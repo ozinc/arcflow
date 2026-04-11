@@ -6,19 +6,12 @@ status: "stable"
 playground:
   query: |-
     MERGE (a1:Account {id: 'acc-001', name: 'Legit Corp', balance: 125000.0, kyc: 1, flagged: 0})
-
     MERGE (a2:Account {id: 'acc-002', name: 'Shell Alpha', balance: 840.0, kyc: 0, flagged: 1})
-
     MERGE (a3:Account {id: 'acc-003', name: 'Shell Beta', balance: 210.0, kyc: 0, flagged: 1})
-
     MERGE (a4:Account {id: 'acc-004', name: 'Offshore Sink', balance: 0.0, kyc: 0, flagged: 1})
-
-    MATCH (a1:Account {id: 'acc-001'}), (a2:Account {id: 'acc-002'}) MERGE (a1)-[:TRANSFERRED_TO {amount: 48000.0, seq: 1, flagged: 0}]->(a2)
-
-    MATCH (a2:Account {id: 'acc-002'}), (a3:Account {id: 'acc-003'}) MERGE (a2)-[:TRANSFERRED_TO {amount: 47500.0, seq: 2, flagged: 1}]->(a3)
-
-    MATCH (a3:Account {id: 'acc-003'}), (a4:Account {id: 'acc-004'}) MERGE (a3)-[:TRANSFERRED_TO {amount: 47200.0, seq: 3, flagged: 1}]->(a4)
-
+    MATCH (a1:Account {id: 'acc-001'}) MATCH (a2:Account {id: 'acc-002'}) MERGE (a1)-[:TRANSFERRED_TO {amount: 48000.0, seq: 1, flagged: 0}]->(a2)
+    MATCH (a2:Account {id: 'acc-002'}) MATCH (a3:Account {id: 'acc-003'}) MERGE (a2)-[:TRANSFERRED_TO {amount: 47500.0, seq: 2, flagged: 1}]->(a3)
+    MATCH (a3:Account {id: 'acc-003'}) MATCH (a4:Account {id: 'acc-004'}) MERGE (a3)-[:TRANSFERRED_TO {amount: 47200.0, seq: 3, flagged: 1}]->(a4)
     MATCH (src:Account)-[t1:TRANSFERRED_TO]->(mid:Account)-[t2:TRANSFERRED_TO]->(sink:Account) WHERE mid.flagged = true AND sink.flagged = true RETURN src.name AS origin, src.balance AS source_balance, src.kyc AS kyc_verified, t1.amount AS first_transfer, mid.name AS intermediary, mid.kyc AS mid_kyc, t2.amount AS second_transfer, sink.name AS destination, t1.amount - t2.amount AS value_skimmed
 
 ---
@@ -189,8 +182,8 @@ Because the world model is temporal, you can reconstruct any previous state:
 MATCH (a:Account)-[:SENT]->(b:Account) AS OF seq 1000
 RETURN a.id, b.id
 
--- Compare current structure to state 24 hours ago
-MATCH (a:Account {id: 'ACC-001'}) AS OF (timestamp() - 86400000)
+-- Compare current structure to state at a prior checkpoint
+MATCH (a:Account {id: 'ACC-001'}) AS OF seq 5000
 RETURN a.flagged, a.risk
 ```
 

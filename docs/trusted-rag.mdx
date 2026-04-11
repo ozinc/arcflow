@@ -126,12 +126,12 @@ MATCH (w:Warranty)-[:DOCUMENTED_IN]->(m:Manual)
   WHERE w.confidence >= 0.8
   RETURN w.duration, m.version, m.url
 
--- What was the warranty policy 6 months ago?
-MATCH (w:Warranty) AS OF (timestamp() - 15552000000)
+-- What was the warranty policy at an earlier checkpoint?
+MATCH (w:Warranty) AS OF seq 1000
   RETURN w.duration
 ```
 
-See [Temporal Queries](/temporal) for full `AS OF` syntax, temporal comparison, and WAL-based time travel.
+See [Temporal Queries](/worldcypher/temporal) for full `AS OF` syntax, temporal comparison, and WAL-based time travel.
 
 ---
 

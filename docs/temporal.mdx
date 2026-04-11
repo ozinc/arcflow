@@ -37,17 +37,17 @@ The power of temporal queries is not in the syntax — it's in the questions you
 **Post-incident reconstruction: who was where when it happened?**
 
 ```cypher
--- All players within 3m of the ball, 10 seconds before the goal was scored
+-- All players within 3m of the ball, 10 sequences before the goal was scored
 MATCH (g:Goal {match_id: 'match-001'})
-MATCH (b:Ball) AS OF (g.timestamp - 10000)
+MATCH (b:Ball) AS OF seq g.seq - 10
   WHERE distance(b.position, g.position) < 1.0
-MATCH (p:Player) AS OF (g.timestamp - 10000)
+MATCH (p:Player) AS OF seq g.seq - 10
   WHERE distance(p.position, b.position) < 3.0
 RETURN p.name, p.team, p._confidence
 ORDER BY p._confidence DESC
 ```
 
-The world model at `g.timestamp - 10000` is the exact graph state 10 seconds before the goal. No log reconstruction. No event replay pipeline. The same query syntax, a different time.
+The world model at `g.seq - 10` is the exact graph state ten mutations before the goal was recorded. No log reconstruction. No event replay pipeline. The same query syntax, a different time.
 
 **Fraud investigation: what did we know before we approved it?**
 
@@ -82,8 +82,8 @@ RETURN o._confidence AS confidence_now
 **Knowledge graph staleness: which facts aged past their reliable window?**
 
 ```cypher
--- Facts that were current 24h ago but have since been superseded
-MATCH (f:Fact) AS OF (timestamp() - 86400000)
+-- Facts that were current at a past checkpoint but have since been superseded
+MATCH (f:Fact) AS OF seq 5000
 WHERE f._observation_class = 'observed'
 WITH f.id AS fact_id, f._confidence AS old_confidence
 

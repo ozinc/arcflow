@@ -100,8 +100,8 @@ CALL arcflow.scene.lineOfSight(robot_id, obstacle_id)
 ## Temporal queries — what changed?
 
 ```cypher
--- Where was this robot 30 seconds ago?
-MATCH (r:Robot {id: 'ROBOT-01'}) AS OF (timestamp() - 30000)
+-- Where was this robot at a recent checkpoint?
+MATCH (r:Robot {id: 'ROBOT-01'}) AS OF seq 800
 RETURN r.x, r.y, r.status
 
 -- Replay the last 5 minutes of all robot positions

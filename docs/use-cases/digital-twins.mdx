@@ -6,25 +6,15 @@ status: "stable"
 playground:
   query: |-
     MERGE (t1:Asset {id: 'turbine-01', name: 'Turbine-01', type: 'turbine', rpm: 1450.0, temp: 72.3, vibration: 0.02, status: 'nominal'})
-
     MERGE (t2:Asset {id: 'turbine-02', name: 'Turbine-02', type: 'turbine', rpm: 1510.0, temp: 88.7, vibration: 0.09, status: 'warning'})
-
     MERGE (p1:Asset {id: 'pump-01', name: 'Pump-01', type: 'pump', pressure: 4.2, flow: 85.0, temp: 42.1, status: 'nominal'})
-
     MERGE (s1:Sensor {id: 'temp-01', name: 'TempSensor-N1', type: 'thermal', reliability: 0.98})
-
     MERGE (s2:Sensor {id: 'vib-01', name: 'VibSensor-01', type: 'accelerometer', reliability: 0.95})
-
     MERGE (s3:Sensor {id: 'press-01', name: 'PressureSensor-01', type: 'pressure', reliability: 0.97})
-
-    MATCH (s1:Sensor {id: 'temp-01'}), (t1:Asset {id: 'turbine-01'}) MERGE (s1)-[:MONITORS {confidence: 0.97, freq_hz: 10}]->(t1)
-
-    MATCH (s1:Sensor {id: 'temp-01'}), (t2:Asset {id: 'turbine-02'}) MERGE (s1)-[:MONITORS {confidence: 0.94, freq_hz: 10}]->(t2)
-
-    MATCH (s2:Sensor {id: 'vib-01'}), (t2:Asset {id: 'turbine-02'}) MERGE (s2)-[:MONITORS {confidence: 0.91, freq_hz: 100}]->(t2)
-
-    MATCH (s3:Sensor {id: 'press-01'}), (p1:Asset {id: 'pump-01'}) MERGE (s3)-[:MONITORS {confidence: 0.96, freq_hz: 5}]->(p1)
-
+    MATCH (s1:Sensor {id: 'temp-01'}) MATCH (t1:Asset {id: 'turbine-01'}) MERGE (s1)-[:MONITORS {confidence: 0.97, freq_hz: 10}]->(t1)
+    MATCH (s1:Sensor {id: 'temp-01'}) MATCH (t2:Asset {id: 'turbine-02'}) MERGE (s1)-[:MONITORS {confidence: 0.94, freq_hz: 10}]->(t2)
+    MATCH (s2:Sensor {id: 'vib-01'}) MATCH (t2:Asset {id: 'turbine-02'}) MERGE (s2)-[:MONITORS {confidence: 0.91, freq_hz: 100}]->(t2)
+    MATCH (s3:Sensor {id: 'press-01'}) MATCH (p1:Asset {id: 'pump-01'}) MERGE (s3)-[:MONITORS {confidence: 0.96, freq_hz: 5}]->(p1)
     MATCH (sensor:Sensor)-[m:MONITORS]->(asset:Asset) WITH sensor, m, asset, sensor.reliability * m.confidence AS composite_trust RETURN sensor.name AS sensor, sensor.type, sensor.reliability, m.confidence AS reading_confidence, composite_trust, asset.name AS asset, asset.type, asset.status, CASE WHEN asset.status = 'warning' AND composite_trust >= 0.88 THEN 'ALERT - confirmed, inspect now' WHEN asset.status = 'warning' THEN 'WARN - low-trust reading, verify first' ELSE 'nominal' END AS action ORDER BY composite_trust DESC
 
 ---
@@ -115,8 +105,8 @@ CALL arcflow.scene.frustumQuery(24.0, 20.0, 3.0, 0, -1, 0, 90, 1, 30)
 ## Temporal queries — the full history
 
 ```cypher
--- What was the state of this asset 2 hours ago?
-MATCH (p:Asset {id: 'PUMP-07'}) AS OF (timestamp() - 7200000)
+-- What was the state of this asset at a past checkpoint?
+MATCH (p:Asset {id: 'PUMP-07'}) AS OF seq 2000
 RETURN p.status, p.rpm, p.temp_c
 
 -- Temperature trend over the last hour (every 5 minutes)
@@ -227,7 +217,7 @@ local.mutate(`MATCH (a:Asset {id: 'PUMP-07'}) SET a.temp_c = $temp`, { temp: 71.
 | Question | Dashboard approach | ArcFlow World Model |
 |---|---|---|
 | What is the current state? | ✓ reads latest sensor value | ✓ same |
-| What was the state 2 hours ago? | ✗ requires separate archive query | ✓ `AS OF (timestamp() - 7200000)` |
+| What was the state 2 hours ago? | ✗ requires separate archive query | ✓ `AS OF seq 2000` |
 | What changed between shift A and B? | ✗ complex join across time ranges | ✓ temporal comparison query |
 | What assets are within 10m of X? | ✗ requires external spatial system | ✓ `CALL algo.nearestNodes(...)` |
 | What does failure of asset X affect? | ✗ requires topology in separate DB | ✓ `MATCH (a)-[:FEEDS*]->()` |

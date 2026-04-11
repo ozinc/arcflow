@@ -8,28 +8,17 @@ status: "preview"
 playground:
   seed: world
   query: |-
-    MERGE (coord:Agent {id: 'coord', name: 'Coordinator', role: 'orchestrator', active: true})
-
-    MERGE (plan:Agent {id: 'planner', name: 'Planner', role: 'planning', active: true})
-
-    MERGE (exec:Agent {id: 'executor', name: 'Executor', role: 'execution', active: true})
-
-    MERGE (guard:Agent {id: 'guardian', name: 'Guardian', role: 'safety', active: true})
-
+    MERGE (coord:Agent {id: 'coord', name: 'Coordinator', role: 'orchestrator', active: 1})
+    MERGE (plan:Agent {id: 'planner', name: 'Planner', role: 'planning', active: 1})
+    MERGE (exec:Agent {id: 'executor', name: 'Executor', role: 'execution', active: 1})
+    MERGE (guard:Agent {id: 'guardian', name: 'Guardian', role: 'safety', active: 1})
     MERGE (s1:Sensor {id: 'cam-1', name: 'Cam-LabA', type: 'camera', reliability: 0.95})
-
     MERGE (s2:Sensor {id: 'lidar-1', name: 'Lidar-LabB', type: 'lidar', reliability: 0.91})
-
-    MATCH (coord:Agent {id: 'coord'}), (plan:Agent {id: 'planner'}) MERGE (coord)-[:DELEGATES_TO {on_event: 'detection', threshold: 0.85, priority: 1}]->(plan)
-
-    MATCH (coord:Agent {id: 'coord'}), (guard:Agent {id: 'guardian'}) MERGE (coord)-[:DELEGATES_TO {on_event: 'hazard_alert', threshold: 0.70, priority: 0}]->(guard)
-
-    MATCH (plan:Agent {id: 'planner'}), (exec:Agent {id: 'executor'}) MERGE (plan)-[:DELEGATES_TO {on_event: 'plan_ready', threshold: 0.80, priority: 2}]->(exec)
-
-    MATCH (plan:Agent {id: 'planner'}), (s1:Sensor {id: 'cam-1'}) MERGE (plan)-[:MONITORS {since_seq: 1, freq_hz: 10}]->(s1)
-
-    MATCH (guard:Agent {id: 'guardian'}), (s2:Sensor {id: 'lidar-1'}) MERGE (guard)-[:MONITORS {since_seq: 1, freq_hz: 25}]->(s2)
-
+    MATCH (coord:Agent {id: 'coord'}) MATCH (plan:Agent {id: 'planner'}) MERGE (coord)-[:DELEGATES_TO {on_event: 'detection', threshold: 0.85, priority: 1}]->(plan)
+    MATCH (coord:Agent {id: 'coord'}) MATCH (guard:Agent {id: 'guardian'}) MERGE (coord)-[:DELEGATES_TO {on_event: 'hazard_alert', threshold: 0.70, priority: 0}]->(guard)
+    MATCH (plan:Agent {id: 'planner'}) MATCH (exec:Agent {id: 'executor'}) MERGE (plan)-[:DELEGATES_TO {on_event: 'plan_ready', threshold: 0.80, priority: 2}]->(exec)
+    MATCH (plan:Agent {id: 'planner'}) MATCH (s1:Sensor {id: 'cam-1'}) MERGE (plan)-[:MONITORS {since_seq: 1, freq_hz: 10}]->(s1)
+    MATCH (guard:Agent {id: 'guardian'}) MATCH (s2:Sensor {id: 'lidar-1'}) MERGE (guard)-[:MONITORS {since_seq: 1, freq_hz: 25}]->(s2)
     MATCH (a:Agent)-[d:DELEGATES_TO]->(b:Agent) RETURN a.name AS from_agent, a.role, d.on_event, d.threshold AS confidence_threshold, d.priority, b.name AS to_agent, b.role ORDER BY d.priority
 
 ---
@@ -46,8 +35,8 @@ Standard behavior tree engines (UE5, BT.CPP) operate in isolation from the world
 -- One call ticks the tree; state persists across restarts
 CALL behavior.tick('PatrolAndEngage')
 
--- Query agent history: what was it doing 30 seconds ago?
-MATCH (n:BehaviorNode) AS OF (timestamp() - 30000) RETURN n.name, n.status
+-- Query agent history: what was it doing at a recent checkpoint?
+MATCH (n:BehaviorNode) AS OF seq 800 RETURN n.name, n.status
 ```
 
 ---
@@ -118,8 +107,8 @@ MATCH (a:Agent)-[:KNOWS]->(fact) RETURN fact
 Every state change is recorded. Ask what the agent knew at any point in time:
 
 ```cypher
--- What was the agent's state 30 seconds ago?
-MATCH (n:BehaviorNode) AS OF (timestamp() - 30000) RETURN n.name, n.status
+-- What was the agent's state at a recent checkpoint?
+MATCH (n:BehaviorNode) AS OF seq 800 RETURN n.name, n.status
 
 -- Replay a decision sequence
 CALL db.temporalReplay('patrol_run_42')

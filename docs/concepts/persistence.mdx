@@ -6,9 +6,7 @@ status: "stable"
 playground:
   query: |-
     MERGE (r:Robot {id: 'r1', name: 'Atlas-01', x: 18.0, y: 8.5, speed: 1.2, task: 'assembly', battery: 87, status: 'active'})
-
-    SET r.battery = 92, r.status = 'charging', r.dock_seq = 310, r.updated = true
-    
+    SET r.battery = 92, r.status = 'charging', r.dock_seq = 310, r.updated = 1
     MATCH (r:Robot {id: 'r1'}) RETURN r.name, r.task, r.battery, r.speed, r.status, r.dock_seq, r.x, r.y
 
 ---

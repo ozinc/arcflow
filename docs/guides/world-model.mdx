@@ -194,8 +194,8 @@ Now query the past:
 MATCH (d:Entity {name: 'Drone-Alpha'}) AS OF seq 100
 RETURN d.x, d.y, d.z
 
--- Replay the entire world at a past moment
-MATCH (e:Entity) AS OF (timestamp() - 5000)
+-- Replay the entire world at a recent sequence checkpoint
+MATCH (e:Entity) AS OF seq 2000
 RETURN e.name, e.x, e.y, e.z, e._observation_class
 
 -- Reconstruct the world at the moment of an incident
@@ -393,7 +393,7 @@ Each capability above is useful on its own. The compound effect is what makes a 
 -- In the last 10 seconds, which high-confidence observed entities
 -- were within 30 units of the formation lead — but are now gone?
 
-MATCH (lead:Entity {name: 'Drone-Alpha'}) AS OF (timestamp() - 10000)
+MATCH (lead:Entity {name: 'Drone-Alpha'}) AS OF seq 4800
 CALL algo.nearestNodes(point({x: lead.x, y: lead.y}), 'Entity', 20)
   YIELD node AS e_past, distance AS d_past
 WHERE d_past < 30.0

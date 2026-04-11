@@ -1,6 +1,6 @@
 ---
 title: "REPROCESS EDGES"
-description: "Re-evaluate edges below a confidence threshold"
+description: "Re-evaluate world model edges below a confidence threshold — delete stale edges and re-run their constructors for fresh, higher-quality relationships."
 section: "constructors"
 order: 4
 since: "0.4.0"
@@ -9,7 +9,6 @@ playground:
   seed: world
   query: |-
     MATCH (s:Sensor)-[d:DETECTED]->(r:Robot) WITH s, d, r, s.reliability * d.confidence AS composite_trust SET d.flagged = composite_trust < 0.80, d.composite_trust = composite_trust
-    
     MATCH (s:Sensor)-[d:DETECTED]->(r:Robot) RETURN s.name AS sensor, s.type, s.reliability, d.confidence AS detection_confidence, d.composite_trust, d.flagged AS needs_review, r.name AS entity, r.task, CASE WHEN d.composite_trust >= 0.90 THEN 'trusted - use directly' WHEN d.composite_trust >= 0.80 THEN 'verify - cross-check' ELSE 'flagged - manual review' END AS action ORDER BY d.composite_trust ASC
 
 ---

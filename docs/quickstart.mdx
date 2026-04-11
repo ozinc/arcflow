@@ -50,8 +50,8 @@ CALL algo.nearestNodes(point({x: 0.0, y: 0.0}), 'Entity', 5)
 YIELD node, distance
 RETURN node.name, distance
 
--- Temporal: where were entities 5 seconds ago?
-MATCH (e:Entity) AS OF (timestamp() - 5000)
+-- Temporal: where were entities at a recent checkpoint?
+MATCH (e:Entity) AS OF seq 500
 RETURN e.name, e.x, e.y
 
 -- Trusted entities only: observed, high confidence
