@@ -10,7 +10,8 @@
         { "slug": "project-setup", "title": "Project Setup", "order": 4 },
         { "slug": "platform", "title": "Platforms", "order": 5 },
         { "slug": "bindings", "title": "Bindings", "order": 6 },
-        { "slug": "licensing", "title": "Licensing", "order": 7 }
+        { "slug": "licensing", "title": "Licensing", "order": 7 },
+        { "slug": "pricing", "title": "Pricing", "order": 8 }
       ]
     },
     {
