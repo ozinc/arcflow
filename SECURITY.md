@@ -4,7 +4,7 @@
 
 If you discover a security vulnerability, please report it responsibly:
 
-**Email:** security@arcflow.dev
+**Email:** security@oz.com
 
 Do not open a public issue for security vulnerabilities.
 

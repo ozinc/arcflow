@@ -1,12 +1,12 @@
 # ArcFlow Documentation
 
-> **Browse these docs at [arcflow.dev/docs](https://arcflow.dev/docs).**
+> **Browse these docs at [oz.com/docs](https://oz.com/docs).**
 > Internal links between pages use absolute paths that the docs site resolves correctly.
 > They will appear broken in GitHub's file viewer — that is expected.
 
 All docs are `.mdx` files with YAML frontmatter. The sidebar and ordering are defined in [`_config.json`](_config.json).
 
-The website at `arcflow.dev/docs` fetches these files from GitHub at build time.
+The website at `oz.com/docs` fetches these files from GitHub at build time.
 
 ## Adding or editing docs
 
@@ -60,6 +60,6 @@ status: "stable"                 # stable | beta | deprecated
 
 ## URL mapping
 
-`docs/{slug}.mdx` → `arcflow.dev/docs/{slug}`
-`docs/concepts/graph-model.mdx` → `arcflow.dev/docs/concepts/graph-model`
-`docs/worldcypher/index.mdx` → `arcflow.dev/docs/worldcypher`
+`docs/{slug}.mdx` → `oz.com/docs/{slug}`
+`docs/concepts/graph-model.mdx` → `oz.com/docs/concepts/graph-model`
+`docs/worldcypher/index.mdx` → `oz.com/docs/worldcypher`

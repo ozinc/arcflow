@@ -41,4 +41,4 @@ CALL db.stats()
 
 - Full docs: https://github.com/ozinc/arcflow
 - MCP server: `npx arcflow-mcp` (cloud chat UIs only — ChatGPT, Claude.ai, Gemini web)
-- Try in browser: https://arcflow.dev/engine
+- Try in browser: https://oz.com/engine

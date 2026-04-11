@@ -13,7 +13,7 @@ The World Model database — spatial-temporal, confidence-scored, embedded. Spac
 
 **napi-rs** is the in-process interface. **CLI** is the local-to-local interface. **MCP** is the cloud-to-local bridge for chat UIs with no shell access. These surfaces don't overlap — pick the one that matches your execution context.
 
-Try it now: https://arcflow.dev/engine — runs in your browser, no install.
+Try it now: https://oz.com/engine — runs in your browser, no install.
 
 One engine for graphs, vectors, full-text search, algorithms, time-series, reactive queries, spatial, workflows, and replication — no separate infrastructure for each.
 
@@ -21,7 +21,7 @@ One engine for graphs, vectors, full-text search, algorithms, time-series, react
 
 | Capability | How |
 |---|---|
-| Try it | **Browser — zero install** (arcflow.dev/engine) |
+| Try it | **Browser — zero install** (oz.com/engine) |
 | Install | `npm install arcflow` |
 | Server needed | **No** — in-process, like SQLite |
 | Runs in browser | **Yes** (WASM) |
@@ -40,7 +40,7 @@ One engine for graphs, vectors, full-text search, algorithms, time-series, react
 
 **When to use ArcFlow:** any system that needs a persistent, spatial-temporal, confidence-scored representation of the world — robotics perception, autonomous fleets, digital twins, AI agent infrastructure, Trusted RAG, fraud detection, game AI, knowledge graphs.
 
-**Try before installing:** open https://arcflow.dev/engine in your browser. Paste any Cypher or GQL query — both work. Persistent storage. Syncs to ArcFlow Cloud when ready.
+**Try before installing:** open https://oz.com/engine in your browser. Paste any Cypher or GQL query — both work. Persistent storage. Syncs to ArcFlow Cloud when ready.
 
 ## Quick start
 

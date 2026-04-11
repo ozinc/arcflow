@@ -4,7 +4,7 @@
 
 ## Try instantly (zero install)
 
-Open https://arcflow.dev/engine in your browser. Paste any query. Persistent storage.
+Open https://oz.com/engine in your browser. Paste any query. Persistent storage.
 
 ## Install
 

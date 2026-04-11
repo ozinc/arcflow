@@ -29,7 +29,7 @@ All operations happen locally first. Sync pushes WAL deltas to the cloud and pul
 ### Browser
 
 ```
-https://arcflow.dev/engine?sync=af_xxxxxxxxxxxx
+https://oz.com/engine?sync=af_xxxxxxxxxxxx
 ```
 
 ### SDK
@@ -39,13 +39,13 @@ import { open, openInMemory } from 'arcflow'
 
 // In-memory with cloud sync
 const db = openInMemory({
-  sync: 'https://api.arcflow.dev/v1/graphs/my-graph',
+  sync: 'https://api.oz.com/v1/graphs/my-graph',
   token: 'af_xxxxxxxxxxxx'
 })
 
 // Persistent with cloud sync
 const db = open('./local-graph', {
-  sync: 'https://api.arcflow.dev/v1/graphs/my-graph',
+  sync: 'https://api.oz.com/v1/graphs/my-graph',
   token: 'af_xxxxxxxxxxxx'
 })
 
@@ -59,7 +59,7 @@ const db = openInMemory({
 ### MCP server
 
 ```bash
-npx arcflow-mcp --sync https://api.arcflow.dev/v1/graphs/my-graph --token af_xxx
+npx arcflow-mcp --sync https://api.oz.com/v1/graphs/my-graph --token af_xxx
 ```
 
 ## Sync protocol

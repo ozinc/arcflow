@@ -2,7 +2,7 @@
 
 MCP server for ArcFlow. For cloud chat interfaces (ChatGPT, Claude.ai, Gemini web) that have no local shell access.
 
-> **CLI agents (Claude Code, Cursor, Codex CLI, Gemini CLI):** use the `arcflow` binary directly — it's faster (<10ms per query, no protocol overhead, no config). See [CLI usage](https://arcflow.dev/cli).
+> **CLI agents (Claude Code, Cursor, Codex CLI, Gemini CLI):** use the `arcflow` binary directly — it's faster (<10ms per query, no protocol overhead, no config). See [CLI usage](https://oz.com/cli).
 
 ## Quick start
 

@@ -51,7 +51,7 @@ arcflow-relay submit --category bug_fix --description "..." --test-case "..."
 Or via the API:
 
 ```bash
-curl -X POST https://relay.arcflow.dev/v1/intents \
+curl -X POST https://relay.oz.com/v1/intents \
   -H "Authorization: Bearer bsk_your_key" \
   -H "Content-Type: application/json" \
   -d '{ "category": "bug_fix", "description": "...", "test_cases": [...] }'
@@ -70,7 +70,7 @@ The relay:
 {
   "status": "pass",
   "artifact": {
-    "url": "https://relay.arcflow.dev/artifacts/abc123.dylib",
+    "url": "https://relay.oz.com/artifacts/abc123.dylib",
     "hash": "sha256:...",
     "signature": "ed25519:..."
   },

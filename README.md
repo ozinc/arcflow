@@ -8,7 +8,7 @@ That infrastructure hasn't existed as a product. It's been assembled from pieces
 
 ArcFlow is the world model layer. One in-process engine. No server. No round-trip. Space and time are first-class dimensions, not extensions. Every mutation is versioned. Every fact carries an observation class and a confidence score. The entire history of the world model is queryable with ISO GQL — in the same syntax as the current state.
 
-**[Try it — arcflow.dev/engine](https://arcflow.dev/engine)** — runs in your browser, zero install.
+**[Try it — oz.com/engine](https://oz.com/engine)** — runs in your browser, zero install.
 
 ```bash
 npm install arcflow
@@ -195,9 +195,9 @@ CALL algo.pageRank() YIELD nodeId, score
 
 | | Command |
 |---|---|
-| Browser | **[arcflow.dev/engine](https://arcflow.dev/engine)** — zero install |
+| Browser | **[oz.com/engine](https://oz.com/engine)** — zero install |
 | npm | `npm install arcflow` |
-| Binary | `curl -fsSL https://arcflow.dev/install \| sh` |
+| Binary | `curl -fsSL https://oz.com/install \| sh` |
 | Python | `pip install arcflow` |
 | Rust | `cargo add arcflow` |
 | Docker | `docker run ghcr.io/ozinc/arcflow:latest` |

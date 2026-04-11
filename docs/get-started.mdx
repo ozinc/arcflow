@@ -15,7 +15,7 @@ It runs in-process. No server. No round-trip. Browser, Node.js, Python, Rust, or
 
 ## Try instantly — zero install
 
-Open **[ArcFlow Engine](https://arcflow.dev/engine)** in your browser. Paste any GQL query — persistent storage, no install, no signup.
+Open **[ArcFlow Engine](https://oz.com/engine)** in your browser. Paste any GQL query — persistent storage, no install, no signup.
 
 ```cypher
 CREATE (e:Entity {id: 'unit-01', x: 12.4, y: 8.7, _observation_class: 'observed', _confidence: 0.94})
@@ -28,7 +28,7 @@ MATCH (e:Entity) AS OF seq 1 RETURN e.id, e._confidence
 ## Install
 
 ```bash
-curl -fsSL https://arcflow.dev/install | sh
+curl -fsSL https://oz.com/install | sh
 ```
 
 Then:
@@ -41,7 +41,7 @@ arcflow --playground
 
 | Path | Time | Friction |
 |---|---|---|
-| [Browser](https://arcflow.dev/engine) | 0s | Zero — click and go |
+| [Browser](https://oz.com/engine) | 0s | Zero — click and go |
 | Binary | 60s | `curl ... \| sh && arcflow` |
 | npm | 2 min | `npm install arcflow` |
 | Docker | 30s | `docker run ghcr.io/ozinc/arcflow:latest` |
