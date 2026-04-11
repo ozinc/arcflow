@@ -6,10 +6,15 @@ status: "stable"
 playground:
   query: |-
     MERGE (z:Zone {id: 'entry', name: 'Entry Point', x: 0.0, y: 0.0, radius: 10.0, hazard: 0.0})
+
     MERGE (r:Robot {id: 'pioneer', name: 'Pioneer-01', task: 'survey', x: 2.0, y: 3.0, speed: 1.1, battery: 100, status: 'commissioned'})
+
     MERGE (s:Sensor {id: 'init-cam', name: 'InitCam', type: 'camera', x: -1.5, y: 5.0, reliability: 0.98})
-    MATCH (s:Sensor {id: 'init-cam'}) MATCH (r:Robot {id: 'pioneer'}) MERGE (s)-[:DETECTED {confidence: 0.97, method: 'vision', first_contact: 1}]->(r)
-    MATCH (r:Robot {id: 'pioneer'}) MATCH (z:Zone {id: 'entry'}) MERGE (r)-[:OCCUPIES {entered_seq: 1}]->(z)
+
+    MATCH (s:Sensor {id: 'init-cam'}), (r:Robot {id: 'pioneer'}) MERGE (s)-[:DETECTED {confidence: 0.97, method: 'vision', first_contact: 1}]->(r)
+
+    MATCH (r:Robot {id: 'pioneer'}), (z:Zone {id: 'entry'}) MERGE (r)-[:OCCUPIES {entered_seq: 1}]->(z)
+
     MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) RETURN s.name AS sensor, s.type, s.reliability, d.method, d.confidence AS trust, d.first_contact, r.name AS robot, r.task, r.battery, r.status, z.name AS zone, z.hazard ORDER BY d.confidence DESC
 
 ---

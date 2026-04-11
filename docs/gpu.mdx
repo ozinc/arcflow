@@ -16,8 +16,6 @@ playground:
 
 ArcFlow implements graph algorithms as **sparse linear algebra operations** — not as edge traversals. Most graph databases walk the graph one edge at a time: visit a node, follow an edge, visit the next node. That is sequential and cache-hostile. It does not map to GPU hardware.
 
-ArcFlow represents the graph as a **sparse matrix** (CSR format) and dispatches operations to Metal (Apple Silicon) or CUDA (NVIDIA) automatically. The result: world model algorithms — PageRank, BFS, triangle counting — run at GPU parallelism without any configuration.
-
 ArcFlow represents the graph as a **sparse matrix** and runs algorithms as **linear algebra operations**. PageRank becomes a sparse matrix-vector multiply. BFS becomes a boolean matrix-vector multiply. Triangle counting becomes a masked sparse matrix-matrix multiply. These operations are massively parallel, cache-friendly, and map directly to GPU hardware.
 
 This is **GraphBLAS** — the Graph Basic Linear Algebra Subprograms standard. ArcFlow implements it natively in Rust.

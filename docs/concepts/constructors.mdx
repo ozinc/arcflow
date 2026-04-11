@@ -8,12 +8,19 @@ status: "stable"
 playground:
   query: |-
     MERGE (sk:Skill {id: 'zone-watch', name: 'ZoneWatch', version: 3, min_confidence: 0.82, active: 1})
+
     MERGE (s1:Sensor {id: 'cam-1', name: 'Cam-LabA', type: 'camera', reliability: 0.95})
+
     MERGE (s2:Sensor {id: 'lidar-1', name: 'Lidar-LabB', type: 'lidar', reliability: 0.91})
+
     MERGE (s3:Sensor {id: 'rfid-1', name: 'RFID-Gate', type: 'rfid', reliability: 0.99})
-    MATCH (sk:Skill {id: 'zone-watch'}) MATCH (s1:Sensor {id: 'cam-1'}) MERGE (sk)-[:GOVERNS {since_seq: 1, config: 'high-freq', freq_hz: 25}]->(s1)
-    MATCH (sk:Skill {id: 'zone-watch'}) MATCH (s2:Sensor {id: 'lidar-1'}) MERGE (sk)-[:GOVERNS {since_seq: 1, config: 'standard', freq_hz: 10}]->(s2)
-    MATCH (sk:Skill {id: 'zone-watch'}) MATCH (s3:Sensor {id: 'rfid-1'}) MERGE (sk)-[:GOVERNS {since_seq: 2, config: 'entry-point', freq_hz: 5}]->(s3)
+
+    MATCH (sk:Skill {id: 'zone-watch'}), (s1:Sensor {id: 'cam-1'}) MERGE (sk)-[:GOVERNS {since_seq: 1, config: 'high-freq', freq_hz: 25}]->(s1)
+
+    MATCH (sk:Skill {id: 'zone-watch'}), (s2:Sensor {id: 'lidar-1'}) MERGE (sk)-[:GOVERNS {since_seq: 1, config: 'standard', freq_hz: 10}]->(s2)
+
+    MATCH (sk:Skill {id: 'zone-watch'}), (s3:Sensor {id: 'rfid-1'}) MERGE (sk)-[:GOVERNS {since_seq: 2, config: 'entry-point', freq_hz: 5}]->(s3)
+
     MATCH (sk:Skill)-[g:GOVERNS]->(s:Sensor) RETURN sk.name AS constructor, sk.version, sk.min_confidence, g.config AS sensor_config, g.freq_hz AS poll_rate, s.name AS sensor, s.type, s.reliability ORDER BY s.reliability DESC
 
 ---

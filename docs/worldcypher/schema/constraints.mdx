@@ -8,9 +8,9 @@ status: "stable"
 playground:
   query: |-
     MERGE (r:Robot {id: 'r-proto', name: 'Proto-01', task: 'calibration', battery: 100, x: 0.0, y: 0.0})
-    ON CREATE SET r.created = true, r.version = 1, r.status = 'new'
+    ON CREATE SET r.created = 1, r.version = 1, r.status = 'new'
     MERGE (r:Robot {id: 'r-proto', name: 'Proto-01', task: 'calibration', battery: 100, x: 0.0, y: 0.0})
-    ON MATCH SET r.verified = true, r.version = 2, r.status = 'commissioned'
+    ON MATCH SET r.verified = 1, r.version = 2, r.status = 'commissioned'
     MATCH (r:Robot {id: 'r-proto'}) RETURN r.id, r.name, r.task, r.battery, r.status, r.created, r.verified, r.version
 
 ---

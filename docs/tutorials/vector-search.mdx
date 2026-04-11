@@ -6,12 +6,19 @@ status: "stable"
 playground:
   query: |-
     MERGE (da:Document {id: 'doc-wm', title: 'World Model Architecture', category: 'graph', relevance: 0.95, tokens: 1420})
+
     MERGE (db:Document {id: 'doc-sp', title: 'Spatial Query Primitives', category: 'spatial', relevance: 0.87, tokens: 980})
+
     MERGE (dc:Document {id: 'doc-conf', title: 'Confidence-Scored Retrieval', category: 'ai', relevance: 0.82, tokens: 1105})
+
     MERGE (dd:Document {id: 'doc-rag', title: 'Trusted RAG Pipelines', category: 'ai', relevance: 0.79, tokens: 870})
-    MATCH (a:Document {id: 'doc-wm'}) MATCH (b:Document {id: 'doc-sp'}) MERGE (a)-[:RELATED_TO {strength: 0.92}]->(b)
-    MATCH (a:Document {id: 'doc-wm'}) MATCH (b:Document {id: 'doc-conf'}) MERGE (a)-[:RELATED_TO {strength: 0.85}]->(b)
-    MATCH (a:Document {id: 'doc-conf'}) MATCH (b:Document {id: 'doc-rag'}) MERGE (a)-[:RELATED_TO {strength: 0.88}]->(b)
+
+    MATCH (a:Document {id: 'doc-wm'}), (b:Document {id: 'doc-sp'}) MERGE (a)-[:RELATED_TO {strength: 0.92}]->(b)
+
+    MATCH (a:Document {id: 'doc-wm'}), (b:Document {id: 'doc-conf'}) MERGE (a)-[:RELATED_TO {strength: 0.85}]->(b)
+
+    MATCH (a:Document {id: 'doc-conf'}), (b:Document {id: 'doc-rag'}) MERGE (a)-[:RELATED_TO {strength: 0.88}]->(b)
+
     MATCH (doc:Document)-[r:RELATED_TO]->(related:Document) WHERE doc.relevance > 0.78 RETURN doc.title AS document, doc.category, doc.relevance AS vector_score, doc.tokens, related.title AS related_document, r.strength AS graph_strength, doc.relevance * r.strength AS combined_score ORDER BY combined_score DESC
 
 ---

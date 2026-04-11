@@ -7,8 +7,11 @@ playground:
   seed: world
   query: |-
     MERGE (s_new:Sensor {id: 'thermal-1', name: 'Thermal-East', type: 'thermal', x: 35.0, y: 5.0, reliability: 0.89})
+
     MERGE (r3:Robot {id: 'r3', name: 'Sentinel-03', x: 33.0, y: 4.0, speed: 0.6, task: 'perimeter', status: 'active', battery: 91})
-    MATCH (s_new:Sensor {id: 'thermal-1'}) MATCH (r3:Robot {id: 'r3'}) MERGE (s_new)-[:DETECTED {confidence: 0.87, method: 'thermal'}]->(r3)
+
+    MATCH (s_new:Sensor {id: 'thermal-1'}), (r3:Robot {id: 'r3'}) MERGE (s_new)-[:DETECTED {confidence: 0.87, method: 'thermal'}]->(r3)
+
     MATCH (s:Sensor)-[d:DETECTED]->(r:Robot) WITH s, d, r, s.reliability * d.confidence AS composite_trust RETURN s.name AS sensor, s.type AS modality, d.confidence AS detection_confidence, d.method, composite_trust, r.name AS robot, r.x AS world_x, r.y AS world_y, r.status ORDER BY composite_trust DESC
 
 ---

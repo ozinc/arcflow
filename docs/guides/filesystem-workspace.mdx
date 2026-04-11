@@ -8,14 +8,23 @@ status: "stable"
 playground:
   query: |-
     MERGE (f1:File {id: 'src/main.ts', name: 'main.ts', type: 'entrypoint', loc: 85, critical: 1})
+
     MERGE (f2:File {id: 'src/lib/db.ts', name: 'db.ts', type: 'library', loc: 240, critical: 1})
+
     MERGE (f3:File {id: 'src/lib/auth.ts', name: 'auth.ts', type: 'library', loc: 320, critical: 1})
+
     MERGE (f4:File {id: 'src/api/routes.ts', name: 'routes.ts', type: 'api', loc: 155, critical: 0})
+
     MERGE (f5:File {id: 'src/utils/logger.ts', name: 'logger.ts', type: 'utility', loc: 60, critical: 0})
-    MATCH (f1:File {id: 'src/main.ts'}) MATCH (f2:File {id: 'src/lib/db.ts'}) MERGE (f1)-[:IMPORTS {static: 1}]->(f2)
-    MATCH (f1:File {id: 'src/main.ts'}) MATCH (f3:File {id: 'src/lib/auth.ts'}) MERGE (f1)-[:IMPORTS {static: 1}]->(f3)
-    MATCH (f4:File {id: 'src/api/routes.ts'}) MATCH (f2:File {id: 'src/lib/db.ts'}) MERGE (f4)-[:IMPORTS {static: 1}]->(f2)
-    MATCH (f3:File {id: 'src/lib/auth.ts'}) MATCH (f5:File {id: 'src/utils/logger.ts'}) MERGE (f3)-[:IMPORTS {static: 0}]->(f5)
+
+    MATCH (f1:File {id: 'src/main.ts'}), (f2:File {id: 'src/lib/db.ts'}) MERGE (f1)-[:IMPORTS {static: 1}]->(f2)
+
+    MATCH (f1:File {id: 'src/main.ts'}), (f3:File {id: 'src/lib/auth.ts'}) MERGE (f1)-[:IMPORTS {static: 1}]->(f3)
+
+    MATCH (f4:File {id: 'src/api/routes.ts'}), (f2:File {id: 'src/lib/db.ts'}) MERGE (f4)-[:IMPORTS {static: 1}]->(f2)
+
+    MATCH (f3:File {id: 'src/lib/auth.ts'}), (f5:File {id: 'src/utils/logger.ts'}) MERGE (f3)-[:IMPORTS {static: 0}]->(f5)
+
     MATCH (f:File)-[:IMPORTS]->(dep:File) WITH dep.name AS dependency, dep.type, dep.loc, dep.critical, count(f) AS dependents RETURN dependency, type, loc, critical, dependents ORDER BY dependents DESC
 
 ---
