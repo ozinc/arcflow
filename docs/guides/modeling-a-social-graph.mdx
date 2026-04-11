@@ -9,18 +9,31 @@ playground:
   seed: world
   query: |-
     MERGE (coord:Agent {id: 'coord-01', name: 'Coordinator', role: 'coordinator', level: 1, active: 1})
+
     MERGE (scout1:Agent {id: 'scout-01', name: 'Scout-Alpha', role: 'scout', level: 2, active: 1})
+
     MERGE (scout2:Agent {id: 'scout-02', name: 'Scout-Beta', role: 'scout', level: 2, active: 1})
+
     MERGE (guard:Agent {id: 'guard-01', name: 'Guard-Prime', role: 'guard', level: 2, active: 1})
+
     MERGE (z1:Zone {id: 'lab-a', name: 'Lab-A', hazard: 0.2})
+
     MERGE (z2:Zone {id: 'lab-b', name: 'Lab-B', hazard: 0.3})
+
     MERGE (z3:Zone {id: 'corridor', name: 'Corridor', hazard: 0.5})
+
     MATCH (c:Agent {id: 'coord-01'}), (s1:Agent {id: 'scout-01'}) MERGE (c)-[:COMMANDS {channel: 'primary', latency_ms: 12, trust: 0.97}]->(s1)
+
     MATCH (c:Agent {id: 'coord-01'}), (s2:Agent {id: 'scout-02'}) MERGE (c)-[:COMMANDS {channel: 'primary', latency_ms: 14, trust: 0.94}]->(s2)
+
     MATCH (c:Agent {id: 'coord-01'}), (g:Agent {id: 'guard-01'}) MERGE (c)-[:COMMANDS {channel: 'secure', latency_ms: 8, trust: 0.99}]->(g)
+
     MATCH (s1:Agent {id: 'scout-01'}), (z1:Zone {id: 'lab-a'}) MERGE (s1)-[:COVERS {assigned_seq: 1}]->(z1)
+
     MATCH (s2:Agent {id: 'scout-02'}), (z2:Zone {id: 'lab-b'}) MERGE (s2)-[:COVERS {assigned_seq: 1}]->(z2)
+
     MATCH (g:Agent {id: 'guard-01'}), (z3:Zone {id: 'corridor'}) MERGE (g)-[:COVERS {assigned_seq: 1}]->(z3)
+
     MATCH (commander:Agent)-[cmd:COMMANDS]->(agent:Agent)-[:COVERS]->(zone:Zone) RETURN commander.name AS commander, cmd.channel, cmd.trust AS command_trust, cmd.latency_ms, agent.name AS agent, agent.role, zone.name AS coverage_zone, zone.hazard AS zone_risk ORDER BY cmd.trust DESC
 
 ---

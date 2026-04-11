@@ -6,14 +6,23 @@ status: "stable"
 playground:
   query: |-
     MERGE (c1:Concept {id: 'world-model', name: 'World Model', domain: 'AI', maturity: 'production', complexity: 0.9})
+
     MERGE (c2:Concept {id: 'spatial-graph', name: 'Spatial Graph', domain: 'databases', maturity: 'production', complexity: 0.7})
+
     MERGE (c3:Concept {id: 'conf-scoring', name: 'Confidence Scoring', domain: 'AI', maturity: 'emerging', complexity: 0.6})
+
     MERGE (c4:Concept {id: 'temporal-query', name: 'Temporal Query', domain: 'databases', maturity: 'stable', complexity: 0.8})
+
     MERGE (c5:Concept {id: 'causal-graph', name: 'Causal Graph', domain: 'AI', maturity: 'research', complexity: 0.95})
+
     MATCH (c1:Concept {id: 'world-model'}), (c2:Concept {id: 'spatial-graph'}) MERGE (c1)-[:BUILT_ON {strength: 0.95, required: 1}]->(c2)
+
     MATCH (c1:Concept {id: 'world-model'}), (c3:Concept {id: 'conf-scoring'}) MERGE (c1)-[:BUILT_ON {strength: 0.88, required: 0}]->(c3)
+
     MATCH (c1:Concept {id: 'world-model'}), (c4:Concept {id: 'temporal-query'}) MERGE (c1)-[:BUILT_ON {strength: 0.91, required: 1}]->(c4)
+
     MATCH (c5:Concept {id: 'causal-graph'}), (c1:Concept {id: 'world-model'}) MERGE (c5)-[:BUILT_ON {strength: 0.82, required: 1}]->(c1)
+
     MATCH (src:Concept)-[r:BUILT_ON]->(dep:Concept) RETURN src.name AS concept, src.domain, src.maturity, src.complexity, r.strength AS dependency_strength, r.required, dep.name AS depends_on, dep.domain AS dep_domain, dep.maturity AS dep_maturity ORDER BY r.strength DESC
 
 ---

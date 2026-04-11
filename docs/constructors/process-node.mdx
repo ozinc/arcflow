@@ -8,8 +8,11 @@ status: "stable"
 playground:
   query: |-
     MERGE (r1:Robot {id: 'r1', name: 'Atlas-01', x: 18.0, y: 8.5, speed: 1.2, task: 'assembly', battery: 87})
+
     MERGE (r2:Robot {id: 'r2', name: 'Rover-02', x: -17.0, y: -9.0, speed: 0.8, task: 'inspection', battery: 63})
+
     MERGE (r3:Robot {id: 'r3', name: 'Welder-03', x: 5.0, y: -5.0, speed: 0.5, task: 'welding', battery: 91})
+
     MATCH (r:Robot) SET r.tier = CASE WHEN r.battery >= 85 THEN 'optimal' WHEN r.battery >= 65 THEN 'nominal' ELSE 'low-power' END, r.dispatch_priority = CASE WHEN r.battery >= 85 THEN 1 WHEN r.battery >= 65 THEN 2 ELSE 3 END, r.processed_seq = 1
     
     MATCH (r:Robot) RETURN r.name, r.task, r.battery, r.speed, r.tier, r.dispatch_priority, r.x AS world_x, r.y AS world_y ORDER BY r.dispatch_priority

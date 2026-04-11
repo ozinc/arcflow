@@ -6,10 +6,15 @@ status: "stable"
 playground:
   query: |-
     MERGE (s:Sensor {id: 'primary-cam', name: 'PrimaryCam', type: 'camera', x: 0.0, y: 15.0, reliability: 0.96})
+
     MERGE (a1:Robot {id: 'bot-a', name: 'Alpha-Bot', task: 'patrol', x: 5.0, y: 12.0, battery: 88, status: 'active'})
+
     MERGE (a2:Robot {id: 'bot-b', name: 'Beta-Bot', task: 'inspect', x: -3.0, y: 11.5, battery: 74, status: 'active'})
+
     MATCH (s:Sensor {id: 'primary-cam'}), (a1:Robot {id: 'bot-a'}) MERGE (s)-[:DETECTED {confidence: 0.94, method: 'vision'}]->(a1)
+
     MATCH (s:Sensor {id: 'primary-cam'}), (a2:Robot {id: 'bot-b'}) MERGE (s)-[:DETECTED {confidence: 0.91, method: 'vision'}]->(a2)
+
     MATCH (s:Sensor)-[d:DETECTED]->(r:Robot) WITH s, d, r, s.reliability * d.confidence AS composite_trust, (r.x - s.x) * (r.x - s.x) + (r.y - s.y) * (r.y - s.y) AS range_sq RETURN s.name AS sensor, s.reliability, d.confidence AS trust, composite_trust, d.method, r.name AS robot, r.task, r.battery, r.status, range_sq ORDER BY composite_trust DESC
 
 ---

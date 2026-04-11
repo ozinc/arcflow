@@ -6,6 +6,7 @@ status: "stable"
 playground:
   query: |-
     MERGE (r:Robot {id: 'r1', name: 'Atlas-01', task: 'assembly', battery: 87})
+
     MATCH (r:Robot) RETURN r.name, r.task, r.battery
 
 ---
