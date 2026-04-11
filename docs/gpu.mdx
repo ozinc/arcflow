@@ -184,7 +184,7 @@ cuSPARSE handles large sparse matrix operations. When the CSR representation exc
 
 cuVS (CUDA Vector Search) with the CAGRA (CUDA Approximate Graph-based Retrieval Algorithm) index accelerates nearest-neighbor vector search on CUDA hardware. Standard HNSW vector search gets 4.2x GPU speedup; CAGRA on large collections (10K+ vectors) can achieve higher throughput through GPU-native graph traversal.
 
-```sql
+```cypher
 -- Same query — routes to CAGRA on CUDA hardware when index size warrants
 CALL algo.vectorSearch('my_index', $vector, 10)
 ```

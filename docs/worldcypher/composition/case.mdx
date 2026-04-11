@@ -9,7 +9,7 @@ status: "stable"
 
 # CASE WHEN
 
-```sql
+```cypher
 MATCH (n:Person) RETURN n.name,
   CASE WHEN n.age < 18 THEN 'minor'
        WHEN n.age < 65 THEN 'adult'
@@ -20,7 +20,7 @@ Conditional expressions for computed values in RETURN clauses.
 
 ## Syntax
 
-```sql
+```cypher
 CASE WHEN condition THEN result [WHEN condition THEN result]... [ELSE default] END
 ```
 
@@ -28,7 +28,7 @@ CASE WHEN condition THEN result [WHEN condition THEN result]... [ELSE default] E
 
 ### Null handling
 
-```sql
+```cypher
 MATCH (n:Person) RETURN n.name,
   CASE WHEN n.email IS NOT NULL THEN 'has email' ELSE 'no email' END AS status
 ```

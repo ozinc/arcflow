@@ -13,13 +13,13 @@ Combine results from two queries into a single result set.
 
 ## Syntax
 
-```sql
+```cypher
 query1 UNION query2
 ```
 
 ## Example
 
-```sql
+```cypher
 MATCH (n:Person) RETURN n.name AS name
 UNION
 MATCH (n:Organization) RETURN n.name AS name

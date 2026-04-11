@@ -38,7 +38,7 @@ ArcFlow handles steps 2 and 3. The embedding model and LLM are external. CLI age
 
 Each document (or chunk) becomes a node with an embedding property. Store the embedding as a list of floats.
 
-```sql
+```cypher
 CREATE (d:Document {
   title: 'Rust Ownership',
   content: 'Rust uses ownership rules to manage memory...',
@@ -49,7 +49,7 @@ CREATE (d:Document {
 
 For chunked documents, create a structure:
 
-```sql
+```cypher
 -- Parent document
 CREATE (doc:Document {title: 'Rust Book Chapter 4', source: 'rust-book'})
 
@@ -73,7 +73,7 @@ CREATE (doc)-[:HAS_CHUNK]->(c)
 
 Connect related concepts with edges:
 
-```sql
+```cypher
 MATCH (c1:Chunk), (c2:Chunk)
 WHERE c1.text CONTAINS 'ownership' AND c2.text CONTAINS 'borrowing'
 CREATE (c1)-[:RELATED_TO {weight: 0.85}]->(c2)
@@ -83,11 +83,11 @@ CREATE (c1)-[:RELATED_TO {weight: 0.85}]->(c2)
 
 Create a vector index on the embedding property. ArcFlow uses HNSW (Hierarchical Navigable Small World) for approximate nearest neighbor search.
 
-```sql
+```cypher
 CREATE VECTOR INDEX ON :Document(embedding)
 ```
 
-```sql
+```cypher
 CREATE VECTOR INDEX ON :Chunk(embedding)
 ```
 
@@ -97,7 +97,7 @@ The index is built in-memory and persisted via WAL. It supports cosine similarit
 
 Search for nodes similar to a query vector:
 
-```sql
+```cypher
 CALL algo.vectorSearch()
 ```
 
@@ -105,7 +105,7 @@ This searches the HNSW index and returns the k nearest neighbors by vector dista
 
 For more control, use `algo.similarNodes()`:
 
-```sql
+```cypher
 CALL algo.similarNodes()
 ```
 
@@ -115,7 +115,7 @@ Returns nodes ranked by similarity score.
 
 This is where ArcFlow differs from flat vector databases. After finding similar nodes, traverse the graph to gather structured context.
 
-```sql
+```cypher
 -- Find similar chunks, then get their parent documents and related chunks
 MATCH (c:Chunk)-[:RELATED_TO]->(related:Chunk)
 RETURN c.text AS match, related.text AS relatedContext, type(r) AS relation
@@ -123,7 +123,7 @@ RETURN c.text AS match, related.text AS relatedContext, type(r) AS relation
 
 Use `algo.graphRAGContext()` to automate context extraction:
 
-```sql
+```cypher
 CALL algo.graphRAGContext()
 ```
 
@@ -133,7 +133,7 @@ This returns not just the matching nodes but their neighborhood: connected nodes
 
 ArcFlow's confidence scoring enables trusted RAG. Every node has a confidence score (0.0-1.0) and an observation class (observed, inferred, predicted).
 
-```sql
+```cypher
 -- Create nodes with confidence metadata
 CREATE (f:Fact {
   claim: 'Rust prevents data races at compile time',
@@ -144,7 +144,7 @@ CREATE (f:Fact {
 
 Use `algo.graphRAGTrusted()` to filter results by confidence:
 
-```sql
+```cypher
 CALL algo.graphRAGTrusted()
 ```
 
@@ -152,7 +152,7 @@ This returns context with confidence scores, filtering out low-trust paths. The 
 
 Query confidence directly:
 
-```sql
+```cypher
 MATCH (n:Fact)
 WHERE confidence(n) > 0.8 AND observationClass(n) = 'observed'
 RETURN n.claim, confidence(n) AS trust
@@ -212,7 +212,7 @@ Agent: "Based on the knowledge graph (confidence: 0.95)..."
 
 Putting it all together -- a knowledge base with vector search, graph context, and confidence scoring:
 
-```sql
+```cypher
 -- 1. Create the knowledge graph
 CREATE (rust:Topic {name: 'Rust', embedding: [0.1, 0.2, ...]})
 CREATE (ownership:Concept {

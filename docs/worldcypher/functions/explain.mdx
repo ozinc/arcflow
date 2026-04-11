@@ -13,13 +13,13 @@ See the query plan without executing. Shows the compiled operator pipeline: scan
 
 ## Syntax
 
-```sql
+```cypher
 EXPLAIN <any query>
 ```
 
 ## Example
 
-```sql
+```cypher
 EXPLAIN MATCH (n:Person) WHERE n.age > 25 RETURN n.name ORDER BY n.age
 ```
 

@@ -9,7 +9,7 @@ status: "stable"
 
 # UNWIND
 
-```sql
+```cypher
 UNWIND ['Alice', 'Bob', 'Carol'] AS name CREATE (n:Person {name: name})
 ```
 
@@ -19,13 +19,13 @@ Expand a list into individual rows. Each element becomes its own row for downstr
 
 ### Expand a literal list
 
-```sql
+```cypher
 UNWIND [1, 2, 3] AS item RETURN item
 ```
 
 ### Process collected results
 
-```sql
+```cypher
 MATCH (n:Person) WITH collect(n.name) AS names UNWIND names AS name RETURN name
 ```
 

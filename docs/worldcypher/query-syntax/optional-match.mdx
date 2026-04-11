@@ -13,13 +13,13 @@ Left-join semantics -- include nodes even when the pattern doesn't match. Unmatc
 
 ## Syntax
 
-```sql
+```cypher
 MATCH (a:Label) OPTIONAL MATCH (a)-[r:TYPE]->(b) RETURN a, b
 ```
 
 ## Example
 
-```sql
+```cypher
 MATCH (p:Person)
 OPTIONAL MATCH (p)-[:WORKS_AT]->(c:Company)
 RETURN p.name, c.name

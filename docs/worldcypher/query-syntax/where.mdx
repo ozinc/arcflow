@@ -13,7 +13,7 @@ related:
 
 Filter results with 15+ predicates: comparisons, boolean logic, string matching, null checks, regex, and list membership.
 
-```sql
+```cypher
 MATCH (n:Person)
 WHERE n.age >= 25 AND n.name STARTS WITH 'A'
 RETURN n.name, n.age
@@ -37,25 +37,25 @@ RETURN n.name, n.age
 
 ### Comparison
 
-```sql
+```cypher
 MATCH (n:Person) WHERE n.age >= 25 AND n.age < 35 RETURN n.name
 ```
 
 ### String predicates
 
-```sql
+```cypher
 MATCH (n:Person) WHERE n.name STARTS WITH 'A' RETURN n
 ```
 
 ### Existence check
 
-```sql
+```cypher
 MATCH (n:Person) WHERE EXISTS(n.email) RETURN n.name, n.email
 ```
 
 ### Compound boolean
 
-```sql
+```cypher
 MATCH (n:Person) WHERE n.age > 25 AND NOT n.name = 'Carol' RETURN n.name
 ```
 

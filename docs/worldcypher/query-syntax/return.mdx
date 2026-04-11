@@ -9,7 +9,7 @@ status: "stable"
 
 # RETURN
 
-```sql
+```cypher
 MATCH (n:Person)
 RETURN n.name AS person, n.age AS years
 ORDER BY n.age DESC
@@ -20,7 +20,7 @@ Project query results with aliases, ordering, pagination, and deduplication.
 
 ## Syntax
 
-```sql
+```cypher
 RETURN expression [AS alias], ...
   [ORDER BY expression [ASC|DESC]]
   [SKIP n]
@@ -31,25 +31,25 @@ RETURN expression [AS alias], ...
 
 ### Basic projection
 
-```sql
+```cypher
 MATCH (n:Person) RETURN n.name, n.age
 ```
 
 ### Ordering
 
-```sql
+```cypher
 MATCH (n:Person) RETURN n.name ORDER BY n.age DESC
 ```
 
 ### Pagination
 
-```sql
+```cypher
 MATCH (n:Person) RETURN n.name ORDER BY n.age SKIP 5 LIMIT 10
 ```
 
 ### Distinct
 
-```sql
+```cypher
 MATCH (n:Person) RETURN DISTINCT n._labels
 ```
 

@@ -12,7 +12,7 @@ related:
 
 # MATCH
 
-```sql
+```cypher
 MATCH (n:Person)-[:KNOWS]->(friend)
 WHERE n.age > 25
 RETURN n.name, friend.name
@@ -22,7 +22,7 @@ Find nodes and relationships by pattern. MATCH is the starting point for every r
 
 ## Syntax
 
-```sql
+```cypher
 MATCH (variable:Label)                    -- by label
 MATCH (variable:Label {key: value})       -- by property
 MATCH (a)-[r:TYPE]->(b)                   -- relationships
@@ -33,7 +33,7 @@ MATCH (a)-[:TYPE*min..max]->(b)           -- variable-length paths
 
 ### All nodes with a label
 
-```sql
+```cypher
 MATCH (n:Person) RETURN n
 ```
 
@@ -46,19 +46,19 @@ MATCH (n:Person) RETURN n
 
 ### Property shorthand filter
 
-```sql
+```cypher
 MATCH (n:Person {name: 'Alice'}) RETURN n
 ```
 
 ### Relationship traversal
 
-```sql
+```cypher
 MATCH (a:Person {name: 'Alice'})-[r:KNOWS]->(b) RETURN b.name
 ```
 
 ### Variable-length paths
 
-```sql
+```cypher
 MATCH (a:Person {name: 'Alice'})-[:KNOWS*1..3]->(friend) RETURN friend.name
 ```
 

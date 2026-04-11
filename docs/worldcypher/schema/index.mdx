@@ -15,7 +15,7 @@ WorldCypher supports explicit schema management for indexes and constraints.
 
 Speed up property lookups:
 
-```sql
+```cypher
 CREATE INDEX ON :Person(name)
 CREATE INDEX ON :Person(age)
 DROP INDEX ON :Person(name)
@@ -23,7 +23,7 @@ DROP INDEX ON :Person(name)
 
 List all indexes:
 
-```sql
+```cypher
 CALL db.indexes()
 ```
 
@@ -31,14 +31,14 @@ CALL db.indexes()
 
 Enforce data integrity:
 
-```sql
+```cypher
 CREATE CONSTRAINT ON (n:Person) ASSERT n.email IS UNIQUE
 DROP CONSTRAINT ON (n:Person) ASSERT n.email IS UNIQUE
 ```
 
 List all constraints:
 
-```sql
+```cypher
 CALL db.constraints()
 ```
 

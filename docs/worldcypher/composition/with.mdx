@@ -13,7 +13,7 @@ Chain queries into pipelines. The output of one stage becomes the input of the n
 
 ## Syntax
 
-```sql
+```cypher
 MATCH (n:Label) WITH n WHERE predicate RETURN n
 ```
 
@@ -21,13 +21,13 @@ MATCH (n:Label) WITH n WHERE predicate RETURN n
 
 ### Filter after aggregation
 
-```sql
+```cypher
 MATCH (n:Person) WITH n WHERE n.age > 25 RETURN n.name
 ```
 
 ### Multi-stage pipeline
 
-```sql
+```cypher
 MATCH (n:Person)-[:KNOWS]->(friend)
 WITH n, count(friend) AS friend_count
 WHERE friend_count > 5

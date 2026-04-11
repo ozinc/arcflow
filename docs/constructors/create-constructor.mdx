@@ -9,7 +9,7 @@ status: "stable"
 
 # CREATE CONSTRUCTOR
 
-```sql
+```cypher
 CREATE SKILL ProfessionalNetwork_v4
   FROM PROMPT 'Given two Person nodes, determine if they have a professional relationship'
   ALLOWED ON [Person, Organization]
@@ -20,7 +20,7 @@ Register a relationship constructor. Once created, use [PROCESS NODE](/construct
 
 ## Syntax
 
-```sql
+```cypher
 CREATE SKILL <name>
   FROM PROMPT '<prompt_template>'
   ALLOWED ON [<Label>, ...]

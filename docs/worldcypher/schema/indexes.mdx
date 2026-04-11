@@ -11,19 +11,19 @@ status: "stable"
 
 CREATE INDEX for O(1) property lookups. Without an index, MATCH scans every node.
 
-```sql
+```cypher
 CREATE INDEX ON :Person(name)
 ```
 
 ## Drop an index
 
-```sql
+```cypher
 DROP INDEX ON :Person(name)
 ```
 
 ## List indexes
 
-```sql
+```cypher
 CALL db.indexes()
 ```
 

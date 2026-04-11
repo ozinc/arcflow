@@ -41,7 +41,7 @@ Connect with any PostgreSQL client:
 psql -h localhost -p 5432
 ```
 
-```sql
+```cypher
 -- Run WorldCypher queries over a standard psql connection
 MATCH (u:User)-[:FOLLOWS]->(u2:User)
 WHERE u.name = 'Alice'
@@ -154,7 +154,7 @@ The native SDK unlocks ArcFlow-only features that have no equivalent in the SQL 
 - `AS OF` — point-in-time temporal queries
 - GPU acceleration — CUDA/Metal dispatch for large graphs
 
-```sql
+```cypher
 -- Live query: re-runs automatically when matching nodes change
 LIVE MATCH (u:User)-[:FOLLOWS]->(influencer:User)
 WHERE influencer.followers > 10000
@@ -185,7 +185,7 @@ In Grafana:
 
 Example dashboard query:
 
-```sql
+```cypher
 MATCH (e:Event)
 WHERE e.timestamp > $__timeFrom() AND e.timestamp < $__timeTo()
 RETURN e.timestamp AS time, e.value AS metric, e.category AS label

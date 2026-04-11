@@ -9,7 +9,7 @@ status: "stable"
 
 # CREATE
 
-```sql
+```cypher
 CREATE (a:Person {name: 'Alice', age: 30})-[:KNOWS]->(b:Person {name: 'Bob', age: 25})
 ```
 
@@ -17,7 +17,7 @@ Create nodes and relationships in one statement. Returns nothing unless you add 
 
 ## Syntax
 
-```sql
+```cypher
 CREATE (variable:Label {key: value, ...}) [RETURN variable]
 CREATE (a:Label {props})-[:TYPE]->(b:Label {props})
 ```
@@ -26,7 +26,7 @@ CREATE (a:Label {props})-[:TYPE]->(b:Label {props})
 
 ### Create a node
 
-```sql
+```cypher
 CREATE (n:Person {name: 'Eve', age: 28}) RETURN n
 ```
 

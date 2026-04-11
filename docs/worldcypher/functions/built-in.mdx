@@ -31,12 +31,12 @@ Aggregation functions operate across rows in a result set. Use with or without G
 | `variance` | `variance(expr)` | Sample variance | Float | 4.0.0 |
 | `median` | `median(expr)` | Median (50th percentile) | Float | 4.0.0 |
 
-```sql
+```cypher
 MATCH (n:Person)
 RETURN count(n) AS total, avg(n.age) AS avgAge, percentile(n.score, 0.95) AS p95
 ```
 
-```sql
+```cypher
 MATCH (n:Person)
 WITH n.department AS dept, collect(n.name) AS members, stdev(n.salary) AS salaryStdev
 RETURN dept, members, salaryStdev
@@ -70,18 +70,18 @@ RETURN dept, members, salaryStdev
 | `size` | `size(s)` | Length of string or list | Integer | 0.10.0 |
 | `toString` | `toString(expr)` | Convert any value to string representation | String | 0.10.0 |
 
-```sql
+```cypher
 MATCH (n:Person)
 RETURN toLower(n.name) AS lower, left(n.name, 3) AS initials, size(n.name) AS len
 ```
 
-```sql
+```cypher
 MATCH (n:Person)
 WHERE startsWith(n.email, 'admin')
 RETURN n.name, replace(n.email, '@old.com', '@new.com') AS newEmail
 ```
 
-```sql
+```cypher
 MATCH (n:Person)
 RETURN lpad(toString(n.id), 6, '0') AS paddedId, repeat('*', n.rating) AS stars
 ```
@@ -108,12 +108,12 @@ RETURN lpad(toString(n.id), 6, '0') AS paddedId, repeat('*', n.rating) AS stars
 | `pi` | `pi()` | Pi constant (3.14159...) | Float | 4.0.0 |
 | `e` | `e()` | Euler's number (2.71828...) | Float | 4.0.0 |
 
-```sql
+```cypher
 MATCH (n:Sensor)
 RETURN n.name, abs(n.reading) AS magnitude, round(n.value * 100) / 100 AS rounded
 ```
 
-```sql
+```cypher
 MATCH (n:Point)
 RETURN atan2(n.y, n.x) AS angle, sqrt(power(n.x, 2) + power(n.y, 2)) AS distance
 ```
@@ -128,7 +128,7 @@ RETURN atan2(n.y, n.x) AS angle, sqrt(power(n.x, 2) + power(n.y, 2)) AS distance
 | `toBoolean` | `toBoolean(expr)` | Convert to boolean | Boolean | 4.0.0 |
 | `coalesce` | `coalesce(a, b, ...)` | First non-null value | Same as first non-null | 0.10.0 |
 
-```sql
+```cypher
 MATCH (n:Person)
 RETURN toInteger(n.ageStr) AS age, coalesce(n.nickname, n.name) AS displayName
 ```
@@ -144,7 +144,7 @@ RETURN toInteger(n.ageStr) AS age, coalesce(n.nickname, n.name) AS displayName
 | `inDegree` | `inDegree(n)` | Incoming relationship count | Integer | 3.0.0 |
 | `outDegree` | `outDegree(n)` | Outgoing relationship count | Integer | 3.0.0 |
 
-```sql
+```cypher
 MATCH (n:Person)
 RETURN n.name, degree(n) AS connections, inDegree(n) AS followers, outDegree(n) AS following
 ORDER BY degree(n) DESC
@@ -162,7 +162,7 @@ ArcFlow world-model metadata functions for provenance and trust scoring.
 | `clockDomain` | `clockDomain(n)` | Temporal clock domain name | String | 4.0.0 |
 | `observationSource` | `observationSource(n)` | Source identity (sensor, model, user) | String | 4.0.0 |
 
-```sql
+```cypher
 MATCH (n:Observation)
 WHERE confidence(n) > 0.8 AND observationClass(n) = 'observed'
 RETURN n.name, confidence(n) AS conf, authorityPlane(n) AS plane
@@ -177,17 +177,17 @@ RETURN n.name, confidence(n) AS conf, authorityPlane(n) AS plane
 | `range` | `range(start, end)` | Generate integer sequence \[start..=end\] | List\<Integer\> | 4.0.0 |
 | `mapProjection` | `n {.name, .age}` | Return only named properties as a map | Map | 4.0.0 |
 
-```sql
+```cypher
 MATCH (n:Person)
 RETURN keys(n) AS propKeys, properties(n) AS allProps
 ```
 
-```sql
+```cypher
 MATCH (n:Person)
 RETURN n {.name, .age} AS profile
 ```
 
-```sql
+```cypher
 UNWIND range(1, 10) AS i
 RETURN i
 ```
@@ -203,7 +203,7 @@ All date/time functions are non-deterministic (they return the current time).
 | `time` | `time()` | Current time as ISO string (HH:MM:SS.mmm) | String | 4.0.0 |
 | `datetime` | `datetime()` | Current datetime as ISO string (YYYY-MM-DDTHH:MM:SS.mmm) | String | 4.0.0 |
 
-```sql
+```cypher
 CREATE (e:Event {name: 'deploy', createdAt: timestamp(), date: date()})
 RETURN e
 ```
@@ -217,12 +217,12 @@ RETURN e
 | `toJson` | `toJson(n)` | Serialize all node properties to JSON string | String | 4.0.0 |
 | `size` | `size(expr)` | Length of string or list | Integer | 0.10.0 |
 
-```sql
+```cypher
 CREATE (n:Record {id: randomUUID(), fingerprint: hash(n.data)})
 RETURN n
 ```
 
-```sql
+```cypher
 MATCH (n:Person)
 RETURN toJson(n) AS json
 ```
@@ -238,13 +238,13 @@ Predicate expressions used in WHERE clauses and RETURN.
 | `IS NOT NULL` | `n.prop IS NOT NULL` | True if property exists and is not null | Boolean | 0.15.0 |
 | `IN` | `expr IN [list]` | True if value is in the list | Boolean | 0.20.0 |
 
-```sql
+```cypher
 MATCH (n:Person)
 WHERE exists(n.email) AND n.role IN ['admin', 'editor']
 RETURN n.name
 ```
 
-```sql
+```cypher
 MATCH (n:Person)
 WHERE n.deletedAt IS NULL
 RETURN n.name

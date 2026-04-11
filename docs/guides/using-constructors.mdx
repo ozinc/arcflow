@@ -13,7 +13,7 @@ Build a self-building graph: register a proximity rule, process nodes, and watch
 
 ## Step 1: Create a constructor
 
-```sql
+```cypher
 CREATE SKILL ProximityDetector
   FROM PROMPT 'Determine if two Person nodes are in the same city'
   ALLOWED ON [Person]
@@ -22,7 +22,7 @@ CREATE SKILL ProximityDetector
 
 ## Step 2: Process nodes
 
-```sql
+```cypher
 PROCESS NODE (n:Person)
 ```
 
@@ -31,7 +31,7 @@ in the same city, it materializes a `NEAR` relationship with confidence and prov
 
 ## Step 3: Query dynamic edges
 
-```sql
+```cypher
 MATCH (a)-[r]->(b) RETURN a.name, type(r), b.name, r.confidence
 ```
 
@@ -41,7 +41,7 @@ Dynamic edges carry:
 
 ## Step 4: Re-evaluate low-confidence edges
 
-```sql
+```cypher
 REPROCESS EDGES WHERE confidence < 0.6
 ```
 

@@ -11,14 +11,14 @@ status: "stable"
 
 DELETE removes nodes. DETACH DELETE removes nodes and all their relationships.
 
-```sql
+```cypher
 MATCH (n) WHERE n.name = 'Eve' DELETE n
 MATCH (n) WHERE n.name = 'Eve' DETACH DELETE n
 ```
 
 ## Syntax
 
-```sql
+```cypher
 MATCH (variable) WHERE predicate DELETE variable
 MATCH (variable) WHERE predicate DETACH DELETE variable
 ```

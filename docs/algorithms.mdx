@@ -19,7 +19,7 @@ All algorithms run in-process with zero serialization overhead. GPU acceleration
 
 Iterative eigenvector centrality. 20 iterations, damping factor 0.85. 154M nodes/sec on CPU, 2.4x faster on GPU.
 
-```sql
+```cypher
 CALL algo.pageRank()
 ```
 
@@ -29,7 +29,7 @@ CALL algo.pageRank()
 | name | string | Node label or name property |
 | score | float | PageRank score (sums to 1.0) |
 
-```sql
+```cypher
 -- PageRank on a social network
 CREATE (a:Person {name: 'Alice'})-[:FOLLOWS]->(b:Person {name: 'Bob'})
 CREATE (b)-[:FOLLOWS]->(c:Person {name: 'Carol'})
@@ -50,7 +50,7 @@ CALL algo.pageRank()
 
 PageRank weighted by edge confidence values. Higher-confidence edges contribute more to rank propagation.
 
-```sql
+```cypher
 CALL algo.confidencePageRank()
 ```
 
@@ -58,7 +58,7 @@ CALL algo.confidencePageRank()
 
 Measures how often a node lies on shortest paths between other nodes. Identifies bridges and brokers in the graph.
 
-```sql
+```cypher
 CALL algo.betweenness()
 ```
 
@@ -68,7 +68,7 @@ CALL algo.betweenness()
 | name | string | Node label or name property |
 | betweenness | float | Betweenness centrality score |
 
-```sql
+```cypher
 CREATE (a:Person {name: 'Alice'})-[:KNOWS]->(b:Person {name: 'Bob'})
 CREATE (b)-[:KNOWS]->(c:Person {name: 'Carol'})
 CREATE (b)-[:KNOWS]->(d:Person {name: 'Dave'})
@@ -89,7 +89,7 @@ CALL algo.betweenness()
 
 Inverse of the average shortest path distance from a node to all reachable nodes. Higher values indicate more central position.
 
-```sql
+```cypher
 CALL algo.closeness()
 ```
 
@@ -103,7 +103,7 @@ CALL algo.closeness()
 
 Count of relationships per node, optionally filtered by direction.
 
-```sql
+```cypher
 CALL algo.degreeCentrality()
 ```
 
@@ -113,7 +113,7 @@ CALL algo.degreeCentrality()
 
 Hierarchical community detection via modularity optimization. 29.6x GPU speedup on large graphs.
 
-```sql
+```cypher
 CALL algo.louvain()
 ```
 
@@ -123,7 +123,7 @@ CALL algo.louvain()
 | name | string | Node label or name property |
 | community | integer | Community assignment ID |
 
-```sql
+```cypher
 -- Detect communities in a social network
 CREATE (a:Person {name: 'Alice'})-[:KNOWS]->(b:Person {name: 'Bob'})
 CREATE (a)-[:KNOWS]->(c:Person {name: 'Carol'})
@@ -146,7 +146,7 @@ CALL algo.louvain()
 
 Refined community detection that guarantees well-connected communities. Improvement over Louvain that avoids poorly connected intermediate communities.
 
-```sql
+```cypher
 CALL algo.leiden()
 ```
 
@@ -156,7 +156,7 @@ Returns the same schema as Louvain (nodeId, name, community).
 
 Weakly connected components via union-find. Identifies disconnected subgraphs.
 
-```sql
+```cypher
 CALL algo.connectedComponents()
 ```
 
@@ -170,7 +170,7 @@ CALL algo.connectedComponents()
 
 Fast community detection using label propagation. Near-linear time complexity.
 
-```sql
+```cypher
 CALL algo.communityDetection()
 ```
 
@@ -180,7 +180,7 @@ Returns nodeId, name, and community columns. 29.6x GPU speedup on large graphs.
 
 Computes the k-core number for each node. A k-core is a maximal subgraph where every node has degree >= k.
 
-```sql
+```cypher
 CALL algo.kCore()
 ```
 
@@ -196,14 +196,14 @@ CALL algo.kCore()
 
 Unweighted shortest path via breadth-first search. 6.3M edges/sec on CPU, 3.5x faster on GPU.
 
-```sql
+```cypher
 MATCH p = shortestPath((a:Person {name: 'Alice'})-[*..10]->(b:Person {name: 'Dave'}))
 RETURN p
 ```
 
 Variable-length traversal with depth bounds:
 
-```sql
+```cypher
 MATCH (a:Person {name: 'Alice'})-[:KNOWS*1..5]->(b)
 RETURN b.name
 ```
@@ -212,7 +212,7 @@ RETURN b.name
 
 Weighted shortest path. Uses a 4-ary min-heap with thread-local buffer reuse. Pass the property key to use as edge weight.
 
-```sql
+```cypher
 CALL algo.dijkstra(startNodeId, endNodeId, 'weight')
 ```
 
@@ -225,7 +225,7 @@ CALL algo.dijkstra(startNodeId, endNodeId, 'weight')
 
 Heuristic-guided shortest path. Faster than Dijkstra when a distance estimate is available — the heuristic guides search toward the goal. Pass a node property to use as the heuristic estimate.
 
-```sql
+```cypher
 CALL algo.astar(startNodeId, endNodeId, 'travel_time', 'estimated_distance')
 ```
 
@@ -240,7 +240,7 @@ CALL algo.astar(startNodeId, endNodeId, 'travel_time', 'estimated_distance')
 
 Shortest path weighted by edge confidence. Finds the most trusted route between two nodes.
 
-```sql
+```cypher
 CALL algo.confidencePath(1, 2)
 ```
 
@@ -253,7 +253,7 @@ CALL algo.confidencePath(1, 2)
 
 Computes shortest path distances between all node pairs. GPU-accelerated for large graphs.
 
-```sql
+```cypher
 CALL algo.allPairsShortestPath()
 ```
 
@@ -273,7 +273,7 @@ Available through node similarity computation. Measures overlap of neighbor sets
 
 Pairwise similarity between all nodes based on shared neighbors.
 
-```sql
+```cypher
 CALL algo.similarNodes()
 ```
 
@@ -281,7 +281,7 @@ CALL algo.similarNodes()
 
 Local clustering coefficient for each node. Measures how close a node's neighbors are to forming a clique.
 
-```sql
+```cypher
 CALL algo.clusteringCoefficient()
 ```
 
@@ -299,7 +299,7 @@ GPU-accelerated: dispatches to CUDA/Metal when graph exceeds 50 nodes.
 
 Counts the number of triangles in the graph. 19.8x GPU speedup.
 
-```sql
+```cypher
 CALL algo.triangleCount()
 ```
 
@@ -311,7 +311,7 @@ CALL algo.triangleCount()
 
 Graph density: ratio of actual edges to possible edges.
 
-```sql
+```cypher
 CALL algo.density()
 ```
 
@@ -323,7 +323,7 @@ CALL algo.density()
 
 Longest shortest path in the graph.
 
-```sql
+```cypher
 CALL algo.diameter()
 ```
 
@@ -337,7 +337,7 @@ CALL algo.diameter()
 
 Tarjan's algorithm for biconnected components — maximal subgraphs with no articulation points. O(V+E) iterative stack-based implementation.
 
-```sql
+```cypher
 CALL algo.biconnectedComponents()
 ```
 
@@ -352,7 +352,7 @@ CALL algo.biconnectedComponents()
 
 Generate node embeddings via random walk + skip-gram. Captures structural position in the graph.
 
-```sql
+```cypher
 CALL algo.node2vec(128, 80, 10)
 ```
 
@@ -368,7 +368,7 @@ Sets `node.embedding` on every node. Use with vector search for structural simil
 
 Structural equivalence embeddings — nodes with similar local structure get similar vectors, regardless of where they are in the graph.
 
-```sql
+```cypher
 CALL algo.struc2vec(64)
 ```
 
@@ -376,7 +376,7 @@ CALL algo.struc2vec(64)
 
 Inductive node embedding via neighborhood aggregation. Handles unseen nodes (no retraining needed).
 
-```sql
+```cypher
 CALL algo.graphSAGE(128)
 ```
 
@@ -384,7 +384,7 @@ CALL algo.graphSAGE(128)
 
 Find nodes whose embeddings are out of date (property changed after last embedding).
 
-```sql
+```cypher
 CALL algo.staleEmbeddings()
 ```
 
@@ -394,7 +394,7 @@ Returns `(nodeId, name)` for nodes needing re-embedding.
 
 Classify nodes by similarity to labeled examples using a vector index.
 
-```sql
+```cypher
 CALL algo.classify($embedding, 'index_name', {k: 10})
 ```
 
@@ -406,7 +406,7 @@ Returns `(nodeId, label, confidence)`.
 
 Find nodes that refer to the same real-world entity despite different IDs or properties.
 
-```sql
+```cypher
 CALL algo.entityResolution()
 ```
 
@@ -416,7 +416,7 @@ Returns `(nodeId1, nodeId2, similarity)` pairs above the resolution threshold.
 
 Find pairs of facts in the graph that contradict each other based on predicates and confidence.
 
-```sql
+```cypher
 CALL algo.factContradiction()
 ```
 
@@ -426,7 +426,7 @@ Returns `(nodeId1, nodeId2, contradiction_type, confidence)`.
 
 Score how strong a relationship is based on frequency, recency, and mutual connections.
 
-```sql
+```cypher
 CALL algo.relationshipStrength()
 ```
 
@@ -436,7 +436,7 @@ Returns `(fromId, toId, strength)` for all relationships.
 
 Composite confidence score that propagates through chains of facts.
 
-```sql
+```cypher
 CALL algo.compoundingScore()
 ```
 
@@ -444,7 +444,7 @@ CALL algo.compoundingScore()
 
 How recently each entity was observed or corroborated. Low freshness = stale facts.
 
-```sql
+```cypher
 CALL algo.entityFreshness()
 ```
 
@@ -454,7 +454,7 @@ Returns `(nodeId, name, freshness, last_observed_at)`.
 
 Find and score near-duplicate nodes using embedding similarity.
 
-```sql
+```cypher
 CALL algo.semanticDedup()
 ```
 
@@ -464,7 +464,7 @@ CALL algo.semanticDedup()
 
 Full retrieval-augmented generation pipeline: query decomposition, graph traversal, evidence collection with confidence scoring.
 
-```sql
+```cypher
 CALL algo.graphRAG('What connections exist between Alice and the project?')
 ```
 
@@ -472,7 +472,7 @@ CALL algo.graphRAG('What connections exist between Alice and the project?')
 
 Retrieves structured context from the graph for a natural language query, with token budgeting for LLM context windows.
 
-```sql
+```cypher
 CALL algo.graphRAGContext('Tell me about Alice')
 ```
 
@@ -480,7 +480,7 @@ CALL algo.graphRAGContext('Tell me about Alice')
 
 Confidence-filtered GraphRAG — only returns evidence above the trust threshold. Facts outrank inferences outrank predictions.
 
-```sql
+```cypher
 CALL algo.graphRAGTrusted('high-confidence relationships for Alice')
 ```
 
@@ -488,7 +488,7 @@ CALL algo.graphRAGTrusted('high-confidence relationships for Alice')
 
 Six algorithms can run as standing queries via `LIVE CALL`. Instead of recomputing from scratch on every mutation, they maintain state incrementally. Cost per update is O(affected neighborhood), not O(V+E).
 
-```sql
+```cypher
 -- Register incremental PageRank -- updates automatically on graph mutations
 LIVE CALL algo.pageRank({ damping: 0.85 })
 
@@ -504,7 +504,7 @@ LIVE CALL algo.clusteringCoefficient()
 
 ### Inspecting live algorithms
 
-```sql
+```cypher
 -- List all running incremental algorithms
 CALL db.liveAlgorithms()
 

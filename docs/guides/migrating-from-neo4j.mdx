@@ -118,7 +118,7 @@ Export your data as Cypher statements or CSV. The method varies by vendor:
 - **TigerGraph**: GSQL export, then convert to Cypher CREATE statements
 - **Cosmos DB**: Export via Gremlin queries to JSON, then convert to Cypher
 
-```sql
+```cypher
 -- Most GQL-compatible databases support exporting as CREATE statements
 -- Adapt vendor-specific export commands to your setup
 ```
@@ -145,13 +145,13 @@ arcflow --data-dir ./my-graph
 
 Or use CREATE statements directly:
 
-```sql
+```cypher
 -- Nodes import directly
 CREATE (n:Person {name: 'Alice', age: 30})
 CREATE (n:Person {name: 'Bob', age: 25})
 ```
 
-```sql
+```cypher
 -- Relationships
 MATCH (a:Person {name: 'Alice'}), (b:Person {name: 'Bob'})
 CREATE (a)-[:KNOWS {since: 2020}]->(b)
@@ -159,7 +159,7 @@ CREATE (a)-[:KNOWS {since: 2020}]->(b)
 
 ### Step 4: Recreate Indexes
 
-```sql
+```cypher
 CREATE INDEX ON :Person(name)
 CREATE INDEX ON :Person(email)
 CREATE CONSTRAINT ON (p:Person) ASSERT p.email IS UNIQUE
@@ -167,17 +167,17 @@ CREATE CONSTRAINT ON (p:Person) ASSERT p.email IS UNIQUE
 
 ### Step 5: Verify
 
-```sql
+```cypher
 -- Check counts match
 CALL db.stats()
 ```
 
-```sql
+```cypher
 -- Check schema
 CALL db.schema()
 ```
 
-```sql
+```cypher
 -- Run diagnostics
 CALL db.doctor()
 ```
@@ -204,7 +204,7 @@ Most graph databases require a separate analytics library or plugin (Neo4j GDS, 
 
 Key difference: no projection step. With most graph analytics libraries, you first create an in-memory graph projection, run the algorithm, then optionally write results back. In ArcFlow, algorithms run directly on the live graph store with zero copy.
 
-```sql
+```cypher
 -- Traditional analytics workflow (3 steps):
 -- 1. Project graph into analytics engine
 -- 2. Run algorithm on projection

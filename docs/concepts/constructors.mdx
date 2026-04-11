@@ -96,7 +96,7 @@ The engine always tries the cheapest tier first. A rule-based constructor runs i
 
 ### Create a constructor
 
-```sql
+```cypher
 CREATE SKILL ProfessionalNetwork_v4
   FROM PROMPT 'Given two Person nodes, determine if they have a professional relationship'
   ALLOWED ON [Person, Organization]
@@ -105,7 +105,7 @@ CREATE SKILL ProfessionalNetwork_v4
 
 ### Execute constructors against nodes
 
-```sql
+```cypher
 PROCESS NODE (n:Person)
 ```
 
@@ -113,7 +113,7 @@ Evaluates all active constructors against matched nodes. Each constructor produc
 
 ### Re-evaluate low-confidence edges
 
-```sql
+```cypher
 REPROCESS EDGES WHERE confidence < 0.6
 ```
 

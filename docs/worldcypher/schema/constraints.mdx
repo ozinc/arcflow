@@ -11,7 +11,7 @@ status: "stable"
 
 UNIQUE constraints prevent duplicate property values across all nodes with a given label.
 
-```sql
+```cypher
 CREATE CONSTRAINT ON (n:Person) ASSERT n.email IS UNIQUE
 ```
 
@@ -19,13 +19,13 @@ Attempting to create a node with a duplicate value will return a typed error.
 
 ## Drop a constraint
 
-```sql
+```cypher
 DROP CONSTRAINT ON (n:Person) ASSERT n.email IS UNIQUE
 ```
 
 ## List constraints
 
-```sql
+```cypher
 CALL db.constraints()
 ```
 

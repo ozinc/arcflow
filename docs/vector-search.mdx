@@ -13,14 +13,14 @@ status: "stable"
 
 No dedicated vector database, no separate similarity service. ArcFlow indexes vectors in the same process as your graph nodes, so you can combine graph traversal with vector similarity in a single query without network hops. GPU acceleration delivers 4.2x additional speedup when available.
 
-```sql
+```cypher
 -- Vector search + graph traversal in one query, one process
 CALL algo.vectorSearch('movie_embeddings', [0.12, -0.34, 0.56, ...], 5)
 ```
 
 ## Create a Vector Index
 
-```sql
+```cypher
 CREATE VECTOR INDEX movie_embeddings
   FOR (m:Movie)
   ON (m.embedding)
@@ -40,7 +40,7 @@ CREATE VECTOR INDEX movie_embeddings
 
 **Dot Product** — raw inner product. Best for pre-normalized vectors where higher values mean more similar.
 
-```sql
+```cypher
 -- Euclidean distance for spatial embeddings
 CREATE VECTOR INDEX spatial_vec
   FOR (p:Point)
@@ -58,7 +58,7 @@ CREATE VECTOR INDEX doc_vec
 
 ### K-Nearest Neighbor Search
 
-```sql
+```cypher
 CALL algo.vectorSearch('movie_embeddings', [0.1, 0.2, 0.3, ...], 10)
 ```
 
@@ -70,7 +70,7 @@ CALL algo.vectorSearch('movie_embeddings', [0.1, 0.2, 0.3, ...], 10)
 
 Returns rows with nodeId, similarity score, and all node properties.
 
-```sql
+```cypher
 -- Find 5 movies most similar to a query embedding
 CALL algo.vectorSearch('movie_embeddings', [0.12, -0.34, 0.56, ...], 5)
 ```
@@ -89,7 +89,7 @@ CALL algo.vectorSearch('movie_embeddings', [0.12, -0.34, 0.56, ...], 5)
 
 Find nodes structurally similar based on their vector embeddings:
 
-```sql
+```cypher
 CALL algo.similarNodes()
 ```
 
@@ -97,13 +97,13 @@ CALL algo.similarNodes()
 
 Combine graph traversal with vector similarity in a single query. Graph structure constrains the candidate set, then vector similarity ranks results.
 
-```sql
+```cypher
 CALL algo.hybridSearch()
 ```
 
 Hybrid search uses graph adjacency to narrow candidates before running vector comparison — faster than brute-force vector scan on large graphs.
 
-```sql
+```cypher
 -- Example: find documents similar to a query, but only within a specific project
 CREATE (p:Project {name: 'ArcFlow'})
 CREATE (d1:Document {name: 'Architecture', embedding: [0.1, 0.2, 0.3]})
@@ -120,7 +120,7 @@ RETURN d.name
 
 List all vector indexes:
 
-```sql
+```cypher
 CALL db.indexes()
 ```
 
@@ -141,7 +141,7 @@ On CUDA hardware with 10K+ vectors, ArcFlow routes to **cuVS (CAGRA)** — NVIDI
 
 ArcFlow's vector search integrates directly with the GraphRAG pipeline:
 
-```sql
+```cypher
 -- Index document embeddings
 CREATE VECTOR INDEX doc_embeddings
   FOR (d:Document)
@@ -161,7 +161,7 @@ CALL algo.graphRAG('How does the storage engine work?')
 
 ### Semantic Search
 
-```sql
+```cypher
 -- Create embeddings from your ML pipeline, store directly in the graph
 CREATE (n:Concept {
   name: 'machine learning',
@@ -174,7 +174,7 @@ CALL algo.vectorSearch('concept_embeddings', [0.44, 0.13, -0.31, ...], 10)
 
 ### Recommendation Engine
 
-```sql
+```cypher
 -- Users and items with embeddings in the same vector space
 CREATE VECTOR INDEX user_item_vec
   FOR (n:Entity)

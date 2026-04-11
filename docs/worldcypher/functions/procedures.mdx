@@ -13,7 +13,7 @@ status: "stable"
 
 100+ CALL procedures: Database Introspection (20), Graph Algorithms (27), Embedding (5), Knowledge Graph (6), Temporal (9), Reactive (5), System (14), Auth (7), Health (3), Extensions (5), and Behavior Graph (3). All return tabular results.
 
-```sql
+```cypher
 CALL db.procedures()
 ```
 
@@ -46,14 +46,14 @@ Core procedures for inspecting database state, schema, and metadata.
 | `CALL db.clear()` | `status`, `nodes_removed`, `rels_removed` | Delete all nodes, relationships, and indexes (mutating) | 5.0.0 |
 | `CALL db.demo()` | _(demo graph)_ | Load sample social network graph with example queries (mutating) | 5.0.0 |
 
-```sql
+```cypher
 -- Get a schema overview
 CALL db.schema()
 ```
 
 Returns one row per label with property keys and node count, plus relationship patterns.
 
-```sql
+```cypher
 -- Run diagnostics
 CALL db.doctor()
 ```
@@ -72,7 +72,7 @@ Returns rows for each check (node_count, relationship_integrity, index_consisten
 | `CALL algo.closeness()` | `nodeId`, `name`, `closeness` | Closeness centrality scores | 3.0.0 |
 | `CALL algo.degreeCentrality()` | `nodeId`, `name`, `centrality` | Degree centrality scores | 3.0.0 |
 
-```sql
+```cypher
 CALL algo.pageRank()
 ```
 
@@ -88,7 +88,7 @@ Returns one row per node, sorted by rank. Uses 20 iterations with damping factor
 | `CALL algo.leiden()` | `nodeId`, `community` | Community IDs via Leiden algorithm (20 iterations) | 5.0.0 |
 | `CALL algo.kCore()` | `nodeId`, `name`, `coreness` | K-core decomposition values | 3.0.0 |
 
-```sql
+```cypher
 CALL algo.louvain()
 ```
 
@@ -103,7 +103,7 @@ Returns one row per node with hierarchical community assignment.
 | `CALL algo.triangleCount()` | `triangles` | Total triangle count in the graph. GPU-accelerated when available. | 3.0.0 |
 | `CALL algo.clusteringCoefficient()` | `nodeId`, `name`, `coefficient` | Per-node clustering coefficients. GPU-accelerated when available. | 3.0.0 |
 
-```sql
+```cypher
 CALL algo.triangleCount()
 ```
 
@@ -118,7 +118,7 @@ Returns a single row with the total number of triangles.
 | `CALL algo.dijkstra(startId, endId, 'weight')` | `path`, `distance` | Weighted shortest path using 4-ary min-heap | 10.0.0 |
 | `CALL algo.astar(startId, endId, 'weight', 'heuristic')` | `path`, `distance` | Heuristic-guided shortest path (A\*) | 10.0.0 |
 
-```sql
+```cypher
 -- Find confidence-weighted shortest path between node 1 and node 5
 CALL algo.confidencePath(1, 5)
 ```
@@ -146,14 +146,14 @@ Returns the path as "id1 -> id2 -> id3", total cost, and hop count.
 | `CALL algo.graphRAGContext()` | `context`, `node_count`, `tokens_approx` | Formatted LLM context from graph retrieval. Accepts optional query vector and max_tokens arguments. | 5.0.0 |
 | `CALL algo.graphRAGTrusted()` | `nodeId`, `trusted_score`, `hops`, `observation` | Trusted RAG with confidence-filtered context, ranked by observation class | 5.0.0 |
 
-```sql
+```cypher
 -- Vector similarity search with a query vector
 CALL algo.vectorSearch([0.1, 0.9, 0.3])
 ```
 
 Returns nodes ranked by cosine similarity to the query vector.
 
-```sql
+```cypher
 -- Trusted RAG pipeline
 CALL algo.graphRAGTrusted()
 ```
@@ -172,7 +172,7 @@ Generate node embeddings for downstream vector search, classification, and simil
 | `CALL algo.staleEmbeddings()` | `nodeId`, `name` | Nodes whose embeddings are outdated (property changed after last embed) | 10.0.0 |
 | `CALL algo.classify($vec, 'indexName', {k: 10})` | `nodeId`, `label`, `confidence` | Classify by similarity to labeled examples in a vector index | 10.0.0 |
 
-```sql
+```cypher
 -- Embed all nodes with 128-dimensional Node2Vec vectors
 CALL algo.node2vec(128, 80, 10)
 
@@ -193,7 +193,7 @@ Algorithms for reasoning over facts, confidence, and semantic relationships.
 | `CALL algo.entityFreshness()` | `nodeId`, `name`, `freshness`, `last_observed_at` | Freshness of each entity based on last observation | 10.0.0 |
 | `CALL algo.semanticDedup()` | `nodeId1`, `nodeId2`, `similarity` | Near-duplicate nodes via embedding similarity | 10.0.0 |
 
-```sql
+```cypher
 -- Find entities that may refer to the same person
 CALL algo.entityResolution()
 ```
@@ -228,14 +228,14 @@ Procedures for temporal queries, clock management, and change tracking.
 | `CALL db.mutations()` | `sequence`, `operation`, `timestamp` | Recent mutation log (last 50 entries) with timestamps | 5.0.0 |
 | `CALL db.fingerprint()` | `fingerprint` | Deterministic FNV hash of current graph state (hex string) | 5.0.0 |
 
-```sql
+```cypher
 -- See recent mutations with timestamps
 CALL db.mutations()
 ```
 
 Returns rows with sequence number, operation description, and timestamp.
 
-```sql
+```cypher
 -- Point-in-time query (query modifier, not a CALL procedure)
 MATCH (n:Person) AS OF seq N
 RETURN n.name
@@ -255,7 +255,7 @@ Procedures for the reactive fabric: topics, subscriptions, live queries, and cau
 | `CALL db.causalChain()` | `origin`, `depth`, `target`, `target_labels`, `confidence` | Traces CAUSES chains from all Action nodes (depth 10) | 3.0.0 |
 | `CALL db.views()` | `name`, `query` | Materialized view definitions | 4.0.0 |
 
-```sql
+```cypher
 CALL db.causalChain()
 ```
 
@@ -282,14 +282,14 @@ Procedures for backend management, validation, and observability.
 | `CALL db.executionContext()` | `context`, `fallback_disabled`, `backends_available` | Current execution context (backend, GPU availability) | 5.0.0 |
 | `CALL db.affordances()` | `from`, `to`, `confidence` | All AFFORDS relationships in the graph | 5.0.0 |
 
-```sql
+```cypher
 -- Check available GPU backends
 CALL db.backends()
 ```
 
 Returns one row per backend (cpu, metal, cuda) with availability and status message.
 
-```sql
+```cypher
 -- Query by observation class
 CALL db.nodesByObservation.observed()
 ```
@@ -306,7 +306,7 @@ Coordinate frame management and spatial query observability.
 | `CALL arcflow.spatial.dispatch_stats()` | `lane_chosen`, `estimated_candidates`, `actual_candidates`, `prefilter_us`, `rtree_us`, `gpu_transfer_us`, `kernel_us`, `total_us` | Last spatial query execution metrics. `lane_chosen`: CpuLive, CpuBatch, GpuLocal, GpuMulti. | 10.0.0 |
 | `CALL arcflow.spatial.trigger_stats()` | `query_name`, `node_id`, `predicate_type`, `evaluation_us`, `fired` | Live geofence trigger metrics — one row per predicate evaluation since last reset. | 10.0.0 |
 
-```sql
+```cypher
 -- Inspect current coordinate frame
 CALL db.spatialMetadata()
 
@@ -322,7 +322,7 @@ CALL arcflow.spatial.dispatch_stats()
 | `CALL db.checkpointMeta()` | `generation`, `nodes` | Last checkpoint generation, node/rel counts, mutation sequence | 5.0.0 |
 | `CALL db.schemaRegistry()` | `label`, `property`, `type` | Registered schema versions with property types | 5.0.0 |
 
-```sql
+```cypher
 CALL db.replicationStatus()
 ```
 
@@ -340,7 +340,7 @@ Additional domain-specific procedures.
 | `CALL swarm.agentCount()` | `active`, `total` | Number of active and total registered agents | 8.0.0 |
 | `CALL geo.cells()` | `cell_id`, `name`, `status`, `entities`, `agents` | Spatial grid cells with entity/agent counts | 9.0.0 |
 
-```sql
+```cypher
 -- Register a drone agent
 CALL swarm.register('drone_01', 'drone')
 ```
@@ -355,12 +355,12 @@ Behavior tree procedures backed by the knowledge graph. Nodes labeled `:Behavior
 | `CALL behavior.status('treeName')` | `nodeId`, `name`, `type`, `status`, `lastTick` | Current status of all nodes in a behavior tree | 9.0.0 |
 | `CALL behavior.nodes()` | `nodeId`, `name`, `type`, `children` | List all behavior tree nodes with child counts | 9.0.0 |
 
-```sql
+```cypher
 -- Tick a behavior tree named "patrol"
 CALL behavior.tick('patrol')
 ```
 
-```sql
+```cypher
 -- List all behavior nodes
 CALL behavior.nodes()
 ```

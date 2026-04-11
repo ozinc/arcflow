@@ -48,7 +48,7 @@ the `message` field.
 
 Before executing an expensive query, agents can inspect the plan:
 
-```sql
+```cypher
 EXPLAIN MATCH (a)-[:KNOWS*1..5]->(b) RETURN b.name
 ```
 

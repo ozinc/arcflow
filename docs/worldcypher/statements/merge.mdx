@@ -13,7 +13,7 @@ Find-or-create. If the node exists, match it. If not, create it. Safe to run mul
 
 ## Syntax
 
-```sql
+```cypher
 MERGE (variable:Label {key: value}) [RETURN variable]
 ```
 
@@ -21,7 +21,7 @@ MERGE (variable:Label {key: value}) [RETURN variable]
 
 ### Idempotent node creation
 
-```sql
+```cypher
 MERGE (n:Person {name: 'Alice'}) RETURN n
 ```
 
@@ -29,7 +29,7 @@ If a `Person` node with `name: 'Alice'` exists, returns it. Otherwise creates it
 
 ### Idempotent data loading
 
-```sql
+```cypher
 MERGE (n:Person {name: 'Alice'})
 MERGE (n:Person {name: 'Bob'})
 MERGE (n:Person {name: 'Carol'})

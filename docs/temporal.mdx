@@ -13,7 +13,7 @@ status: "stable"
 
 Every mutation in ArcFlow is versioned and preserved. The world model at any previous moment is accessible with a single `AS OF seq N` clause on any `MATCH` — no schema changes, no separate tables, no event-sourcing pipeline. Point-in-time queries, deterministic replay, temporal comparison, and clock domain merging are built into the query language itself.
 
-```sql
+```cypher
 -- Current state
 MATCH (o:Order {id: 'ORD-001'}) RETURN o.status  -- "shipped"
 
@@ -25,7 +25,7 @@ MATCH (o:Order {id: 'ORD-001'}) AS OF seq 100 RETURN o.status  -- "confirmed"
 
 The engine maintains a logical clock. Each mutation advances the clock tick.
 
-```sql
+```cypher
 CALL db.clock()
 ```
 
@@ -39,7 +39,7 @@ CALL db.clock()
 
 View all active clock domains and their current state:
 
-```sql
+```cypher
 CALL db.clockDomains()
 ```
 
@@ -47,12 +47,12 @@ CALL db.clockDomains()
 
 Query the graph as it existed at a specific **mutation sequence number**. The engine replays the WAL onto a clean snapshot at that sequence and executes the query against it.
 
-```sql
+```cypher
 -- Preferred: AS OF seq N (exact, WAL-based snapshot)
 MATCH (n:Person) AS OF seq 42 RETURN n.name
 ```
 
-```sql
+```cypher
 -- Create nodes — each mutation advances the sequence
 CREATE (a:Person {name: 'Alice'})  -- seq 1
 CREATE (b:Person {name: 'Bob'})    -- seq 2
@@ -75,7 +75,7 @@ Only mutations up to and including sequence N are visible.
 
 Procedure form for temporal point-in-time queries:
 
-```sql
+```cypher
 CALL db.nodesAsOf()
 ```
 
@@ -97,7 +97,7 @@ Temporal ingest is used for backfilling historical data, replaying event streams
 
 Compare the graph state between two points in time:
 
-```sql
+```cypher
 CALL db.temporalCompare()
 ```
 
@@ -107,7 +107,7 @@ Returns the diff: nodes added, removed, and properties changed between two tempo
 
 Replay mutations in chronological order from a starting tick:
 
-```sql
+```cypher
 CALL db.temporalReplay()
 ```
 
@@ -117,7 +117,7 @@ Useful for auditing, debugging, and reconstructing how the graph evolved over ti
 
 Conditional logic based on temporal state. Gate procedures validate that certain temporal preconditions hold before allowing a mutation:
 
-```sql
+```cypher
 CALL db.temporalGate()
 ```
 
@@ -127,7 +127,7 @@ CALL db.temporalGate()
 
 Get all mutations since a given tick:
 
-```sql
+```cypher
 CALL db.changesSince()
 ```
 
@@ -137,7 +137,7 @@ Returns the mutation log entries — node creates, property updates, relationshi
 
 View the full mutation history:
 
-```sql
+```cypher
 CALL db.mutations()
 ```
 
@@ -145,7 +145,7 @@ CALL db.mutations()
 
 Cryptographic fingerprint of the current graph state. Two graphs with identical content produce identical fingerprints regardless of insertion order.
 
-```sql
+```cypher
 CALL db.fingerprint()
 ```
 
@@ -169,7 +169,7 @@ When merging data from multiple sources with independent clocks:
 2. Conflicts are detected when two sources assert contradictory facts at overlapping time ranges
 3. The merge result includes provenance metadata identifying which source contributed each fact
 
-```sql
+```cypher
 -- View clock domains from different data sources
 CALL db.clockDomains()
 ```
