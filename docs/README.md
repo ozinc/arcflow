@@ -1,5 +1,9 @@
 # ArcFlow Documentation
 
+> **Browse these docs at [arcflow.dev/docs](https://arcflow.dev/docs).**
+> Internal links between pages use absolute paths that the docs site resolves correctly.
+> They will appear broken in GitHub's file viewer — that is expected.
+
 All docs are `.mdx` files with YAML frontmatter. The sidebar and ordering are defined in [`_config.json`](_config.json).
 
 The website at `arcflow.dev/docs` fetches these files from GitHub at build time.
