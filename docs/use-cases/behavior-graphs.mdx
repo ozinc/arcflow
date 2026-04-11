@@ -9,9 +9,7 @@ status: "stable"
 
 In ArcFlow, a behavior tree is not a separate engine layered on top of the world model — the tree IS the graph. Nodes are graph nodes. Transitions are edges. The blackboard is the property store. The agent's decision history is queryable with `AS OF seq N`.
 
-This matters for autonomous agents and game AI because behavior is inseparable from world state. An agent that can traverse the same graph it lives in — seeing its own history, querying its environment, following relationships to nearby entities — makes decisions grounded in the full world model rather than a shallow key-value blackboard.
-
-Model behavior trees as graph structures for game AI, robotics, and autonomous agents.
+This matters for autonomous agents because behavior is inseparable from world state. An agent that traverses the same graph it lives in — seeing its own history, querying its environment, following relationships to nearby entities — makes decisions grounded in the full world model rather than a shallow key-value blackboard. And in a multi-agent system, multiple trees live in the same graph: one agent's action is visible to another agent's condition check without any message passing.
 
 ## The pattern
 
