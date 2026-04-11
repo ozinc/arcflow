@@ -1,6 +1,6 @@
 ---
 title: "Agent Integration Guide"
-description: "Embed a World Model database in any project in 60 seconds — spatial-temporal, confidence-scored, in-process. For Claude Code, Codex, Cursor, Copilot."
+description: "Embed a world model database in any project — spatial-temporal, confidence-scored, in-process. For Claude Code, Codex, Cursor, Copilot."
 section: "guides"
 status: "stable"
 ---
@@ -27,26 +27,40 @@ const db = openInMemory()
 
 // Or persistent (for production — data survives restarts)
 // import { open } from 'arcflow'
-// const db = open('./data/graph')
+// const db = open('./data/world-model')
 ```
 
 ## Step 3: Write data
 
 ```typescript
-// Create a node
-db.mutate("CREATE (n:Person {name: 'Alice', age: 30, email: 'alice@example.com'})")
+// Create a world model entity with epistemic state
+db.mutate(`
+  CREATE (e:Entity {
+    id: 'unit-01',
+    x: 12.4, y: 8.7, z: 0.0,
+    _observation_class: 'observed',
+    _confidence: 0.94
+  })
+`)
 
-// Create with parameters (always use this for user input)
-db.mutate("CREATE (n:Person {name: $name, age: $age})", { name: 'Bob', age: 35 })
+// Create with parameters (always use this for dynamic values)
+db.mutate(
+  "CREATE (e:Entity {id: $id, x: $x, y: $y, _observation_class: $cls, _confidence: $conf})",
+  { id: 'contact-x', x: 80.0, y: 90.0, cls: 'predicted', conf: 0.38 }
+)
 
-// Create a relationship (MATCH existing nodes first, then MERGE the edge)
-db.mutate("MATCH (a:Person {name: 'Alice'}) MATCH (b:Person {name: 'Bob'}) MERGE (a)-[:KNOWS]->(b)")
+// Create a relationship with provenance
+db.mutate(`
+  MATCH (a:Entity {id: 'unit-01'})
+  MATCH (b:Entity {id: 'contact-x'})
+  MERGE (a)-[:DETECTS {sensor: 'lidar-1', _confidence: 0.91}]->(b)
+`)
 
 // Batch create (faster for bulk operations)
 db.batchMutate([
-  "MERGE (a:Person {id: 'p1', name: 'Alice'})",
-  "MERGE (b:Person {id: 'p2', name: 'Bob'})",
-  "MERGE (c:Org {id: 'o1', name: 'Acme'})",
+  "MERGE (e:Entity {id: 'sensor-1', x: 0.0, y: 0.0})",
+  "MERGE (e:Entity {id: 'sensor-2', x: 50.0, y: 0.0})",
+  "MERGE (z:Zone {id: 'zone-alpha', name: 'Perimeter'})",
 ])
 ```
 
@@ -54,21 +68,25 @@ db.batchMutate([
 
 ```typescript
 // Query returns typed results — numbers are numbers, not strings
-const result = db.query("MATCH (n:Person) RETURN n.name, n.age ORDER BY n.name")
+const result = db.query(`
+  MATCH (e:Entity)
+  WHERE e._observation_class = 'observed' AND e._confidence > 0.8
+  RETURN e.id, e.x, e.y, e._confidence
+  ORDER BY e._confidence DESC
+`)
 
 // Access by column name
 for (const row of result.rows) {
-  const name: string = row.get('name') as string   // "Alice"
-  const age: number = row.get('age') as number      // 30 (number, not "30")
+  const id: string = row.get('e.id') as string
+  const conf: number = row.get('e._confidence') as number  // 0.94 (number, not "0.94")
 }
 
 // Access as objects
-const people = result.rows.map(row => row.toObject())
-// [{ 'n.name': 'Alice', 'n.age': 30 }, { 'n.name': 'Bob', 'n.age': 35 }]
+const entities = result.rows.map(row => row.toObject())
 
 // Result metadata
-result.columns    // ['n.name', 'n.age']
-result.rowCount   // 2
+result.columns    // ['e.id', 'e.x', 'e.y', 'e._confidence']
+result.rowCount   // number of rows returned
 result.computeMs  // 0.3 (milliseconds)
 ```
 
@@ -77,33 +95,45 @@ result.computeMs  // 0.3 (milliseconds)
 ```typescript
 // Always use parameters for dynamic values — prevents injection
 const result = db.query(
-  "MATCH (n:Person {name: $name}) RETURN n.age",
-  { name: 'Alice' }
+  "MATCH (e:Entity {id: $id}) RETURN e.x, e.y, e._confidence",
+  { id: 'unit-01' }
 )
-// result.rows[0].get('age') → 30
+// result.rows[0].get('e._confidence') → 0.94
 
 // Parameters work with all types
-db.query("MATCH (n) WHERE n.age > $min RETURN n.name", { min: 25 })
-db.query("MATCH (n {active: $active}) RETURN n", { active: true })
+db.query(
+  "MATCH (e:Entity) WHERE e._confidence > $threshold RETURN e.id",
+  { threshold: 0.85 }
+)
+db.query(
+  "MATCH (e:Entity {_observation_class: $cls}) RETURN e.id",
+  { cls: 'observed' }
+)
 ```
 
 ## Step 6: Update and delete
 
 ```typescript
-// Update a property
-db.mutate("MATCH (n:Person {name: 'Alice'}) SET n.age = 31")
+// Update position (entity moved)
+db.mutate(
+  "MATCH (e:Entity {id: $id}) SET e.x = $x, e.y = $y",
+  { id: 'unit-01', x: 14.2, y: 9.1 }
+)
 
-// Upsert (create if not exists, match if exists)
-db.mutate("MERGE (n:Person {id: 'p1'}) SET n.lastSeen = 'today'")
+// Upsert (create if not exists, update if exists)
+db.mutate(
+  "MERGE (e:Entity {id: $id}) SET e._confidence = $conf",
+  { id: 'unit-01', conf: 0.97 }
+)
 
 // Delete a node
-db.mutate("MATCH (n:Person {name: 'Bob'}) DELETE n")
+db.mutate("MATCH (e:Entity {id: 'contact-x'}) DELETE e")
 
 // Delete a node and all its relationships
-db.mutate("MATCH (n:Person {name: 'Bob'}) DETACH DELETE n")
+db.mutate("MATCH (e:Entity {id: 'contact-x'}) DETACH DELETE e")
 
 // Remove a property
-db.mutate("MATCH (n:Person {name: 'Alice'}) REMOVE n.email")
+db.mutate("MATCH (e:Entity {id: 'unit-01'}) REMOVE e.stale_field")
 ```
 
 ## Step 7: Run algorithms
@@ -184,26 +214,36 @@ import { openInMemory, ArcflowError } from 'arcflow'
 const db = openInMemory()
 
 try {
-  // Create
+  // Build a world model
   db.batchMutate([
-    "MERGE (alice:Person {id: 'p1', name: 'Alice', age: 30})",
-    "MERGE (bob:Person {id: 'p2', name: 'Bob', age: 35})",
-    "MERGE (acme:Org {id: 'o1', name: 'Acme', industry: 'tech'})",
+    "MERGE (e:Entity {id: 'unit-01', x: 12.4, y: 8.7, _observation_class: 'observed', _confidence: 0.94})",
+    "MERGE (e:Entity {id: 'unit-02', x: 45.0, y: 22.3, _observation_class: 'observed', _confidence: 0.88})",
+    "MERGE (e:Entity {id: 'contact-x', x: 80.0, y: 90.0, _observation_class: 'predicted', _confidence: 0.38})",
+    "MERGE (z:Zone {id: 'zone-alpha', name: 'Perimeter'})",
   ])
-  db.mutate("MATCH (a:Person {id: 'p1'}) MATCH (o:Org {id: 'o1'}) MERGE (a)-[:WORKS_AT]->(o)")
+  db.mutate(`
+    MATCH (a:Entity {id: 'unit-01'}) MATCH (b:Entity {id: 'contact-x'})
+    MERGE (a)-[:DETECTS {sensor: 'lidar-1', _confidence: 0.91}]->(b)
+  `)
 
-  // Read
-  const people = db.query("MATCH (n:Person) RETURN n.name, n.age ORDER BY n.name")
-  console.log(`Found ${people.rowCount} people`)
+  // Query high-confidence observed entities
+  const trusted = db.query(`
+    MATCH (e:Entity)
+    WHERE e._observation_class = 'observed' AND e._confidence > 0.85
+    RETURN e.id, e.x, e.y, e._confidence
+    ORDER BY e._confidence DESC
+  `)
+  console.log(`${trusted.rowCount} trusted entities in world model`)
 
-  // Parameterized query
-  const alice = db.query("MATCH (n:Person {name: $name}) RETURN n.age", { name: 'Alice' })
-  console.log(`Alice is ${alice.rows[0].get('age')}`)
+  // Temporal: what did the world model show 5 seconds ago?
+  const past = db.query(
+    "MATCH (e:Entity) AS OF seq $seq RETURN e.id, e._confidence",
+    { seq: 10 }
+  )
 
-  // Algorithm
+  // Centrality: which entities are most connected?
   const pr = db.query("CALL algo.pageRank()")
 
-  // Stats
   const stats = db.stats()
   console.log(`${stats.nodes} nodes, ${stats.relationships} relationships`)
 

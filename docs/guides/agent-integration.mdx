@@ -1,72 +1,219 @@
 ---
-title: "Agent Integration"
-description: "Using ArcFlow from AI coding agents (Claude Code, Cursor, etc.)"
+title: "ArcFlow for Coding Agents"
+description: "How coding agents interact with ArcFlow — CLI binary for Claude Code and Codex, structured errors with recovery hints, confidence-aware queries, and temporal replay for debugging."
 section: "guides"
-order: 3
+order: 11
 since: "0.2.0"
 status: "stable"
 ---
 
-# Agent Integration
+# ArcFlow for Coding Agents
 
-ArcFlow speaks the language of AI agents -- structured errors with recovery suggestions, deterministic output (same query + same state = same results), and filesystem-native operation with no daemon process required. Coding agents (Claude Code, Codex, Gemini CLI) use the CLI binary — each command exits in <10ms, no session required. Cloud chat interfaces (ChatGPT, Claude.ai) use the MCP server. Every response is machine-parseable.
+ArcFlow is designed to be used directly by coding agents — not as infrastructure they configure, but as a tool they call. The CLI exits in under 10ms. Every error carries a recovery suggestion. Results are structured JSON. Agents build world models the same way humans do, except they can query, reason, and update in a tight loop without any protocol overhead.
 
-## CLI as control surface
+---
 
-Agents interact with ArcFlow through the CLI. Every query returns structured,
-parseable output.
+## The three surfaces
+
+| Agent type | Interface | Latency |
+|---|---|---|
+| Claude Code, Codex CLI, Gemini CLI | `arcflow` binary | < 10ms |
+| Python agents, shell pipelines | `arcflow` binary | < 10ms |
+| ChatGPT, Claude.ai web | MCP server | ~100ms |
+
+For any agent with shell access, the CLI binary is always the right choice — no configuration, no MCP registration, no daemon.
+
+---
+
+## Starting a world model
 
 ```bash
-# Agent sends a query
-echo "MATCH (n:Person) RETURN n.name, n.age" | arcflow
+# Initialize a persistent workspace in the current project
+arcflow workspace init
+
+# All subsequent queries auto-discover .arcflow/ from any subdirectory
+arcflow query "CREATE (e:Entity {id: 'unit-01', x: 12.4, y: 8.7, _observation_class: 'observed', _confidence: 0.94})" --json
+
+# Or: in-memory only (no --data-dir, no init)
+arcflow query "MATCH (e:Entity) RETURN e.id" --json
 ```
 
-## Deterministic behavior
+---
 
-- Same query against same state = same results
-- Replay of write sequence produces same graph
-- No ambiguity in result schemas
+## Structured errors with recovery hints
 
-## Structured errors
+Every failure returns machine-readable fields. Agents parse `code` to decide recovery strategy — no string matching on `message`:
 
-Every error is typed with machine-readable fields:
-
+```bash
+arcflow query "METCH (n) RETURN n" --json 2>&1
+```
 ```json
 {
-  "class": "Validation",
-  "code": "UNKNOWN_LABEL",
-  "message": "Label 'Perso' not found",
-  "failing_field": "label",
-  "recovery_suggestion": "Check label spelling. Available: Person, Organization"
+  "ok": false,
+  "code": "PARSE_FAILED",
+  "message": "Unknown keyword 'METCH'",
+  "recovery_suggestion": "Did you mean MATCH?"
 }
 ```
 
-Agents parse `class` + `code` to decide recovery strategy without reading
-the `message` field.
-
-## EXPLAIN for planning
-
-Before executing an expensive query, agents can inspect the plan:
-
-```cypher
-EXPLAIN MATCH (a)-[:KNOWS*1..5]->(b) RETURN b.name
+```bash
+arcflow query "MATCH (n:Perso) RETURN n" --json 2>&1
+```
+```json
+{
+  "ok": false,
+  "code": "UNKNOWN_LABEL",
+  "message": "Label 'Perso' not found",
+  "failing_field": "label",
+  "recovery_suggestion": "Check label spelling. Available: Entity, Zone, Observation"
+}
 ```
 
-## Snapshot/restore for checkpointing
+Exit codes are deterministic:
 
-Agents can checkpoint state before risky operations:
+| Code | Meaning |
+|---|---|
+| `0` | Success |
+| `1` | Query error (syntax, missing label, type mismatch) |
+| `2` | System error (file not found, permission denied) |
+| `3` | Validation error (constraint violation) |
+
+The agent checks `$?` before parsing output.
+
+---
+
+## Schema discovery before querying
+
+Before writing queries against an existing world model, agents inspect the schema:
+
+```bash
+arcflow query "CALL db.schema()" --json
+```
+
+Returns every label, relationship type, property key, index, and constraint currently in the graph. An agent that reads schema first can write correct queries without trial and error.
+
+```bash
+# Full engine context — procedures, algorithms, observation classes
+arcflow agent-context synth --json
+```
+
+---
+
+## Confidence-aware queries
+
+World model queries should always filter on epistemic state:
+
+```bash
+# Only act on high-confidence observed facts
+arcflow query "
+  MATCH (e:Entity)
+  WHERE e._observation_class = 'observed' AND e._confidence > 0.85
+  RETURN e.id, e.x, e.y, e._confidence
+  ORDER BY e._confidence DESC
+" --json
+
+# Flag low-confidence predictions for verification
+arcflow query "
+  MATCH (e:Entity)
+  WHERE e._observation_class = 'predicted' AND e._confidence < 0.5
+  RETURN e.id, e._confidence
+  ORDER BY e._confidence ASC
+" --json
+```
+
+An agent building on a world model that mixes observed and predicted facts without filtering is reasoning from incomplete epistemic context.
+
+---
+
+## Temporal queries for debugging
+
+When an agent needs to understand what the world model showed at a previous moment:
+
+```bash
+# What was the entity's state 50 mutations ago?
+arcflow query "MATCH (e:Entity {id: 'unit-01'}) AS OF seq 50 RETURN e.x, e.y, e._confidence" --json
+
+# What entities existed before the agent's last write batch?
+arcflow query "MATCH (e:Entity) AS OF seq \$seq RETURN e.id, e._observation_class" \
+  --param seq=100 --json
+```
+
+This is the primary debugging surface: when an agent's decision produced a wrong outcome, `AS OF seq N` shows exactly what state the world model was in when that decision was made.
+
+---
+
+## Query planning before execution
+
+Before running an expensive traversal, agents can inspect the execution plan:
+
+```bash
+arcflow query "EXPLAIN MATCH (a:Entity)-[:DETECTS*1..5]->(b) RETURN b.id" --json
+```
+
+Use this before any multi-hop traversal or algorithm call on a large world model.
+
+---
+
+## Checkpointing before risky operations
+
+Agents checkpoint state before mutations that are hard to reverse:
+
+```bash
+# Save state before a bulk update
+arcflow query ":snapshot ./before-migration.json" --json
+
+# Run the migration
+arcflow query "MATCH (e:Entity) SET e.schema_version = 2" --json
+
+# Verify, then if something is wrong:
+arcflow query ":restore ./before-migration.json" --json
+```
+
+---
+
+## Batch execution — multiple queries, one call
+
+For processing many queries at once, the `--exec-dir` pattern avoids per-query startup overhead:
+
+```bash
+# Agent writes queries as files
+echo "MATCH (e:Entity) WHERE e._confidence > 0.9 RETURN e.id" > queries/trusted.cypher
+echo "CALL algo.pageRank()" > queries/centrality.cypher
+
+# Execute all at once
+arcflow --exec-dir queries/ --output-dir results/
+
+# Results appear as JSON files
+cat results/trusted.json
+cat results/centrality.json
+```
+
+One CLI invocation. N queries. N result files. No per-query startup.
+
+---
+
+## Multi-agent shared workspace
+
+Multiple agents can share the same world model through the filesystem:
 
 ```
-:snapshot ./before-migration.json
+project/
+└── .arcflow/
+    └── data/
+        └── worldcypher.snapshot.json   # Shared graph state
 ```
 
-And roll back if something goes wrong:
+Agent A writes observations. Agent B queries them. Agent C runs algorithms. No message broker. No coordination framework. For concurrent writes at scale, start the HTTP server to serialize access:
 
+```bash
+arcflow --http 8080 --data-dir .arcflow/data
 ```
-:restore ./before-migration.json
-```
+
+---
 
 ## See Also
 
-- [CLI Reference](/cli) — full command surface
-- [Errors Reference](/reference/errors) — all error types
+- [Agent-Native](/agent-native) — full surface comparison and filesystem workspace patterns
+- [Agent Tooling](/use-cases/agent-tooling) — ephemeral in-process usage, MCP for cloud chat UIs
+- [Temporal Queries](/temporal) — `AS OF seq N` for replay and audit
+- [Swarm & Multi-Agent](/guides/swarm-agents) — multi-agent coordination via shared world model
