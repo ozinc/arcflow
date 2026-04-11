@@ -19,4 +19,4 @@ db.batchMutate(lines)
 | File | Description | Nodes | Relationships |
 |---|---|---|---|
 | `social-network.cypher` | 6 people, 2 orgs, KNOWS/WORKS_AT/MENTORS | 8 | 13 |
-| `knowledge-graph.cypher` | Entities + confidence-scored facts (BASAL pattern) | 12 | 13 |
+| `knowledge-graph.cypher` | Entities + confidence-scored facts (world model pattern) | 12 | 13 |

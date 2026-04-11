@@ -6,7 +6,7 @@ The World Model database — spatial-temporal, confidence-scored, embedded. Spac
 
 | Consumer | Integration | Why |
 |---|---|---|
-| BASAL broker, watcher daemon | **napi-rs in-process** | Microseconds, same memory, no process boundary |
+| Application daemons, broker processes | **napi-rs in-process** | Microseconds, same memory, no process boundary |
 | Claude Code, Codex, Gemini CLI | **`arcflow` CLI binary** | Shell-native, composable, <10ms, no config |
 | ChatGPT, Claude.ai, Gemini web | **MCP server** | No local execution context, chat latency budget |
 | Python / shell pipelines | **`arcflow` CLI binary** | Same as CLI agents |
