@@ -1,137 +1,231 @@
 # ArcFlow
 
-The **World Model database**. Spatial-temporal, confidence-scored, embedded. Runs in the browser, Node.js, Python, Rust, and Docker. No server needed.
+**The World Model database.** Spatial-temporal, confidence-scored, embedded.
 
-Space and time are first-class dimensions — not columns, not extensions. Every mutation is versioned. Every fact carries an observation class (`observed`, `inferred`, `predicted`) and a confidence score. The entire history of the world model is queryable with a single ISO GQL syntax.
+Every autonomous system needs a model of its world — what entities exist, where they are, how confident we are in each fact, and what the world looked like at any previous moment. That model has always had to be assembled from separate systems: a spatial database for positions, a time-series store for history, a graph database for relationships, application code for confidence scoring. Each boundary introduces latency, consistency risk, and operational complexity.
 
-**[Try it now — arcflow.dev/engine](https://arcflow.dev/engine)** — runs in your browser, zero install.
+ArcFlow collapses this into one in-process engine. No server. No round-trip. Space and time are first-class dimensions, not extensions. Every mutation is versioned. Every fact carries an observation class and a confidence score. The entire history of the world model is queryable with ISO GQL — in the same syntax as the current state.
+
+**[Try it — arcflow.dev/engine](https://arcflow.dev/engine)** — runs in your browser, zero install.
 
 ```bash
 npm install arcflow
 ```
 
-```typescript
-import { openInMemory } from 'arcflow'
+---
 
-const db = openInMemory()  // No server. No Docker. No connection string.
-db.mutate("CREATE (n:Person {name: 'Alice', age: 30})")
-const result = db.query("MATCH (n:Person) RETURN n.name, n.age")
-console.log(result.rows[0].get('name'))  // "Alice"
-console.log(result.rows[0].get('age'))   // 30 (typed)
-db.close()
+```typescript
+import { open } from 'arcflow'
+
+const db = open('./data/world-model')
+
+// Entities with spatial positions, epistemic state, and confidence
+db.mutate(`
+  CREATE (e1:Entity {
+    name: 'Unit-01', x: 12.4, y: 8.7, z: 0.0,
+    vx: 0.5, vy: 0.0,
+    _observation_class: 'observed',
+    _confidence: 0.97
+  })
+  CREATE (e2:Entity {
+    name: 'Contact-X', x: 80.0, y: 90.0, z: 5.0,
+    _observation_class: 'predicted',
+    _confidence: 0.38
+  })
+`)
+
+// Spatial: nearest trusted entities — R*-tree backed, ≥ 2,000 queries/sec at 11K entities
+const nearby = db.query(`
+  CALL algo.nearestNodes(point({x: 0, y: 0}), 'Entity', 10)
+    YIELD node AS e, distance
+  WHERE e._observation_class = 'observed'
+    AND e._confidence > 0.85
+  RETURN e.name, distance
+  ORDER BY distance
+`)
+
+// Temporal: where was the world 5 seconds ago?
+const past = db.query(`
+  MATCH (e:Entity) AS OF (timestamp() - 5000)
+  RETURN e.name, e.x, e.y, e._confidence
+`)
+
+// Reactive: fire the instant anything enters a 5m radius
+db.subscribe(
+  `CALL algo.nearestNodes(point({x: 0, y: 0}), 'Entity', 10)
+     YIELD node AS e, distance
+   WHERE distance < 5.0
+     AND e._observation_class = 'observed'
+     AND e._confidence > 0.8
+   RETURN e.name, e.x, e.y`,
+  (event) => {
+    if (event.added.length > 0) triggerEmergencyStop()
+  }
+)
 ```
 
-Two lines to a working world model. Or zero lines — just open the browser.
+Spatial query composing with epistemic filter and graph traversal — in a single statement, in one engine, in your process.
 
-## Why ArcFlow
+---
 
-One in-process library replaces six services:
+## What makes a world model different from a database
 
-| You'd otherwise need | ArcFlow has it built in |
-|---|---|
-| Neo4j (graph DB) | GQL graph store (ISO/IEC 39075, Cypher-compatible) |
-| Redis (cache) | In-memory, zero-copy |
-| DuckDB (analytics) | Window functions, aggregations |
-| Pinecone (vector DB) | HNSW vector index |
-| Elasticsearch (search) | BM25 full-text search |
-| Temporal (workflows) | Graph-native durable workflows |
-
-### vs. Neo4j / Memgraph
-
-| | ArcFlow | Neo4j / Memgraph |
+| Dimension | Conventional database | ArcFlow World Model |
 |---|---|---|
-| Try it | **[Browser — zero install](https://arcflow.dev/engine)** | Download + install + configure |
-| Install | `npm install arcflow` | Docker + driver + connection |
-| First query | 2 lines | 10+ lines |
-| Server needed | **No** — in-process | Yes — separate process |
-| Runs in browser | **Yes** (WASM) | No |
-| Testing | `openInMemory()` | Docker container + teardown |
-| Algorithms | `CALL algo.pageRank()` | GDS: project → catalog → run → drop |
-| Vector search | Built-in | Separate service |
-| Window functions | LAG, LEAD, STDDEV_POP, PERCENT_RANK | Not available |
-| Live views | `CREATE LIVE VIEW` — auto-maintained | Not available |
-| MCP server | `npx arcflow-mcp` | None |
+| **Space** | Coordinates as numeric columns | R*-tree indexed — frustum queries, KNN, proximity algorithms native |
+| **Time** | Timestamps on rows | Every mutation versioned — `AS OF seq N` on the same graph, same syntax |
+| **Confidence** | Binary (present or absent) | Scored `[0.0, 1.0]` on every node and relationship |
+| **Provenance** | Absent or in a separate log | Built-in — every edge records which sensor, model, or process produced it |
+| **Observation class** | Not modeled | First-class: `observed`, `inferred`, or `predicted` on every fact |
+| **Relationships** | Foreign keys derived at query time | Stored first-class edges with properties and direction |
+| **Reactivity** | Poll for changes | `db.subscribe()` — standing queries fire on every relevant mutation |
+
+These are not features. They are the minimum requirements for a system that needs to reason about the physical world.
+
+---
+
+## Three epistemic states on every fact
+
+The world model distinguishes what was measured from what was inferred from what was predicted. This distinction drives operational decisions, not just metadata.
+
+```cypher
+-- Only act on high-confidence observed facts
+MATCH (e:Entity)
+WHERE e._observation_class = 'observed'
+  AND e._confidence > 0.85
+RETURN e.name, e.x, e.y
+
+-- Flag predictions for verification
+MATCH ()-[r:DETECTS]->(contact:Entity)
+WHERE contact._observation_class = 'predicted'
+  AND r._confidence < 0.5
+RETURN contact.name, r.sensor, r._confidence
+ORDER BY r._confidence ASC
+
+-- Confidence-weighted centrality: most trusted entities rank highest
+CALL algo.confidencePageRank()
+YIELD nodeId, score
+```
+
+A safety system running on confidence thresholds is fundamentally different from one running on boolean flags.
+
+---
+
+## Performance
+
+| Operation | Throughput |
+|---|---|
+| Spatial KNN (R*-tree, 11K entities) | ≥ 2,000 queries/sec |
+| Node creates | 9.3M/sec |
+| PageRank (154M nodes) | <1 second |
+| Geofence trigger latency | <20ms |
+| Temporal `AS OF` query | Same as current-state query — no separate index |
+
+---
 
 ## What you can build
 
-| Use Case | Why ArcFlow |
+| | Why ArcFlow |
 |---|---|
-| **World models** | Continuous spatial-temporal graph — entities, positions, relationships, confidence scores, full history |
-| Robotics & autonomous systems | Sensor fusion, spatial proximity, confidence-filtered perception, temporal replay |
-| Game AI | NPCs with persistent memory, shared world state, spatial awareness, behavior graphs |
-| Digital twins | Live replica of physical systems — queryable, versioned, spatially grounded |
-| Knowledge graphs | Entity linking, confidence-scored facts, provenance — all in one engine |
-| RAG pipelines | Graph traversal for multi-hop reasoning — the gap between what LLMs know and what they can connect |
-| AI agent memory | Persistent, queryable graph across sessions — not context window tricks |
-| Fraud detection | Circular patterns, shared identity clusters, temporal velocity — graph patterns SQL can't write |
-| Sports analytics | Player tracking, spatial queries, real-time formation analysis |
+| **Robotics perception** | Sensor fusion pipeline — observed/predicted tracks, lidar provenance, confidence-filtered spatial queries, emergency-stop reactive monitoring |
+| **Autonomous fleets** | Shared world model across all agents — spatial task assignment, formation coordination, temporal audit |
+| **Digital twins** | Live spatial replica of a physical facility — temporal history, anomaly detection, downstream topology |
+| **AI agent infrastructure** | Persistent working memory across sessions — confidence-scored observations, multi-agent coordination, durable workflows |
+| **Fraud detection** | Circular transaction patterns, shared identity clusters, confidence-scored entity links — graph patterns SQL can't write |
+| **Game AI** | NPCs with persistent spatial memory, behavior trees grounded in live world state, formation algorithms |
+| **Knowledge graphs** | Entity linking, confidence-scored facts, provenance-tracked sources — semantic + graph + full-text in one engine |
+| **Trusted RAG** | Confidence-filtered retrieval — query only high-confidence facts, detect stale information via temporal queries |
 
-## Features
+---
 
-```typescript
-// 30+ algorithms — no projection, no catalog
-db.query("CALL algo.pageRank()")
-db.query("CALL algo.louvain()")
+## One engine, no stack
 
-// Vector search — no separate service
-db.mutate("CREATE VECTOR INDEX idx FOR (n:Doc) ON (n.embedding) OPTIONS {dimensions: 1536, similarity: 'cosine'}")
-db.query("CALL algo.vectorSearch('idx', $vec, 10)", { vec: JSON.stringify(embedding) })
-
-// Full-text search — BM25
-db.mutate("CREATE FULLTEXT INDEX ft FOR (n:Person) ON (n.name)")
-db.query("CALL db.index.fulltext.queryNodes('ft', 'Alice')")
-
-// Window functions
-db.query("MATCH (n:Bar) RETURN lag(n.close, 1) OVER (PARTITION BY n.symbol ORDER BY n.date)")
-
-// Live views — incremental, auto-maintained
-db.mutate("CREATE LIVE VIEW stats AS MATCH (n) RETURN labels(n), count(*)")
-
-// Temporal snapshots
-db.query("MATCH (n:Person) AS OF 1700000000 RETURN n.name")
-
-// Persistence — WAL-journaled
-const db = open('./data/graph')
-
-// Structured errors — not stack traces
-try { db.query("BAD") } catch (e) {
-  e.code       // "EXPECTED_KEYWORD"
-  e.suggestion // "Expected MATCH or CREATE"
-}
 ```
+Traditional stack                ArcFlow
+─────────────────                ──────────────────────────────────
+Neo4j (graph)                →   GQL graph store (ISO/IEC 39075, Cypher-compatible)
+Separate spatial DB          →   R*-tree spatial index, composable with graph traversal
+Time-series DB               →   Every mutation versioned, AS OF seq N on the same graph
+Redis (cache)                →   In-memory, zero-copy
+Pinecone (vector DB)         →   HNSW vector index, 27 built-in graph algorithms
+Kafka/NATS (streaming)       →   CDC + standing queries, no external broker
+Temporal (workflows)         →   Graph-native durable workflows
+```
+
+All in one `GraphStore`. One process. Zero serialization between them.
+
+---
+
+## Query language: ISO GQL (WorldCypher)
+
+ArcFlow implements [ISO/IEC 39075 GQL](https://www.iso.org/standard/76120.html) — the international standard for graph query languages, published 2024. 100% openCypher TCK (3,881/3,881 scenarios). Full ISO GQL V2.
+
+If you know Cypher, you already know WorldCypher. The extensions are additive:
+
+```cypher
+-- Temporal: query any past state
+MATCH (e:Entity) AS OF seq 5000 RETURN e.name, e.x, e.y
+
+-- Spatial: composable with graph traversal
+CALL algo.nearestNodes(point({x: 0, y: 0}), 'Entity', 10)
+  YIELD node AS e, distance
+WHERE distance < 20.0
+MATCH (e)-[:MEMBER_OF]->(f:Formation {name: 'Alpha'})
+RETURN e.name, distance, f.pattern
+
+-- Reactive: standing query fires on every relevant mutation
+CREATE LIVE VIEW trusted_contacts AS
+  MATCH (e:Entity)
+  WHERE e._observation_class = 'observed' AND e._confidence > 0.85
+  RETURN e.name, e.x, e.y, e._confidence
+
+-- Graph algorithm — no projection, no catalog
+CALL algo.pageRank() YIELD nodeId, score
+```
+
+---
 
 ## Install
 
-| Method | Command | Friction |
-|---|---|---|
-| Browser | [arcflow.dev/engine](https://arcflow.dev/engine) | Zero — click and go |
-| npm | `npm install arcflow` | One command |
-| Binary | `curl -fsSL https://github.com/ozinc/arcflow/releases/latest/download/install.sh \| sh` | curl + run |
-| Python | `pip install arcflow` | One command |
-| Rust | `cargo add arcflow` | One command |
-| Docker | `docker run ghcr.io/ozinc/arcflow:latest` | Container |
-| CLI (coding agents) | `arcflow query '...'` | Shell-native, <10ms |
-| MCP (cloud chat UIs) | `npx arcflow-mcp` | ChatGPT, Claude.ai, Gemini web |
+| | Command |
+|---|---|
+| Browser | **[arcflow.dev/engine](https://arcflow.dev/engine)** — zero install |
+| npm | `npm install arcflow` |
+| Binary | `curl -fsSL https://arcflow.dev/install \| sh` |
+| Python | `pip install arcflow` |
+| Rust | `cargo add arcflow` |
+| Docker | `docker run ghcr.io/ozinc/arcflow:latest` |
+| CLI (coding agents) | `arcflow query '...'` — exits in <10ms, composable like grep |
+| MCP (cloud chat UIs) | `npx arcflow-mcp` |
+
+Pre-built native binaries for macOS (Apple Silicon + Intel), Linux (x64 + ARM64), and Windows (x64). No build tools required.
+
+---
 
 ## Documentation
 
-| Section | What you'll learn |
+| | |
 |---|---|
-| [Quickstart](docs/quickstart.mdx) | First query in 5 minutes |
-| [GQL / WorldCypher](docs/worldcypher.mdx) | Query language (ISO/IEC 39075 GQL, Cypher-compatible) |
-| [GQL Conformance](docs/reference/gql-conformance.mdx) | Standards lineage, TCK results, comparison with other implementations |
-| [Tutorials](docs/tutorials/knowledge-graph.mdx) | Knowledge graph, vector search, algorithms |
-| [Recipes](docs/recipes/crud.mdx) | Copy-paste patterns |
-| [API Reference](docs/reference/api.mdx) | TypeScript SDK API |
-| [Compatibility](docs/reference/compatibility.mdx) | Full feature matrix |
+| [World Model](docs/concepts/world-model.mdx) | What a world model is and why it matters |
+| [Building a World Model](docs/guides/world-model.mdx) | Step-by-step: entities, spatial queries, temporal memory, reactive monitoring |
+| [GQL / WorldCypher](docs/worldcypher.mdx) | Query language reference (ISO/IEC 39075, Cypher-compatible) |
+| [GQL Conformance](docs/reference/gql-conformance.mdx) | Standards lineage, TCK results, comparison with Neo4j/Memgraph/FalkorDB |
+| [Autonomous Systems](docs/use-cases/autonomous-systems.mdx) | Robot fleets, UAVs, self-driving vehicles |
+| [Digital Twins](docs/use-cases/digital-twins.mdx) | Live spatial replicas of physical facilities |
+| [Robotics & Perception](docs/use-cases/robotics.mdx) | Sensor fusion, ROS integration, track lifecycle |
+| [Quickstart](docs/quickstart.mdx) | First world model in minutes |
+
+---
 
 ## For AI coding agents
 
 | File | Purpose |
 |---|---|
-| [`AGENTS.md`](AGENTS.md) | Full context — API, GQL (WorldCypher), comparison table, patterns |
+| [`AGENTS.md`](AGENTS.md) | Full context — API, GQL (WorldCypher), spatial/temporal extensions, all procedures |
 | [`llms.txt`](llms.txt) | Compact reference for quick orientation |
-| [`llms-full.txt`](llms-full.txt) | Complete reference with every procedure |
+| [`llms-full.txt`](llms-full.txt) | Complete reference with every procedure and WorldCypher extension |
+
+---
 
 ## License
 
@@ -140,8 +234,4 @@ try { db.query("BAD") } catch (e) {
 | SDK wrapper code (this repo) | [MIT](LICENSE) |
 | ArcFlow engine (compiled binary) | [OZ Intent-Source License](legal/ENGINE-LICENSE.md) |
 
-The SDK wrapper is MIT — do whatever you want with it. The compiled ArcFlow
-engine binary shipped inside the npm/pip/cargo package is licensed under the
-[OZ Intent-Source License (OISL)](legal/INTENT-SOURCE-TERM-SHEET.md) — freely
-usable in commercial products, source proprietary, contributions via
-[Intent Relay](legal/ENGINE-LICENSE.md).
+The SDK is MIT. The compiled engine binary is licensed under the [OZ Intent-Source License (OISL)](legal/INTENT-SOURCE-TERM-SHEET.md) — freely usable in commercial products, source proprietary, contributions via [Intent Relay](legal/ENGINE-LICENSE.md).
