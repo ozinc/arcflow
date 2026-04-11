@@ -17,12 +17,12 @@ ArcFlow is that engine. It runs in-process, starts in two lines of code, and sur
 
 Three surfaces, no overlap:
 
-| Consumer | Integration | Why |
-|---|---|---|
-| **BASAL broker, watcher daemon** | napi-rs in-process | Microseconds, same memory |
-| **Claude Code, Codex, Gemini CLI** | `arcflow` CLI binary | Shell-native, composable, &lt;10ms |
-| **ChatGPT, Claude.ai, Gemini web** | MCP server | No local shell — MCP is the only bridge |
-| **Python / shell pipelines** | `arcflow` CLI binary | Same as CLI agents |
+| Consumer | Integration | Latency | Why |
+|---|---|---|---|
+| **BASAL broker, watcher daemon** | napi-rs in-process | **~1 µs** | Same memory, zero process boundary |
+| **Claude Code, Codex, Gemini CLI** | `arcflow` CLI binary | **< 10 ms** | Shell-native, composable, linked Rust binary |
+| **ChatGPT, Claude.ai, Gemini web** | MCP server | **~100 ms** | No local shell — MCP is the only bridge |
+| **Python / shell pipelines** | `arcflow` CLI binary | **< 10 ms** | Same as CLI agents |
 
 ## napi-rs binding — for application code
 

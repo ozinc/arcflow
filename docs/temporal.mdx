@@ -21,6 +21,73 @@ MATCH (o:Order {id: 'ORD-001'}) RETURN o.status  -- "shipped"
 MATCH (o:Order {id: 'ORD-001'}) AS OF seq 100 RETURN o.status  -- "confirmed"
 ```
 
+## Real-world queries
+
+The power of temporal queries is not in the syntax — it's in the questions you can now ask that were previously unanswerable without a separate audit system.
+
+**Post-incident reconstruction: who was where when it happened?**
+
+```cypher
+-- All players within 3m of the ball, 10 seconds before the goal was scored
+MATCH (g:Goal {match_id: 'match-001'})
+MATCH (b:Ball) AS OF (g.timestamp - 10000)
+  WHERE distance(b.position, g.position) < 1.0
+MATCH (p:Player) AS OF (g.timestamp - 10000)
+  WHERE distance(p.position, b.position) < 3.0
+RETURN p.name, p.team, p._confidence
+ORDER BY p._confidence DESC
+```
+
+The world model at `g.timestamp - 10000` is the exact graph state 10 seconds before the goal. No log reconstruction. No event replay pipeline. The same query syntax, a different time.
+
+**Fraud investigation: what did we know before we approved it?**
+
+```cypher
+-- Account state at the moment the transfer was authorised
+MATCH (a:Account {id: $account_id}) AS OF seq $approval_seq
+RETURN a.balance, a.risk_score, a.last_verified_at, a._confidence
+
+-- Which facts were predicted (not observed) at that moment?
+MATCH (a:Account {id: $account_id})-[r:LINKED_TO]->(b:Account)
+  AS OF seq $approval_seq
+WHERE r._observation_class = 'predicted'
+RETURN b.id, r._confidence, r.source
+```
+
+**Autonomous system debugging: what did the world model show before the decision?**
+
+```cypher
+-- Robot's view of obstacle positions 500ms before the collision
+MATCH (o:Obstacle) AS OF seq $collision_seq - 50
+RETURN o.name, o.position, o._observation_class, o._confidence
+ORDER BY o._confidence ASC
+
+-- Confidence at the moment versus now — did confidence degrade?
+MATCH (o:Obstacle {id: $id}) AS OF seq $collision_seq - 50
+RETURN o._confidence AS confidence_then
+
+MATCH (o:Obstacle {id: $id})
+RETURN o._confidence AS confidence_now
+```
+
+**Knowledge graph staleness: which facts aged past their reliable window?**
+
+```cypher
+-- Facts that were current 24h ago but have since been superseded
+MATCH (f:Fact) AS OF (timestamp() - 86400000)
+WHERE f._observation_class = 'observed'
+WITH f.id AS fact_id, f._confidence AS old_confidence
+
+MATCH (f:Fact {id: fact_id})
+WHERE f._confidence < old_confidence - 0.2
+RETURN fact_id, old_confidence, f._confidence AS current_confidence
+ORDER BY (old_confidence - f._confidence) DESC
+```
+
+These are not reconstructions from logs. They are direct queries against the versioned world model — same graph, same language, different point in time.
+
+---
+
 ## Clock and Ticks
 
 The engine maintains a logical clock. Each mutation advances the clock tick.
