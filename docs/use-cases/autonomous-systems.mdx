@@ -13,9 +13,9 @@ playground:
 
 Every autonomous system is, at its core, a question of state: what is known, when it was known, and how much to trust it. A robot navigating a warehouse, a UAV fleet maintaining formation, a self-driving vehicle making a lane-change decision — each requires a continuous, spatially precise, temporally accurate, confidence-scored store of what is actually happening.
 
-Neural world models are the prediction tier — generative engines that anticipate how the world evolves under actions. ArcFlow is the persistence tier — the operational world model that stores what actually happened, at what confidence, from which sensor, queryable at any sequence checkpoint.
+Neural world models are the simulation tier — generative engines that anticipate how the world evolves under actions. ArcFlow is the persistence tier — the operational world model that stores what actually happened, at what confidence, from which sensor, queryable at any sequence checkpoint.
 
-Neural world models predict. ArcFlow remembers. Autonomous systems need both.
+Neural world models simulate. ArcFlow records. Autonomous systems need both.
 
 ## The infrastructure problem
 
@@ -210,7 +210,7 @@ CALL arcflow.scene.queryInLocalSpace(robot_id, 10.0)
 
 ## Why one world model instead of five systems
 
-The operational world model layer is the piece most autonomous stacks are missing. Neural world models handle prediction. ArcFlow handles persistence — collapsing what used to be five separate systems into one in-process engine.
+The operational world model layer is the piece most autonomous stacks are missing. Neural world models handle simulation. ArcFlow handles persistence — collapsing what used to be five separate systems into one in-process engine.
 
 | Capability | Traditional stack | ArcFlow |
 |---|---|---|
@@ -226,7 +226,7 @@ The operational world model layer is the piece most autonomous stacks are missin
 
 ## See Also
 
-- [World Model](/concepts/world-model) — the two-layer framing: neural world models predict, ArcFlow persists
+- [World Model](/concepts/world-model) — the two-layer framing: neural world models simulate, ArcFlow records
 - [Building a World Model](/guides/world-model) — step-by-step with spatial, temporal, and confidence
 - [Grounded Neural Objects](/use-cases/grounded-neural-objects) — lifting neural world models detections into persistent entities
 - [Spatial Queries](/spatial-knowledge) — R*-tree, frustum, line-of-sight

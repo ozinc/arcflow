@@ -13,7 +13,7 @@ playground:
 
 The coordination problem in multi-agent systems is not a communication problem. It is an operational world model problem.
 
-When multiple agents operate independently — LLM agents running in parallel, a robot fleet navigating shared space, a pipeline of workers processing tasks — they need a shared answer to one question: *what does the collective know, right now, and how confident is it?* Solving that with a message bus gives you delivery. Solving it with a vector store gives you similarity. Neural world models predict what the world could look like — but don't store what agents actually did. None of these gives you a persistent, queryable, spatially grounded, temporally accurate store of world state that every agent reads from and writes to without coordination overhead.
+When multiple agents operate independently — LLM agents running in parallel, a robot fleet navigating shared space, a pipeline of workers processing tasks — they need a shared answer to one question: *what does the collective know, right now, and how confident is it?* Solving that with a message bus gives you delivery. Solving it with a vector store gives you similarity. Neural world models simulate what the world could look like — but don't store what agents actually did. None of these gives you a persistent, queryable, spatially grounded, temporally accurate store of world state that every agent reads from and writes to without coordination overhead.
 
 That is what ArcFlow provides as the coordination substrate. The world model is the swarm's shared mind. Agents register, write observations, claim tasks, and query the combined knowledge of every other agent — with full temporal history, confidence scoring, and live notification the moment anything changes.
 
