@@ -5,7 +5,6 @@ section: "concepts"
 order: 3
 since: "0.2.0"
 status: "stable"
-  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS entity_count, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS composite_trust RETURN zone, hazard, entity_count, avg_battery, composite_trust, CASE WHEN composite_trust >= 0.92 THEN 'authoritative' WHEN composite_trust >= 0.80 THEN 'confirmed' WHEN composite_trust >= 0.65 THEN 'uncertain' ELSE 'unreliable' END AS provenance_tier ORDER BY composite_trust DESC"
 playground:
   seed: world
   query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS entity_count, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS composite_trust RETURN zone, hazard, entity_count, avg_battery, composite_trust, CASE WHEN composite_trust >= 0.92 THEN 'authoritative' WHEN composite_trust >= 0.80 THEN 'confirmed' WHEN composite_trust >= 0.65 THEN 'uncertain' ELSE 'unreliable' END AS provenance_tier ORDER BY composite_trust DESC"

@@ -3,7 +3,6 @@ title: "Use Case: Sports Analytics"
 description: "Sports analytics as a world model problem — spatial-temporal player tracking, confidence-scored events, formation algorithms, and real-time queries in one engine"
 section: "use-cases"
 status: "stable"
-  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS entity_count, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS composite_trust RETURN zone, hazard, entity_count, avg_battery, composite_trust, CASE WHEN composite_trust >= 0.9 THEN 'high composite_trust' WHEN composite_trust >= 0.75 THEN 'adequate composite_trust' ELSE 'composite_trust gaps' END AS zone_observability ORDER BY composite_trust DESC"
 playground:
   seed: world
   query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS active_agents, avg(r.speed) AS avg_speed, avg(r.battery) AS avg_energy, avg(s.reliability * d.confidence) AS tracking_quality RETURN zone, hazard, active_agents, avg_speed, avg_energy, tracking_quality, CASE WHEN tracking_quality >= 0.92 THEN 'broadcast-ready' WHEN tracking_quality >= 0.80 THEN 'analytics-grade' ELSE 'data-gap' END AS data_tier ORDER BY tracking_quality DESC"
@@ -12,7 +11,7 @@ playground:
 
 # Use Case: Sports Analytics
 
-Sports analytics is fundamentally a world model problem. 22 players tracked at 50Hz. Formations that emerge from spatial relationships. Events detected from position history. Historical queries at any moment in the match.
+Sports analytics is fundamentally an operational world model problem — the persistence and query layer, not the prediction layer. 22 players tracked at 50Hz. Formations that emerge from spatial relationships. Events detected from position history. Historical queries at any moment in the match. Neural world model outputs (pose estimates, trajectory predictions) arrive as `_observation_class: 'predicted'` facts alongside camera-confirmed positions. ArcFlow stores all of it, versions all of it, and makes all of it queryable with one syntax.
 
 ## The problem
 

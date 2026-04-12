@@ -3,7 +3,6 @@ title: "Recipe: GraphRAG"
 description: "Graph RAG from the world model — combine vector search, graph traversal, and confidence filtering to ground LLM context in structured evidence."
 section: "recipes"
 status: "stable"
-  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WHERE s.reliability >= 0.9 AND d.confidence >= 0.88 WITH z.name AS zone, z.hazard AS hazard, count(r) AS entity_count, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS composite_trust RETURN zone, hazard, entity_count, avg_battery, composite_trust, CASE WHEN composite_trust >= 0.93 THEN 'tier-1' WHEN composite_trust >= 0.88 THEN 'tier-2' ELSE 'tier-3' END AS rag_tier ORDER BY composite_trust DESC"
 playground:
   seed: world
   query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WHERE s.reliability >= 0.90 AND d.confidence >= 0.88 WITH z.name AS zone, z.hazard AS hazard, count(r) AS entities, avg(d.confidence) AS avg_confidence, avg(s.reliability) AS avg_reliability, avg(s.reliability * d.confidence) AS composite_trust RETURN zone, hazard, entities, avg_confidence, avg_reliability, composite_trust, CASE WHEN composite_trust >= 0.92 THEN 'tier1' WHEN composite_trust >= 0.88 THEN 'tier2' ELSE 'tier3' END AS rag_tier ORDER BY composite_trust DESC"

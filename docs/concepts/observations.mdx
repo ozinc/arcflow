@@ -3,7 +3,6 @@ title: "Observations & Evidence"
 description: "Confidence-scored, provenance-tracked observations with three classes: observed, inferred, predicted"
 section: "concepts"
 status: "stable"
-  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS entity_count, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS composite_trust RETURN zone, hazard, entity_count, avg_battery, composite_trust, CASE WHEN composite_trust >= 0.90 THEN 'optimal' WHEN composite_trust >= 0.75 THEN 'nominal' ELSE 'degraded' END AS status ORDER BY composite_trust DESC"
 playground:
   seed: world
   query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH s.name AS sensor, s.type AS modality, s.reliability AS sensor_trust, count(r) AS observations, avg(d.confidence) AS avg_confidence, avg(s.reliability * d.confidence) AS evidence_weight RETURN sensor, modality, sensor_trust, observations, avg_confidence, evidence_weight, CASE WHEN evidence_weight >= 0.92 THEN 'primary-source' WHEN evidence_weight >= 0.80 THEN 'corroborating' ELSE 'insufficient' END AS evidence_class ORDER BY evidence_weight DESC"

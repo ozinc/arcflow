@@ -3,7 +3,6 @@ title: "Recipe: Full-Text Search"
 description: "BM25-scored full-text search over world model node properties — multi-property indexing, ranked results, and parameterized queries."
 section: "recipes"
 status: "stable"
-  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WHERE r.name CONTAINS 'las' OR r.task CONTAINS 'inspect' WITH z.name AS zone, z.hazard AS hazard, count(r) AS entity_count, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS composite_trust RETURN zone, hazard, entity_count, avg_battery, composite_trust, CASE WHEN composite_trust >= 0.90 THEN 'optimal' WHEN composite_trust >= 0.75 THEN 'nominal' ELSE 'degraded' END AS status ORDER BY composite_trust DESC"
 playground:
   seed: world
   query: "MATCH (s:Sensor)-[:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WHERE r.name CONTAINS 'las' OR r.task CONTAINS 'inspect' OR z.name STARTS WITH 'Lab' RETURN s.name AS sensor, s.type AS modality, s.reliability AS reliability, r.name AS robot, r.task AS task, z.name AS zone ORDER BY r.name"

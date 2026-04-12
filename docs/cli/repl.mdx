@@ -6,7 +6,7 @@ order: 2
 since: "0.2.0"
 status: "stable"
 playground:
-  query: "MERGE (r:Robot {id: 'repl-bot', name: 'REPL-Bot', task: 'explore', battery: 100, status: 'ready', x: 0.0, y: 0.0}) MERGE (s:Sensor {id: 'repl-cam', name: 'REPL-Cam', type: 'camera', reliability: 0.99, x: 1.0, y: 2.0}) MERGE (s:Sensor {id: 'repl-cam'})-[:DETECTED {confidence: 0.99, method: 'vision'}]->(r:Robot {id: 'repl-bot'}) MATCH (s:Sensor)-[d:DETECTED]->(r:Robot) RETURN s.name AS sensor, s.reliability, d.confidence AS trust, r.name AS robot, r.task, r.battery, r.status"
+  query: "MERGE (r:Robot {id: 'repl-bot', name: 'REPL-Bot', task: 'explore', battery: 100, status: 'ready', x: 0.0, y: 0.0}) MERGE (s:Sensor {id: 'repl-cam', name: 'REPL-Cam', type: 'camera', reliability: 0.99, last_confidence: 0.99, x: 1.0, y: 2.0}) MERGE (s:Sensor {id: 'repl-cam'})-[:DETECTED]->(r:Robot {id: 'repl-bot'}) MATCH (s:Sensor)-[:DETECTED]->(r:Robot) RETURN s.name AS sensor, s.reliability AS reliability, s.last_confidence AS last_trust, r.name AS robot, r.task AS task, r.battery AS battery, r.status AS status"
 ---
 
 # REPL

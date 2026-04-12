@@ -3,7 +3,6 @@ title: "Get Started"
 description: "ArcFlow is the World Model database — spatial-temporal, confidence-scored, embedded. Runs in browser, Node.js, Python, Rust, and Docker with no server needed."
 section: "get-started"
 status: "stable"
-  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS entity_count, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS composite_trust RETURN zone, hazard, entity_count, avg_battery, composite_trust, CASE WHEN composite_trust >= 0.90 THEN 'optimal' WHEN composite_trust >= 0.75 THEN 'nominal' ELSE 'degraded' END AS status ORDER BY composite_trust DESC"
 playground:
   seed: world
   query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS robots_tracked, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS world_trust RETURN zone, hazard, robots_tracked, avg_battery, world_trust, CASE WHEN world_trust >= 0.90 THEN 'high-confidence' WHEN world_trust >= 0.75 THEN 'operational' ELSE 'needs-calibration' END AS model_quality ORDER BY world_trust DESC"

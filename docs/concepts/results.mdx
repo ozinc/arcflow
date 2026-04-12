@@ -3,7 +3,6 @@ title: "Query Results"
 description: "World model query results as typed rows — numbers are numbers, not strings. ISO GQL status codes, mutation statistics, and structured access patterns."
 section: "concepts"
 status: "stable"
-  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS entity_count, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS composite_trust RETURN zone, hazard, entity_count, avg_battery, composite_trust, CASE WHEN composite_trust >= 0.9 THEN 'fully observed' WHEN composite_trust >= 0.75 THEN 'partially observed' ELSE 'low composite_trust' END AS observability ORDER BY composite_trust DESC"
 playground:
   seed: world
   query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS entity_count, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS composite_trust RETURN zone, hazard, entity_count, avg_battery, composite_trust, CASE WHEN composite_trust >= 0.9 THEN 'fully-observed' WHEN composite_trust >= 0.75 THEN 'partially-observed' ELSE 'low-confidence' END AS observability ORDER BY composite_trust DESC"

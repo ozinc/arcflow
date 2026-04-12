@@ -5,7 +5,6 @@ section: "event-sourcing"
 order: 1
 since: "4.0.0"
 status: "stable"
-  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS entity_count, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS composite_trust RETURN zone, hazard, entity_count, avg_battery, composite_trust, CASE WHEN composite_trust >= 0.90 THEN 'optimal' WHEN composite_trust >= 0.75 THEN 'nominal' ELSE 'degraded' END AS status ORDER BY composite_trust DESC"
 playground:
   seed: world
   query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS tracked_entities, avg(r.battery) AS avg_battery, avg(r.speed) AS avg_velocity, avg(s.reliability * d.confidence) AS event_quality RETURN zone, hazard, tracked_entities, avg_battery, avg_velocity, event_quality, CASE WHEN event_quality >= 0.90 THEN 'high-fidelity' WHEN event_quality >= 0.75 THEN 'operational' ELSE 'replay-needed' END AS event_state ORDER BY event_quality DESC"

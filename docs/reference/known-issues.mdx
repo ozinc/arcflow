@@ -3,10 +3,9 @@ title: "Known Issues"
 description: "Known world model engine issues and workarounds — Metal GPU hangs, pnpm binary sync, multi-MATCH naming collisions, and parameter coercion."
 section: "reference"
 status: "stable"
-  query: "MATCH (r:Robot) SET r.tier = CASE WHEN r.battery >= 85 THEN 'optimal' WHEN r.battery >= 65 THEN 'nominal' ELSE 'low-power' END MATCH (r:Robot)-[:OCCUPIES]->(z:Zone) RETURN r.name AS robot, r.task, r.battery, r.tier, r.x AS world_x, r.y AS world_y, z.name AS zone, z.hazard ORDER BY r.battery DESC"
 playground:
   seed: world
-  query: "MATCH (r:Robot) SET r.status = CASE WHEN r.battery >= 80 THEN 'active' WHEN r.battery >= 60 THEN 'nominal' ELSE 'low-power' END\n\nMATCH (r:Robot)-[:OCCUPIES]->(z:Zone) RETURN r.name AS robot, r.task AS task, r.battery AS battery, r.status AS status, r.x AS pos_x, r.y AS pos_y, z.name AS zone, z.hazard AS hazard ORDER BY r.battery DESC"
+  query: "MATCH (r:Robot) SET r.status = CASE WHEN r.battery >= 80 THEN 'active' WHEN r.battery >= 60 THEN 'nominal' ELSE 'low-power' END MATCH (r:Robot)-[:OCCUPIES]->(z:Zone) RETURN r.name AS robot, r.task AS task, r.battery AS battery, r.status AS status, r.x AS pos_x, r.y AS pos_y, z.name AS zone, z.hazard AS hazard ORDER BY r.battery DESC"
 
 ---
 

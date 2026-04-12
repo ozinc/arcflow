@@ -3,7 +3,6 @@ title: "Graph Patterns"
 description: "Pattern matching is how you query the world model — ASCII-art graph patterns that match nodes, relationships, and paths in the spatial-temporal graph."
 section: "concepts"
 status: "stable"
-  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS zone_risk, count(r) AS robot_count, avg(s.reliability * d.confidence) AS avg_composite_trust, avg(r.battery) AS avg_energy RETURN zone, zone_risk, robot_count, avg_composite_trust, avg_energy ORDER BY avg_composite_trust DESC"
 playground:
   seed: world
   query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS zone_risk, count(r) AS robot_count, avg(s.reliability * d.confidence) AS pattern_confidence, avg(r.battery) AS avg_energy RETURN zone, zone_risk, robot_count, pattern_confidence, avg_energy, CASE WHEN robot_count >= 2 AND pattern_confidence >= 0.88 THEN 'dense-trusted' WHEN robot_count >= 2 THEN 'dense-uncertain' WHEN pattern_confidence >= 0.88 THEN 'sparse-trusted' ELSE 'sparse-uncertain' END AS pattern_class ORDER BY pattern_confidence DESC"
