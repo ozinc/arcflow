@@ -5,8 +5,10 @@ section: "concepts"
 order: 2
 since: "0.2.0"
 status: "stable"
-playground:
   query: "MERGE (sk:Skill {id: 'zone-watch', name: 'ZoneWatch', version: 3, min_confidence: 0.82, active: 1}) MERGE (s1:Sensor {id: 'cam-1', name: 'Cam-LabA', type: 'camera', reliability: 0.95}) MERGE (s2:Sensor {id: 'lidar-1', name: 'Lidar-LabB', type: 'lidar', reliability: 0.91}) MERGE (s3:Sensor {id: 'rfid-1', name: 'RFID-Gate', type: 'rfid', reliability: 0.99}) MERGE (sk:Skill {id: 'zone-watch'})-[:GOVERNS {since_seq: 1, config: 'high-freq', freq_hz: 25}]->(s1:Sensor {id: 'cam-1'}) MERGE (sk:Skill {id: 'zone-watch'})-[:GOVERNS {since_seq: 1, config: 'standard', freq_hz: 10}]->(s2:Sensor {id: 'lidar-1'}) MERGE (sk:Skill {id: 'zone-watch'})-[:GOVERNS {since_seq: 2, config: 'entry-point', freq_hz: 5}]->(s3:Sensor {id: 'rfid-1'}) MATCH (sk:Skill)-[g:GOVERNS]->(s:Sensor) RETURN sk.name AS constructor, sk.version, sk.min_confidence, g.config AS sensor_config, g.freq_hz AS poll_rate, s.name AS sensor, s.type, s.reliability ORDER BY s.reliability DESC"
+playground:
+  query: "MERGE (sk:Skill {id: 'zone-watch', name: 'ZoneWatch', version: 3, min_confidence: 0.82, active: 1})\n\nMERGE (s1:Sensor {id: 'cam-1', name: 'Cam-LabA', type: 'camera', reliability: 0.95, freq_hz: 25, config: 'high-freq'})\n\nMERGE (s2:Sensor {id: 'lidar-1', name: 'Lidar-LabB', type: 'lidar', reliability: 0.91, freq_hz: 10, config: 'standard'})\n\nMERGE (s3:Sensor {id: 'rfid-1', name: 'RFID-Gate', type: 'rfid', reliability: 0.99, freq_hz: 5, config: 'entry-point'})\n\nMERGE (sk1:Skill {id: 'zone-watch'})-[:GOVERNS]->(s1a:Sensor {id: 'cam-1'})\n\nMERGE (sk2:Skill {id: 'zone-watch'})-[:GOVERNS]->(s2a:Sensor {id: 'lidar-1'})\n\nMERGE (sk3:Skill {id: 'zone-watch'})-[:GOVERNS]->(s3a:Sensor {id: 'rfid-1'})\n\nMATCH (sk:Skill)-[:GOVERNS]->(s:Sensor) RETURN sk.name AS constructor, sk.version AS version, sk.min_confidence AS min_confidence, s.name AS sensor, s.type AS sensor_type, s.reliability AS reliability, s.freq_hz AS poll_rate, s.config AS sensor_config ORDER BY s.reliability DESC"
+
 ---
 
 # Constructors

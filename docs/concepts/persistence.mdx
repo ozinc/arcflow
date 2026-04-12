@@ -3,8 +3,10 @@ title: "Persistence & WAL"
 description: "The world model persists across restarts — WAL journaling with MVCC lock-free reads, crash recovery, and deterministic replay built in."
 section: "concepts"
 status: "stable"
-playground:
   query: "MERGE (r:Robot {id: 'r1', name: 'Atlas-01', x: 18.0, y: 8.5, speed: 1.2, task: 'assembly', battery: 87, status: 'active'}) SET r.battery = 92, r.status = 'charging', r.dock_seq = 310, r.updated = 1 MATCH (r:Robot {id: 'r1'}) RETURN r.name, r.task, r.battery, r.speed, r.status, r.dock_seq, r.x, r.y"
+playground:
+  query: "MERGE (r:Robot {id: 'r1', name: 'Atlas-01', x: 18.0, y: 8.5, speed: 1.2, task: 'assembly', battery: 87, status: 'active'})\n\nMATCH (r:Robot {id: 'r1'}) SET r.battery = 92, r.status = 'charging', r.dock_seq = 310, r.updated = 1\n\nMATCH (r:Robot {id: 'r1'}) RETURN r.name AS robot, r.task AS task, r.battery AS battery, r.speed AS speed, r.status AS status, r.dock_seq AS dock_seq, r.x AS world_x, r.y AS world_y"
+
 ---
 
 # Persistence & WAL
