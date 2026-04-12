@@ -15,7 +15,7 @@ playground:
 
 Most AI systems can read the world. Few can remember it.
 
-They parse language. They embed text. They generate responses. Neural world models (Cosmos, Genie, FSD) go further — they learn to simulate how the world evolves under actions, anticipating futures from petabytes of sensor data. But when the question is "Where was that entity 30 seconds ago? What does the sensor data say? How confident are we, and which instrument produced that reading?" — prediction is not the answer. Persistence is.
+They parse language. They embed text. They generate responses. Neural world models go further — they learn to simulate how the world evolves under actions, anticipating futures from petabytes of sensor data. But when the question is "Where was that entity 30 seconds ago? What does the sensor data say? How confident are we, and which instrument produced that reading?" — prediction is not the answer. Persistence is.
 
 The AI infrastructure stack has a missing middle tier. Foundation models handle language and perception. Neural world models handle generative prediction. But the layer where actual world state persists — spatially precise, temporally versioned, confidence-scored — has no standard infrastructure. That gap is a database problem.
 
@@ -357,7 +357,7 @@ Vector search composes with all other query types — filter by label, confidenc
 
 ## 9. USD scene export and physics queries
 
-For world models representing USD stages (Isaac Sim, Omniverse, game engines, digital twin platforms), ArcFlow exports and queries using USD semantics directly:
+For world models representing USD stages (USD-based simulators, simulation platforms, game engines, digital twin platforms), ArcFlow exports and queries using USD semantics directly:
 
 ```cypher
 -- Export the world model as USD ASCII

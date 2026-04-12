@@ -12,7 +12,7 @@ playground:
 
 # Migration Guide
 
-If you've worked with Neo4j, Memgraph, FalkorDB, TigerGraph, or Cosmos DB's Gremlin API, most of what you know transfers. ArcFlow uses GQL (ISO/IEC 39075) with full Cypher compatibility — your existing `MATCH`, `CREATE`, `MERGE`, and `WHERE` clauses work without modification. This isn't coincidence: Cypher was the dominant influence on the ISO GQL specification. The syntax survived the standardization process largely intact.
+If you've worked with Neo4j, Memgraph, FalkorDB, TigerGraph, or neural world models DB's Gremlin API, most of what you know transfers. ArcFlow uses GQL (ISO/IEC 39075) with full Cypher compatibility — your existing `MATCH`, `CREATE`, `MERGE`, and `WHERE` clauses work without modification. This isn't coincidence: Cypher was the dominant influence on the ISO GQL specification. The syntax survived the standardization process largely intact.
 
 What changes: the deployment model (in-process or lightweight server, no JVM), built-in GPU-accelerated algorithms, confidence scoring, temporal queries, and vector search with no add-ons.
 
@@ -23,7 +23,7 @@ This guide covers what stays the same, what's different, and how to move your da
 | Aspect | Typical Graph Database | ArcFlow |
 |---|---|---|
 | **Deployment** | Client-server (Neo4j, TigerGraph) or embedded (FalkorDB, Memgraph) | In-process library or lightweight server mode |
-| **Runtime** | JVM (Neo4j, TigerGraph), C/C++ (Memgraph, FalkorDB), .NET (Cosmos DB) | Native binary, no runtime dependency |
+| **Runtime** | JVM (Neo4j, TigerGraph), C/C++ (Memgraph, FalkorDB), .NET (neural world models DB) | Native binary, no runtime dependency |
 | **Memory model** | Off-heap page cache or shared memory | In-process shared memory (SoC architecture) |
 | **Serialization** | Wire protocol (Bolt, Gremlin, GSQL) | None (in-process) or TCP/HTTP |
 | **Query language** | Cypher, Gremlin, GSQL, GQL | GQL (ISO/IEC 39075) — WorldCypher implementation; 100% openCypher TCK, full ISO GQL V2 |
@@ -41,7 +41,7 @@ ArcFlow can run as an in-process engine with zero network overhead, or as a stan
 
 **Conformance:** ArcFlow passes 100% of the openCypher TCK (3881/3881 scenarios) and implements ISO GQL V2 fully, including GQLSTATUS codes, `IS LABELED`, `ELEMENT_ID`, `NEXT WHEN/THEN/ELSE/END` conditional pipelines, `UNIQUE` and `PRIMARY KEY` constraints, and transaction control statements. See [GQL Conformance](/reference/gql-conformance) for the full breakdown and comparison with other implementations.
 
-If you're coming from Neo4j, Memgraph, or FalkorDB (all GQL-family), most of your queries port directly. Coming from TigerGraph (GSQL) or Cosmos DB (Gremlin) requires a query rewrite, but the graph modeling concepts transfer.
+If you're coming from Neo4j, Memgraph, or FalkorDB (all GQL-family), most of your queries port directly. Coming from TigerGraph (GSQL) or neural world models DB (Gremlin) requires a query rewrite, but the graph modeling concepts transfer.
 
 ### Fully Compatible (GQL family)
 
@@ -119,7 +119,7 @@ Export your data as Cypher statements or CSV. The method varies by vendor:
 - **Memgraph**: `DUMP DATABASE` or CSV export via `LOAD CSV` in reverse
 - **FalkorDB**: Export via RedisGraph commands or Cypher MATCH + file write
 - **TigerGraph**: GSQL export, then convert to Cypher CREATE statements
-- **Cosmos DB**: Export via Gremlin queries to JSON, then convert to Cypher
+- **neural world models DB**: Export via Gremlin queries to JSON, then convert to Cypher
 
 ```cypher
 -- Most GQL-compatible databases support exporting as CREATE statements
@@ -133,7 +133,7 @@ WorldCypher accepts most Cypher CREATE statements directly. Key adaptations:
 1. Remove vendor-specific syntax (proprietary ID functions, internal properties)
 2. Replace `FOREACH` with `UNWIND`
 3. Remove `CALL {} IN TRANSACTIONS` wrappers
-4. Convert GSQL or Gremlin to Cypher if coming from TigerGraph or Cosmos DB
+4. Convert GSQL or Gremlin to Cypher if coming from TigerGraph or neural world models DB
 5. Keep CREATE, MERGE, and SET statements as-is
 
 ### Step 3: Import into ArcFlow

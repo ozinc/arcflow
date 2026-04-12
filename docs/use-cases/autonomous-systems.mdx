@@ -1,6 +1,6 @@
 ---
 title: "Autonomous Systems"
-description: "The operational world model layer for autonomous systems — persistence, spatial queries, and temporal memory that complete the stack beneath neural world models like Cosmos and FSD."
+description: "The operational world model layer for autonomous systems — persistence, spatial queries, and temporal memory that complete the stack beneath neural world models."
 section: "use-cases"
 status: "stable"
 playground:
@@ -13,7 +13,7 @@ playground:
 
 Every autonomous system is, at its core, a question of state: what is known, when it was known, and how much to trust it. A robot navigating a warehouse, a UAV fleet maintaining formation, a self-driving vehicle making a lane-change decision — each requires a continuous, spatially precise, temporally accurate, confidence-scored store of what is actually happening.
 
-Neural world models (Cosmos, FSD, Genie) are the prediction tier — generative engines that anticipate how the world evolves under actions. ArcFlow is the persistence tier — the operational world model that stores what actually happened, at what confidence, from which sensor, queryable at any sequence checkpoint.
+Neural world models are the prediction tier — generative engines that anticipate how the world evolves under actions. ArcFlow is the persistence tier — the operational world model that stores what actually happened, at what confidence, from which sensor, queryable at any sequence checkpoint.
 
 Neural world models predict. ArcFlow remembers. Autonomous systems need both.
 
@@ -191,7 +191,7 @@ RETURN length(p), nodes(p)
 
 ## OpenUSD / physics integration
 
-For robotic systems that use USD-based scene graphs (Isaac Sim, digital twin platforms):
+For robotic systems that use USD-based scene graphs (USD-based simulators, digital twin platforms):
 
 ```cypher
 -- Export the world model as USD scene description
@@ -228,7 +228,7 @@ The operational world model layer is the piece most autonomous stacks are missin
 
 - [World Model](/concepts/world-model) — the two-layer framing: neural world models predict, ArcFlow persists
 - [Building a World Model](/guides/world-model) — step-by-step with spatial, temporal, and confidence
-- [Grounded Neural Objects](/use-cases/grounded-neural-objects) — lifting Cosmos/Genie/FSD detections into persistent entities
+- [Grounded Neural Objects](/use-cases/grounded-neural-objects) — lifting neural world models detections into persistent entities
 - [Spatial Queries](/spatial-knowledge) — R*-tree, frustum, line-of-sight
 - [Temporal Queries](/worldcypher/temporal) — `AS OF seq N`, replay, comparison
 - [Live Queries](/live-queries) — standing queries and live views

@@ -1,6 +1,6 @@
 ---
 title: "Robotics & Perception"
-description: "ArcFlow as the operational world model layer for robotics — grounds neural world model outputs (Cosmos, FSD) into persistent, spatially indexed, temporally versioned entity state."
+description: "ArcFlow as the operational world model layer for robotics — grounds neural world model outputs into persistent, spatially indexed, temporally versioned entity state."
 section: "use-cases"
 status: "stable"
 playground:
@@ -11,7 +11,7 @@ playground:
 
 # Robotics & Perception
 
-Robotics perception is the process of turning sensor data — lidar returns, camera detections, radar contacts — into a structured, queryable model of the world the robot can act on. Neural world models (NVIDIA Cosmos, Isaac Lab, FSD-style simulators) handle the generative prediction side: action-conditioned simulation, synthetic training data, policy rollouts. But predictions are ephemeral. ArcFlow is the persistence tier — the operational world model that stores what the robot actually encountered, at what confidence, from which sensor, queryable at any sequence checkpoint.
+Robotics perception is the process of turning sensor data — lidar returns, camera detections, radar contacts — into a structured, queryable model of the world the robot can act on. Neural world models and robotics simulators handle the generative prediction side: action-conditioned simulation, synthetic training data, policy rollouts. But predictions are ephemeral. ArcFlow is the persistence tier — the operational world model that stores what the robot actually encountered, at what confidence, from which sensor, queryable at any sequence checkpoint.
 
 ArcFlow runs in-process alongside the robot's software stack — no network round-trip between sensing and decision-making.
 

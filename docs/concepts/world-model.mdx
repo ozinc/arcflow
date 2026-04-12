@@ -19,7 +19,7 @@ Two distinct things go by the name "world model" today. Getting them confused �
 
 ## The two definitions
 
-**Neural world model** — a neural network trained to simulate how the world evolves under actions. Given an observation and an action, it predicts the next state. Action-conditioned, generative, trained on petabytes of sensor data. Architecturally: a Vision model compresses observations into latent space, a Memory model (RSSM / MDN-RNN) predicts how latents evolve given actions, a Controller selects actions — together they let agents rehearse inside a hallucinated future before acting in reality. This is the NVIDIA Cosmos / DeepMind Genie / Tesla FSD / DreamerV3 sense. These systems simulate. They are not databases. They do not store what actually happened. They cannot tell you where Robot-04 was at 14:23:07 with confidence 0.91 from lidar-03.
+**Neural world model** — a neural network trained to simulate how the world evolves under actions. Given an observation and an action, it predicts the next state. Action-conditioned, generative, trained on petabytes of sensor data. Architecturally: a Vision model compresses observations into latent space, a Memory model (RSSM / MDN-RNN) predicts how latents evolve given actions, a Controller selects actions — together they let agents rehearse inside a hallucinated future before acting in reality. This is the sense used by the leading neural world model platforms in research and production. These systems simulate. They are not databases. They do not store what actually happened. They cannot tell you where Robot-04 was at 14:23:07 with confidence 0.91 from lidar-03.
 
 **Operational world model** — a persistent, queryable store of actual world state. What entities exist, where they are, how they relate to each other, how confident we are in each fact, what the world looked like at any previous moment. This is ArcFlow. It records. It does not hallucinate — it stores neural model outputs as they arrive (`_observation_class: 'predicted'`), alongside sensor-confirmed observations and inferred facts, all versioned and spatially indexed.
 
@@ -172,7 +172,7 @@ The AI infrastructure stack now has three tiers:
 | Tier | Examples | What it does |
 |---|---|---|
 | **Foundation models** | GPT-4, Gemini, Claude | Language, perception, reasoning |
-| **Neural world models** | NVIDIA Cosmos, DeepMind Genie, Tesla FSD | Simulate how the world evolves under actions — action-conditioned, generative, petabyte-trained |
+| **Neural world models** | Leading neural World Foundation Models (WFMs) | Simulate how the world evolves under actions — action-conditioned, generative, petabyte-trained |
 | **Operational world model** | **ArcFlow** | Store, query, and remember what actually happened — spatial-temporal, confidence-scored, fully versioned |
 
 Neural world models are the prediction tier — extraordinary at simulating possible futures given an observation and an action. They are not designed to remember that Robot-04 entered Zone-B at 14:23:07 with confidence 0.91, or that the ball crossed the goal line 200ms before the keeper moved. Their outputs are ephemeral: video frames, latent tensors, predicted detections.
@@ -227,7 +227,7 @@ The research community wants calibrated uncertainty in their neural models. It a
 ## See Also
 
 - [Building a World Model](/guides/world-model) — step-by-step guide with 20 entities, spatial queries, temporal memory, and algorithm overlay
-- [Grounded Neural Objects](/use-cases/grounded-neural-objects) — lifting neural world model outputs (Cosmos/Genie detections) into persistent ArcFlow entities
+- [Grounded Neural Objects](/use-cases/grounded-neural-objects) — lifting neural world model outputs into persistent ArcFlow entities
 - [Autonomous Systems](/use-cases/autonomous-systems) — the two-layer stack applied to robot fleets and UAV coordination
 - [Confidence & Provenance](/concepts/confidence-and-provenance) — scoring and tracing every fact
 - [Observations & Evidence](/concepts/observations) — the observation model in detail

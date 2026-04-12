@@ -2,7 +2,7 @@
 
 **The correct architectural separation.** Spatial-temporal, confidence-scored, embedded.
 
-The neural world model research community — Cosmos, Genie, FSD, V-JEPA — is trying to collapse simulation, memory, spatial grounding, and calibrated uncertainty into a single generative model. MosaicMem, PERSIST, and similar papers are adding persistence into the neural layer. It is the wrong direction.
+The neural world model research community — leading neural world models, leading neural world models — is trying to collapse simulation, memory, spatial grounding, and calibrated uncertainty into a single generative model. MosaicMem, PERSIST, and similar papers are adding persistence into the neural layer. It is the wrong direction.
 
 Simulation belongs in the neural layer. Persistence belongs in a separate, deterministic, queryable layer. These are not the same problem. Neural world models simulate. **ArcFlow records.**
 

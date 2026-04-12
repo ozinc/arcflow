@@ -11,11 +11,11 @@ playground:
 
 # Get Started
 
-The neural world model community — NVIDIA Cosmos, DeepMind Genie, Tesla FSD, Meta V-JEPA — is trying to collapse simulation, memory, spatial grounding, and calibrated uncertainty into a single generative model. Papers are being published about adding persistence (MosaicMem), 3D scene grounding (PERSIST), and uncertainty awareness to neural WFMs. It is failing as an architecture because these are not the same problem.
+The neural world model research community is trying to collapse simulation, memory, spatial grounding, and calibrated uncertainty into a single generative model. Papers have proposed baking persistence directly into the neural layer (MosaicMem), embedding 3D scene grounding inside the network (PERSIST), and adding uncertainty awareness to the generative system itself. This is the wrong architectural direction — these are not the same problem, and mixing them makes systems worse at both.
 
-**ArcFlow is the correct architectural separation.** Simulation belongs in the neural layer. Persistence, spatial indexing, temporal versioning, and confidence scoring belong in a separate, deterministic, queryable layer. This is not a design choice — it is a consequence of the physics of the problem.
+**ArcFlow is the correct architectural separation.** Simulation belongs in the neural layer — learned, generative, action-conditioned. Persistence, spatial indexing, temporal versioning, and confidence scoring belong in a separate, deterministic, queryable layer. The two layers have different latency requirements, different failure modes, different update rates. They should not be one thing.
 
-Neural world models like Cosmos and Genie are extraordinary at simulating possible futures. They don't remember anything. **ArcFlow is what you build underneath them** — the persistence tier that stores what actually happened, spatially indexed, versioned to the sequence number, and queryable in microseconds.
+Neural world models are extraordinary at simulating possible futures. They don't remember anything. **ArcFlow is what you build underneath them** — the persistence tier that stores what actually happened, spatially indexed, versioned to the sequence number, and queryable in microseconds.
 
 ```cypher
 -- A query no neural world model can answer:

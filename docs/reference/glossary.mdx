@@ -170,7 +170,7 @@ RETURN a.name, b.name
 
 Two definitions share the same name in AI today.
 
-**Neural world model** (AI/ML research sense) — an action-conditioned learned simulator. Given an observation and an action, it predicts the next state. Architecture: Vision model → Memory model (RSSM/MDN-RNN) → Controller. Systems: NVIDIA Cosmos, DeepMind Genie, Tesla FSD, DreamerV3. These simulate possible futures; they are not databases and do not store factual history.
+**Neural world model** (AI/ML research sense) — an action-conditioned learned simulator. Given an observation and an action, it predicts the next state. Architecture: Vision model → Memory model (RSSM/MDN-RNN) → Controller. Examples include leading neural World Foundation Models (WFMs). These simulate possible futures; they are not databases and do not store factual history.
 
 **Operational world model** (ArcFlow sense) — a persistent, spatial-temporal knowledge graph representing the actual state of a real or simulated environment. Entities have position, velocity, and observation class. Relationships carry provenance and confidence. The entire history is queryable via `AS OF seq N`. Stores neural world model outputs as `_observation_class: 'predicted'` facts alongside sensor-confirmed observations.
 
