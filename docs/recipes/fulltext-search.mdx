@@ -5,7 +5,7 @@ section: "recipes"
 status: "stable"
 playground:
   seed: world
-  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WHERE r.name CONTAINS 'las' OR r.task CONTAINS 'inspect' WITH s, d, r, z, s.reliability * d.confidence AS composite_trust RETURN r.name AS robot, r.task, r.battery, composite_trust, d.method AS detected_by, s.name AS sensor, z.name AS zone ORDER BY composite_trust DESC"
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WHERE r.name CONTAINS 'las' OR r.task CONTAINS 'inspect' WITH s, d.method AS method, r, z, s.reliability * d.confidence AS composite_trust RETURN r.name AS robot, r.task, r.battery, composite_trust, method, s.name AS sensor, z.name AS zone ORDER BY composite_trust DESC"
 ---
 
 # Recipe: Full-Text Search

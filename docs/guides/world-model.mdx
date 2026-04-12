@@ -7,7 +7,7 @@ since: "10.0.0"
 status: "stable"
 playground:
   seed: world
-  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH s, d, r, z, s.reliability * d.confidence AS composite_trust RETURN s.name AS sensor, s.type AS modality, d.method, composite_trust, r.name AS entity, r.task, r.x AS world_x, r.y AS world_y, r.battery AS energy, z.name AS zone, z.hazard AS risk ORDER BY composite_trust DESC"
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH s, d.method AS method, r, z, s.reliability * d.confidence AS composite_trust RETURN s.name AS sensor, s.type AS modality, method, composite_trust, r.name AS entity, r.task, r.x AS world_x, r.y AS world_y, r.battery AS energy, z.name AS zone, z.hazard AS risk ORDER BY composite_trust DESC"
 ---
 
 # Building a World Model

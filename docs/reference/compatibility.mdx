@@ -5,7 +5,7 @@ section: "reference"
 status: "stable"
 playground:
   seed: world
-  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[occ:OCCUPIES]->(z:Zone) WITH s, d, r, occ, z, s.reliability * d.confidence AS composite_trust RETURN s.name AS sensor, s.type, s.reliability, d.confidence AS detection_confidence, d.method AS detection_method, composite_trust, occ.entered_seq AS occupancy_seq, r.name AS robot, r.task, r.x AS pos_x, r.y AS pos_y, z.name AS zone, z.hazard ORDER BY composite_trust DESC"
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[occ:OCCUPIES]->(z:Zone) WITH s, d.confidence AS confidence, d.method AS method, r, occ.entered_seq AS entered_seq, z, s.reliability * d.confidence AS composite_trust RETURN s.name AS sensor, s.type, s.reliability, confidence, method, composite_trust, entered_seq, r.name AS robot, r.task, r.x AS pos_x, r.y AS pos_y, z.name AS zone, z.hazard ORDER BY composite_trust DESC"
 ---
 
 # GQL & WorldCypher Reference

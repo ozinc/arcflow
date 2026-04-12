@@ -5,7 +5,7 @@ section: "concepts"
 status: "stable"
 playground:
   seed: world
-  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH s, d, r, z, s.reliability * d.confidence AS composite_trust, (r.x - s.x) * (r.x - s.x) + (r.y - s.y) * (r.y - s.y) AS proximity_sq RETURN s.name AS sensor, s.type, d.method AS detection_method, composite_trust, proximity_sq, r.name AS entity, r.task, r.x AS world_x, r.y AS world_y, z.name AS zone, CASE WHEN composite_trust >= 0.90 THEN 'authoritative' WHEN composite_trust >= 0.75 THEN 'confirmed' ELSE 'uncertain' END AS trust_tier ORDER BY composite_trust DESC"
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH s, d.method AS method, r, z, s.reliability * d.confidence AS composite_trust, (r.x - s.x) * (r.x - s.x) + (r.y - s.y) * (r.y - s.y) AS proximity_sq RETURN s.name AS sensor, s.type, method, composite_trust, proximity_sq, r.name AS entity, r.task, r.x AS world_x, r.y AS world_y, z.name AS zone, CASE WHEN composite_trust >= 0.90 THEN 'authoritative' WHEN composite_trust >= 0.75 THEN 'confirmed' ELSE 'uncertain' END AS trust_tier ORDER BY composite_trust DESC"
 ---
 
 # Query Language (GQL)

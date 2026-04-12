@@ -7,7 +7,7 @@ since: "0.21.0"
 status: "stable"
 playground:
   seed: world
-  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH s, d, r, z, s.reliability * d.confidence AS composite_trust, d.confidence * r.battery AS operational_score WHERE composite_trust > 0.80 AND operational_score > 55 RETURN r.name AS robot, r.task AS task, r.battery AS battery, r.speed AS speed, composite_trust, operational_score, d.method AS sensor_method, z.name AS zone, z.hazard AS hazard ORDER BY operational_score DESC"
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH s, d.method AS method, r, z, s.reliability * d.confidence AS composite_trust, d.confidence * r.battery AS operational_score WHERE composite_trust > 0.80 AND operational_score > 55 RETURN r.name AS robot, r.task AS task, r.battery AS battery, r.speed AS speed, composite_trust, operational_score, method, z.name AS zone, z.hazard AS hazard ORDER BY operational_score DESC"
 ---
 
 # WITH

@@ -7,7 +7,7 @@ since: "7.0.0"
 status: "stable"
 playground:
   seed: world
-  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[occ:OCCUPIES]->(z:Zone) WITH s, d, r, occ, z, r.speed AS velocity, r.battery AS energy, s.reliability * d.confidence AS observation_quality RETURN occ.entered_seq AS event_seq, r.name AS entity, r.task AS task, r.x AS pos_x, r.y AS pos_y, velocity, energy, observation_quality, d.method AS detection_method, z.name AS zone ORDER BY event_seq"
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[occ:OCCUPIES]->(z:Zone) WITH s, d.method AS method, r, occ.entered_seq AS entered_seq, z, r.speed AS velocity, r.battery AS energy, s.reliability * d.confidence AS observation_quality RETURN entered_seq, r.name AS entity, r.task AS task, r.x AS pos_x, r.y AS pos_y, velocity, energy, observation_quality, method, z.name AS zone ORDER BY event_seq"
 ---
 
 # Temporal Queries

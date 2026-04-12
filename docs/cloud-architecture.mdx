@@ -6,7 +6,7 @@ order: 1
 since: "10.1.0"
 playground:
   seed: world
-  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH s, d, r, z, s.reliability * d.confidence AS replication_quality RETURN z.name AS zone, z.hazard AS hazard, r.name AS robot, r.task, r.battery AS battery_level, replication_quality, d.confidence AS detection_quality, s.name AS sensor, s.reliability ORDER BY replication_quality DESC"
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH s, d.confidence AS confidence, r, z, s.reliability * d.confidence AS replication_quality RETURN z.name AS zone, z.hazard AS hazard, r.name AS robot, r.task, r.battery AS battery_level, replication_quality, confidence, s.name AS sensor, s.reliability ORDER BY replication_quality DESC"
 ---
 
 # ArcFlow Cloud: Edge-Native Graph Mesh

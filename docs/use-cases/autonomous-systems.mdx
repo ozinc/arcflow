@@ -5,7 +5,7 @@ section: "use-cases"
 status: "stable"
 playground:
   seed: world
-  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH s, d, r, z, r.speed * r.battery AS operational_power, s.reliability * d.confidence AS perception_quality RETURN s.name AS sensor, s.type AS modality, perception_quality, d.method AS detection_method, r.name AS robot, r.task, r.x AS current_x, r.y AS current_y, r.speed AS velocity, r.battery AS energy, operational_power, z.name AS zone, z.hazard, CASE WHEN perception_quality >= 0.9 AND r.battery >= 80 THEN 'autonomous - full capability' WHEN perception_quality >= 0.8 THEN 'supervised - nominal' ELSE 'degraded - human oversight required' END AS operational_mode ORDER BY operational_power DESC"
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH s, d.method AS method, r, z, r.speed * r.battery AS operational_power, s.reliability * d.confidence AS perception_quality RETURN s.name AS sensor, s.type AS modality, perception_quality, method, r.name AS robot, r.task, r.x AS current_x, r.y AS current_y, r.speed AS velocity, r.battery AS energy, operational_power, z.name AS zone, z.hazard, CASE WHEN perception_quality >= 0.9 AND r.battery >= 80 THEN 'autonomous - full capability' WHEN perception_quality >= 0.8 THEN 'supervised - nominal' ELSE 'degraded - human oversight required' END AS operational_mode ORDER BY operational_power DESC"
 ---
 
 # Autonomous Systems

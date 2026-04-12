@@ -7,7 +7,7 @@ since: "4.0.0"
 status: "stable"
 playground:
   seed: world
-  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[occ:OCCUPIES]->(z:Zone) WITH s, d, r, occ, z, s.reliability * d.confidence AS observation_quality RETURN occ.entered_seq AS event_seq, 'entity_observed' AS event_type, r.name AS entity, r.task AS task, r.x AS pos_x, r.y AS pos_y, r.speed AS velocity, r.battery AS energy, observation_quality, d.confidence AS detection_confidence, d.method AS detection_method, s.name AS reporting_sensor, z.name AS zone ORDER BY event_seq"
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[occ:OCCUPIES]->(z:Zone) WITH s, d.confidence AS confidence, d.method AS method, r, occ.entered_seq AS entered_seq, z, s.reliability * d.confidence AS observation_quality RETURN entered_seq, 'entity_observed' AS event_type, r.name AS entity, r.task AS task, r.x AS pos_x, r.y AS pos_y, r.speed AS velocity, r.battery AS energy, observation_quality, confidence, method, s.name AS reporting_sensor, z.name AS zone ORDER BY event_seq"
 ---
 
 # Event Sourcing Graph

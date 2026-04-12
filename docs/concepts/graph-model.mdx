@@ -5,7 +5,7 @@ section: "concepts"
 status: "stable"
 playground:
   seed: world
-  query: "MERGE (s_new:Sensor {id: 'thermal-1', name: 'Thermal-East', type: 'thermal', x: 35.0, y: 5.0, reliability: 0.89}) MERGE (r3:Robot {id: 'r3', name: 'Sentinel-03', x: 33.0, y: 4.0, speed: 0.6, task: 'perimeter', status: 'active', battery: 91}) MERGE (s_new:Sensor {id: 'thermal-1'})-[:DETECTED {confidence: 0.87, method: 'thermal'}]->(r3:Robot {id: 'r3'}) MATCH (s:Sensor)-[d:DETECTED]->(r:Robot) WITH s, d, r, s.reliability * d.confidence AS composite_trust RETURN s.name AS sensor, s.type AS modality, d.confidence AS detection_confidence, d.method, composite_trust, r.name AS robot, r.x AS world_x, r.y AS world_y, r.status ORDER BY composite_trust DESC"
+  query: "MERGE (s_new:Sensor {id: 'thermal-1', name: 'Thermal-East', type: 'thermal', x: 35.0, y: 5.0, reliability: 0.89}) MERGE (r3:Robot {id: 'r3', name: 'Sentinel-03', x: 33.0, y: 4.0, speed: 0.6, task: 'perimeter', status: 'active', battery: 91}) MERGE (s_new:Sensor {id: 'thermal-1'})-[:DETECTED {confidence: 0.87, method: 'thermal'}]->(r3:Robot {id: 'r3'}) MATCH (s:Sensor)-[d:DETECTED]->(r:Robot) WITH s, d.confidence AS confidence, d.method AS method, r, s.reliability * d.confidence AS composite_trust RETURN s.name AS sensor, s.type AS modality, confidence, method, composite_trust, r.name AS robot, r.x AS world_x, r.y AS world_y, r.status ORDER BY composite_trust DESC"
 ---
 
 # Graph Model

@@ -5,7 +5,7 @@ section: "concepts"
 status: "stable"
 playground:
   seed: world
-  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH s, d, r, z, s.reliability * d.confidence AS composite_trust RETURN s.name AS evidence_source, s.type AS evidence_type, s.reliability AS source_quality, d.method AS observation_method, d.confidence AS raw_confidence, composite_trust, r.name AS proven_entity, r.task, r.x AS world_x, r.y AS world_y, z.name AS spatial_context, z.hazard AS contextual_risk ORDER BY composite_trust DESC"
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH s, d.method AS method, d.confidence AS confidence, r, z, s.reliability * d.confidence AS composite_trust RETURN s.name AS evidence_source, s.type AS evidence_type, s.reliability AS source_quality, method, confidence, composite_trust, r.name AS proven_entity, r.task, r.x AS world_x, r.y AS world_y, z.name AS spatial_context, z.hazard AS contextual_risk ORDER BY composite_trust DESC"
 ---
 
 # Proof Artifacts & Gates

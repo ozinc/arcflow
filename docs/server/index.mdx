@@ -7,7 +7,7 @@ since: "0.11.0"
 status: "stable"
 playground:
   seed: world
-  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z, r, d, s RETURN z.name AS zone, z.hazard, count(r) AS robot_count, avg(d.confidence) AS avg_detection_quality, avg(s.reliability * d.confidence) AS composite_coverage ORDER BY composite_coverage DESC"
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z, r, d.confidence AS confidence, s RETURN z.name AS zone, z.hazard, count(r) AS robot_count, avg(confidence) AS avg_detection_quality, avg(s.reliability * confidence) AS composite_coverage ORDER BY composite_coverage DESC"
 ---
 
 # Server & Access Layers
