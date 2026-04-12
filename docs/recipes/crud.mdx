@@ -3,9 +3,11 @@ title: "Recipe: CRUD Operations"
 description: "Copy-paste patterns for world model mutations — create, read, update, delete with filters, sorting, aggregations, and upserts."
 section: "recipes"
 status: "stable"
+  query: "MERGE (r:Robot {id: 'r-new', name: 'Proto-04', task: 'calibration', x: 0.0, y: 0.0, speed: 0.3, battery: 100, status: 'initializing'}) MATCH (r:Robot {id: 'r-new'}) SET r.battery = 97, r.status = 'ready', r.task = 'patrol', r.updated_seq = 5 MATCH (r:Robot {id: 'r-new'}) RETURN r.name, r.task, r.battery, r.speed, r.status, r.updated_seq, r.x, r.y"
 playground:
   seed: world
-  query: "MERGE (r:Robot {id: 'r-new', name: 'Proto-04', task: 'calibration', x: 0.0, y: 0.0, speed: 0.3, battery: 100, status: 'initializing'}) MATCH (r:Robot {id: 'r-new'}) SET r.battery = 97, r.status = 'ready', r.task = 'patrol', r.updated_seq = 5 MATCH (r:Robot {id: 'r-new'}) RETURN r.name, r.task, r.battery, r.speed, r.status, r.updated_seq, r.x, r.y"
+  query: "MERGE (r:Robot {id: 'r-patrol', name: 'Patrol-X1', task: 'standby', x: 0.0, y: 0.0, speed: 0.0, battery: 100, status: 'initializing'})\n\nMATCH (r:Robot {id: 'r-patrol'}) SET r.task = 'patrol', r.speed = 1.1, r.x = 12.0, r.y = 8.0, r.status = 'active'\n\nMATCH (r:Robot) RETURN r.name AS robot, r.task AS task, r.battery AS battery, r.speed AS speed, r.status AS status, r.x AS pos_x, r.y AS pos_y ORDER BY r.battery DESC"
+
 ---
 
 # Recipe: CRUD Operations

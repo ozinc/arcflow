@@ -1,6 +1,6 @@
 ---
 title: "Autonomous Systems"
-description: "World Model infrastructure for autonomous systems — robot fleets, UAVs, self-driving vehicles, and industrial automation where shared spatial-temporal state is the operational foundation"
+description: "The operational world model layer for autonomous systems — persistence, spatial queries, and temporal memory that complete the stack beneath neural world models like Cosmos and FSD."
 section: "use-cases"
 status: "stable"
 playground:
@@ -225,9 +225,10 @@ The operational world model layer is the piece most autonomous stacks are missin
 
 ## See Also
 
+- [World Model](/concepts/world-model) — the two-layer framing: neural world models predict, ArcFlow persists
 - [Building a World Model](/guides/world-model) — step-by-step with spatial, temporal, and confidence
+- [Grounded Neural Objects](/use-cases/grounded-neural-objects) — lifting Cosmos/Genie/FSD detections into persistent entities
 - [Spatial Queries](/spatial-knowledge) — R*-tree, frustum, line-of-sight
 - [Temporal Queries](/worldcypher/temporal) — `AS OF seq N`, replay, comparison
 - [Live Queries](/live-queries) — standing queries and live views
-- [Grounded Neural Objects](/use-cases/grounded-neural-objects) — lifting detections into persistent entities
 - [Digital Twins](/use-cases/digital-twins) — live mirror of physical systems

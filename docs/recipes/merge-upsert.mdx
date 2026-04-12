@@ -3,8 +3,10 @@ title: "Recipe: MERGE (Upsert)"
 description: "MERGE upsert pattern for idempotent world model pipelines — find matching nodes or create them on first run, with ON CREATE / ON MATCH hooks."
 section: "recipes"
 status: "stable"
-playground:
   query: "MERGE (r:Robot {id: 'r-upsert', name: 'Prototype-X', x: 0.0, y: 0.0}) ON CREATE SET r.battery = 100, r.task = 'standby', r.created = 1, r.version = 1, r.speed = 0.5 ON MATCH SET r.battery = 88, r.task = 'active', r.updated = 1, r.version = 2, r.speed = 1.1 MATCH (r:Robot {id: 'r-upsert'}) RETURN r.name, r.task, r.battery, r.speed, r.created, r.updated, r.version"
+playground:
+  query: "MERGE (r:Robot {id: 'r-sentinel'}) ON CREATE SET r.name = 'Sentinel-01', r.task = 'standby', r.battery = 100, r.x = 0.0, r.y = 0.0, r.speed = 0.0 ON MATCH SET r.battery = 88, r.task = 'patrol', r.x = 18.0, r.y = 9.0, r.speed = 1.2\n\nMATCH (r:Robot) RETURN r.name AS robot, r.task AS task, r.battery AS battery, r.speed AS speed, r.x AS pos_x, r.y AS pos_y ORDER BY r.name"
+
 ---
 
 # Recipe: MERGE (Upsert)

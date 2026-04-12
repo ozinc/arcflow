@@ -3,8 +3,10 @@ title: "Recipe: Batch Projection"
 description: "Idempotent batch projection into the world model — high-throughput entity and relationship loading with MERGE semantics so replays never create duplicates."
 section: "recipes"
 status: "stable"
-playground:
   query: "UNWIND ['Assembly-East', 'Inspection-West', 'Storage-Bay', 'Maintenance-Hub'] AS area_name MERGE (z:Zone {id: area_name, name: area_name, active: 1, hazard: 0.05, radius: 12.0}) RETURN z.name AS zone, z.active AS active, z.hazard AS hazard, z.radius AS radius ORDER BY z.name"
+playground:
+  query: "MERGE (w1:Workstation {id: 'ws-01', name: 'Station-Alpha', type: 'assembly', x: 20.0, y: 15.0, capacity: 3, active: 1})\n\nMERGE (w2:Workstation {id: 'ws-02', name: 'Station-Beta', type: 'inspection', x: -20.0, y: 15.0, capacity: 2, active: 1})\n\nMERGE (w3:Workstation {id: 'ws-03', name: 'Station-Gamma', type: 'charging', x: 0.0, y: -20.0, capacity: 4, active: 1})\n\nMATCH (w:Workstation) RETURN w.name AS station, w.type AS type, w.capacity AS capacity, w.x AS pos_x, w.y AS pos_y ORDER BY capacity DESC"
+
 ---
 
 # Recipe: Batch Projection

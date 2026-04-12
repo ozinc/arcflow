@@ -3,9 +3,11 @@ title: "Recipe: Temporal Queries"
 description: "Time-travel queries over the world model — AS OF seq N snapshots, temporal decay scoring, and observation velocity metrics."
 section: "recipes"
 status: "stable"
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS entity_count, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS composite_trust RETURN zone, hazard, entity_count, avg_battery, composite_trust, CASE WHEN composite_trust >= 0.90 THEN 'optimal' WHEN composite_trust >= 0.75 THEN 'nominal' ELSE 'degraded' END AS status ORDER BY composite_trust DESC"
 playground:
   seed: world
-  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS entity_count, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS composite_trust RETURN zone, hazard, entity_count, avg_battery, composite_trust, CASE WHEN composite_trust >= 0.90 THEN 'optimal' WHEN composite_trust >= 0.75 THEN 'nominal' ELSE 'degraded' END AS status ORDER BY composite_trust DESC"
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS active_entities, avg(r.battery) AS avg_energy, avg(r.speed) AS avg_velocity, avg(s.reliability * d.confidence) AS observation_quality RETURN zone, hazard, active_entities, avg_energy, avg_velocity, observation_quality, CASE WHEN observation_quality >= 0.90 THEN 'current' WHEN observation_quality >= 0.75 THEN 'recent' ELSE 'stale' END AS data_freshness ORDER BY observation_quality DESC"
+
 ---
 
 # Recipe: Temporal Queries
