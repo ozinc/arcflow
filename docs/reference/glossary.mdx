@@ -130,7 +130,7 @@ An open specification of the Cypher query language, originally developed at Neo4
 
 ## MVCC (Multi-Version Concurrency Control)
 
-**ArcFlow.** The mechanism that allows reads and writes to proceed concurrently without blocking each other. ArcFlow uses ArcSwap for lock-free pointer swaps, meaning reads never wait for writes. Each write creates a new version; readers see a consistent snapshot.
+**ArcFlow.** The mechanism that allows reads and writes to proceed concurrently without blocking each other. Reads use atomic snapshot swaps — no read lock, no contention with writers. Each write creates a new version; readers always see a consistent snapshot.
 
 ---
 

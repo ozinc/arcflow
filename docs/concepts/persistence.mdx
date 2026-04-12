@@ -33,7 +33,7 @@ const disk = open('./data/graph')
 
 ## Read path — MVCC lock-free reads
 
-The read path uses an ArcSwap CoW (copy-on-write) store. Readers load the current graph snapshot via an atomic pointer swap — no read lock, no contention with writers. Writes produce a new snapshot and atomically swap it in. This means:
+The read path uses a copy-on-write store with atomic snapshot swaps. Readers load the current graph snapshot via an atomic pointer swap — no read lock, no contention with writers. Writes produce a new snapshot and atomically swap it in. This means:
 
 - `db.query()` never blocks on a concurrent `db.mutate()`
 - `db.mutate()` never blocks on concurrent reads

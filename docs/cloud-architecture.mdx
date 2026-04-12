@@ -168,7 +168,7 @@ arcflow deploy
 |---|---|
 | Edge runtime | WASM binary |
 | Origin server | Docker container (under 20MB) |
-| Binary WAL | bincode + CRC32 + fsync |
+| Binary WAL | compact binary encoding + CRC32 + fsync |
 | Checkpoints | Atomic snapshot + restore |
 | WAL segment shipping | ObjectStorageBackend + WalShipper |
 | Change tracking | `db.changesSince()` CDC |
