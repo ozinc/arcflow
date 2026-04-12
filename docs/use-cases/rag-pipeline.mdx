@@ -3,9 +3,11 @@ title: "Use Case: RAG Pipeline"
 description: "Trusted RAG on a world model — confidence-scored facts, provenance-tracked sources, and multi-hop graph traversal replace flat chunk retrieval"
 section: "use-cases"
 status: "stable"
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WHERE s.reliability >= 0.9 AND d.confidence >= 0.88 WITH z.name AS zone, z.hazard AS hazard, count(r) AS entity_count, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS composite_trust RETURN zone, hazard, entity_count, avg_battery, composite_trust, CASE WHEN composite_trust >= 0.93 THEN 'tier-1' WHEN composite_trust >= 0.88 THEN 'tier-2' ELSE 'tier-3' END AS rag_tier ORDER BY composite_trust DESC"
 playground:
   seed: world
   query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WHERE s.reliability >= 0.9 AND d.confidence >= 0.88 WITH z.name AS zone, z.hazard AS hazard, count(r) AS entity_count, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS composite_trust RETURN zone, hazard, entity_count, avg_battery, composite_trust, CASE WHEN composite_trust >= 0.93 THEN 'tier-1' WHEN composite_trust >= 0.88 THEN 'tier-2' ELSE 'tier-3' END AS rag_tier ORDER BY composite_trust DESC"
+
 ---
 
 # Use Case: RAG Pipeline

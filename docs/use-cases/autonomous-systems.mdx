@@ -3,9 +3,11 @@ title: "Autonomous Systems"
 description: "The operational world model layer for autonomous systems — persistence, spatial queries, and temporal memory that complete the stack beneath neural world models like Cosmos and FSD."
 section: "use-cases"
 status: "stable"
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS entity_count, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS composite_trust RETURN zone, hazard, entity_count, avg_battery, composite_trust, CASE WHEN composite_trust >= 0.9 AND r.battery >= 80 THEN 'autonomous' WHEN composite_trust >= 0.8 THEN 'supervised' ELSE 'degraded' END AS operational_mode ORDER BY composite_trust DESC"
 playground:
   seed: world
-  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS entity_count, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS composite_trust RETURN zone, hazard, entity_count, avg_battery, composite_trust, CASE WHEN composite_trust >= 0.9 AND r.battery >= 80 THEN 'autonomous' WHEN composite_trust >= 0.8 THEN 'supervised' ELSE 'degraded' END AS operational_mode ORDER BY composite_trust DESC"
+  query: "MATCH (r:Robot)-[:OCCUPIES]->(z:Zone) RETURN r.name AS robot, r.task AS task, r.battery AS battery, r.speed AS speed, r.x AS pos_x, r.y AS pos_y, z.name AS zone, z.hazard AS zone_hazard, CASE WHEN r.battery >= 80 AND z.hazard < 0.2 THEN 'autonomous' WHEN r.battery >= 60 THEN 'supervised' ELSE 'degraded' END AS operational_mode ORDER BY r.battery DESC"
+
 ---
 
 # Autonomous Systems
