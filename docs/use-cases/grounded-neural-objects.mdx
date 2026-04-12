@@ -5,12 +5,14 @@ section: "use-cases"
 status: "stable"
 playground:
   seed: world
-  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH s, d.method AS method, r, z, s.reliability * d.confidence AS grounding_confidence, (r.x - s.x) * (r.x - s.x) + (r.y - s.y) * (r.y - s.y) AS spatial_distance_sq RETURN r.name AS gno_id, r.task AS entity_type, r.x AS world_x, r.y AS world_y, r.speed AS velocity, r.battery AS energy, grounding_confidence, spatial_distance_sq, method, z.name AS spatial_context, z.hazard AS hazard_level, CASE WHEN grounding_confidence >= 0.90 THEN 'grounded - high fidelity' WHEN grounding_confidence >= 0.80 THEN 'partially grounded - acceptable' ELSE 'ungrounded - needs verification' END AS grounding_state ORDER BY grounding_confidence DESC"
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS entity_count, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS composite_trust RETURN zone, hazard, entity_count, avg_battery, composite_trust, CASE WHEN grounding_confidence >= 0.90 THEN 'grounded' WHEN grounding_confidence >= 0.80 THEN 'partially grounded' ELSE 'ungrounded' END AS composite_trust ORDER BY composite_trust DESC"
 ---
 
 # Use Case: Grounded Neural Objects
 
-Real-world objects — players, vehicles, robots, equipment — lifted into a persistent world model where each carries spatial position, confidence score, observation class, provenance, and temporal history. The gap between "a detection" and "a known entity in the world" is where most production systems break down. ArcFlow closes it.
+Neural world models (NVIDIA Cosmos, DeepMind Genie, Tesla FSD) generate detections, pose estimates, predicted future states. Their output is ephemeral — tensors, tracks, video latents. They do not remember. They do not version. They cannot tell you where a specific entity was at a specific timestamp with a specific confidence score from a specific sensor.
+
+ArcFlow is the grounding layer. Real-world objects — players, vehicles, robots, equipment — lifted from neural outputs into persistent entities where each carries spatial position, per-dimension confidence, observation class, provenance, and temporal history. The gap between "a detection" and "a known entity in the world" is where most production systems break down. ArcFlow closes it.
 
 ## The Problem
 
@@ -224,7 +226,11 @@ function getFramingTarget() {
 
 ## Key insight
 
-The learned layer (sidecar) rides **alongside** the physical track — it doesn't replace it. This is not a generative model hallucinating objects. It's an evidence pipeline under real-time physical constraints, with ArcFlow maintaining the objects as a live executable graph.
+Neural world models (Cosmos, Genie, FSD) are generative prediction engines — trained on petabytes of sensor data to simulate how the world evolves under actions. They are extraordinary at anticipating futures. They are not a database. They do not remember that `gno-player-10` was at (52.3, 34.1) at tick 4821 with identity confidence 0.92, or that the ReID signature changed during a camera handoff.
+
+ArcFlow is the operational complement. Neural outputs arrive as detections; ArcFlow lifts them into persistent, queryable entities with spatial position, per-dimension confidence, temporal history, and live-view relations. The learned sidecar rides **alongside** the physical track — it does not replace it.
+
+Neural world models predict. ArcFlow remembers. The GNO is the point where both layers meet.
 
 ## See Also
 

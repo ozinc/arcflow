@@ -5,16 +5,18 @@ section: "get-started"
 status: "stable"
 playground:
   seed: world
-  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH s, d.method AS method, d.confidence AS confidence, r, z, s.reliability * d.confidence AS composite_trust RETURN s.name AS sensor, s.type AS modality, s.reliability AS sensor_reliability, method, confidence, composite_trust, r.name AS robot, r.task AS task, r.battery AS battery, r.x AS world_x, r.y AS world_y, z.name AS zone, z.hazard AS zone_hazard ORDER BY composite_trust DESC"
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS entity_count, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS composite_trust RETURN zone, hazard, entity_count, avg_battery, composite_trust, CASE WHEN composite_trust >= 0.90 THEN 'optimal' WHEN composite_trust >= 0.75 THEN 'nominal' ELSE 'degraded' END AS status ORDER BY composite_trust DESC"
 ---
 
 # Get Started
 
-ArcFlow is the **World Model database** — built for systems that need a persistent, spatial-temporal, confidence-scored representation of the world.
+ArcFlow is the **operational world model layer** — the database that stores, queries, and remembers actual world state for systems that cannot afford to lose spatial precision, temporal fidelity, or epistemic provenance.
 
-Space and time are first-class dimensions, not extensions. Every mutation is versioned. Every fact carries a confidence score and an observation class. Relationships are stored objects, not derived at query time. The entire history of the model is queryable with a single syntax — the ISO GQL standard, Cypher-compatible.
+The AI infrastructure stack now has three tiers. Foundation models handle language and perception. Neural world models (Cosmos, FSD, Genie) generate action-predicated predictions of how the world evolves. The middle tier — where actual world state persists — has been the missing piece. That is ArcFlow.
 
-As AI systems move from single-agent to multi-agent, they need infrastructure that isn't a retrieval index — they need a world model. Something that knows what connects, where it is, how confident we are, and what it looked like before. ArcFlow is that layer.
+Space and time are first-class dimensions, not extensions. Every mutation is versioned. Every fact carries a confidence score and an observation class (`observed`, `inferred`, `predicted`). Relationships are stored objects, not derived at query time. The full history is queryable with a single syntax — the ISO GQL standard, Cypher-compatible.
+
+Neural world models predict. ArcFlow remembers. Every agent in a multi-agent system, every sensor in a fleet, every frame of a camera network writes into and reads from the same queryable world state.
 
 It runs in-process. No server. No round-trip. Browser, Node.js, Python, Rust, or Docker — same engine, same queries, same guarantees.
 

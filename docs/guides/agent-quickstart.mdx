@@ -4,7 +4,7 @@ description: "Embed a world model database in any project — spatial-temporal, 
 section: "guides"
 status: "stable"
 playground:
-  query: "MERGE (s:Sensor {id: 'primary-cam', name: 'PrimaryCam', type: 'camera', x: 0.0, y: 15.0, reliability: 0.96}) MERGE (a1:Robot {id: 'bot-a', name: 'Alpha-Bot', task: 'patrol', x: 5.0, y: 12.0, battery: 88, status: 'active'}) MERGE (a2:Robot {id: 'bot-b', name: 'Beta-Bot', task: 'inspect', x: -3.0, y: 11.5, battery: 74, status: 'active'}) MERGE (s:Sensor {id: 'primary-cam'})-[:DETECTED {confidence: 0.94, method: 'vision'}]->(a1:Robot {id: 'bot-a'}) MERGE (s:Sensor {id: 'primary-cam'})-[:DETECTED {confidence: 0.91, method: 'vision'}]->(a2:Robot {id: 'bot-b'}) MATCH (s:Sensor)-[d:DETECTED]->(r:Robot) WITH s, d.confidence AS confidence, d.method AS method, r, s.reliability * d.confidence AS composite_trust, (r.x - s.x) * (r.x - s.x) + (r.y - s.y) * (r.y - s.y) AS range_sq RETURN s.name AS sensor, s.reliability, confidence, composite_trust, method, r.name AS robot, r.task, r.battery, r.status, range_sq ORDER BY composite_trust DESC"
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS entity_count, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS composite_trust RETURN zone, hazard, entity_count, avg_battery, composite_trust, CASE WHEN composite_trust >= 0.90 THEN 'optimal' WHEN composite_trust >= 0.75 THEN 'nominal' ELSE 'degraded' END AS status ORDER BY composite_trust DESC"
 ---
 
 # Add ArcFlow to a Project

@@ -7,7 +7,7 @@ since: "4.0.0"
 status: "stable"
 playground:
   seed: world
-  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WHERE s.reliability >= 0.91 AND d.confidence >= 0.88 WITH s, d.method AS method, d.confidence AS confidence, r, z, s.reliability * d.confidence AS composite_trust RETURN composite_trust, s.name AS evidence_source, s.type AS sensor_modality, s.reliability AS source_reliability, method, confidence, r.name AS grounded_entity, r.task AS task, r.x AS world_x, r.y AS world_y, r.battery AS battery, z.name AS spatial_context, z.hazard AS hazard ORDER BY composite_trust DESC"
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WHERE s.reliability >= 0.91 AND d.confidence >= 0.88 WITH z.name AS zone, z.hazard AS hazard, count(r) AS entity_count, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS composite_trust RETURN zone, hazard, entity_count, avg_battery, composite_trust, CASE WHEN composite_trust >= 0.90 THEN 'optimal' WHEN composite_trust >= 0.75 THEN 'nominal' ELSE 'degraded' END AS status ORDER BY composite_trust DESC"
 ---
 
 # Trusted RAG

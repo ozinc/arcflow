@@ -5,7 +5,7 @@ section: "use-cases"
 status: "stable"
 playground:
   seed: world
-  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH s, d.method AS method, r, z, s.reliability * d.confidence AS perception_quality, (r.x - s.x) * (r.x - s.x) + (r.y - s.y) * (r.y - s.y) AS range_sq RETURN s.name AS perception_source, s.type AS modality, perception_quality, method, r.name AS entity, r.task, r.x AS current_x, r.y AS current_y, r.speed AS velocity, r.battery, range_sq, z.name AS zone, z.hazard, CASE WHEN r.speed > 1.0 AND perception_quality > 0.88 THEN 'track - high confidence' WHEN r.speed > 0.5 THEN 'observe - monitor' ELSE 'hold - low activity' END AS robot_action ORDER BY perception_quality DESC"
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS entity_count, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS composite_trust RETURN zone, hazard, entity_count, avg_battery, composite_trust, CASE WHEN r.speed > 1.0 AND composite_trust > 0.88 THEN 'track' WHEN r.speed > 0.5 THEN 'observe' ELSE 'hold' END AS robot_action ORDER BY composite_trust DESC"
 ---
 
 # Robotics & Perception

@@ -1,20 +1,30 @@
 ---
 title: "World Model"
-description: "A world model is a persistent, spatial-temporal representation of what is, was, and will be. ArcFlow is the database built to be one."
+description: "Two definitions share the same name. ArcFlow is the operational layer — the database that stores, queries, and remembers actual world state."
 section: "concepts"
 status: "stable"
 playground:
   seed: world
-  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH s, d, r, z, s.reliability * d.confidence AS composite_trust RETURN s.name AS sensor, s.type AS modality, composite_trust, r.name AS entity, r.task, r.battery AS energy, r.x AS world_x, r.y AS world_y, z.name AS zone, z.hazard AS risk, CASE WHEN z.hazard > 0.15 THEN 'high-risk zone' WHEN z.hazard > 0.05 THEN 'moderate zone' ELSE 'safe zone' END AS zone_classification ORDER BY composite_trust DESC"
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS entity_count, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS composite_trust RETURN zone, hazard, entity_count, avg_battery, composite_trust, CASE WHEN z.hazard > 0.15 THEN 'high-risk zone' WHEN z.hazard > 0.05 THEN 'moderate zone' ELSE 'safe zone' END AS zone_classification ORDER BY composite_trust DESC"
 ---
 
 # World Model
 
-A world model is a persistent, queryable representation of physical or simulated reality — what entities exist, where they are, how they relate to each other, how confident we are in each fact, and how all of this has evolved over time.
+Two distinct things go by this name in AI today. Getting them confused is costly.
 
-Every autonomous system needs one. A robot navigating a warehouse. A camera network tracking 22 players at 60fps. An AI agent coordinating with other agents across sessions. A digital twin mirroring a physical facility. All of these need the same underlying capability: a continuously updated, spatially grounded, temporally aware, confidence-scored model of the world.
+## The two definitions
 
-ArcFlow is built to be that model.
+**Neural world model** — a neural network trained to simulate how the world evolves. Given an observation and an action, it predicts the next state. This is the NVIDIA Cosmos / Tesla FSD / Yann LeCun sense: a generative engine that learns the physics of change. It predicts. It is not a database. It does not remember individual facts. It cannot tell you where Robot-04 was at 14:23:07.
+
+**Operational world model** — a persistent, queryable store of actual world state. What entities exist, where they are, how they relate to each other, how confident we are in each fact, what the world looked like at any previous moment. This is ArcFlow. It remembers. It does not predict unprompted — it stores predictions when they arrive, tagged `_observation_class: 'predicted'`, alongside observed and inferred facts.
+
+These two layers are complementary. Neural world models generate predictions → ArcFlow stores them as queryable facts. ArcFlow's current state feeds back as grounded context into the neural model's next inference. One predicts, one persists.
+
+**ArcFlow is the operational world model layer.**
+
+A robot navigating a warehouse. A camera network tracking 22 players at 60fps. An AI agent coordinating with other agents across sessions. A digital twin mirroring a physical facility. All of these need the same underlying infrastructure: a continuously updated, spatially grounded, temporally aware, confidence-scored store of what is actually happening.
+
+ArcFlow is built to be that store.
 
 ## What makes a world model different from a database
 
@@ -127,25 +137,29 @@ const monitor = db.subscribe(
 
 ## ArcFlow in the AI infrastructure stack
 
-The current AI infrastructure stack has a gap. Foundation models handle language and perception. Vector databases handle similarity search. But no standard infrastructure layer handles the problem of **representing what the world is, was, and will be** — with spatial precision, temporal fidelity, and epistemic honesty about what is known versus inferred.
+The current AI infrastructure stack has three tiers. Foundation models handle language and perception. Vector databases handle similarity search. And operational world models — the tier that has been missing — handle **what the world is, was, and will be**: spatial precision, temporal fidelity, epistemic honesty about what is known versus inferred.
 
-That gap is where world models live. An autonomous vehicle fleet needs to know where every vehicle is, where it was, and what confidence level its sensor data carries — not retrieved from a language model, not approximated by vector similarity, but tracked precisely in a spatial-temporal graph. A multi-agent AI system needs persistent shared state that every agent reads from and writes to, with full provenance of who changed what and when. A physical AI deployment needs a live replica of its environment that can be queried, replayed, and reasoned over.
+Neural world models (Cosmos, FSD, Genie) sit at the top — generative, petabyte-trained, action-predicated. They are extraordinary at simulating possible futures. They are not designed to remember that Robot-04 entered Zone-B at 14:23:07 with confidence 0.91, or that the ball crossed the goal line 200ms before the keeper moved.
 
-ArcFlow is the database layer for this part of the AI stack: the World Model infrastructure that foundation models, agent frameworks, and reasoning systems build on top of.
+ArcFlow is the middle tier — the persistence layer that stores what actually happened, tagged with who observed it, at what confidence, from which sensor, at what sequence checkpoint. It is what neural world models write their outputs into (`_observation_class: 'predicted'`), and what they read ground truth from.
+
+An autonomous vehicle fleet needs to know where every vehicle is, where it was, and what confidence level its sensor data carries — not retrieved from a language model, not approximated by vector similarity, but tracked precisely in a spatial-temporal graph. A multi-agent AI system needs persistent shared state that every agent reads from and writes to, with full provenance of who changed what and when. A physical AI deployment needs a live replica of its environment that can be queried, replayed, and reasoned over.
+
+That is ArcFlow: the operational world model layer that foundation models, neural world models, agent frameworks, and reasoning systems build on top of.
 
 ## Why OZ built ArcFlow
 
-OZ builds operational AI infrastructure for physical environments — sports venues, industrial facilities, autonomous fleets. Every system OZ runs needs the same thing at its core: a continuous, spatial-temporal representation of what is happening, where, and how reliably we know it.
+OZ builds operational AI infrastructure for physical environments — sports venues, industrial facilities, autonomous fleets. Every system OZ runs needs the same thing at its core: a continuous, spatial-temporal record of what is happening, where, and how reliably we know it.
 
-That representation did not exist as a database product. The landscape had two failure modes:
+That record did not exist as a database product. The landscape had two failure modes:
 
 **General-purpose databases** treat coordinates as numeric columns, timestamps as metadata, and confidence as something you implement yourself. Spatial queries require extensions. Temporal history requires separate audit tables. Confidence scoring is entirely application logic. The result is a stack of five systems doing the work of one — each with its own consistency model, each requiring its own maintenance, each introducing its own latency.
 
-**Foundation model databases** represent the world through statistical correlations across internet-scale data. They are extraordinary at language and perception. They are not designed for ground-truth sensor data where spatial precision is measured in centimeters, temporal accuracy is measured in milliseconds, and every fact must be traceable to the instrument that produced it.
+**Neural world models** are extraordinary at simulating possible futures — action-predicated prediction trained on petabytes of sensor data. They are not designed as a queryable store of what actually happened. They do not give you `AS OF seq N` access to ground truth, nor do they maintain the graph of which sensor produced which detection at what confidence.
 
-The world model era is real. AI systems that navigate physical environments, coordinate autonomous fleets, or make decisions with real consequences all require the same infrastructure: a database where space and time are first-class dimensions from first principles — not extensions, not add-ons, not workarounds.
+The world model era is real. But it has two layers, not one. Generative prediction at the top. Operational persistence underneath. AI systems that navigate physical environments, coordinate autonomous fleets, or make decisions with real consequences need both: a neural layer that anticipates, and a database layer where space and time are first-class dimensions, every fact carries a confidence score, and the full history is always queryable.
 
-OZ built ArcFlow because that infrastructure did not exist. It runs in-process (no server, no round-trip), in the browser (any device, zero install), or as a lightweight server — with the same query language, the same temporal guarantees, the same confidence model everywhere. The intention is to give every team building world-aware systems the same foundation that OZ's own physical AI infrastructure runs on.
+OZ built ArcFlow because the persistence layer did not exist. It runs in-process (no server, no round-trip), in the browser (any device, zero install), or as a lightweight server — with the same query language, the same temporal guarantees, the same confidence model everywhere. The intention is to give every team building world-aware systems the same foundation that OZ's own physical AI infrastructure runs on.
 
 Not a research prototype. Production infrastructure — deployed, operating, and under continuous load.
 

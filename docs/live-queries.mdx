@@ -7,7 +7,7 @@ since: "1.5.0"
 status: "stable"
 playground:
   seed: world
-  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH s, d.confidence AS confidence, r, z, s.reliability * d.confidence AS composite_trust RETURN s.name AS sensor, s.type AS type, s.reliability AS reliability, confidence, composite_trust, r.name AS robot, r.task AS task, r.battery AS battery, z.name AS zone, z.hazard AS hazard, CASE WHEN composite_trust >= 0.90 THEN 'nominal' WHEN composite_trust >= 0.75 THEN 'degraded - verify' WHEN composite_trust >= 0.50 THEN 'alert - manual check' ELSE 'critical - sensor fault' END AS alert_level ORDER BY composite_trust"
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS entities, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS composite_trust RETURN zone, hazard, entities, avg_battery, composite_trust, CASE WHEN composite_trust >= 0.90 THEN 'nominal' WHEN composite_trust >= 0.75 THEN 'partial' ELSE 'stale' END AS status ORDER BY composite_trust DESC"
 ---
 
 # Live Queries

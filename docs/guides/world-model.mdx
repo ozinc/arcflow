@@ -7,16 +7,18 @@ since: "10.0.0"
 status: "stable"
 playground:
   seed: world
-  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH s, d.method AS method, r, z, s.reliability * d.confidence AS composite_trust RETURN s.name AS sensor, s.type AS modality, method, composite_trust, r.name AS entity, r.task, r.x AS world_x, r.y AS world_y, r.battery AS energy, z.name AS zone, z.hazard AS risk ORDER BY composite_trust DESC"
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS entity_count, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS composite_trust RETURN zone, hazard, entity_count, avg_battery, composite_trust, CASE WHEN composite_trust >= 0.90 THEN 'optimal' WHEN composite_trust >= 0.75 THEN 'nominal' ELSE 'degraded' END AS status ORDER BY composite_trust DESC"
 ---
 
 # Building a World Model
 
 Most AI systems can read the world. Few can remember it.
 
-They parse language. They embed text. They generate responses. But when the question is "Where was that entity 30 seconds ago? What does the sensor data say? How confident are we, and which instrument produced that reading?" — there is no standard infrastructure layer with an answer. The gap between foundation models and the physical world is not a model problem. It is a database problem.
+They parse language. They embed text. They generate responses. Neural world models (Cosmos, Genie, FSD) go further — they learn to simulate how the world evolves under actions, anticipating futures from petabytes of sensor data. But when the question is "Where was that entity 30 seconds ago? What does the sensor data say? How confident are we, and which instrument produced that reading?" — prediction is not the answer. Persistence is.
 
-A **world model** is the solution: a persistent, queryable representation of physical or simulated reality — what entities exist, where they are, how they relate, how confident we are in each fact, and how all of this has evolved over time.
+The AI infrastructure stack has a missing middle tier. Foundation models handle language and perception. Neural world models handle generative prediction. But the layer where actual world state persists — spatially precise, temporally versioned, confidence-scored — has no standard infrastructure. That gap is a database problem.
+
+An **operational world model** is the solution: a persistent, queryable store of what actually happened — what entities exist, where they are, how they relate, how confident we are in each fact, and how all of this has evolved over time. Neural world models write their predictions into it (`_observation_class: 'predicted'`). Sensors write observations. ArcFlow remembers everything, queryable at any sequence checkpoint.
 
 This guide builds one from scratch. By the end you'll have:
 

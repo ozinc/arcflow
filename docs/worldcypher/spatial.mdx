@@ -5,7 +5,7 @@ section: "worldcypher"
 status: "stable"
 playground:
   seed: world
-  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH s, d.method AS method, d.confidence AS confidence, r, z, s.reliability * d.confidence AS composite_trust, (r.x - s.x) * (r.x - s.x) + (r.y - s.y) * (r.y - s.y) AS dist_sq RETURN s.name AS sensor, s.type AS type, s.x AS sensor_x, s.y AS sensor_y, s.reliability AS reliability, method, confidence, composite_trust, dist_sq AS proximity_sq, r.name AS robot, r.x AS robot_x, r.y AS robot_y, r.task AS task, z.name AS zone ORDER BY composite_trust DESC"
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS entity_count, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS composite_trust RETURN zone, hazard, entity_count, avg_battery, composite_trust, CASE WHEN composite_trust >= 0.90 THEN 'optimal' WHEN composite_trust >= 0.75 THEN 'nominal' ELSE 'degraded' END AS status ORDER BY composite_trust DESC"
 ---
 
 # WorldCypher: Spatial Queries

@@ -5,14 +5,16 @@ section: "use-cases"
 status: "stable"
 playground:
   seed: world
-  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH s, d.method AS method, r, z, r.speed * r.battery AS operational_power, s.reliability * d.confidence AS perception_quality RETURN s.name AS sensor, s.type AS modality, perception_quality, method, r.name AS robot, r.task, r.x AS current_x, r.y AS current_y, r.speed AS velocity, r.battery AS energy, operational_power, z.name AS zone, z.hazard, CASE WHEN perception_quality >= 0.9 AND r.battery >= 80 THEN 'autonomous - full capability' WHEN perception_quality >= 0.8 THEN 'supervised - nominal' ELSE 'degraded - human oversight required' END AS operational_mode ORDER BY operational_power DESC"
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS entity_count, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS composite_trust RETURN zone, hazard, entity_count, avg_battery, composite_trust, CASE WHEN composite_trust >= 0.9 AND r.battery >= 80 THEN 'autonomous' WHEN composite_trust >= 0.8 THEN 'supervised' ELSE 'degraded' END AS operational_mode ORDER BY composite_trust DESC"
 ---
 
 # Autonomous Systems
 
-Every autonomous system is, at its core, a question of state: what is known, when it was known, and how much to trust it. A robot navigating a warehouse, a UAV fleet maintaining formation, a self-driving vehicle making a lane-change decision — each requires a continuous, spatially precise, temporally accurate, confidence-scored representation of its environment.
+Every autonomous system is, at its core, a question of state: what is known, when it was known, and how much to trust it. A robot navigating a warehouse, a UAV fleet maintaining formation, a self-driving vehicle making a lane-change decision — each requires a continuous, spatially precise, temporally accurate, confidence-scored store of what is actually happening.
 
-That representation is a world model. ArcFlow is the database built to be one.
+Neural world models (Cosmos, FSD, Genie) are the prediction tier — generative engines that anticipate how the world evolves under actions. ArcFlow is the persistence tier — the operational world model that stores what actually happened, at what confidence, from which sensor, queryable at any sequence checkpoint.
+
+Neural world models predict. ArcFlow remembers. Autonomous systems need both.
 
 ## The infrastructure problem
 
@@ -207,8 +209,11 @@ CALL arcflow.scene.queryInLocalSpace(robot_id, 10.0)
 
 ## Why one world model instead of five systems
 
+The operational world model layer is the piece most autonomous stacks are missing. Neural world models handle prediction. ArcFlow handles persistence — collapsing what used to be five separate systems into one in-process engine.
+
 | Capability | Traditional stack | ArcFlow |
 |---|---|---|
+| Neural model outputs | Application code, separate store | Store as `_observation_class: 'predicted'` edges |
 | Spatial proximity | Separate spatial DB + query | `CALL algo.nearestNodes(...)` |
 | Entity history | Time-series DB + join | `AS OF seq N` on same graph |
 | Confidence scoring | Application logic | `_confidence` on every fact |
