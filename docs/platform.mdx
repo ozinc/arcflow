@@ -6,9 +6,7 @@ order: 1
 since: "10.0.0"
 status: "stable"
 playground:
-  query: |-
-    MERGE (n:Node {id: 'platform-demo', name: 'ArcFlow', runtime: 'wasm', version: '2.0', portable: 1, modes: 3}) RETURN n.name, n.runtime, n.version, n.portable, n.modes
-
+  query: "MERGE (n:Node {id: 'platform-demo', name: 'ArcFlow', runtime: 'wasm', version: '2.0', portable: 1, modes: 3}) RETURN n.name, n.runtime, n.version, n.portable, n.modes"
 ---
 
 # Platforms

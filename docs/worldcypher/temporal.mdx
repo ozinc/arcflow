@@ -5,11 +5,7 @@ section: "worldcypher"
 status: "stable"
 playground:
   seed: world
-  query: |-
-    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[occ:OCCUPIES]->(z:Zone)
-    WITH s, d, r, occ, z, r.speed AS velocity, r.battery AS energy, s.reliability * d.confidence AS observation_quality
-    RETURN r.name AS entity, r.task, r.x AS pos_x, r.y AS pos_y, velocity, energy, occ.entered_seq AS entry_seq, observation_quality, d.method AS detection_method, z.name AS current_zone ORDER BY velocity DESC
-
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[occ:OCCUPIES]->(z:Zone) WITH s, d, r, occ, z, r.speed AS velocity, r.battery AS energy, s.reliability * d.confidence AS observation_quality RETURN r.name AS entity, r.task AS task, r.x AS pos_x, r.y AS pos_y, velocity, energy, occ.entered_seq AS entry_seq, observation_quality, d.method AS detection_method, z.name AS current_zone ORDER BY velocity DESC"
 ---
 
 # WorldCypher: Temporal Queries

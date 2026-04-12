@@ -7,11 +7,7 @@ since: "0.4.0"
 status: "stable"
 playground:
   seed: world
-  query: |-
-    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot) WITH s, d, r, s.reliability * d.confidence AS composite_trust SET d.flagged = composite_trust < 0.80, d.composite_trust = composite_trust
-
-    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot) RETURN s.name AS sensor, s.type, s.reliability, d.confidence AS detection_confidence, d.composite_trust, d.flagged AS needs_review, r.name AS entity, r.task, CASE WHEN d.composite_trust >= 0.90 THEN 'trusted - use directly' WHEN d.composite_trust >= 0.80 THEN 'verify - cross-check' ELSE 'flagged - manual review' END AS action ORDER BY d.composite_trust ASC
-
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot) WITH s, d, r, s.reliability * d.confidence AS composite_trust SET d.flagged = composite_trust < 0.80, d.composite_trust = composite_trust MATCH (s:Sensor)-[d:DETECTED]->(r:Robot) RETURN s.name AS sensor, s.type, s.reliability, d.confidence AS detection_confidence, d.composite_trust, d.flagged AS needs_review, r.name AS entity, r.task, CASE WHEN d.composite_trust >= 0.90 THEN 'trusted - use directly' WHEN d.composite_trust >= 0.80 THEN 'verify - cross-check' ELSE 'flagged - manual review' END AS action ORDER BY d.composite_trust ASC"
 ---
 
 # REPROCESS EDGES

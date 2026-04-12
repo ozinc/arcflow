@@ -4,11 +4,7 @@ description: "Docker deployment for the world model engine — volume mounts for
 section: "deployment"
 status: "stable"
 playground:
-  query: |-
-    MERGE (r:Robot {id: 'r1', name: 'Atlas-01', task: 'assembly', battery: 87})
-
-    MATCH (r:Robot) RETURN r.name, r.task, r.battery
-
+  query: "MERGE (r:Robot {id: 'r1', name: 'Atlas-01', task: 'assembly', battery: 87}) MATCH (r:Robot) RETURN r.name, r.task, r.battery"
 ---
 
 # Deployment: Docker

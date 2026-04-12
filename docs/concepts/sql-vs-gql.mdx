@@ -5,9 +5,7 @@ section: "concepts"
 status: "stable"
 playground:
   seed: world
-  query: |-
-    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WHERE r.battery > 50 WITH z.name AS zone, z.hazard AS zone_risk, count(r) AS robots, avg(r.battery) AS avg_energy, avg(s.reliability * d.confidence) AS sensor_coverage RETURN zone, zone_risk, robots, avg_energy, sensor_coverage, CASE WHEN sensor_coverage >= 0.9 THEN 'full situational awareness' WHEN sensor_coverage >= 0.75 THEN 'good coverage' ELSE 'sensor gaps - investigate' END AS awareness_state ORDER BY sensor_coverage DESC
-
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WHERE r.battery > 50 WITH z.name AS zone, z.hazard AS zone_risk, count(r) AS robots, avg(r.battery) AS avg_energy, avg(s.reliability * d.confidence) AS sensor_coverage RETURN zone, zone_risk, robots, avg_energy, sensor_coverage, CASE WHEN sensor_coverage >= 0.9 THEN 'full situational awareness' WHEN sensor_coverage >= 0.75 THEN 'good coverage' ELSE 'sensor gaps - investigate' END AS awareness_state ORDER BY sensor_coverage DESC"
 ---
 
 # SQL vs GQL — The Mental Model Shift

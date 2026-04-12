@@ -4,11 +4,7 @@ description: "Idempotent batch projection into the world model — high-throughp
 section: "recipes"
 status: "stable"
 playground:
-  query: |-
-    UNWIND ['Assembly-East', 'Inspection-West', 'Storage-Bay', 'Maintenance-Hub'] AS area_name
-    MERGE (z:Zone {id: area_name, name: area_name, active: 1, hazard: 0.05, radius: 12.0})
-    RETURN z.name AS zone, z.active, z.hazard, z.radius ORDER BY z.name
-
+  query: "UNWIND ['Assembly-East', 'Inspection-West', 'Storage-Bay', 'Maintenance-Hub'] AS area_name MERGE (z:Zone {id: area_name, name: area_name, active: 1, hazard: 0.05, radius: 12.0}) RETURN z.name AS zone, z.active AS active, z.hazard AS hazard, z.radius AS radius ORDER BY z.name"
 ---
 
 # Recipe: Batch Projection

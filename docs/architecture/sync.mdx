@@ -5,9 +5,7 @@ section: "operations"
 status: "stable"
 playground:
   seed: world
-  query: |-
-    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS entities, avg(s.reliability * d.confidence) AS sync_quality RETURN zone, hazard, entities, sync_quality, CASE WHEN sync_quality >= 0.88 THEN 'push - authoritative' WHEN sync_quality >= 0.70 THEN 'pull - verify' ELSE 'stale - resync' END AS sync_directive ORDER BY sync_quality DESC
-
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS entities, avg(s.reliability * d.confidence) AS sync_quality RETURN zone, hazard, entities, sync_quality, CASE WHEN sync_quality >= 0.88 THEN 'push - authoritative' WHEN sync_quality >= 0.70 THEN 'pull - verify' ELSE 'stale - resync' END AS sync_directive ORDER BY sync_quality DESC"
 ---
 
 # Sync Architecture

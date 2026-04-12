@@ -7,11 +7,7 @@ since: "0.2.0"
 status: "stable"
 playground:
   seed: world
-  query: |-
-    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone)
-    WITH s, d, r, z, s.reliability * d.confidence AS composite_trust, r.battery * r.speed AS operational_power
-    RETURN r.name AS robot, r.task AS role, r.battery AS battery_pct, r.speed AS velocity, operational_power, d.confidence AS detection_confidence, d.method AS perception_method, composite_trust, z.name AS zone, z.hazard AS zone_hazard, CASE WHEN composite_trust >= 0.90 THEN 'authoritative' WHEN composite_trust >= 0.80 THEN 'confirmed' ELSE 'uncertain' END AS trust_tier ORDER BY composite_trust DESC
-
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH s, d, r, z, s.reliability * d.confidence AS composite_trust, r.battery * r.speed AS operational_power RETURN r.name AS robot, r.task AS role, r.battery AS battery_pct, r.speed AS velocity, operational_power, d.confidence AS detection_confidence, d.method AS perception_method, composite_trust, z.name AS zone, z.hazard AS zone_hazard, CASE WHEN composite_trust >= 0.90 THEN 'authoritative' WHEN composite_trust >= 0.80 THEN 'confirmed' ELSE 'uncertain' END AS trust_tier ORDER BY composite_trust DESC"
 ---
 
 # RETURN

@@ -7,9 +7,7 @@ since: "0.2.0"
 status: "stable"
 playground:
   seed: world
-  query: |-
-    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WHERE d.confidence > 0.85 WITH s, d, r, z, d.confidence * s.reliability AS composite_trust, (r.x - s.x) * (r.x - s.x) + (r.y - s.y) * (r.y - s.y) AS sensor_range_sq RETURN r.name AS entity, r.task, r.x AS pos_x, r.y AS pos_y, r.battery, composite_trust, sensor_range_sq, d.method AS perception_method, z.name AS zone, z.hazard ORDER BY composite_trust DESC
-
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WHERE d.confidence > 0.85 WITH s, d, r, z, d.confidence * s.reliability AS composite_trust, (r.x - s.x) * (r.x - s.x) + (r.y - s.y) * (r.y - s.y) AS sensor_range_sq RETURN r.name AS entity, r.task, r.x AS pos_x, r.y AS pos_y, r.battery, composite_trust, sensor_range_sq, d.method AS perception_method, z.name AS zone, z.hazard ORDER BY composite_trust DESC"
 ---
 
 # ArcFlow for Coding Agents

@@ -6,27 +6,7 @@ order: 4
 since: "10.0.0"
 status: "stable"
 playground:
-  query: |-
-    MERGE (f1:File {id: 'src/main.ts', name: 'main.ts', type: 'entrypoint', loc: 85, critical: 1})
-
-    MERGE (f2:File {id: 'src/lib/db.ts', name: 'db.ts', type: 'library', loc: 240, critical: 1})
-
-    MERGE (f3:File {id: 'src/lib/auth.ts', name: 'auth.ts', type: 'library', loc: 320, critical: 1})
-
-    MERGE (f4:File {id: 'src/api/routes.ts', name: 'routes.ts', type: 'api', loc: 155, critical: 0})
-
-    MERGE (f5:File {id: 'src/utils/logger.ts', name: 'logger.ts', type: 'utility', loc: 60, critical: 0})
-
-    MERGE (f1:File {id: 'src/main.ts'})-[:IMPORTS {static: 1}]->(f2:File {id: 'src/lib/db.ts'})
-
-    MERGE (f1:File {id: 'src/main.ts'})-[:IMPORTS {static: 1}]->(f3:File {id: 'src/lib/auth.ts'})
-
-    MERGE (f4:File {id: 'src/api/routes.ts'})-[:IMPORTS {static: 1}]->(f2:File {id: 'src/lib/db.ts'})
-
-    MERGE (f3:File {id: 'src/lib/auth.ts'})-[:IMPORTS {static: 0}]->(f5:File {id: 'src/utils/logger.ts'})
-
-    MATCH (f:File)-[:IMPORTS]->(dep:File) WITH dep.name AS dependency, dep.type, dep.loc, dep.critical, count(f) AS dependents RETURN dependency, type, loc, critical, dependents ORDER BY dependents DESC
-
+  query: "MERGE (f1:File {id: 'src/main.ts', name: 'main.ts', type: 'entrypoint', loc: 85, critical: 1}) MERGE (f2:File {id: 'src/lib/db.ts', name: 'db.ts', type: 'library', loc: 240, critical: 1}) MERGE (f3:File {id: 'src/lib/auth.ts', name: 'auth.ts', type: 'library', loc: 320, critical: 1}) MERGE (f4:File {id: 'src/api/routes.ts', name: 'routes.ts', type: 'api', loc: 155, critical: 0}) MERGE (f5:File {id: 'src/utils/logger.ts', name: 'logger.ts', type: 'utility', loc: 60, critical: 0}) MERGE (f1:File {id: 'src/main.ts'})-[:IMPORTS {static: 1}]->(f2:File {id: 'src/lib/db.ts'}) MERGE (f1:File {id: 'src/main.ts'})-[:IMPORTS {static: 1}]->(f3:File {id: 'src/lib/auth.ts'}) MERGE (f4:File {id: 'src/api/routes.ts'})-[:IMPORTS {static: 1}]->(f2:File {id: 'src/lib/db.ts'}) MERGE (f3:File {id: 'src/lib/auth.ts'})-[:IMPORTS {static: 0}]->(f5:File {id: 'src/utils/logger.ts'}) MATCH (f:File)-[:IMPORTS]->(dep:File) WITH dep.name AS dependency, dep.type, dep.loc, dep.critical, count(f) AS dependents RETURN dependency, type, loc, critical, dependents ORDER BY dependents DESC"
 ---
 
 # Filesystem Workspace

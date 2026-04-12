@@ -5,9 +5,7 @@ section: "recipes"
 status: "stable"
 playground:
   seed: world
-  query: |-
-    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH r, s, z, d, r.speed AS velocity, r.battery AS energy, s.reliability * d.confidence AS observation_trust RETURN r.name AS entity, r.task, r.x AS pos_x, r.y AS pos_y, velocity, energy, energy * velocity AS kinetic_index, observation_trust, d.confidence AS last_confidence, z.name AS zone ORDER BY velocity DESC
-
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH r, s, z, d, r.speed AS velocity, r.battery AS energy, s.reliability * d.confidence AS observation_trust RETURN r.name AS entity, r.task, r.x AS pos_x, r.y AS pos_y, velocity, energy, energy * velocity AS kinetic_index, observation_trust, d.confidence AS last_confidence, z.name AS zone ORDER BY velocity DESC"
 ---
 
 # Recipe: Temporal Queries

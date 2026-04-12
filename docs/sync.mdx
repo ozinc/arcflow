@@ -5,11 +5,7 @@ section: "capabilities"
 status: "stable"
 playground:
   seed: world
-  query: |-
-    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone)
-    WITH z.name AS zone, z.hazard AS hazard, count(r) AS entity_count, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS sync_quality
-    RETURN zone, hazard, entity_count, avg_battery, sync_quality, CASE WHEN sync_quality >= 0.90 THEN 'synced' WHEN sync_quality >= 0.75 THEN 'partial' ELSE 'stale' END AS sync_status ORDER BY sync_quality DESC
-
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS entity_count, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS sync_quality RETURN zone, hazard, entity_count, avg_battery, sync_quality, CASE WHEN sync_quality >= 0.90 THEN 'synced' WHEN sync_quality >= 0.75 THEN 'partial' ELSE 'stale' END AS sync_status ORDER BY sync_quality DESC"
 ---
 
 # Sync

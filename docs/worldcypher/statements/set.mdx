@@ -7,11 +7,7 @@ since: "0.3.0"
 status: "stable"
 playground:
   seed: world
-  query: |-
-    MATCH (r:Robot {id: 'r1'})
-    SET r.battery = 96, r.status = 'charging', r.task = 'standby', r.dock_seq = 201
-    RETURN r.name, r.task, r.battery, r.status, r.dock_seq, r.x, r.y
-
+  query: "MATCH (r:Robot {id: 'r1'}) SET r.battery = 96, r.status = 'charging', r.task = 'standby', r.dock_seq = 201 RETURN r.name AS name, r.task AS task, r.battery AS battery, r.status AS status, r.dock_seq AS dock_seq, r.x AS x, r.y AS y"
 ---
 
 # SET

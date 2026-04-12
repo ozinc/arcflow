@@ -6,15 +6,7 @@ order: 2
 since: "0.10.0"
 status: "stable"
 playground:
-  query: |-
-    MERGE (r1:Robot {id: 'r1', name: 'Atlas-01', task: 'assembly', battery: 87, speed: 1.2, x: 18.0, y: 8.5})
-
-    MERGE (r2:Robot {id: 'r2', name: 'Rover-02', task: 'inspection', battery: 63, speed: 0.8, x: -17.0, y: -9.0})
-
-    MERGE (r3:Robot {id: 'r3', name: 'Welder-03', task: 'welding', battery: 91, speed: 0.5, x: 5.0, y: -5.0})
-
-    MATCH (r:Robot) WHERE r.battery > 70 AND r.speed > 0.4 RETURN r.name, r.task, r.battery, r.speed, r.x, r.y, CASE WHEN r.battery >= 85 THEN 'high' WHEN r.battery >= 70 THEN 'medium' ELSE 'low' END AS battery_tier ORDER BY r.battery DESC
-
+  query: "MERGE (r1:Robot {id: 'r1', name: 'Atlas-01', task: 'assembly', battery: 87, speed: 1.2, x: 18.0, y: 8.5}) MERGE (r2:Robot {id: 'r2', name: 'Rover-02', task: 'inspection', battery: 63, speed: 0.8, x: -17.0, y: -9.0}) MERGE (r3:Robot {id: 'r3', name: 'Welder-03', task: 'welding', battery: 91, speed: 0.5, x: 5.0, y: -5.0}) MATCH (r:Robot) WHERE r.battery > 70 AND r.speed > 0.4 RETURN r.name, r.task, r.battery, r.speed, r.x, r.y, CASE WHEN r.battery >= 85 THEN 'high' WHEN r.battery >= 70 THEN 'medium' ELSE 'low' END AS battery_tier ORDER BY r.battery DESC"
 ---
 
 # Indexes

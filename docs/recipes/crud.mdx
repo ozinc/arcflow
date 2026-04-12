@@ -5,13 +5,7 @@ section: "recipes"
 status: "stable"
 playground:
   seed: world
-  query: |-
-    MERGE (r:Robot {id: 'r-new', name: 'Proto-04', task: 'calibration', x: 0.0, y: 0.0, speed: 0.3, battery: 100, status: 'initializing'})
-
-    MATCH (r:Robot {id: 'r-new'}) SET r.battery = 97, r.status = 'ready', r.task = 'patrol', r.updated_seq = 5
-
-    MATCH (r:Robot {id: 'r-new'}) RETURN r.name, r.task, r.battery, r.speed, r.status, r.updated_seq, r.x, r.y
-
+  query: "MERGE (r:Robot {id: 'r-new', name: 'Proto-04', task: 'calibration', x: 0.0, y: 0.0, speed: 0.3, battery: 100, status: 'initializing'}) MATCH (r:Robot {id: 'r-new'}) SET r.battery = 97, r.status = 'ready', r.task = 'patrol', r.updated_seq = 5 MATCH (r:Robot {id: 'r-new'}) RETURN r.name, r.task, r.battery, r.speed, r.status, r.updated_seq, r.x, r.y"
 ---
 
 # Recipe: CRUD Operations

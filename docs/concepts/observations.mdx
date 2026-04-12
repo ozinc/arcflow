@@ -5,9 +5,7 @@ section: "concepts"
 status: "stable"
 playground:
   seed: world
-  query: |-
-    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot) WITH s, d, r, s.reliability * d.confidence AS composite_trust RETURN s.name AS observer, s.type AS modality, s.reliability AS sensor_quality, d.confidence AS detection_confidence, composite_trust, r.name AS observed_entity, r.task, r.battery ORDER BY composite_trust DESC
-
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot) WITH s, d, r, s.reliability * d.confidence AS composite_trust RETURN s.name AS observer, s.type AS modality, s.reliability AS sensor_quality, d.confidence AS detection_confidence, composite_trust, r.name AS observed_entity, r.task, r.battery ORDER BY composite_trust DESC"
 ---
 
 # Observations & Evidence

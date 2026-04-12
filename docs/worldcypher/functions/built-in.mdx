@@ -7,11 +7,7 @@ since: "0.8.0"
 status: "stable"
 playground:
   seed: world
-  query: |-
-    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone)
-    WITH s, d, r, z, s.reliability * d.confidence AS perception_quality, d.confidence * r.battery AS operational_score, r.battery * r.speed AS throughput
-    RETURN r.name AS robot, r.task, r.battery, r.speed, operational_score, throughput, perception_quality, d.method, z.name AS zone ORDER BY operational_score DESC
-
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH s, d, r, z, s.reliability * d.confidence AS perception_quality, d.confidence * r.battery AS operational_score, r.battery * r.speed AS throughput RETURN r.name AS robot, r.task AS task, r.battery AS battery, r.speed AS speed, operational_score, throughput, perception_quality, d.method AS method, z.name AS zone ORDER BY operational_score DESC"
 ---
 
 # Built-in Functions

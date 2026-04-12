@@ -7,11 +7,7 @@ since: "0.2.0"
 status: "stable"
 playground:
   seed: world
-  query: |-
-    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone)
-    WITH s, d, r, z, s.reliability * d.confidence AS perception_quality, r.battery * d.confidence AS operational_score
-    RETURN s.name AS sensor, s.type AS modality, perception_quality, d.method, r.name AS robot, r.task, r.battery, operational_score, z.name AS zone, z.hazard ORDER BY operational_score DESC
-
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH s, d, r, z, s.reliability * d.confidence AS perception_quality, r.battery * d.confidence AS operational_score RETURN s.name AS sensor, s.type AS modality, perception_quality, d.method AS method, r.name AS robot, r.task AS task, r.battery AS battery, operational_score, z.name AS zone, z.hazard AS hazard ORDER BY operational_score DESC"
 ---
 
 # GQL / WorldCypher

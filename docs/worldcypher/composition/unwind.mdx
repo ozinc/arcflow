@@ -6,11 +6,7 @@ order: 2
 since: "0.12.0"
 status: "stable"
 playground:
-  query: |-
-    UNWIND ['Assembly', 'Quality-Control', 'Logistics', 'Quarantine'] AS area_name
-    MERGE (z:Zone {id: area_name, name: area_name, active: 1, hazard: 0.1, radius: 15.0})
-    RETURN z.name, z.active, z.hazard, z.radius ORDER BY z.name
-
+  query: "UNWIND ['Assembly', 'Quality-Control', 'Logistics', 'Quarantine'] AS area_name MERGE (z:Zone {id: area_name, name: area_name, active: 1, hazard: 0.1, radius: 15.0}) RETURN z.name AS name, z.active AS active, z.hazard AS hazard, z.radius AS radius ORDER BY z.name"
 ---
 
 # UNWIND

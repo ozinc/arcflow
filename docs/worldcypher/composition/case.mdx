@@ -7,11 +7,7 @@ since: "0.12.0"
 status: "stable"
 playground:
   seed: world
-  query: |-
-    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone)
-    WITH s, d, r, z, s.reliability * d.confidence AS composite_trust, d.confidence * r.battery AS score
-    RETURN r.name AS robot, r.task, r.battery, composite_trust, score, CASE WHEN score >= 85 THEN 'tier-1 optimal' WHEN score >= 60 THEN 'tier-2 nominal' ELSE 'tier-3 degraded' END AS operational_tier, CASE WHEN z.hazard >= 0.3 THEN 'restricted' WHEN z.hazard >= 0.1 THEN 'caution' ELSE 'clear' END AS zone_access, z.name AS zone ORDER BY score DESC
-
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH s, d, r, z, s.reliability * d.confidence AS composite_trust, d.confidence * r.battery AS score RETURN r.name AS robot, r.task AS task, r.battery AS battery, composite_trust, score, CASE WHEN score >= 85 THEN 'tier-1 optimal' WHEN score >= 60 THEN 'tier-2 nominal' ELSE 'tier-3 degraded' END AS operational_tier, CASE WHEN z.hazard >= 0.3 THEN 'restricted' WHEN z.hazard >= 0.1 THEN 'caution' ELSE 'clear' END AS zone_access, z.name AS zone ORDER BY score DESC"
 ---
 
 # CASE WHEN

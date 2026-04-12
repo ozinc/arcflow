@@ -4,23 +4,7 @@ description: "Merge records that refer to the same real-world entity — confide
 section: "tutorials"
 status: "stable"
 playground:
-  query: |-
-    MERGE (robot:Robot {id: 'r1', name: 'Atlas-01', canonical: 1, x: 18.0, y: 8.5, battery: 87, task: 'assembly'})
-
-    MERGE (obs_cam:Observation {id: 'obs-cam-r1', source: 'cam-1', label: 'Robot-Silhouette-34', confidence: 0.96})
-
-    MERGE (obs_lidar:Observation {id: 'obs-lidar-r1', source: 'lidar-1', label: 'Object-3D-12', confidence: 0.89})
-
-    MERGE (obs_rfid:Observation {id: 'obs-rfid-r1', source: 'rfid-1', label: 'Tag-F3A2', confidence: 0.99})
-
-    MATCH (robot:Robot {id: 'r1'}), (obs_cam:Observation {id: 'obs-cam-r1'}) MERGE (obs_cam)-[:RESOLVES_TO {method: 'vision-match', verified: 1, strength: 0.96}]->(robot)
-
-    MATCH (robot:Robot {id: 'r1'}), (obs_lidar:Observation {id: 'obs-lidar-r1'}) MERGE (obs_lidar)-[:RESOLVES_TO {method: 'geometry-match', verified: 0, strength: 0.89}]->(robot)
-
-    MATCH (robot:Robot {id: 'r1'}), (obs_rfid:Observation {id: 'obs-rfid-r1'}) MERGE (obs_rfid)-[:RESOLVES_TO {method: 'rfid-tag', verified: 1, strength: 0.99}]->(robot)
-
-    MATCH (obs:Observation)-[r:RESOLVES_TO]->(entity:Robot) RETURN obs.source AS sensor, obs.label AS raw_observation, obs.confidence AS raw_confidence, r.method AS linking_method, r.verified, r.strength AS link_strength, entity.name AS resolved_entity, entity.task, entity.x, entity.y ORDER BY r.strength DESC
-
+  query: "MERGE (robot:Robot {id: 'r1', name: 'Atlas-01', canonical: 1, x: 18.0, y: 8.5, battery: 87, task: 'assembly'}) MERGE (obs_cam:Observation {id: 'obs-cam-r1', source: 'cam-1', label: 'Robot-Silhouette-34', confidence: 0.96}) MERGE (obs_lidar:Observation {id: 'obs-lidar-r1', source: 'lidar-1', label: 'Object-3D-12', confidence: 0.89}) MERGE (obs_rfid:Observation {id: 'obs-rfid-r1', source: 'rfid-1', label: 'Tag-F3A2', confidence: 0.99}) MATCH (robot:Robot {id: 'r1'}), (obs_cam:Observation {id: 'obs-cam-r1'}) MERGE (obs_cam)-[:RESOLVES_TO {method: 'vision-match', verified: 1, strength: 0.96}]->(robot) MATCH (robot:Robot {id: 'r1'}), (obs_lidar:Observation {id: 'obs-lidar-r1'}) MERGE (obs_lidar)-[:RESOLVES_TO {method: 'geometry-match', verified: 0, strength: 0.89}]->(robot) MATCH (robot:Robot {id: 'r1'}), (obs_rfid:Observation {id: 'obs-rfid-r1'}) MERGE (obs_rfid)-[:RESOLVES_TO {method: 'rfid-tag', verified: 1, strength: 0.99}]->(robot) MATCH (obs:Observation)-[r:RESOLVES_TO]->(entity:Robot) RETURN obs.source AS sensor, obs.label AS raw_observation, obs.confidence AS raw_confidence, r.method AS linking_method, r.verified, r.strength AS link_strength, entity.name AS resolved_entity, entity.task, entity.x, entity.y ORDER BY r.strength DESC"
 ---
 
 # Tutorial: Entity Linking

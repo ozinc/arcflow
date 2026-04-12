@@ -7,11 +7,7 @@ since: "0.10.0"
 status: "stable"
 playground:
   seed: world
-  query: |-
-    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone)
-    WITH s, d, r, z, s.reliability * d.confidence AS composite_trust
-    RETURN s.name AS sensor_entity, s.type AS sensor_schema, s.reliability, d.confidence, d.method, composite_trust, r.name AS robot_entity, r.task AS robot_schema, r.battery, r.speed, r.x, r.y, z.name AS zone_entity, z.hazard AS zone_schema ORDER BY composite_trust DESC
-
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH s, d, r, z, s.reliability * d.confidence AS composite_trust RETURN s.name AS sensor_entity, s.type AS sensor_schema, s.reliability AS reliability, d.confidence AS confidence, d.method AS method, composite_trust, r.name AS robot_entity, r.task AS robot_schema, r.battery AS battery, r.speed AS speed, r.x AS x, r.y AS y, z.name AS zone_entity, z.hazard AS zone_schema ORDER BY composite_trust DESC"
 ---
 
 # Schema

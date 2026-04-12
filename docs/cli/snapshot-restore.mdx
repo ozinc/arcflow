@@ -7,10 +7,7 @@ since: "0.2.0"
 status: "stable"
 playground:
   seed: world
-  query: |-
-    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone)
-    RETURN r.name AS robot, r.task, r.battery, r.speed, r.x, r.y, s.name AS sensor, s.type, d.confidence AS trust, d.method, z.name AS zone ORDER BY r.name
-
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) RETURN r.name AS robot, r.task AS task, r.battery AS battery, r.speed AS speed, r.x AS x, r.y AS y, s.name AS sensor, s.type AS type, d.confidence AS trust, d.method AS method, z.name AS zone ORDER BY r.name"
 ---
 
 # Snapshot & Restore

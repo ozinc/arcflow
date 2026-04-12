@@ -5,27 +5,7 @@ section: "use-cases"
 status: "stable"
 playground:
   seed: world
-  query: |-
-    MERGE (director:Agent {id: 'director', name: 'DirectorAgent', role: 'orchestrator', active: 1})
-
-    MERGE (planner1:Agent {id: 'plan-a', name: 'PlannerAlpha', role: 'planning', zone: 'lab-a', active: 1})
-
-    MERGE (planner2:Agent {id: 'plan-b', name: 'PlannerBeta', role: 'planning', zone: 'lab-b', active: 1})
-
-    MERGE (s1:Sensor {id: 'cam-1', name: 'Cam-LabA', type: 'camera', reliability: 0.95})
-
-    MERGE (s2:Sensor {id: 'lidar-1', name: 'Lidar-LabB', type: 'lidar', reliability: 0.91})
-
-    MERGE (d:Agent {id: 'director'})-[:DELEGATES_TO {intent: 'monitor', priority: 1, confidence_floor: 0.85}]->(p1:Agent {id: 'plan-a'})
-
-    MERGE (d:Agent {id: 'director'})-[:DELEGATES_TO {intent: 'inspect', priority: 2, confidence_floor: 0.80}]->(p2:Agent {id: 'plan-b'})
-
-    MERGE (p1:Agent {id: 'plan-a'})-[:MONITORS {freq_hz: 25}]->(s1:Sensor {id: 'cam-1'})
-
-    MERGE (p2:Agent {id: 'plan-b'})-[:MONITORS {freq_hz: 10}]->(s2:Sensor {id: 'lidar-1'})
-
-    MATCH (dir:Agent)-[del:DELEGATES_TO]->(planner:Agent)-[mon:MONITORS]->(sensor:Sensor) RETURN dir.name AS director, del.intent, del.priority, del.confidence_floor, planner.name AS planner, sensor.name AS monitoring_sensor, sensor.type, sensor.reliability, mon.freq_hz AS poll_rate ORDER BY del.priority
-
+  query: "MERGE (director:Agent {id: 'director', name: 'DirectorAgent', role: 'orchestrator', active: 1}) MERGE (planner1:Agent {id: 'plan-a', name: 'PlannerAlpha', role: 'planning', zone: 'lab-a', active: 1}) MERGE (planner2:Agent {id: 'plan-b', name: 'PlannerBeta', role: 'planning', zone: 'lab-b', active: 1}) MERGE (s1:Sensor {id: 'cam-1', name: 'Cam-LabA', type: 'camera', reliability: 0.95}) MERGE (s2:Sensor {id: 'lidar-1', name: 'Lidar-LabB', type: 'lidar', reliability: 0.91}) MERGE (d:Agent {id: 'director'})-[:DELEGATES_TO {intent: 'monitor', priority: 1, confidence_floor: 0.85}]->(p1:Agent {id: 'plan-a'}) MERGE (d:Agent {id: 'director'})-[:DELEGATES_TO {intent: 'inspect', priority: 2, confidence_floor: 0.80}]->(p2:Agent {id: 'plan-b'}) MERGE (p1:Agent {id: 'plan-a'})-[:MONITORS {freq_hz: 25}]->(s1:Sensor {id: 'cam-1'}) MERGE (p2:Agent {id: 'plan-b'})-[:MONITORS {freq_hz: 10}]->(s2:Sensor {id: 'lidar-1'}) MATCH (dir:Agent)-[del:DELEGATES_TO]->(planner:Agent)-[mon:MONITORS]->(sensor:Sensor) RETURN dir.name AS director, del.intent, del.priority, del.confidence_floor, planner.name AS planner, sensor.name AS monitoring_sensor, sensor.type, sensor.reliability, mon.freq_hz AS poll_rate ORDER BY del.priority"
 ---
 
 # Use Case: Behavior Graphs

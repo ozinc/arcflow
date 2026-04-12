@@ -6,9 +6,7 @@ order: 1
 since: "0.1.0"
 status: "stable"
 playground:
-  query: |-
-    MERGE (e:Entity {id: 'types-demo', name: 'ArcFlow Type System', active: 1, score: 9.75, confidence: 0.97, sequence: 42, tag: 'reference', version: 2}) RETURN e.name, e.active, e.score, e.confidence, e.sequence, e.tag, e.version
-
+  query: "MERGE (e:Entity {id: 'types-demo', name: 'ArcFlow Type System', active: 1, score: 9.75, confidence: 0.97, sequence: 42, tag: 'reference', version: 2}) RETURN e.name, e.active, e.score, e.confidence, e.sequence, e.tag, e.version"
 ---
 
 # Data Types

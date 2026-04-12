@@ -4,12 +4,7 @@ description: "MERGE upsert pattern for idempotent world model pipelines — find
 section: "recipes"
 status: "stable"
 playground:
-  query: |-
-    MERGE (r:Robot {id: 'r-upsert', name: 'Prototype-X', x: 0.0, y: 0.0})
-    ON CREATE SET r.battery = 100, r.task = 'standby', r.created = 1, r.version = 1, r.speed = 0.5
-    ON MATCH SET r.battery = 88, r.task = 'active', r.updated = 1, r.version = 2, r.speed = 1.1
-    MATCH (r:Robot {id: 'r-upsert'}) RETURN r.name, r.task, r.battery, r.speed, r.created, r.updated, r.version
-
+  query: "MERGE (r:Robot {id: 'r-upsert', name: 'Prototype-X', x: 0.0, y: 0.0}) ON CREATE SET r.battery = 100, r.task = 'standby', r.created = 1, r.version = 1, r.speed = 0.5 ON MATCH SET r.battery = 88, r.task = 'active', r.updated = 1, r.version = 2, r.speed = 1.1 MATCH (r:Robot {id: 'r-upsert'}) RETURN r.name, r.task, r.battery, r.speed, r.created, r.updated, r.version"
 ---
 
 # Recipe: MERGE (Upsert)

@@ -5,9 +5,7 @@ section: "concepts"
 status: "stable"
 playground:
   seed: world
-  query: |-
-    MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z, count(r) AS entity_count, avg(r.battery) AS avg_energy, avg(d.confidence) AS avg_detection_confidence, avg(s.reliability * d.confidence) AS avg_composite_trust RETURN z.name AS zone, z.hazard AS zone_risk, entity_count, avg_energy, avg_detection_confidence, avg_composite_trust, CASE WHEN avg_composite_trust >= 0.9 THEN 'fully observed' WHEN avg_composite_trust >= 0.75 THEN 'partially observed' ELSE 'low coverage' END AS observability ORDER BY avg_composite_trust DESC
-
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z, count(r) AS entity_count, avg(r.battery) AS avg_energy, avg(d.confidence) AS avg_detection_confidence, avg(s.reliability * d.confidence) AS avg_composite_trust RETURN z.name AS zone, z.hazard AS zone_risk, entity_count, avg_energy, avg_detection_confidence, avg_composite_trust, CASE WHEN avg_composite_trust >= 0.9 THEN 'fully observed' WHEN avg_composite_trust >= 0.75 THEN 'partially observed' ELSE 'low coverage' END AS observability ORDER BY avg_composite_trust DESC"
 ---
 
 # Query Results
