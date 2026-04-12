@@ -15,13 +15,25 @@ Two distinct things go by this name in AI today. Getting them confused is costly
 
 ## The two definitions
 
-**Neural world model** — a neural network trained to simulate how the world evolves. Given an observation and an action, it predicts the next state. This is the NVIDIA Cosmos / Tesla FSD / Yann LeCun sense: a generative engine that learns the physics of change. It predicts. It is not a database. It does not remember individual facts. It cannot tell you where Robot-04 was at 14:23:07.
+**Neural world model** — a neural network trained to simulate how the world evolves under actions. Given an observation and an action, it predicts the next state. Action-conditioned, generative, trained on petabytes of sensor data. Architecturally: a Vision model compresses observations into latent space, a Memory model (RSSM / MDN-RNN) predicts how latents evolve given actions, a Controller selects actions — together they let agents rehearse inside a hallucinated future before acting in reality. This is the NVIDIA Cosmos / DeepMind Genie / Tesla FSD / DreamerV3 sense. These systems simulate. They are not databases. They do not store what actually happened. They cannot tell you where Robot-04 was at 14:23:07 with confidence 0.91 from lidar-03.
 
-**Operational world model** — a persistent, queryable store of actual world state. What entities exist, where they are, how they relate to each other, how confident we are in each fact, what the world looked like at any previous moment. This is ArcFlow. It remembers. It does not predict unprompted — it stores predictions when they arrive, tagged `_observation_class: 'predicted'`, alongside observed and inferred facts.
+**Operational world model** — a persistent, queryable store of actual world state. What entities exist, where they are, how they relate to each other, how confident we are in each fact, what the world looked like at any previous moment. This is ArcFlow. It records. It does not hallucinate — it stores neural model outputs as they arrive (`_observation_class: 'predicted'`), alongside sensor-confirmed observations and inferred facts, all versioned and spatially indexed.
 
-These two layers are complementary. Neural world models generate predictions → ArcFlow stores them as queryable facts. ArcFlow's current state feeds back as grounded context into the neural model's next inference. One predicts, one persists.
+These two layers are architecturally distinct but operationally complementary. Neural world models hallucinate possible futures → their outputs land in ArcFlow as queryable predicted state. ArcFlow's grounded observations feed back as the actual truth the neural model learns to predict from. One simulates, one records.
 
-**ArcFlow is the operational world model layer.**
+**ArcFlow is the operational world model layer.** Not a simulation sandbox — a factual one.
+
+A simple test separates the two layers:
+
+| Question | Neural world model | ArcFlow |
+|---|---|---|
+| Can I **intervene** and see what changes? | Yes — action-conditioned | Yes — `MUTATE`, confidence propagates |
+| Does it **remember** when the camera moves away? | Sometimes (MosaicMem, PERSIST) | Always — full versioned history |
+| Can it roll out **counterfactual futures**? | Yes — its core purpose | No — not its job |
+| Can I use it for **planning/evaluation**? | Yes — dream-based RL | Yes — query observed state to inform decisions |
+| Does it know when it is **uncertain**? | Some (calibrated WMs) | Always — `_confidence` and `_observation_class` on every fact |
+
+The frontier of neural world modeling is converging on persistence and grounded spatial memory (MosaicMem: "spatial memory is the bottleneck"; PERSIST: "interactive world models need a persistent latent 3D scene, not just pixel histories"). What those papers are trying to *learn*, ArcFlow stores as *ground truth* — for the actual world, from actual sensors, at factual precision.
 
 A robot navigating a warehouse. A camera network tracking 22 players at 60fps. An AI agent coordinating with other agents across sessions. A digital twin mirroring a physical facility. All of these need the same underlying infrastructure: a continuously updated, spatially grounded, temporally aware, confidence-scored store of what is actually happening.
 

@@ -1,6 +1,6 @@
 # ArcFlow
 
-The World Model database — spatial-temporal, confidence-scored, embedded. Space and time are first-class dimensions. Every node has an observation class (observed/inferred/predicted) and confidence score [0.0, 1.0]. Full GQL (ISO/IEC 39075, Cypher-compatible). Runs everywhere — browser (WASM), Node.js, Python, Rust, Docker. No server needed.
+The operational world model layer — the persistence tier where actual world state lives. Neural world models (Cosmos, Genie, FSD) simulate possible futures; ArcFlow records what actually happened. Spatial-temporal, confidence-scored, embedded. Space and time are first-class dimensions. Every node has an observation class (observed/inferred/predicted) and confidence score [0.0, 1.0]. Full GQL (ISO/IEC 39075, Cypher-compatible). Runs everywhere — browser (WASM), Node.js, Python, Rust, Docker. No server needed.
 
 ## Integration model — three surfaces, no overlap
 

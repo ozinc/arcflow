@@ -1,12 +1,14 @@
 # ArcFlow
 
-**The World Model database.** Spatial-temporal, confidence-scored, embedded.
+**The operational world model layer.** Spatial-temporal, confidence-scored, embedded.
 
-AI systems can now perceive, reason, and act. The missing piece is memory — a persistent, spatially grounded, temporally accurate model of the world that every agent, robot, and autonomous system can read from and write to. Not a vector index. Not a document store. A world model: what entities exist, where they are, how confident we are in each fact, and what the world looked like at any previous moment.
+The AI stack now has three tiers. Foundation models handle language and perception. Neural world models (NVIDIA Cosmos, DeepMind Genie, Tesla FSD) simulate how the world evolves under actions — action-conditioned, generative, petabyte-trained. The missing piece is the persistence layer: a database where actual world state lives, versioned, queryable, confidence-scored. Neural world models simulate. ArcFlow records.
+
+ArcFlow is that layer. Not a vector index. Not a document store. A persistent, spatially grounded, temporally versioned store of what entities exist, where they are, how confident we are in each fact, and what the world looked like at any previous moment. Neural model outputs land here as `_observation_class: 'predicted'` facts. Sensor observations land here as `_observation_class: 'observed'` facts. Everything is queryable with the same ISO GQL syntax.
 
 That infrastructure hasn't existed as a product. It's been assembled from pieces — a spatial system for positions, a time-series store for history, a graph layer for relationships, application code for confidence scoring. Each boundary introduces latency, consistency risk, and complexity that compounds at scale.
 
-ArcFlow is the world model layer. One in-process engine. No server. No round-trip. Space and time are first-class dimensions, not extensions. Every mutation is versioned. Every fact carries an observation class and a confidence score. The entire history of the world model is queryable with ISO GQL — in the same syntax as the current state.
+ArcFlow is one in-process engine. No server. No round-trip. Space and time are first-class dimensions, not extensions. Every mutation is versioned. Every fact carries an observation class and a confidence score. The entire history is queryable with ISO GQL — in the same syntax as the current state.
 
 **[Try it — oz.com/engine](https://oz.com/engine)** — runs in your browser, zero install.
 
