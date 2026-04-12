@@ -1,6 +1,6 @@
 ---
 title: "REPROCESS EDGES"
-description: "Re-evaluate world model edges below a confidence threshold — delete stale edges and re-run their skills for fresh, higher-quality relationships."
+description: "Refresh low-confidence derived edges — delete stale relationships and re-run their compiled skill patterns for updated scores. No model calls."
 section: "skills"
 order: 4
 since: "0.4.0"
@@ -13,7 +13,9 @@ playground:
 
 # REPROCESS EDGES
 
-Re-evaluate low-confidence edges when skills improve. Deletes edges below a threshold and re-runs their skills for fresh scores.
+Re-evaluate world model edges when the underlying data improves. Deletes edges below a confidence threshold and re-runs their **compiled skill patterns** for fresh scores. **No model calls. No tokens.**
+
+The LLM compiled each skill once. `REPROCESS EDGES` runs the same compiled patterns again — against updated world model data — and produces new edges with recalculated confidence scores.
 
 ## Syntax
 
@@ -24,16 +26,80 @@ REPROCESS EDGES WHERE confidence < <threshold>
 ## Example
 
 ```cypher
-REPROCESS EDGES WHERE confidence < 0.6
+REPROCESS EDGES WHERE confidence < 0.7
 ```
 
 This:
-1. Finds all dynamic edges with confidence below 0.6
-2. Deletes them
-3. Re-executes the originating skills
-4. New edges get fresh confidence scores and updated provenance
+
+1. Finds all derived edges with `confidence < 0.7`
+2. Identifies the skill that produced each edge (via `skill_id` provenance)
+3. Deletes the stale edges
+4. Re-executes the compiled pattern for those node pairs
+5. Materializes new edges with fresh confidence scores from current world model data
+
+## When to use it
+
+The world model is live. As new sensor observations arrive, existing derived edges can become stale — they were scored against older data. `REPROCESS EDGES` closes that loop:
+
+```cypher
+-- New sensor data arrived with higher reliability readings
+-- Refresh any co-occupancy edges that were scored below threshold
+
+REPROCESS EDGES WHERE confidence < 0.75
+-- => 12 ZONE_PEER edges re-evaluated
+-- => avg confidence improved from 0.68 to 0.84
+```
+
+## Scoped reprocessing
+
+Target a specific skill or relationship type:
+
+```cypher
+-- Only refresh co-detection edges
+REPROCESS EDGES WHERE confidence < 0.8
+  AND type = 'CO_DETECTED'
+
+-- Only refresh edges from an older skill version
+REPROCESS EDGES WHERE skill_version < 3
+```
+
+## How confidence improves without a new model call
+
+The compiled pattern scores edges from **properties already in the graph** — sensor reliability, detection confidence on existing relationships, zone hazard levels. When those upstream values improve (a sensor is recalibrated, a detection is corroborated by a second sensor), re-running the same pattern against the updated data produces a higher score.
+
+The LLM authored the scoring logic. The graph engine executes it against current values.
+
+```
+Sensor s1 recalibrated: reliability 0.72 → 0.94
+                  ↓
+REPROCESS EDGES WHERE confidence < 0.75
+                  ↓
+  ZonePeerDetector compiled pattern re-runs
+  Scores edge (Atlas-01, Rover-02) using s1.reliability = 0.94 now
+  New confidence: 0.61 → 0.89
+```
+
+## Relationship to skill versions
+
+`REPROCESS EDGES` re-runs the **current compiled pattern** of each skill. If you want the re-evaluation to use a new rule, create a new skill version first:
+
+```cypher
+-- Recompile with a richer rule (one LLM call)
+CREATE SKILL ZonePeerDetector_v2
+  FROM PROMPT 'Link two Robot nodes as ZONE_PEER if they share a zone
+               AND combined detection confidence exceeds 0.80'
+  ALLOWED ON [Robot]
+  TIER SYMBOLIC
+
+-- Refresh all weak edges with the new compiled pattern (zero LLM)
+REPROCESS EDGES WHERE confidence < 0.75
+```
+
+Old edges carry `skill_version: 1`. Refreshed edges carry `skill_version: 2`. Both are traceable in the provenance chain.
 
 ## See Also
 
-- [PROCESS NODE](/skills/process-node)
-- [Confidence & Provenance](/concepts/confidence-and-provenance)
+- [CREATE SKILL](/skills/create-skill) — where the LLM compiles your rule (once)
+- [PROCESS NODE](/skills/process-node) — initial materialization of derived edges
+- [Confidence & Provenance](/concepts/confidence-and-provenance) — how edges carry scores and evidence chains
+- [Concepts: Skills](/concepts/skills) — the compile-once model explained

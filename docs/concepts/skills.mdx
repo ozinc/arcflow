@@ -1,6 +1,6 @@
 ---
 title: "Skills"
-description: "Executable, versioned, confidence-scored relationship builders — the world model's enrichment layer, no external pipelines"
+description: "Derive world model relationships from natural language rules — LLM compiles once, PROCESS NODE and REPROCESS EDGES execute at graph-native speed with no model calls."
 section: "concepts"
 order: 2
 since: "0.2.0"
@@ -12,120 +12,145 @@ playground:
 
 # Skills
 
-A Skill is a named, versioned, graph-native enrichment program. It processes nodes with a specific label, builds relationships with confidence scores and provenance, and can be re-run when source data changes — no external pipeline, no nightly batch job, no drift between runs.
+A Skill is a named, versioned, graph-native enrichment program. You describe a relationship rule in natural language. ArcFlow compiles it once — using your configured LLM endpoint — into a cached graph pattern. From that point on, `PROCESS NODE` and `REPROCESS EDGES` execute the compiled pattern at graph-native speed: no model calls, no API latency, no token cost.
+
+**The LLM is a compiler frontend. ArcFlow is the optimized runtime. These two things never overlap.**
 
 ---
 
-## World Model Use Case
+## The compile-once model
 
-In a robotic environment, sensors observe entities. Skills derive the relationships between them — which robots share a zone, which sensors have co-detected the same entity, which coverage gaps exist. These are *inferred* relationships that don't come from a sensor directly, but from reasoning over what sensors have observed.
-
-```cypher
--- Register a skill: derive co-detection relationships from sensor observations
-CREATE SKILL CoDetectionLinker
-  FROM PROMPT 'Link two Robots if the same Sensor detected both within 30 seconds'
+```
+CREATE SKILL ZoneCoOccupancy
+  FROM PROMPT 'Link two Robots as ZONE_PEER if they occupy the same Zone'
   ALLOWED ON [Robot]
   TIER SYMBOLIC
-
--- Materialize derived edges across all robots in the world model
-PROCESS NODE (n:Robot)
--- => Created 23 CO_DETECTED edges, avg confidence 0.87
-
--- Every derived edge carries provenance — which skill, which version
-MATCH (a:Robot)-[r:CO_DETECTED]->(b:Robot)
-WHERE r._confidence > 0.8
-RETURN a.name, b.name, r._confidence, r._skill_version, r._created_at
-ORDER BY r._confidence DESC
-
--- As sensors improve, reprocess uncertain edges
-REPROCESS EDGES WHERE confidence < 0.7
--- => Re-evaluated 6 edges with CoDetectionLinker v2, avg confidence now 0.91
 ```
 
-No ETL pipeline. No external enrichment service. The world model derives and refines its own relationship layer.
+At creation time, ArcFlow sends the prompt and relevant schema context to OZ's compiler endpoint — authenticated automatically through your [oz.com/world](https://oz.com/world) connection. No API keys to manage. Compilation results are cached: the same rule against the same schema returns an instant response at no cost to your allowance. On a cache miss, the schema context is prefix-cached across calls, so you pay only for the rule text itself. The compiled WorldCypher pattern is returned and stored in the skill alongside the original prompt.
+
+```
+Skill stored in graph:
+  name:             ZoneCoOccupancy
+  prompt_template:  'Link two Robots as ZONE_PEER if they occupy the same Zone'
+  compiled_pattern: 'MATCH (a:Robot)-[:OCCUPIES]->(z:Zone)<-[:OCCUPIES]-(b:Robot)
+                     WHERE a.id < b.id
+                     MERGE (a)-[:ZONE_PEER {zone_id: z.id}]->(b)'
+  compiled_by:      claude-opus-4-6
+  version:          1
+  tier:             symbolic
+```
+
+The original prompt is preserved as **auditable intent** — you can always read it to verify the compiled form matches what you asked for. The compiled pattern is what executes.
 
 ---
 
-## What is a Skill?
+## PROCESS NODE: zero LLM
 
-A Skill is a first-class graph primitive — an executable program stored inside the world model that *builds* relationships. Think of it as a materialized view that produces edges instead of rows, with confidence scores and full provenance on every edge it creates.
+```cypher
+PROCESS NODE (n:Robot)
+```
 
-Skills sit alongside Nodes and Relationships as native graph objects. The world model is not just a passive store — it is an active system that can derive, score, and re-evaluate its own knowledge.
+Runs the compiled pattern against every matched node. No model call. No API request. The engine evaluates the graph pattern directly — finding co-occupying robots, scoring the relationship by zone confidence, materializing edges.
 
-## Mental Model
+At 1,000 robots this takes milliseconds. At 1,000,000 it scales the same way — the pattern is graph algebra, not inference.
 
-| Traditional approach | ArcFlow Skills |
-|---|---|
-| Relationships inserted manually | Edges materialized by executable programs |
-| Batch ETL to derive relationships | `PROCESS NODE` runs inline, no external system |
-| No confidence scoring on derived edges | Every edge carries `_confidence` (0.0–1.0) |
-| No audit trail | Every edge carries provenance: skill name, version, timestamp |
-| Re-derive = rewrite the pipeline | `REPROCESS EDGES WHERE confidence < 0.7` |
+---
 
-## Skill Properties
+## REPROCESS EDGES: zero LLM
 
-Every Skill has:
+```cypher
+REPROCESS EDGES WHERE confidence < 0.7
+```
+
+When the world model changes — new sensor data arrives, observation confidence improves — low-trust edges can be refreshed. ArcFlow deletes edges below the threshold and re-runs the **same compiled pattern** for fresh scores. The LLM is not consulted. The pattern was compiled once and it runs again, unchanged.
+
+To get a materially different pattern, you create a new skill version — which calls the LLM once more to recompile.
+
+---
+
+## What a skill actually contains
 
 | Property | Description |
 |---|---|
 | `name` | Unique identifier |
 | `version` | Semantic version — edges carry the version that built them |
-| `prompt_template` | The rule or instruction the skill applies |
+| `prompt_template` | The original natural language rule — auditable intent |
+| `compiled_pattern` | WorldCypher graph pattern produced by LLM at creation time |
+| `compiled_by` | Model that compiled the pattern — provenance on the compilation itself |
 | `allowed_on` | Which node labels this skill applies to |
 | `min_confidence` | Minimum score for an edge to be materialized |
 | `active` | Whether the skill runs on `PROCESS NODE` calls |
 
-## Execution Tiers
+---
 
-| Tier | Latency | Status |
-|---|---|---|
-| `SYMBOLIC` | < 1ms | Active — pattern matching, rule-based logic |
-| `WASM` | < 10ms | Planned |
-| `LLM` | seconds | Planned |
+## Execution tiers
 
-Only `TIER SYMBOLIC` is active. WASM and LLM tiers will extend skills to compiled logic and batched model inference without changing the query interface.
+The tier determines what the LLM compiles **to** — the output format of the compilation step.
 
-## WorldCypher Operations
+| Tier | LLM compiles to | Runtime | Status |
+|---|---|---|---|
+| `SYMBOLIC` | WorldCypher graph pattern | Sub-millisecond graph traversal | Active |
+| `WASM` | Sandboxed WASM module | ~1ms compiled logic | Planned |
 
-### Register a skill
+`TIER SYMBOLIC` covers the vast majority of relationship rules — co-location, shared detection, causal proximity, coverage overlap. Any rule expressible as a graph path can be compiled to a SYMBOLIC pattern.
 
-```cypher
-CREATE SKILL ZoneCoOccupancy
-  FROM PROMPT 'Link two Robots if they occupy the same Zone simultaneously'
-  ALLOWED ON [Robot]
-  TIER SYMBOLIC
-```
-
-### Materialize edges
-
-```cypher
-PROCESS NODE (n:Robot)
-```
-
-Evaluates all active skills against matched nodes. Each produces edges with `_confidence` and `_skill_version`. Low-confidence edges can be re-evaluated later as skills improve or new observations arrive.
-
-### Re-evaluate weak edges
-
-```cypher
-REPROCESS EDGES WHERE confidence < 0.6
-```
-
-Deletes edges below the threshold and re-runs their skills. This is how the world model self-heals: as skill versions improve, stale or low-quality edges are replaced with higher-confidence ones.
+`TIER WASM` is for rules that require heavy computation beyond graph traversal — custom scoring functions, matrix operations, statistical models. The LLM generates the implementation; the WASM sandbox executes it deterministically.
 
 ---
 
-## Why Skills Matter
+## World model use case
 
-Most graph databases treat edges as static assertions: they are inserted once and never questioned. Skills make edges *derived* — built by programs, scored by confidence, traceable to the version that produced them, and re-evaluable as evidence improves.
+In a facility environment, sensors observe entities. Skills derive the relationships between them — co-located robots, shared detection chains, coverage gaps. These relationships don't come from sensors directly. They come from reasoning over observed facts.
 
-For world model applications: every relationship between entities in your world model — co-location, shared detection, causal proximity — can be derived automatically from observed facts, with a full evidence chain traceable back to the sensor or model that produced it.
+```cypher
+-- Step 1: create the skill (LLM called once)
+CREATE SKILL CoDetectionLinker
+  FROM PROMPT 'Link two Robots as CO_DETECTED if the same Sensor detected both,
+               weighted by the sensor reliability and detection confidence'
+  ALLOWED ON [Robot]
+  TIER SYMBOLIC
 
-For AI applications: every RAG answer can trace its evidence chain back to the specific skill version and confidence threshold that produced each supporting edge.
+-- Step 2: materialize edges across the world model (zero LLM)
+PROCESS NODE (n:Robot)
+-- => 23 CO_DETECTED edges, avg confidence 0.87
+
+-- Step 3: query derived relationships
+MATCH (a:Robot)-[r:CO_DETECTED]->(b:Robot)
+WHERE r.confidence > 0.8
+RETURN a.name, b.name, r.confidence, r.zone_id
+ORDER BY r.confidence DESC
+
+-- Step 4: world model updated, refresh weak edges (zero LLM)
+REPROCESS EDGES WHERE confidence < 0.7
+-- => 6 edges re-evaluated with updated sensor data, avg confidence now 0.91
+```
+
+No ETL pipeline. No external enrichment service. The LLM authored the logic once; ArcFlow operates it forever.
+
+---
+
+## Why this matters
+
+Most graph databases treat edges as static assertions — inserted once, never questioned. Skills make edges *derived*: compiled by a model, scored by confidence, traced to the version that produced them, and re-evaluable as the world changes.
+
+The model call happens at authoring time. Production is model-free.
+
+| Stage | LLM involved? | Cost |
+|---|---|---|
+| `CREATE SKILL` — compilation | Yes, once | One compilation via your oz.com/world connection (cached results are free) |
+| `PROCESS NODE` — execution | No | Pure graph computation, unlimited |
+| `REPROCESS EDGES` — refresh | No | Pure graph computation, unlimited |
+| Query derived edges | No | Read-only graph traversal, unlimited |
+
+Compilation uses your [oz.com/world](https://oz.com/world) connection — credentials are managed through your account, no separate API keys required. Compilation results are cached: the same rule against the same schema returns an instant response at no cost on repeat calls.
+
+For AI applications: every RAG answer can trace its evidence chain back to the specific skill version and compiled pattern that produced each supporting edge — with the original human-readable prompt preserved alongside it.
 
 ## See Also
 
+- [CREATE SKILL](/skills/create-skill) — register and compile a skill
+- [PROCESS NODE](/skills/process-node) — execute compiled skills across the world model
+- [REPROCESS EDGES](/skills/reprocess-edges) — refresh weak edges without model calls
 - [Confidence & Provenance](/concepts/confidence-and-provenance) — how skill edges carry scores and evidence chains
-- [CREATE SKILL](/skills/create-skill) — syntax reference
-- [PROCESS NODE](/skills/process-node) — executing skills
-- [REPROCESS EDGES](/skills/reprocess-edges) — re-evaluating low-confidence edges
 - [Using Skills](/guides/using-skills) — step-by-step guide with world model examples

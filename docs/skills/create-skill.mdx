@@ -1,6 +1,6 @@
 ---
 title: "CREATE SKILL"
-description: "Register a skill in the world model — named, versioned, scoped to node labels, executed on demand"
+description: "Teach the world model a new relationship it can recognize — describe the rule once in plain language, and the world model applies it everywhere, forever."
 section: "skills"
 order: 2
 since: "0.2.0"
@@ -12,7 +12,7 @@ playground:
 
 # CREATE SKILL
 
-Register a skill in the world model. Once registered, use [PROCESS NODE](/skills/process-node) to run it against matched nodes.
+Teach the world model a new relationship it can recognize. Describe the rule in plain language — once registered, the world model applies it across every entity, every update, and every sensor read, automatically and indefinitely.
 
 ## Syntax
 
@@ -27,37 +27,170 @@ CREATE SKILL <name>
 
 ```cypher
 CREATE SKILL ZonePeerDetector
-  FROM PROMPT 'Link two Robot nodes as ZONE_PEER if they occupy the same zone with combined confidence above 0.75'
+  FROM PROMPT 'Link two Robot nodes as ZONE_PEER if they occupy the same Zone
+               with combined sensor confidence above 0.75'
   ALLOWED ON [Robot]
   TIER SYMBOLIC
 ```
+
+---
+
+## A world model is only as intelligent as what it knows how to see
+
+Raw data flows through your world model constantly — positions, detections, sensor readings, state changes. But a world model that only stores facts is not intelligent. Intelligence is recognizing what those facts *mean together*: which robots are working toward the same objective, which sensors are corroborating each other, which zone is approaching a critical density threshold, which operator just entered a hazardous area undetected.
+
+That understanding doesn't emerge automatically from the data. You have to teach it.
+
+Skills are how you teach. Each `CREATE SKILL` instruction adds a new relationship the world model can recognize — and once learned, it applies that understanding everywhere, continuously, without being asked again.
+
+The world models that become genuinely powerful are the ones with a deep library of skills. Each skill compounds on the ones before it. A world model that knows about proximity can learn about proximity-under-observation. A world model that knows about task assignment can learn about task blockage. The relationships build. The understanding deepens. The gap between your world model and one built on raw graph queries widens — permanently.
+
+---
+
+## What skills can express
+
+Any relationship rule you can describe in language, the world model can learn to recognize:
+
+**Spatial co-presence:**
+```cypher
+CREATE SKILL ZonePeer
+  FROM PROMPT 'Link two Robots as ZONE_PEER if they occupy the same Zone simultaneously'
+  ALLOWED ON [Robot]
+  TIER SYMBOLIC
+```
+
+**Shared observation:**
+```cypher
+CREATE SKILL CoDetection
+  FROM PROMPT 'Link two entities as CO_DETECTED if the same sensor observed both
+               within the last 30 seconds, weighted by sensor reliability'
+  ALLOWED ON [Robot, Operator]
+  TIER SYMBOLIC
+```
+
+**Coverage and blind spots:**
+```cypher
+CREATE SKILL CoverageGap
+  FROM PROMPT 'Mark a Robot as UNMONITORED if no active sensor has detected it
+               with confidence above 0.7 in the current state'
+  ALLOWED ON [Robot]
+  TIER SYMBOLIC
+```
+
+**Causal influence:**
+```cypher
+CREATE SKILL TaskDependency
+  FROM PROMPT 'Link two Robots as TASK_BLOCKED if one occupies the zone the other
+               needs to reach to complete its current task'
+  ALLOWED ON [Robot]
+  TIER SYMBOLIC
+```
+
+**Temporal proximity:**
+```cypher
+CREATE SKILL ProximityAlert
+  FROM PROMPT 'Create a PROXIMITY_WARNING between a Robot and an Operator
+               when both are detected within 5 meters by a sensor with reliability above 0.85'
+  ALLOWED ON [Robot]
+  TIER SYMBOLIC
+```
+
+**Cross-entity reasoning:**
+```cypher
+CREATE SKILL TeamCoordination
+  FROM PROMPT 'Link two Robots as COORDINATE_WITH if they share zone proximity
+               AND their combined task sequence suggests they are working on the same objective'
+  ALLOWED ON [Robot]
+  TIER SYMBOLIC
+```
+
+The world model applies these rules continuously. As entities move, as sensors update, as new observations arrive — the derived relationships stay current.
+
+---
+
+## How skills grow with your world model
+
+Skills are versioned. Refine the rule, create a new version — the world model learns the improved relationship:
+
+```cypher
+-- Initial version: basic co-occupancy
+CREATE SKILL ZonePeer_v1
+  FROM PROMPT 'Link two Robots as ZONE_PEER if they occupy the same Zone'
+  ALLOWED ON [Robot]
+  TIER SYMBOLIC
+
+-- Improved version: co-occupancy with sensor corroboration
+CREATE SKILL ZonePeer_v2
+  FROM PROMPT 'Link two Robots as ZONE_PEER if they occupy the same Zone
+               AND at least one sensor has detected both with combined confidence above 0.80'
+  ALLOWED ON [Robot]
+  TIER SYMBOLIC
+```
+
+Old edges carry `skill_version: 1`. New edges carry `skill_version: 2`. Both coexist and are traceable — the world model's understanding evolves without losing history. Your first version of a skill is never wasted; it becomes the baseline from which the next version is measured.
+
+---
+
+## Registration vs execution
+
+`CREATE SKILL` registers and teaches the rule. It does not execute it. Call `PROCESS NODE` to derive edges across the world model, and `REPROCESS EDGES` to refresh when data improves.
+
+```cypher
+CREATE SKILL ZonePeer
+  FROM PROMPT 'Link two Robots as ZONE_PEER if they occupy the same Zone'
+  ALLOWED ON [Robot]
+  TIER SYMBOLIC
+
+-- Materialize ZONE_PEER edges across all Robots
+PROCESS NODE (n:Robot)
+
+-- Refresh when sensor data improves
+REPROCESS EDGES WHERE confidence < 0.75
+```
+
+Once a skill is registered, `PROCESS NODE` and `REPROCESS EDGES` run it as pure graph computation — no model calls, no token cost, sub-millisecond per node. The skill runs on every new entity automatically as your world model grows.
+
+---
+
+## Skill compilation and your oz.com/world connection
+
+When you call `CREATE SKILL ... FROM PROMPT`, your world model connects to OZ World Intelligence to compile the natural language rule into an optimized graph pattern specific to your schema. This happens once, at registration time.
+
+After that, the compiled pattern is stored inside the skill. `PROCESS NODE` executes it directly — deterministic, graph-native, no model involvement. The relationship between "teaching" and "applying" is deliberate: the world model learns a rule once, then applies it everywhere it can, forever.
+
+This is handled transparently through your oz.com/world connection. No endpoint configuration. No API keys to manage. Compilation credentials are wired through the same pairing that connected your ArcFlow engine to OZ.
+
+Cache: if the same rule has already been compiled against the same schema — by you or any other user — the cached result is returned instantly at no cost.
+
+---
 
 ## Parameters
 
 | Parameter | Description |
 |---|---|
-| `<name>` | Unique skill name. Use versioned names (`MySkill_v2`) to track evolution. |
-| `FROM PROMPT` | The rule or instruction the skill applies when evaluating node pairs. |
-| `ALLOWED ON` | List of node labels this skill applies to. Scopes execution to relevant nodes. |
-| `TIER` | Execution tier. `SYMBOLIC` is the active tier — pattern matching and rule-based logic. |
+| `<name>` | Unique skill name. Use versioned names (`MySkill_v2`) to track rule evolution over time. |
+| `FROM PROMPT` | The relationship rule in plain language. Describe the condition clearly — entity types, properties, relationships, thresholds. |
+| `ALLOWED ON` | Node labels this skill applies to. Scopes execution and provides the world model with schema context for this rule. |
+| `TIER` | Execution tier. `SYMBOLIC` — pure graph computation, sub-millisecond per node. |
 
-## Execution Tiers
+## Execution tiers
 
-| Tier | Status | Description |
+| Tier | What it does | Status |
 |---|---|---|
-| `SYMBOLIC` | Active | Pure logic, pattern matching, rule-based. Sub-millisecond. |
-| `WASM` | Planned | Compiled logic in a sandboxed runtime. |
-| `LLM` | Planned | Batched model inference for complex relationship judgements. |
+| `SYMBOLIC` | Graph pattern execution — co-location, traversal, structural rules | Active |
+| `WASM` | Compiled logic for custom scoring, matrix operations | Planned |
+
+---
 
 ## Notes
 
-- The skill is stored in the graph immediately but does not execute on creation
-- Registration and execution are separate — call `PROCESS NODE` to run it
-- Use versioned names (`_v2`, `_v3`) when updating logic; old edges retain their `_skill_version`
-- Multiple skills can be active for the same label simultaneously
+- Multiple skills can target the same label simultaneously — each runs independently and produces its own edge type
+- Skills are stored as first-class graph objects alongside nodes and relationships
+- Every edge a skill produces carries the skill name, version, and a confidence score — the world model's derived relationships are always traceable
 
 ## See Also
 
-- [PROCESS NODE](/skills/process-node) — execute registered skills
-- [REPROCESS EDGES](/skills/reprocess-edges) — re-evaluate low-confidence edges
-- [Concepts: Skills](/concepts/skills) — design philosophy and world model context
+- [PROCESS NODE](/skills/process-node) — execute skills across the world model
+- [REPROCESS EDGES](/skills/reprocess-edges) — refresh low-confidence derived edges
+- [Concepts: Skills](/concepts/skills) — the full skills model explained
+- [Using Skills](/guides/using-skills) — step-by-step guide with world model examples

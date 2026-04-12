@@ -124,7 +124,7 @@ Run directly — no projection lifecycle needed.
 | `algo.louvain()` | Louvain community detection |
 | `algo.leiden()` | Leiden community detection |
 | `algo.communityDetection()` | Community detection |
-| `algo.connectedComponents()` | Connected components (union-find) |
+| `algo.connectedComponents()` | Connected components |
 | `algo.clusteringCoefficient()` | Local clustering coefficient |
 | `algo.nodeSimilarity()` | Node similarity |
 | `algo.triangleCount()` | Triangle count |
@@ -159,7 +159,7 @@ Run directly — no projection lifecycle needed.
 | `db.nodeCount` | Total node count |
 | `db.relationshipCount` | Total relationship count |
 | `db.version` | Engine version |
-| `db.capabilities` | GPU, incremental, Z-set support |
+| `db.capabilities` | GPU, incremental, live-delta support |
 | `db.doctor` | 5 health checks |
 | `db.fingerprint` | Graph hash for integrity verification |
 | `db.export` | Full graph as JSON snapshot |
@@ -203,6 +203,42 @@ Run directly — no projection lifecycle needed.
 |---|---|---|---|
 | CREATE SKILL | ✅ | `CREATE SKILL name FROM PROMPT ...` | Declarative AI skill |
 | PROCESS NODE | ✅ | `PROCESS NODE (n:Label)` | Execute skill on node |
+
+## Triggers
+
+| Feature | Status | Syntax | Notes |
+|---|---|---|---|
+| CREATE TRIGGER | 🔜 | `CREATE TRIGGER name ON :Label WHEN CREATED RUN SKILL skill_name` | Fire-once event binding |
+| DROP TRIGGER | 🔜 | `DROP TRIGGER name` | Remove trigger registration |
+| WHEN CREATED | 🔜 | `ON :Label WHEN CREATED` | Fires on node creation |
+| WHEN MODIFIED | 🔜 | `ON :Label WHEN MODIFIED` | Fires on property change |
+| WHEN DELETED | 🔜 | `ON :Label WHEN DELETED` | Fires on node deletion |
+
+| Procedure | Description |
+|---|---|
+| `db.triggers()` | List all registered triggers with label, event, and skill |
+
+## Programs
+
+| Feature | Status | Syntax | Notes |
+|---|---|---|---|
+| CREATE PROGRAM | 🔜 | `CREATE PROGRAM name VERSION '...' (...)` | Install a capability manifest |
+| DROP PROGRAM | 🔜 | `DROP PROGRAM name` | Deregister program and its triggers |
+| CARDINALITY SINGLETON | 🔜 | `CARDINALITY SINGLETON` | One executor instance globally |
+| CARDINALITY PER_SENSOR | 🔜 | `CARDINALITY PER_SENSOR` | One executor per `:Sensor` node |
+| CARDINALITY SHARDED | 🔜 | `CARDINALITY SHARDED BY <prop>` | One executor per unique property value |
+| REQUIRES GPU | 🔜 | `REQUIRES GPU (SM >= 7.0, VRAM >= 4.0)` | Hardware validation at install time |
+| EVIDENCE tier | 🔜 | `EVIDENCE SYMBOLIC \| WASM \| LLM \| NEURAL` | Epistemic class for program outputs |
+
+| Procedure | Description |
+|---|---|
+| `arcflow.programs.list()` | List all installed programs with provides tags and cardinality |
+| `arcflow.programs.describe(name)` | Full manifest: I/O schema, hardware requirements, executor |
+| `arcflow.programs.validate(name)` | Check hardware requirements without installing |
+| `arcflow.programs.health(name)` | Executor health: status, last heartbeat, address |
+| `arcflow.programs.install(manifest)` | Programmatic install (alternative to CREATE PROGRAM DDL) |
+| `arcflow.programs.remove(name)` | Remove a program and deregister its triggers |
+| `arcflow.programs.find_by_capability(tag)` | Find programs providing a given capability tag |
 
 ## Server Protocols
 
@@ -267,4 +303,6 @@ Run directly — no projection lifecycle needed.
 
 - [GQL Conformance](/reference/gql-conformance) — ISO/IEC 39075 standards compliance and TCK results
 - [Graph Algorithms](/algorithms) — full algorithm catalog
+- [Programs](/programs) — `CREATE PROGRAM` capability manifests with hardware validation and executor wiring
+- [Triggers](/worldcypher/triggers) — `CREATE TRIGGER` fire-once event bindings
 - [Known Issues](/reference/known-issues) — active workarounds and edge cases

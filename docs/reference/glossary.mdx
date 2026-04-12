@@ -124,7 +124,7 @@ An open specification of the Cypher query language that became a key input to th
 
 ## WorldCypher
 
-**ArcFlow.** ArcFlow's implementation of ISO GQL, extended with temporal snapshots, live queries, confidence scoring, spatial predicates, constructors, and graph algorithm procedures. All standard GQL syntax works; WorldCypher adds what the standard leaves to implementations.
+**ArcFlow.** ArcFlow's implementation of ISO GQL, extended with temporal snapshots, live queries, confidence scoring, spatial predicates, skills, and graph algorithm procedures. All standard GQL syntax works; WorldCypher adds what the standard leaves to implementations.
 
 ---
 
@@ -180,7 +180,7 @@ These two layers are complementary: neural world models simulate → ArcFlow rec
 
 ## Skill
 
-**ArcFlow.** A named, versioned, graph-native program that processes nodes with a specific label and derives confidence-scored relationships. Defined with `CREATE SKILL`, triggered with `PROCESS NODE`. Skills implement extraction pipelines, enrichment steps, and relationship derivation as first-class graph objects — each edge they produce carries provenance, a confidence score, and the version that built it.
+**ArcFlow.** A named, versioned, graph-native relationship derivation program. You describe a rule in natural language; `CREATE SKILL` sends it to your configured LLM endpoint once, receives a compiled WorldCypher graph pattern, and stores both in the skill node. Every subsequent `PROCESS NODE` and `REPROCESS EDGES` executes the compiled pattern directly — no model calls, no token cost, sub-millisecond per node. The LLM is a compiler frontend; ArcFlow is the runtime. Each edge a skill produces carries the skill name, version, and a confidence score derived from the graph structure.
 
 ---
 
@@ -199,6 +199,24 @@ RETURN u.id, u.name
 ## Live query
 
 **ArcFlow.** A standing query that re-evaluates when the graph changes. Written as `LIVE MATCH` or registered via `db.subscribe()`. The engine pushes deltas (added/removed rows) to the subscriber rather than requiring polling.
+
+---
+
+## Trigger
+
+**ArcFlow.** A fire-once event binding. Declared with `CREATE TRIGGER name ON :Label WHEN CREATED | MODIFIED | DELETED RUN SKILL skill_name`. Unlike a live query — which maintains a result set continuously — a trigger executes exactly once per matching graph event. Use triggers for side effects (run inference on a new frame, enrich a new node). Use live queries for always-current result sets.
+
+---
+
+## Program
+
+**ArcFlow.** A declarative capability manifest. A `CREATE PROGRAM` statement bundles a skill set, trigger bindings, I/O schema, executor transport, and hardware requirements into a single installable unit. Hardware validation runs at install time — if the machine doesn't meet the `REQUIRES GPU` clause, the install fails immediately with an explicit error. The executor is a separate OS process; the engine dispatches inputs and ingests outputs as standard graph mutations. Programs have `CARDINALITY` (SINGLETON, PER_SENSOR, or SHARDED BY key) and declare `PROVIDES` tags for capability discovery.
+
+---
+
+## Evidence tier
+
+**ArcFlow.** The epistemic class assigned to all nodes a Program produces. Set via the `EVIDENCE` clause in `CREATE PROGRAM`. Four tiers: `SYMBOLIC` (pure graph logic, deterministic), `WASM` (compiled sandboxed skill), `LLM` (language model output, probabilistic), `NEURAL` (neural network, sensor-grounded). Tier propagates through the ArcFlow Evidence Model — downstream live queries can filter on `_evidence_tier`.
 
 ---
 
@@ -264,6 +282,8 @@ A test suite for verifying query language conformance. The openCypher TCK contai
 - [GQL Conformance](/reference/gql-conformance) — standards coverage
 - [Observations & Evidence](/concepts/observations) — ArcFlow Evidence Model in depth
 - [Confidence & Provenance](/concepts/confidence-and-provenance) — scoring and tracing facts
+- [Programs](/programs) — `CREATE PROGRAM` capability manifests
+- [Triggers](/worldcypher/triggers) — `CREATE TRIGGER` fire-once event bindings
 - [Temporal](/temporal) — ArcFlow Clock Domains and AS OF queries
 - [GPU Acceleration](/gpu) — ArcFlow Graph Kernel, Adaptive Dispatch, and GPU Index in depth
 - [Sync](/sync) — ArcFlow WAL Stream and SWMR replication

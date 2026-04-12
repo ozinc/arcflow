@@ -1,6 +1,6 @@
 ---
 title: "Types"
-description: "TypeScript type primitives for the world model SDK — NodeId, RelId, PropertyValue, Label, RelType, and typed row accessors."
+description: "Type primitives for the world model SDK — identifiers, property value types, execution tiers, errors, and TypeScript SDK interfaces."
 section: "reference"
 order: 1
 since: "0.1.0"
@@ -16,45 +16,32 @@ Core type primitives used across the ArcFlow engine.
 
 ## Identifiers
 
-| Type | Rust | Display | Description |
-|---|---|---|---|
-| `NodeId` | `NodeId(u64)` | `n42` | Unique node identifier, monotonically assigned |
-| `RelId` | `RelId(u64)` | `r7` | Unique relationship identifier |
-| `ConstructorId` | `ConstructorId(u64)` | `s3` | Unique constructor identifier |
-| `Generation` | `Generation(u64)` | — | Snapshot cache invalidation counter |
-| `Timestamp` | `Timestamp(u64)` | `1711234567:000` | Milliseconds since UNIX epoch |
+| Identifier | Display | Description |
+|---|---|---|
+| `NodeId` | `n42` | Unique node identifier, monotonically assigned |
+| `RelId` | `r7` | Unique relationship identifier |
+| `SkillId` | `s3` | Unique skill identifier |
+| `Timestamp` | `1711234567:000` | Milliseconds since UNIX epoch |
 
-## Property Values
+## Property value types
 
-```rust
-enum PropertyValue {
-    Null,
-    Bool(bool),
-    Int(i64),
-    Float(f64),
-    String(String),
-    IntList(Vec<i64>),
-    FloatList(Vec<f64>),
-    StringList(Vec<String>),
-}
-```
+| Type | GQL literals | Notes |
+|---|---|---|
+| Null | `null` | Missing or unknown |
+| Boolean | `true`, `false` | |
+| Integer | `42`, `-7` | 64-bit signed |
+| Float | `3.14`, `-0.5` | 64-bit |
+| String | `'hello'` | Single-quoted |
+| IntList | `[1, 2, 3]` | Homogeneous list |
+| FloatList | `[1.0, 2.5]` | Homogeneous list |
+| StringList | `['a', 'b']` | Homogeneous list |
 
-## Graph Primitives
+## Execution tiers and backends
 
-| Type | Description |
-|---|---|
-| `Label(String)` | Node label (e.g., "Person") |
-| `RelType(String)` | Relationship type (e.g., "KNOWS") |
-| `Properties` | `HashMap<String, PropertyValue>` |
-| `Confidence(f64)` | 0.0–1.0, clamped |
-| `SemanticVersion` | major.minor.patch |
-
-## Execution
-
-| Type | Values |
-|---|---|
-| `ExecutionTier` | `Symbolic`, `Wasm`, `Llm` |
-| `BackendId` | `Cpu`, `Cuda`, `Metal` |
+| Concept | Values | Where used |
+|---|---|---|
+| Skill tier | `SYMBOLIC`, `WASM` | `CREATE SKILL ... TIER` |
+| Hardware backend | `Cpu`, `Cuda`, `Metal` | ArcFlow Adaptive Dispatch routing |
 
 ## Errors
 

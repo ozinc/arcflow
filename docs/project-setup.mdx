@@ -89,8 +89,8 @@ The SDK ships with full type definitions. No extra `@types/` packages needed.
 If using pnpm with `file:` protocol during local dev, the `.node` binary may not sync on rebuild. Workaround:
 
 ```bash
-cp path/to/arcflow/bindings/typescript/arcflow.darwin-arm64.node \
-   node_modules/arcflow-core/arcflow.darwin-arm64.node
+# Manually copy the built .node binary into your node_modules
+cp <built-binary>.node node_modules/arcflow/arcflow.<platform>.node
 ```
 
 ## Environment setup

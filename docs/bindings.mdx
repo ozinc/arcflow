@@ -141,7 +141,7 @@ let page
 while ((page = cursor.next()) !== null) process(page.rows)
 cursor.close()
 
-// Live subscriptions (Z-set deltas, in-process polling)
+// Live subscriptions — callback fires with added/removed events on each relevant mutation
 const sub = db.subscribe(
   'MATCH (n:Alert) WHERE n.level = "critical" RETURN n.id, n.message',
   ({ added, removed }) => console.log('new alerts', added)
@@ -258,7 +258,7 @@ const char* err = arcflow_last_error();
 
 ## C++
 
-Header-only RAII wrapper over the C ABI. Include `arcflow.hpp` and link with `-lwc_ffi`.
+Header-only RAII wrapper over the C ABI. Include `arcflow.hpp` and link with `-larcflow`.
 
 ```cpp
 #include "arcflow.hpp"
@@ -284,9 +284,9 @@ int main() {
 
 ```bash
 g++ -std=c++17 \
-    -I crates/wc-ffi/include \
+    -I include/arcflow \
     main.cpp \
-    -L target/release -lwc_ffi \
+    -L /path/to/arcflow/lib -larcflow \
     -o myapp
 ```
 
@@ -323,7 +323,7 @@ For cloud chat interfaces (ChatGPT, Claude.ai, Gemini web) that have no local sh
 All bindings target one engine. Pick the layer that matches your use case:
 
 ```
-                     Rust engine (wc-core / wc-sdk)
+                        ArcFlow Rust engine
                                │
                     C ABI  (libarcflow.so)
                                │

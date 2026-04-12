@@ -1,6 +1,6 @@
 ---
 title: "Code Intelligence"
-description: "Build a persistent, queryable, incrementally-maintained graph of your codebase with ArcFlow."
+description: "Build a persistent world model of your codebase — every symbol, call, import, and commit as a queryable graph node with impact analysis, live views, and no LLM calls for navigation."
 section: "guides"
 order: 9
 since: "8.0.0"
@@ -12,7 +12,7 @@ playground:
 
 # Code Intelligence
 
-ArcFlow turns your codebase into a live knowledge graph. Parse once, query forever. Every symbol, call, import, and commit is a node you can traverse in GQL — no LLM calls required for navigation or impact analysis.
+ArcFlow turns your codebase into a live world model. Parse once, query forever. Every symbol, call, import, and commit is a node you can traverse in GQL — no LLM calls required for navigation or impact analysis.
 
 **What this unlocks:**
 - "What does changing `authenticate()` break?" — answered in microseconds via blast-radius traversal
@@ -246,32 +246,21 @@ If the agent runs in a browser or cloud sandbox with no local shell (Claude.ai a
 
 ## Rust SDK
 
-The Rust layer lives in `arcflow/sdk/code-intelligence/`. It provides:
+The code intelligence layer is available as a Rust crate alongside the core engine. It provides:
 
-- `schema.rs` — same label/edge constants as the TypeScript layer (single source of truth)
-- `extractor.rs` — `AstNode` → `CodeDelta` (tree-sitter entry point)
-- `ingester.rs` — `CodeIngester` wraps `GraphStore::apply_node_edge_delta()`
-- `slicer.rs` — file + line range → source text + SHA-256 hash for `contentHash`
-- `git.rs` — `CommitGraph::parse_git_log()` + `build_delta()`
+- The same node/edge label constants as the TypeScript layer (single source of truth)
+- AST extraction for all supported languages (tree-sitter entry point)
+- Incremental ingestion — content-hash dedup, only changed nodes touch the graph
+- File + line range → source text + SHA-256 hash for `contentHash`
+- Git log parsing → commit graph delta builder
 
 ```rust
-use arcflow_code_intelligence::{CodeIngester, Slicer, extractor::{extract_file, AstNode, AstSpan}};
-use wc_core::GraphStore;
+use arcflow::GraphStore;
 
 let mut store = GraphStore::new();
-let mut ingester = CodeIngester::new(&mut store);
 
-let nodes = vec![AstNode {
-    kind: "Function".into(),
-    name: "login".into(),
-    file_path: "src/auth.rs".into(),
-    span: AstSpan { line_start: 12, line_end: 30 },
-    references: vec!["verify_token".into()],
-    content_hash: Some(Slicer::content_hash(path, 12, 30)?),
-}];
-
-let delta = extract_file("src/auth.rs", "rust", &nodes);
-ingester.ingest_code_delta(delta)?;
+// Ingest a parsed AST node
+store.apply_code_delta(&delta)?;
 ```
 
 ---

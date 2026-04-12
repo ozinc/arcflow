@@ -23,14 +23,15 @@
         { "slug": "sync", "title": "Sync", "order": 3 },
         { "slug": "mcp", "title": "MCP Server (AI Agents)", "order": 4 },
         { "slug": "live-queries", "title": "Live Queries", "order": 5 },
-        { "slug": "temporal", "title": "Temporal", "order": 6 },
-        { "slug": "spatial-knowledge", "title": "Spatial", "order": 7 },
-        { "slug": "trusted-rag", "title": "Trusted RAG", "order": 8 },
-        { "slug": "behavior-graph", "title": "Behavior Graph", "order": 9 },
-        { "slug": "agent-native", "title": "Agent-Native", "order": 10 },
-        { "slug": "event-sourcing", "title": "Event Sourcing", "order": 11 },
-        { "slug": "gpu", "title": "GPU Acceleration", "order": 12 },
-        { "slug": "relay", "title": "Intent Relay", "order": 13 }
+        { "slug": "programs", "title": "Programs", "order": 6 },
+        { "slug": "temporal", "title": "Temporal", "order": 7 },
+        { "slug": "spatial-knowledge", "title": "Spatial", "order": 8 },
+        { "slug": "trusted-rag", "title": "Trusted RAG", "order": 9 },
+        { "slug": "behavior-graph", "title": "Behavior Graph", "order": 10 },
+        { "slug": "agent-native", "title": "Agent-Native", "order": 11 },
+        { "slug": "event-sourcing", "title": "Event Sourcing", "order": 12 },
+        { "slug": "gpu", "title": "GPU Acceleration", "order": 13 },
+        { "slug": "relay", "title": "Intent Relay", "order": 14 }
       ]
     },
     {
@@ -72,7 +73,8 @@
         { "slug": "worldcypher/composition/case", "title": "CASE", "order": 14 },
         { "slug": "worldcypher/spatial", "title": "Spatial Queries", "order": 15 },
         { "slug": "worldcypher/temporal", "title": "Temporal Queries", "order": 16 },
-        { "slug": "worldcypher/algorithms", "title": "Algorithms Reference", "order": 17 }
+        { "slug": "worldcypher/algorithms", "title": "Algorithms Reference", "order": 17 },
+        { "slug": "worldcypher/triggers", "title": "Triggers", "order": 18 }
       ]
     },
     {

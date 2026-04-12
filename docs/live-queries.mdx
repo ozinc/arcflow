@@ -279,7 +279,7 @@ CREATE LIVE VIEW zone_breach AS
   RETURN e.id, e.name, e.position, e.confidence, e._observation_class
 ```
 
-The view is maintained by the R\*-tree. When an entity's position update crosses the 25-meter boundary, the view updates in the same mutation pass — no separate geofence evaluation cycle.
+The view is maintained by the ArcFlow Spatial Index. When an entity's position update crosses the 25-meter boundary, the view updates in the same mutation pass — no separate geofence evaluation cycle.
 
 ### High-confidence fact surfacing
 
@@ -366,8 +366,37 @@ No external orchestration service. No separate state store. Workflow state lives
 
 ---
 
+## LIVE vs TRIGGER
+
+ArcFlow has two reactive primitives. They are not interchangeable.
+
+| | LIVE | TRIGGER |
+|---|---|---|
+| **Syntax** | `CREATE LIVE VIEW`, `LIVE MATCH`, `LIVE CALL` | `CREATE TRIGGER` |
+| **Semantics** | Always current — maintained continuously as the graph mutates | Fire-once — executes exactly once per matching graph event |
+| **State** | Z-set maintained — result set is always current | Stateless — no maintained result |
+| **Use when** | You need a result set that is always true | You need a one-time side effect per event |
+
+```gql
+-- LIVE: the set of high-confidence entities is always current
+CREATE LIVE VIEW trusted_entities AS
+  MATCH (e:Entity) WHERE e.confidence > 0.9
+  RETURN e.id, e.name, e.position
+
+-- TRIGGER: when a new frame arrives, run detection once
+CREATE TRIGGER detect_on_frame
+    ON :ImageFrame WHEN CREATED
+    RUN SKILL detect_objects
+```
+
+See [Triggers](/worldcypher/triggers) for the full `CREATE TRIGGER` reference.
+
+---
+
 ## See also
 
+- [Triggers](/worldcypher/triggers) — `CREATE TRIGGER` for fire-once event bindings
+- [Programs](/programs) — bundle skills, triggers, and executor endpoints into an installable manifest
 - [Temporal Queries](/temporal) — `AS OF seq N` point-in-time snapshots; combining temporal and live queries
 - [Graph Algorithms](/algorithms) — full algorithm reference and `LIVE CALL` algorithm list
 - [Data Quality & Pipeline Integrity](/guides/data-quality) — live views for batch/delta equivalence, pipeline prune, drill-through

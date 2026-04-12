@@ -1,6 +1,6 @@
 ---
 title: "Using Skills"
-description: "Skills derive confidence-scored relationships from world model entities — register a rule once, and the graph materializes edges with provenance automatically."
+description: "Derive world model relationships from natural language rules — ArcFlow compiles once using your LLM, every PROCESS NODE and REPROCESS EDGES runs at graph-native speed with no model calls."
 section: "guides"
 order: 2
 since: "0.3.0"
@@ -13,7 +13,7 @@ playground:
 
 # Using Skills
 
-Skills register a derivation rule once. Every time `PROCESS NODE` runs, the world model materializes the resulting edges with confidence scores and provenance — which skill built them, which version, when.
+Skills have a single LLM cost: at creation time. You describe a relationship rule in natural language. ArcFlow sends that rule to your configured LLM endpoint once, receives a compiled WorldCypher graph pattern, and stores it in the skill. Every subsequent `PROCESS NODE` and `REPROCESS EDGES` executes the compiled pattern directly — no model calls, no token cost, sub-millisecond per node.
 
 This guide walks through the full lifecycle using a robotics scenario: detecting which robots are operating in the same zone and should coordinate.
 
@@ -25,16 +25,19 @@ You have a world model with `Robot` nodes, each carrying position and observatio
 
 ---
 
-## Step 1: Register the skill
+## Step 1: Register the skill (one LLM call)
 
 ```cypher
 CREATE SKILL ZonePeerDetector
-  FROM PROMPT 'Link two Robot nodes as ZONE_PEER if they occupy the same Zone with combined confidence above 0.75'
+  FROM PROMPT 'Link two Robot nodes as ZONE_PEER if they occupy the same Zone
+               with combined sensor confidence above 0.75'
   ALLOWED ON [Robot]
   TIER SYMBOLIC
 ```
 
-The skill is now stored in the world model. It does not run yet — registration and execution are separate.
+ArcFlow sends the prompt + your current schema to your configured LLM endpoint. The model returns a compiled WorldCypher graph pattern. ArcFlow stores both the original prompt and the compiled pattern in the skill node.
+
+The skill is now registered. It does not run yet — registration and execution are separate. No further LLM calls happen at any point after this.
 
 ---
 
@@ -66,13 +69,13 @@ CREATE (r4:Robot {
 
 ---
 
-## Step 3: Run the skill
+## Step 3: Run the skill (zero LLM)
 
 ```cypher
 PROCESS NODE (n:Robot)
 ```
 
-The engine evaluates `ZonePeerDetector` against all Robot nodes. It materializes `ZONE_PEER` edges between robots that satisfy the rule:
+The engine evaluates `ZonePeerDetector` against all Robot nodes using the compiled pattern — no model call, pure graph computation. It materializes `ZONE_PEER` edges between robots that satisfy the rule:
 
 ```
 => Created 2 ZONE_PEER edges (Atlas-01 ↔ Rover-02, Atlas-01 ↔ Scout-04)
@@ -105,7 +108,7 @@ Every derived relationship is traceable. If a coordination decision was made bas
 
 ---
 
-## Step 5: Re-evaluate as sensors improve
+## Step 5: Re-evaluate as sensors improve (zero LLM)
 
 Over time, sensor fusion improves and `Scout-04`'s confidence rises from 0.72 to 0.89. The existing `ZONE_PEER` edge to `Rover-02` was never materialized because the original confidence was too low.
 
@@ -128,9 +131,9 @@ The world model now reflects the higher-quality sensor state — without any man
 
 ---
 
-## Step 6: Version the skill
+## Step 6: Version the skill (one LLM call for the new version)
 
-When the coordination logic improves, create a new version:
+When the coordination logic improves, create a new version. ArcFlow calls your LLM endpoint once more to compile the revised rule:
 
 ```cypher
 CREATE SKILL ZonePeerDetector_v2

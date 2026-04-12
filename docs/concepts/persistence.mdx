@@ -37,7 +37,7 @@ The read path uses a copy-on-write store with atomic snapshot swaps. Readers loa
 
 - `db.query()` never blocks on a concurrent `db.mutate()`
 - `db.mutate()` never blocks on concurrent reads
-- Zero-copy commit: the committed snapshot is the same Arc the engine already holds
+- Zero-copy commit: the committed snapshot is swapped in atomically without copying
 
 ```typescript
 const db = open('./my-graph')

@@ -38,7 +38,7 @@ db.mutate(`
   })
 `)
 
-// Spatial: nearest trusted entities — R*-tree backed, high-throughput exact lookup
+// Spatial: nearest trusted entities — ArcFlow Spatial Index, ≥ 2,000 queries/sec at 11K entities
 const nearby = db.query(`
   CALL algo.nearestNodes(point({x: 0, y: 0}), 'Entity', 10)
     YIELD node AS e, distance
@@ -76,13 +76,13 @@ Spatial query composing with epistemic filter and graph traversal — in a singl
 
 | Dimension | Conventional database | ArcFlow World Model |
 |---|---|---|
-| **Space** | Coordinates as numeric columns | R*-tree indexed — frustum queries, KNN, proximity algorithms native |
+| **Space** | Coordinates as numeric columns | ArcFlow Spatial Index — frustum queries, KNN, proximity algorithms native |
 | **Time** | Timestamps on rows | Every mutation versioned — `AS OF seq N` on the same graph, same syntax |
 | **Confidence** | Binary (present or absent) | Scored `[0.0, 1.0]` on every node and relationship |
 | **Provenance** | Absent or in a separate log | Built-in — every edge records which sensor, model, or process produced it |
 | **Observation class** | Not modeled | First-class: `observed`, `inferred`, or `predicted` on every fact |
 | **Relationships** | Foreign keys derived at query time | Stored first-class edges with properties and direction |
-| **Reactivity** | Poll for changes | `db.subscribe()` — standing queries fire on every relevant mutation |
+| **Live queries** | Poll for changes | `db.subscribe()` — standing queries fire on every relevant mutation |
 
 These are not features. They are the minimum requirements for a system that needs to reason about the physical world.
 
@@ -115,19 +115,15 @@ A safety system running on confidence thresholds is fundamentally different from
 
 ---
 
-## Performance Snapshot
+## Performance
 
 | Operation | Throughput |
-|---|---:|
-| IS1: person profile | 10.6M/s |
-| Property scan | 14.6M/s |
-| Count(Person) | 43.7M/s |
-| 3-hop traversal | 780.0K/s |
-| Upsert (1K get_or_create) | 10.1M/s |
-| Bulk insert + edges | 503.7K/s |
-| Index build single | 151.3/s |
-| Index build composite | 343.8/s |
-| Composite exact lookup | 5.6M/s |
+|---|---|
+| Spatial KNN (ArcFlow Spatial Index, 11K entities) | ≥ 2,000 queries/sec |
+| Node creates | 9.3M/sec |
+| PageRank (154M nodes) | <1 second |
+| Geofence trigger latency | <20ms |
+| Temporal `AS OF` query | Same as current-state query — no separate index |
 
 ---
 
@@ -154,7 +150,7 @@ Building a world model without ArcFlow means assembling infrastructure piece by 
 What the fragmented approach requires      What ArcFlow provides
 ──────────────────────────────────────     ──────────────────────────────────────────
 A graph layer for entity relationships  →  GQL graph store (ISO/IEC 39075, Cypher-compatible)
-A spatial system for positions          →  R*-tree spatial index, composable with graph traversal
+A spatial system for positions          →  ArcFlow Spatial Index, composable with graph traversal
 A time-series store for history         →  Every mutation versioned — AS OF seq N on the same graph
 An in-memory layer for hot state        →  In-memory, zero-copy
 A vector database for embeddings        →  HNSW vector index, 27 built-in graph algorithms

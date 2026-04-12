@@ -1,0 +1,186 @@
+---
+title: "Triggers"
+description: "Fire-once event bindings — ON :Label WHEN CREATED RUN SKILL x. Declare a response before an event happens. No polling, no message broker, no callback registration."
+section: "worldcypher"
+order: 18
+since: "2.0.0"
+status: "planned"
+---
+
+# Triggers
+
+A trigger is a pre-planned response to a graph event. You declare it before the event happens. When the event occurs — a node is created, a property changes, a node is deleted — the trigger fires once and does its work.
+
+```gql
+-- When a frame arrives, run the detection skill
+CREATE TRIGGER detect_on_frame
+    ON :ImageFrame WHEN CREATED
+    RUN SKILL detect_objects
+```
+
+This is different from a [live query](/live-queries). A live query maintains a result set continuously — it is always true. A trigger fires once per matching event — it is a deliberate response.
+
+| Concept | Syntax | Semantics |
+|---|---|---|
+| **LIVE** | `CREATE LIVE VIEW`, `LIVE MATCH`, `LIVE CALL` | Continuous — always current, maintained as the graph mutates |
+| **TRIGGER** | `CREATE TRIGGER` | Fire-once — executes exactly once per matching graph event |
+| **SKILL** | `CREATE SKILL` | Logic definition — invoked by a trigger or called explicitly |
+
+Choose `LIVE` when you need a result set that is always current. Choose `TRIGGER` when you need to act once in response to a specific event.
+
+---
+
+## Syntax
+
+### CREATE TRIGGER
+
+```gql
+CREATE TRIGGER <name>
+    ON :<Label> WHEN CREATED | MODIFIED | DELETED
+    RUN SKILL <skill_name>
+```
+
+**`ON :<Label>`** — The label that determines which nodes are watched. Only nodes with this label will match.
+
+**`WHEN CREATED`** — Fires when a new node with the label enters the graph.
+
+**`WHEN MODIFIED`** — Fires when a property on a matching node changes.
+
+**`WHEN DELETED`** — Fires when a matching node is removed from the graph.
+
+**`RUN SKILL <name>`** — The skill to execute. The skill receives the triggering node as input.
+
+### DROP TRIGGER
+
+```gql
+DROP TRIGGER detect_on_frame
+```
+
+Deregisters the trigger. In-flight executions are not interrupted.
+
+---
+
+## Event types
+
+### CREATED — respond when a node arrives
+
+```gql
+-- Run enrichment whenever a new Person node is added
+CREATE TRIGGER enrich_person
+    ON :Person WHEN CREATED
+    RUN SKILL extract_relationships
+
+-- Start detection when a new frame is captured
+CREATE TRIGGER detect_on_frame
+    ON :ImageFrame WHEN CREATED
+    RUN SKILL detect_objects
+
+-- Index a document when it enters the workspace
+CREATE TRIGGER index_document
+    ON :Document WHEN CREATED
+    RUN SKILL embed_and_link
+```
+
+### MODIFIED — respond when state changes
+
+```gql
+-- Re-score when a detection's confidence is updated
+CREATE TRIGGER rescore_on_update
+    ON :Detection WHEN MODIFIED
+    RUN SKILL score_and_link
+
+-- Recalculate risk when an entity's position changes
+CREATE TRIGGER position_risk_update
+    ON :Entity WHEN MODIFIED
+    RUN SKILL recalculate_risk_score
+```
+
+### DELETED — respond when a node leaves
+
+```gql
+-- Clean up linked evidence when a session ends
+CREATE TRIGGER cleanup_on_session_end
+    ON :Session WHEN DELETED
+    RUN SKILL archive_session_evidence
+```
+
+---
+
+## Trigger vs Live: choosing the right primitive
+
+The same scenario can often be written two ways. The semantics are different.
+
+**Scenario: index documents as they arrive.**
+
+With a trigger — fire once per document:
+```gql
+CREATE TRIGGER index_on_arrival
+    ON :Document WHEN CREATED
+    RUN SKILL embed_and_link
+```
+
+With a live query — maintain the set of unindexed documents continuously:
+```gql
+CREATE LIVE VIEW unindexed_documents AS
+  MATCH (d:Document)
+  WHERE d.indexed IS NULL OR d.indexed = false
+  RETURN d.id, d.content, d.created_at
+```
+
+The trigger is better when the action is a one-time side effect — index this document, enrich this node, start this workflow. The live query is better when you need to know the current state — what documents still need indexing — across restarts, failures, or batches.
+
+**Use a trigger when:**
+- The action is a side effect that should happen once per event
+- You are invoking a skill against each new or changed node
+- You are wiring a program's output stage to a downstream skill
+
+**Use a live query when:**
+- You need a continuously maintained result set
+- Multiple consumers read the same derived data
+- The view should survive session ends and restarts
+
+---
+
+## Triggers inside Programs
+
+Programs can declare triggers inline. This is the recommended pattern for production deployments — the trigger's lifecycle is tied to the program's install/remove cycle:
+
+```gql
+CREATE PROGRAM yolo_v11 VERSION '1.0' (
+    ...
+    SKILLS [detect_objects, score_balls],
+    TRIGGERS [ON :ImageFrame WHEN CREATED]
+)
+```
+
+When the program is installed, the trigger is registered. When the program is removed with `DROP PROGRAM`, the trigger is dropped. There is no orphaned trigger to clean up.
+
+Standalone `CREATE TRIGGER` is for cases where the trigger is not part of a program — ad hoc automation, scripted pipelines, or development workflows.
+
+---
+
+## Inspecting triggers
+
+```gql
+-- List all registered triggers
+CALL db.triggers()
+YIELD name, label, event, skill, created_at
+RETURN *
+```
+
+```
+| name                   | label      | event   | skill            | created_at  |
+|------------------------|------------|---------|------------------|-------------|
+| detect_on_frame        | ImageFrame | CREATED | detect_objects   | 1744600000  |
+| enrich_person          | Person     | CREATED | extract_rels     | 1744600100  |
+| rescore_on_update      | Detection  | MODIFIED | score_and_link  | 1744600200  |
+```
+
+---
+
+## See also
+
+- [Programs](/programs) — `CREATE PROGRAM` bundles triggers, skills, and executor endpoints into a single installable manifest
+- [Live Queries](/live-queries) — `CREATE LIVE VIEW` and `LIVE MATCH` for continuously maintained result sets
+- [Skills](/skills) — `CREATE SKILL`, `PROCESS NODE`, `REPROCESS EDGES`
+- [Event Sourcing](/event-sourcing) — CDC and mutation log for downstream event pipelines

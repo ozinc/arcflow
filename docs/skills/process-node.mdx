@@ -1,6 +1,6 @@
 ---
 title: "PROCESS NODE"
-description: "Run skills against world model nodes to materialize confidence-scored dynamic edges — the engine's enrichment trigger."
+description: "Execute compiled skills across the world model — pure graph computation, no model calls, no token cost, sub-millisecond per node."
 section: "skills"
 order: 3
 since: "0.3.0"
@@ -12,7 +12,9 @@ playground:
 
 # PROCESS NODE
 
-PROCESS NODE runs all skills against matched nodes, creating edges with confidence scores and provenance metadata.
+Execute all compiled skills against matched world model nodes. **No model calls. No tokens. Pure graph computation.**
+
+The LLM's work is already done — it compiled each skill's rule into a graph pattern when the skill was registered. `PROCESS NODE` runs those patterns directly against your data at graph-native speed.
 
 ## Syntax
 
@@ -23,15 +25,66 @@ PROCESS NODE (variable:Label)
 ## Example
 
 ```cypher
-PROCESS NODE (n:Person)
+PROCESS NODE (n:Robot)
 ```
 
-For each matched Person node, the engine:
-1. Finds skills where `allowed_on` includes `Person`
-2. Executes each skill (symbolic tier)
-3. Materializes new edges with `Confidence` and `EdgeProvenance`
+For each matched Robot node, the engine:
+
+1. Finds all active skills where `allowed_on` includes `Robot`
+2. Executes each skill's **compiled pattern** — a WorldCypher graph traversal
+3. Scores candidate edges using observation confidence from existing relationships
+4. Materializes new edges with confidence score and provenance metadata
+
+No model is consulted. The compiled pattern is the complete specification.
+
+## What gets produced
+
+Every materialized edge carries:
+
+| Property | Description |
+|---|---|
+| `confidence` | Score derived from the graph structure — sensor reliability, detection scores, relationship weights |
+| `skill_id` | Which skill produced this edge |
+| `skill_version` | The compiled pattern version that ran |
+| `created_at` | Sequence number when the edge was materialized |
+
+## Performance
+
+`PROCESS NODE` is a graph traversal operation. Cost scales with the number of matched nodes and the complexity of the compiled pattern — not with edge count or world model size. At 10,000 robots with a co-occupancy pattern: single-digit milliseconds.
+
+There is no network call, no external service, no queue. The pattern runs in the graph engine's process.
+
+## Scoped execution
+
+Run skills against a filtered subset of nodes:
+
+```cypher
+-- Only process robots currently active
+PROCESS NODE (n:Robot)
+WHERE n.status = 'active'
+
+-- Only process robots in a specific zone
+MATCH (r:Robot)-[:OCCUPIES]->(z:Zone {id: 'lab-a'})
+PROCESS NODE (r)
+```
+
+## Multiple active skills
+
+Multiple skills can target the same label. `PROCESS NODE` runs all of them:
+
+```cypher
+-- Registered skills:
+--   ZonePeerDetector    — co-occupancy relationships
+--   CoDetectionLinker   — shared sensor detection relationships
+--   CoverageGapFinder   — identify robots without sensor coverage
+
+PROCESS NODE (n:Robot)
+-- Runs all three compiled patterns
+-- Produces ZONE_PEER, CO_DETECTED, and COVERAGE_GAP edges
+```
 
 ## See Also
 
-- [REPROCESS EDGES](/skills/reprocess-edges) — re-evaluate existing edges
-- [CREATE SKILL](/skills/create-skill) — register skills
+- [CREATE SKILL](/skills/create-skill) — where the LLM compiles your rule (once)
+- [REPROCESS EDGES](/skills/reprocess-edges) — refresh low-confidence edges, also model-free
+- [Concepts: Skills](/concepts/skills) — the compile-once model explained

@@ -38,7 +38,7 @@ One engine for graphs, vectors, full-text search, algorithms, time-series, live 
 | openCypher conformance | **100%** (3881/3881 TCK) |
 | ISO GQL | **V2 native** |
 | Workflow engine | **Built-in** (graph-native durable workflows) |
-| Replication | **Arrow Flight WAL tailing** (SWMR) |
+| Replication | **ArcFlow WAL Stream** — SWMR (single-writer, multi-reader) WAL tailing |
 
 **When to use ArcFlow:** any system that needs a persistent, spatial-temporal, confidence-scored representation of the world — robotics perception, autonomous fleets, digital twins, AI agent infrastructure, Trusted RAG, fraud detection, game AI, knowledge graphs.
 
@@ -396,7 +396,7 @@ CALL db.auth.auditLog(since, limit)                YIELD identity, action, query
 CALL arcflow.replication.contract()
   YIELD mode, writes_enabled, replication_factor, description
 
--- Arrow Flight WAL tailing config
+-- WAL tailing config
 CALL arcflow.replication.walTailing()
   YIELD field, value, description
 
@@ -498,6 +498,48 @@ CALL arcflow.claw.workerModel()      YIELD mode, description, latency_class, iso
 ```cypher
 CALL arcflow.skills.export('my-pack', '1.0.0') YIELD json
 CALL arcflow.skills.import(json)               YIELD name, version, skill_count
+```
+
+### Triggers (fire-once event bindings)
+```gql
+-- Bind a skill to a graph event
+CREATE TRIGGER detect_on_frame
+    ON :ImageFrame WHEN CREATED
+    RUN SKILL detect_objects
+
+-- WHEN CREATED | MODIFIED | DELETED
+DROP TRIGGER detect_on_frame
+
+-- Inspect registered triggers
+CALL db.triggers() YIELD name, label, event, skill, created_at
+```
+
+### Programs (installable capability manifests)
+```gql
+-- Declare a capability with hardware requirements, I/O schema, and executor wiring
+CREATE PROGRAM yolo_v11 VERSION '1.0' (
+    PROVIDES ['object_detection', 'ball_tracking'],
+    CARDINALITY PER_SENSOR,            -- SINGLETON | PER_SENSOR | SHARDED BY <prop>
+    INPUT  :ImageFrame { bytes BYTES, width INT, height INT },
+    OUTPUT :Detection  { label STRING, confidence FLOAT, bbox FLOAT[] },
+    REQUIRES GPU (SM >= 7.0, VRAM >= 4.0),
+    MODEL '/models/yolov11x.onnx',
+    EXECUTOR unix:///tmp/yolo.sock HEARTBEAT 5000,
+    EVIDENCE NEURAL,                   -- SYMBOLIC | WASM | LLM | NEURAL
+    SKILLS [detect_objects],
+    TRIGGERS [ON :ImageFrame WHEN CREATED]
+)
+
+DROP PROGRAM yolo_v11
+
+-- Program procedure API
+CALL arcflow.programs.list()                         YIELD name, version, provides, cardinality
+CALL arcflow.programs.describe('yolo_v11')           YIELD input_schema, output_schema, hardware_reqs
+CALL arcflow.programs.validate('yolo_v11')           YIELD passed, details
+CALL arcflow.programs.health('yolo_v11')             YIELD status, last_heartbeat_ms
+CALL arcflow.programs.find_by_capability('ball_3d')  YIELD name
+CALL arcflow.programs.install($manifest)             YIELD name, installed_at
+CALL arcflow.programs.remove('yolo_v11')             YIELD removed
 ```
 
 ### Ontology (IS_A hierarchy)

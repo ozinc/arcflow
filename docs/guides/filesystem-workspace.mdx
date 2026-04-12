@@ -230,9 +230,9 @@ Endpoints:
 
 ---
 
-## Practical Example: Codebase Knowledge Graph
+## Practical Example: Codebase World Model
 
-Here's how Claude Code would build and query a knowledge graph of your codebase:
+Here's how Claude Code would build and query a world model of your codebase:
 
 ### Step 1: Initialize
 
@@ -244,13 +244,13 @@ arcflow workspace init
 
 ```bash
 # Create crate nodes (no --data-dir needed — .arcflow/ auto-discovered)
-arcflow query "CREATE (c:Crate {name: 'wc-core', loc: 5500, tests: 120})" --json
-arcflow query "CREATE (c:Crate {name: 'wc-runtime', loc: 17000, tests: 467})" --json
-arcflow query "CREATE (c:Crate {name: 'wc-storage', loc: 2200, tests: 32})" --json
+arcflow query "CREATE (c:Crate {name: 'my-core', loc: 5500, tests: 120})" --json
+arcflow query "CREATE (c:Crate {name: 'my-runtime', loc: 17000, tests: 467})" --json
+arcflow query "CREATE (c:Crate {name: 'my-storage', loc: 2200, tests: 32})" --json
 
 # Create dependency relationships
-arcflow query "MATCH (a:Crate {name: 'wc-runtime'}), (b:Crate {name: 'wc-core'}) CREATE (a)-[:DEPENDS_ON]->(b)" --json
-arcflow query "MATCH (a:Crate {name: 'wc-runtime'}), (b:Crate {name: 'wc-storage'}) CREATE (a)-[:DEPENDS_ON]->(b)" --json
+arcflow query "MATCH (a:Crate {name: 'my-runtime'}), (b:Crate {name: 'my-core'}) CREATE (a)-[:DEPENDS_ON]->(b)" --json
+arcflow query "MATCH (a:Crate {name: 'my-runtime'}), (b:Crate {name: 'my-storage'}) CREATE (a)-[:DEPENDS_ON]->(b)" --json
 ```
 
 ### Step 3: Query and analyze
@@ -259,8 +259,8 @@ arcflow query "MATCH (a:Crate {name: 'wc-runtime'}), (b:Crate {name: 'wc-storage
 # Which crate has the most code?
 arcflow query "MATCH (c:Crate) RETURN c.name, c.loc ORDER BY c.loc DESC" --json
 
-# What depends on wc-core?
-arcflow query "MATCH (a:Crate)-[:DEPENDS_ON]->(b:Crate {name: 'wc-core'}) RETURN a.name" --json
+# What depends on my-core?
+arcflow query "MATCH (a:Crate)-[:DEPENDS_ON]->(b:Crate {name: 'my-core'}) RETURN a.name" --json
 
 # PageRank — which crate is most central?
 arcflow query "CALL algo.pageRank()" --json
@@ -268,7 +268,7 @@ arcflow query "CALL algo.pageRank()" --json
 
 ### Step 4: Persist across sessions
 
-The graph survives CLI restarts. Next time Claude Code opens your project, the knowledge graph is already there:
+The graph survives CLI restarts. Next time Claude Code opens your project, the world model is already there:
 
 ```bash
 arcflow query "MATCH (c:Crate) RETURN count(c)" --json

@@ -1,6 +1,6 @@
 ---
 title: "CLI"
-description: "arcflow — graph intelligence for the command line. Like grep, find, and jq, but for knowledge graphs."
+description: "arcflow — world model intelligence for the command line. Like grep, find, and jq, but for operational world models."
 section: "cli"
 order: 1
 since: "0.2.0"
@@ -12,7 +12,7 @@ playground:
 
 # CLI
 
-`arcflow` adds graph intelligence to the command line. The way `grep` searches text and `find` searches files, `arcflow` searches, transforms, and reasons over knowledge graphs — at filesystem speed, with structured JSON output that pipes into any workflow.
+`arcflow` adds world model intelligence to the command line. The way `grep` searches text and `find` searches files, `arcflow` searches, transforms, and reasons over operational world models — at filesystem speed, with structured JSON output that pipes into any workflow.
 
 ```bash
 # Create a graph, query it, get JSON — one line
@@ -37,9 +37,9 @@ An agent calling `arcflow` has the same performance characteristics as calling `
 
 ```bash
 # grep searches text
-grep -r "class GraphStore" crates/
+grep -r "class AuthService" src/
 
-# arcflow searches a knowledge graph
+# arcflow searches a world model
 arcflow --data-dir ./graph --exec "MATCH (c:Crate)-[:DEPENDS_ON]->(d) RETURN c.name, d.name" --json
 ```
 

@@ -76,7 +76,7 @@ MATCH (o:Obstacle {id: $id})
 RETURN o._confidence AS confidence_now
 ```
 
-**Knowledge graph staleness: which facts aged past their reliable window?**
+**World model staleness: which facts aged past their reliable window?**
 
 ```cypher
 -- Facts that were current at a past checkpoint but have since been superseded

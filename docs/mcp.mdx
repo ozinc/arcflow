@@ -61,7 +61,7 @@ npx arcflow-mcp --data-dir ./my-graph        # Persistent graph
 | `get_capabilities` | Algorithms, procedures, window functions, features | Read |
 | `read_query` | Execute read-only WorldCypher (MATCH, CALL algo.*, CALL db.*) | Read |
 | `write_query` | Execute mutations (CREATE, SET, DELETE, MERGE) | Write |
-| `graph_rag` | Trusted GraphRAG — answer questions from the knowledge graph | Read |
+| `graph_rag` | Trusted GraphRAG — answer questions from the world model | Read |
 | `ingest_nodes` | Push node/edge batches with idempotent content-hash dedup | Write |
 | `create_live_view` | Register a standing query as a named live view | Write |
 | `live_view_status` | Poll a live view's current result set and frontier | Read |
@@ -118,7 +118,7 @@ The `frontier` is a monotonically increasing mutation sequence number. If it has
 
 ### `graph_rag`
 
-Ask a natural language question answered from the knowledge graph with confidence filtering:
+Ask a natural language question answered from the world model with confidence filtering:
 
 ```
 graph_rag("Which entities have been observed with confidence above 0.9 in the last 5 minutes?")
@@ -143,3 +143,4 @@ MCP operates over stdio JSON-RPC. Each tool call has ~100ms of overhead from pro
 - [CLI](/cli) — the `arcflow` binary for shell-capable agents and developers
 - [Language Bindings](/bindings) — napi-rs (Node.js), Python, Rust, C, C++
 - [Agent-Native](/agent-native) — filesystem workspace, batch execution, watch mode
+- [Skills](/skills) — teach the world model a relationship rule in plain language; compiled once, executed at graph speed forever

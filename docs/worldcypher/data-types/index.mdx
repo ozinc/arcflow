@@ -15,21 +15,21 @@ playground:
 
 ## Scalar Types
 
-| Type | WorldCypher Literal | Rust Type | Example |
-|---|---|---|---|
-| Null | `null` | `PropertyValue::Null` | `null` |
-| Boolean | `true`, `false` | `PropertyValue::Bool(bool)` | `true` |
-| Integer | numeric literal | `PropertyValue::Int(i64)` | `42` |
-| Float | decimal literal | `PropertyValue::Float(f64)` | `3.14` |
-| String | single-quoted | `PropertyValue::String(String)` | `'hello'` |
+| Type | WorldCypher Literal | Example |
+|---|---|---|
+| Null | `null` | `null` |
+| Boolean | `true`, `false` | `true` |
+| Integer | numeric literal | `42` |
+| Float | decimal literal | `3.14` |
+| String | single-quoted | `'hello'` |
 
 ## Collection Types
 
-| Type | Rust Type | Description |
-|---|---|---|
-| IntList | `PropertyValue::IntList(Vec<i64>)` | List of integers |
-| FloatList | `PropertyValue::FloatList(Vec<f64>)` | List of floats |
-| StringList | `PropertyValue::StringList(Vec<String>)` | List of strings |
+| Type | Description |
+|---|---|
+| IntList | List of integers |
+| FloatList | List of floats |
+| StringList | List of strings |
 
 ## Type Coercion
 

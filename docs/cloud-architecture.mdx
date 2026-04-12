@@ -26,7 +26,7 @@ This worked when applications lived on servers. It doesn't work when your graph 
 - **The browser** — collaborative editing, offline-first apps
 - **Edge PoPs** — sub-millisecond reads at Cloudflare's 300+ locations
 - **IoT devices** — robots, drones, game engines with local graph state
-- **Mobile apps** — offline knowledge graphs that sync when connected
+- **Mobile apps** — offline world models that sync when connected
 
 ---
 
@@ -92,21 +92,14 @@ Every node in the mesh runs the same ArcFlow engine. The optimized WASM engine h
 
 Every write to ArcFlow generates a WAL (Write-Ahead Log) entry with CRC32 integrity. WAL segments rotate at configurable thresholds (default: 4MB or 10K entries) and ship to S3-compatible object storage.
 
-```rust
-use arcflow::{WalShipper, WalShipperConfig, LocalFsBackend};
-
-let config = WalShipperConfig {
-    db_id: "my-graph".into(),
-    max_segment_bytes: 4 * 1024 * 1024,  // 4MB segments
-    max_segment_entries: 10_000,
-};
-
-let backend = LocalFsBackend::new("/var/lib/arcflow/object-store")?;
-let mut shipper = WalShipper::new(config, backend, "/var/lib/arcflow/wal")?;
-
-// Writes automatically rotate and ship
-shipper.append(op, txn_id)?;
-shipper.ship_closed()?;  // Upload to object storage
+```yaml
+# arcflow.toml — WAL segment shipping configuration
+wal_shipping:
+  db_id: "my-graph"
+  max_segment_bytes: 4194304   # 4MB
+  max_segment_entries: 10000
+  backend: s3                  # s3 | gcs | azure | local
+  path: "/var/lib/arcflow/wal"
 ```
 
 Recovery from object storage: load the latest checkpoint, replay WAL segments after it. CRC32 verified on every segment download.
@@ -133,7 +126,7 @@ Fingerprint verification (`db.fingerprint()`) ensures consistency after sync.
 
 When multiple edge nodes write concurrently:
 - **Default:** Last-Writer-Wins (LWW) with timestamps
-- **Pluggable:** `MergeStrategy` trait for custom resolution
+- **Pluggable:** Custom merge strategy for domain-specific resolution
 - **Auditable:** Conflict log records all resolutions with both versions
 - **Causal:** Vector clocks detect truly concurrent writes vs. ordered writes
 
@@ -170,7 +163,7 @@ arcflow deploy
 | Origin server | Docker container (under 20MB) |
 | Binary WAL | compact binary encoding + CRC32 + fsync |
 | Checkpoints | Atomic snapshot + restore |
-| WAL segment shipping | ObjectStorageBackend + WalShipper |
+| WAL segment shipping | ArcFlow WAL Stream — object storage backend |
 | Change tracking | `db.changesSince()` CDC |
 | Data integrity | `db.fingerprint()` |
 | HTTP API | `--http PORT` |

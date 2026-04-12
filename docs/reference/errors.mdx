@@ -55,7 +55,7 @@ TypedError {
 | `STEP_NOT_FOUND` | validation | Step name not in workflow | Check step name spelling |
 | `EXECUTION_CONTEXT_MISMATCH` | integration | `requireExecutionContext` guard failed | `CALL db.setExecutionContext(...)` first |
 | `UNKNOWN_EXECUTION_CONTEXT` | validation | Invalid context string | Use `local_cpu`, `local_gpu`, or `distributed` |
-| `TEMPORAL_WAL_NOT_WIRED` | integration | `AS OF seq N` without WAL context | Use `JournaledStore` or `ConcurrentStore` |
+| `TEMPORAL_WAL_NOT_WIRED` | integration | `AS OF seq N` without WAL context | Open the store with WAL enabled (`open()` or `openInMemory()` with sync options) |
 
 ## Design Principle
 

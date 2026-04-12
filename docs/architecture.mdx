@@ -38,47 +38,33 @@ This architecture eliminates entire categories of infrastructure: no external ca
 Rules: Workspace → Engine (explicit load). Engine → Projection (explicit export).
 Projections never feed back as authority.
 
-## Crate Map (14 crates)
-
-```
-wc-cli ─── wc-sdk ─── wc-runtime ─── wc-query-compiler ─── wc-query-ir
-  │                       │
-wc-mcp                 wc-storage ─── wc-core ─── wc-types
-  │                                      │
-wc-ffi                              (zset, delta_engine,
-wc-wasm                              standing_query,
-wc-bench                              window_ops,
-wc-bridge                             live_algorithm,
-                                       arrangement)
-```
+## Module architecture
 
 **Core (bottom of stack):**
 
-| Crate | Responsibility |
+| Layer | Responsibility |
 |---|---|
-| `wc-types` | Core primitives: NodeId, PropertyValue, ZSet, EvidenceWeight, Confidence |
-| `wc-core` | Graph store, property index, adjacency lists, Z-set algebra, delta engine, standing queries, window operators, live algorithms, arrangements |
-| `wc-storage` | Journaled storage, WAL, snapshot/restore |
+| Core types | Node, relationship, property primitives; confidence and evidence types |
+| Graph engine | Graph store, property index, adjacency structures, incremental computation, standing queries, window operators, live algorithms |
+| Storage | Journaled storage, WAL, snapshot/restore |
 
 **Query and incremental (middle):**
 
-| Crate | Responsibility |
+| Layer | Responsibility |
 |---|---|
-| `wc-query-ir` | Query IR (17 ZSetOp variants), compilation target |
-| `wc-query-compiler` | WorldCypher (ISO GQL) parser, QueryPlan to ZSetOp lowering, incrementalization |
-| `wc-runtime` | Execution engine, GPU dispatch, 14 CUDA kernels, 25 Metal kernels |
+| Query IR | Compiled query representation — the target for the query compiler |
+| Query compiler | WorldCypher (ISO GQL) parser, query planning, incrementalization |
+| Runtime | Execution engine, ArcFlow Adaptive Dispatch, GPU kernels |
 
 **Public API (top of stack):**
 
-| Crate | Responsibility |
+| Surface | Responsibility |
 |---|---|
-| `wc-sdk` | Public Rust SDK (published as `arcflow` on crates.io) |
-| `wc-cli` | CLI REPL, TCP/HTTP/PG servers, self-update, structured output (user-facing binary: `arcflow`) |
-| `wc-ffi` | C ABI (cdylib + staticlib) for Python/TypeScript/C++ bindings |
-| `wc-mcp` | Model Context Protocol server (stdio JSON-RPC) |
-| `wc-wasm` | WASM binary for browser and edge |
-| `wc-bench` | Stress benchmarks |
-| `wc-bridge` | Language interop utilities |
+| Rust SDK | Published as `arcflow` on crates.io |
+| CLI | REPL, TCP/HTTP/PostgreSQL servers, self-update, structured output — user-facing binary: `arcflow` |
+| FFI | C ABI for Python, TypeScript, and C++ bindings |
+| MCP | Model Context Protocol server (stdio JSON-RPC) |
+| WASM | Browser and edge runtime |
 
 Dependencies flow inward. Transport/CLI depend on core, never reverse.
 

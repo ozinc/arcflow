@@ -15,46 +15,103 @@ playground:
 
 **The ArcFlow Evidence Model makes every fact in the world model epistemically graded. Every node and relationship carries an observation class, a confidence score, and a provenance chain — built into the storage engine, not bolted on.**
 
-Every edge in ArcFlow knows who created it, when, with what tool, and how confident. Query `r._confidence`, `r._skill_version`, or `r._created_at` on any relationship, the same way you query `r.weight` or `r.type`.
+Query `r._confidence`, `r._skill_version`, or `r._created_at` on any relationship the same way you query `r.weight` or `r.type`. This isn't optional metadata — it's how ArcFlow stores edges.
 
-Static edges (manually created) default to confidence 1.0. Dynamic edges (created by skills) carry the full provenance chain — skill name, semantic version, model fingerprint, and a hash of the provenance lineage.
+---
 
-## Confidence
+## Confidence Score
 
-```rust
-struct Confidence(f64); // 0.0 to 1.0, clamped
-```
+Every edge carries `_confidence` — a float from 0.0 to 1.0 indicating how reliable the data is.
 
 | Value | Meaning |
 |---|---|
-| `1.0` | Static edge or full certainty |
-| `0.75+` | High confidence (default constructor threshold) |
-| `0.5–0.75` | Medium — may need re-evaluation |
-| `< 0.5` | Low — candidate for REPROCESS |
+| `1.0` | Manually asserted or directly measured |
+| `0.75+` | High confidence — default skill materialization threshold |
+| `0.5–0.75` | Medium — may need re-evaluation as evidence improves |
+| `< 0.5` | Low — candidate for `REPROCESS EDGES` |
+
+Static edges (manually created with `CREATE` or `MERGE`) default to confidence 1.0. Dynamic edges (produced by Skills) carry the full provenance chain.
+
+---
 
 ## Edge Provenance
 
-```rust
-struct EdgeProvenance {
-    skill_id: Option<ConstructorId>,       // which constructor created this edge
-    skill_version: Option<SemanticVersion>, // constructor version at creation time
-    model_fingerprint: Option<String>,      // e.g., "claude-opus-4-6"
-    provenance_hash: Option<String>,        // hash of the provenance chain
-}
-```
+Every dynamic edge carries:
 
-## Querying by confidence
+| Property | Description |
+|---|---|
+| `_skill_version` | Which skill version built this edge |
+| `_model_fingerprint` | The model or extractor that produced the source data |
+| `_provenance_hash` | Hash of the full provenance lineage |
+| `_created_at` | Timestamp of materialization |
+
+These are queryable directly:
 
 ```cypher
+MATCH (a:Robot)-[r:ZONE_PEER]->(b:Robot)
+RETURN
+  a.name, b.name,
+  r._confidence,
+  r._skill_version,
+  r._created_at
+ORDER BY r._confidence DESC
+```
+
+---
+
+## Confidence-Weighted Traversal
+
+Confidence propagates multiplicatively along paths. A path through two 0.9-confidence edges has path confidence 0.81. This means longer inference chains naturally accumulate uncertainty — queries can filter on path-level confidence rather than edge-level alone.
+
+---
+
+## Filtering by Trust
+
+```cypher
+-- High-trust sensor detections only
+MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)
+WHERE d._confidence > 0.85
+RETURN s.name, r.name, d._confidence
+
+-- Identify edges needing re-evaluation
+MATCH ()-[r]->()
+WHERE r._confidence < 0.6
+RETURN type(r), r._skill_version, r._confidence
+ORDER BY r._confidence
+
+-- Re-run skills against stale low-confidence edges
 REPROCESS EDGES WHERE confidence < 0.6
 ```
 
-## Confidence-weighted traversal
+---
 
-When traversing paths, confidence propagates multiplicatively — a path through
-two 0.9-confidence edges has path confidence 0.81.
+## Observation Class + Confidence Together
+
+Observation class and confidence work as a two-axis trust model:
+
+| Observation Class | Confidence | Interpretation |
+|---|---|---|
+| `observed` | 0.95 | Direct high-quality sensor reading — authoritative |
+| `observed` | 0.62 | Direct but degraded reading — sensor occlusion, noise |
+| `inferred` | 0.88 | Strong algorithmic derivation — reliable |
+| `inferred` | 0.51 | Weak derivation — needs corroboration |
+| `predicted` | any | Model output — use for planning, not for facts |
+
+A query that needs authoritative facts filters on both:
+
+```cypher
+MATCH (r:Robot)
+WHERE r._observation_class = 'observed'
+  AND r._confidence > 0.85
+RETURN r.name, r.x, r.y, r._confidence
+```
+
+---
 
 ## See Also
 
-- [Skills](/concepts/skills)
-- [REPROCESS EDGES](/skills/reprocess-edges)
+- [Observations & Evidence](/concepts/observations) — observation classes and the ArcFlow Evidence Model
+- [Skills](/concepts/skills) — how skills produce confidence-scored edges with provenance
+- [REPROCESS EDGES](/skills/reprocess-edges) — re-evaluating low-confidence edges
+- [Trusted RAG](/trusted-rag) — confidence-filtered retrieval from the world model
+- [Proof Artifacts & Gates](/concepts/proof-artifacts) — cryptographic state proofs built from the evidence chain

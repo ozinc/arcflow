@@ -1,6 +1,6 @@
 ---
 title: "Skills"
-description: "WorldCypher operations for registering and executing Skills — derive confidence-scored edges from world model facts, no external pipeline"
+description: "Derive world model relationships from natural language rules — compile once with your LLM, execute at graph speed forever. No model calls on PROCESS NODE or REPROCESS EDGES."
 section: "skills"
 order: 1
 since: "0.2.0"
@@ -12,21 +12,23 @@ playground:
 
 # Skill Operations
 
-Skills derive relationships from world model facts. Register a rule once — the engine materializes edges with confidence scores and provenance, re-evaluable as observations improve.
+Describe a relationship rule in natural language. ArcFlow compiles it once — using your configured LLM endpoint — into a graph pattern stored in the skill. Every subsequent `PROCESS NODE` and `REPROCESS EDGES` executes the compiled pattern directly: no model calls, no token cost, sub-millisecond per node. The LLM is a compiler frontend. ArcFlow is the runtime.
 
 ## Operations
 
-| Operation | What it does |
-|---|---|
-| [CREATE SKILL](/skills/create-skill) | Register a new skill |
-| [PROCESS NODE](/skills/process-node) | Execute skills against nodes |
-| [REPROCESS EDGES](/skills/reprocess-edges) | Re-evaluate low-confidence edges |
+| Operation | LLM? | What it does |
+|---|---|---|
+| [CREATE SKILL](/skills/create-skill) | Once | Compile a rule and register the skill |
+| [PROCESS NODE](/skills/process-node) | Never | Execute compiled skills against nodes |
+| [REPROCESS EDGES](/skills/reprocess-edges) | Never | Re-run compiled patterns against updated data |
 
 ---
 
 ## See Also
 
 - [Using Skills](/guides/using-skills) — step-by-step guide with real examples
+- [Programs](/programs) — bundle skills, triggers, and executor endpoints into an installable manifest
+- [Triggers](/worldcypher/triggers) — `CREATE TRIGGER` to run a skill automatically when a graph event fires
 - [Observations & Evidence](/concepts/observations) — the observation model that skills write to
 - [Confidence & Provenance](/concepts/confidence-and-provenance) — how skill edges carry confidence scores
 - [Use Case: Knowledge Management](/use-cases/knowledge-management) — skills in an entity extraction pipeline

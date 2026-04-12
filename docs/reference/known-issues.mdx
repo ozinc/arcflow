@@ -13,7 +13,7 @@ playground:
 
 ## Metal GPU initialization hang
 
-**Symptom:** `require('arcflow-core')` or `new Runtime()` hangs indefinitely on macOS.
+**Symptom:** `require('arcflow')` hangs indefinitely on macOS.
 
 **Cause:** Metal GPU kernel compilation can deadlock during module initialization on some systems.
 
@@ -32,8 +32,8 @@ This disables Metal acceleration and falls back to CPU. All queries still work â
 **Fix:** Manually copy the binary:
 
 ```bash
-cp path/to/arcflow/bindings/typescript/arcflow.darwin-arm64.node \
-   node_modules/arcflow-core/arcflow.darwin-arm64.node
+# Manually copy the built .node binary into your node_modules
+cp <built-binary>.node node_modules/arcflow/arcflow.<platform>.node
 ```
 
 ## SET multiple properties in one clause

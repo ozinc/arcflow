@@ -1,6 +1,6 @@
 ---
 title: "Server & Access Layers"
-description: "In-process, HTTP, TCP, and MCP — the engine adapts to how you deploy"
+description: "Access the operational world model over PostgreSQL wire protocol, HTTP REST, TCP, or MCP — same engine, same WorldCypher queries, same world model everywhere"
 section: "server"
 order: 1
 since: "0.11.0"
@@ -338,7 +338,7 @@ printf "CREATE (n:A {x: 1})\nMATCH (n) RETURN count(*)\n" | nc localhost 7687
 
 ### Concurrency
 
-Each TCP client gets its own thread. Multiple clients can connect simultaneously. The underlying `ConcurrentStore` uses `Arc<RwLock>` for thread safety: multiple concurrent readers, single writer with exclusive access.
+Each TCP client gets its own thread. Multiple clients can connect simultaneously. The server engine is thread-safe: multiple concurrent readers, single writer with exclusive access.
 
 ## MCP Server
 
@@ -475,7 +475,7 @@ Run the trusted GraphRAG pipeline — combines graph traversal, vector search, a
 
 | Parameter | Type   | Required | Description                                      |
 |-----------|--------|----------|--------------------------------------------------|
-| `query`   | string | yes      | Natural language question for the knowledge graph |
+| `query`   | string | yes      | Natural language question for the world model |
 
 ```json
 {"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"graph_rag","arguments":{"query":"What do we know about water on Mars?"}}}
@@ -504,13 +504,13 @@ Returns all 5 tool definitions with input schemas.
 
 ## Thread Safety
 
-All server access layers (HTTP, TCP, MCP) use `ConcurrentStore`, which wraps the graph engine in `Arc<RwLock<GraphStore>>`. This provides:
+All server access layers (HTTP, TCP, MCP) share one graph engine with read/write isolation:
 
 - **Multiple concurrent readers**: MATCH queries run in parallel across threads.
 - **Single writer with exclusive access**: CREATE/SET/DELETE acquire a write lock. Other queries wait.
 - **Automatic persistence**: After mutations, the snapshot is written to disk if `--data-dir` is set.
 
-The REPL is single-threaded and uses `GraphStore` directly (no locking overhead).
+The REPL runs single-threaded (no locking overhead).
 
 ## Persistence
 
@@ -569,4 +569,4 @@ curl -s http://localhost:8080/status
 ## See Also
 
 - [REPL Reference](/cli/repl) — all meta-commands and agent usage
-- [Persistence](/server/persistence) — storage internals
+- [Persistence](/server/persistence) — WAL-backed durable storage

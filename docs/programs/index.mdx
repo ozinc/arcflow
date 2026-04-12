@@ -1,0 +1,300 @@
+---
+title: "Programs"
+description: "Declarative capability bundles — install a YOLO detector, a player tracker, or a PTZ controller as a single manifest. Hardware validation at install time, not at 2am."
+section: "programs"
+order: 1
+since: "2.0.0"
+status: "planned"
+---
+
+# Programs
+
+A GPU-backed object detector needs five things wired together: a skill definition, a trigger binding, an I/O schema, a hardware requirement check, and a running executor process. You could set all five up by hand. Most people do. The result is an implicit contract — conventions in a README, validation that happens at runtime failure, and a set of wiring steps that every operator re-does for every deployment.
+
+ArcFlow Programs make that contract explicit. A Program is a manifest that declares what a capability needs, what it produces, where it runs, and what hardware it requires. The engine validates the contract at install time. If your machine can't run it, the install fails loudly. If it can, the wiring is complete — skills, triggers, and executor endpoint — in a single DDL statement.
+
+```gql
+CREATE PROGRAM yolo_v11 VERSION '1.0' (
+    PROVIDES ['object_detection', 'ball_tracking'],
+    CARDINALITY PER_SENSOR,
+
+    INPUT  :ImageFrame  { bytes BYTES, width INT, height INT },
+    OUTPUT :Detection   { label STRING, confidence FLOAT, bbox FLOAT[] },
+    OUTPUT EDGE :DETECTED_IN FROM :Detection TO :Frame,
+
+    REQUIRES GPU (SM >= 7.0, VRAM >= 4.0),
+    MODEL '/models/yolov11x.onnx',
+
+    EXECUTOR unix:///tmp/yolo.sock HEARTBEAT 5000,
+    EVIDENCE NEURAL,
+
+    SKILLS [detect_objects, score_balls],
+    TRIGGERS [ON :ImageFrame WHEN CREATED]
+)
+```
+
+This is a complete deployment unit. The engine validates the GPU, connects to the executor, registers the skills and triggers, and records the output schema — all before any data arrives.
+
+---
+
+## The problem with the alternatives
+
+### Manual wiring
+
+The common approach: create a skill, bind a trigger, write the executor connection code, add a hardware check somewhere. Each step is ad hoc. The hardware check — if it exists at all — runs the first time an `:ImageFrame` node arrives. A machine with no GPU, or a GPU with the wrong CUDA SM version, fails at 2am in production, not at 5pm during deployment. Nothing validated the contract at install time because there was no contract.
+
+### Embedded inference
+
+Loading model weights inside the engine process gives the engine a CUDA context, a memory budget, and a crash domain it was never designed to manage. An OOM in the detector takes down the graph. A model update requires a full engine restart. The engine's job is graph operations — standing queries, Z-set algebra, WAL journaling. Inference is not its job.
+
+### External orchestration
+
+An orchestration service that knows about skills, GPU requirements, and executor processes is a second system that must be consistent with the engine's state. ArcFlow runs one process. Programs bring the deployment contract into that process without embedding inference in it.
+
+---
+
+## The separation of concerns
+
+Programs solve the wiring problem without blurring the engine/executor boundary:
+
+**What the engine owns:**
+- The manifest — name, version, provides tags, cardinality, I/O schema
+- Hardware validation — checked once at install
+- Trigger bindings — registered against the DeltaEngine, fire on graph events
+- Result ingestion — executor outputs enter the graph as standard mutations
+- Executor health — periodic heartbeat checks, reported via `arcflow.programs.health()`
+
+**What the executor owns:**
+- Model weights and inference compute
+- Its own CUDA context and memory budget
+- Its own crash domain — an executor panic does not affect the graph process
+
+The executor is a separate OS process. The engine never loads weights. The engine dispatches inputs and ingests graph delta payloads. This is the only correct division of responsibility when you need both a reliable graph and GPU inference.
+
+---
+
+## Syntax reference
+
+### CREATE PROGRAM
+
+```gql
+CREATE PROGRAM <name> VERSION '<semver>' (
+    PROVIDES [<tag>, ...],
+    CARDINALITY SINGLETON | PER_SENSOR | SHARDED BY <property>,
+
+    INPUT  :<Label> { <prop> <type>, ... },
+    OUTPUT :<Label> { <prop> <type>, ... },
+    OUTPUT EDGE :<TYPE> FROM :<Label> TO :<Label>,
+
+    REQUIRES GPU (SM >= <float>, VRAM >= <float>),
+    MODEL '<path>',
+
+    EXECUTOR <transport>://<address> HEARTBEAT <ms>,
+    EVIDENCE SYMBOLIC | WASM | LLM | NEURAL,
+
+    SKILLS [<skill_name>, ...],
+    TRIGGERS [ON :<Label> WHEN CREATED | MODIFIED | DELETED]
+)
+```
+
+All clauses are optional except `EXECUTOR`. A Program without `SKILLS` or `TRIGGERS` is a valid manifest — it declares I/O schema and hardware requirements and relies on external invocation.
+
+### DROP PROGRAM
+
+```gql
+DROP PROGRAM yolo_v11
+```
+
+Deregisters the manifest, drops associated triggers, and removes the program's skills from the registry. Existing graph data produced by the program is not deleted — `:Detection` nodes remain.
+
+---
+
+## Cardinality
+
+Cardinality declares the deployment topology — how many executor instances the operator should run. It is a wiring hint, not runtime enforcement.
+
+| Cardinality | Instances | When to use |
+|---|---|---|
+| `SINGLETON` | One globally | Shared resource, single GPU, central coordinator |
+| `PER_SENSOR` | One per `:Sensor` node | Camera-local detectors, per-device processing |
+| `SHARDED BY <key>` | One per unique value of `key` | Partition by venue, by team, by geographic region |
+
+```gql
+-- One YOLO instance per camera
+CREATE PROGRAM yolo_v11 VERSION '1.0' (
+    CARDINALITY PER_SENSOR,
+    ...
+)
+
+-- One fusion program globally
+CREATE PROGRAM player_fusion VERSION '1.0' (
+    CARDINALITY SINGLETON,
+    ...
+)
+
+-- One tracker per venue
+CREATE PROGRAM ball_tracker VERSION '1.0' (
+    CARDINALITY SHARDED BY venue_id,
+    ...
+)
+```
+
+---
+
+## Capability discovery
+
+Programs self-declare what they provide via free-form `PROVIDES` tags. There is no controlled vocabulary — a program that provides `"object_detection"` says so. A consumer that needs `"object_detection"` asks for it.
+
+```gql
+-- What capabilities does this deployment have?
+CALL arcflow.programs.list()
+YIELD name, version, provides, cardinality
+RETURN *
+
+-- Is ball fusion available?
+CALL arcflow.programs.find_by_capability('ball_3d')
+YIELD name WHERE name IS NOT NULL
+RETURN count(*) > 0 AS has_ball_fusion
+
+-- Can we run a full broadcast pipeline?
+CALL arcflow.programs.find_by_capability('ball_3d')    YIELD name AS p1
+CALL arcflow.programs.find_by_capability('player_3d')  YIELD name AS p2
+CALL arcflow.programs.find_by_capability('ptz_control') YIELD name AS p3
+RETURN p1 IS NOT NULL AND p2 IS NOT NULL AND p3 IS NOT NULL AS pipeline_ready
+```
+
+Two programs with the same `provides` tag are valid. `find_by_capability` returns both. The consumer chooses.
+
+---
+
+## Hardware requirements
+
+The `REQUIRES GPU` clause declares the minimum compute capability and VRAM the executor needs:
+
+```gql
+REQUIRES GPU (SM >= 7.0, VRAM >= 4.0)   -- Volta+ with 4GB minimum
+REQUIRES GPU (SM >= 8.6, VRAM >= 16.0)  -- Ampere+ for large models
+```
+
+This check runs once — at `CREATE PROGRAM` time. If the engine cannot find a GPU meeting these requirements, the install fails with an explicit error:
+
+```
+Error: hardware validation failed for 'yolo_v11'
+  required: SM >= 7.0, VRAM >= 4.0 GB
+  available: SM 6.1, VRAM 4.0 GB (GTX 1050 Ti)
+  fix: deploy on Volta (SM 7.0) or later hardware
+```
+
+After a successful install, hardware is never checked again. Runtime failures from hardware mismatch are not possible if the install succeeded.
+
+---
+
+## Evidence tier
+
+The `EVIDENCE` clause sets the epistemic class for all nodes the program produces. This propagates through Z-set algebra — downstream live queries can filter on confidence that originates from a program's tier.
+
+| Tier | Meaning |
+|---|---|
+| `SYMBOLIC` | Pure graph logic — deterministic, no uncertainty |
+| `WASM` | Compiled WASM skill — deterministic, sandboxed |
+| `LLM` | Language model output — probabilistic, text-grounded |
+| `NEURAL` | Neural network — probabilistic, sensor-grounded |
+
+```gql
+-- Only accept detections from neural programs with confidence > 0.85
+MATCH (d:Detection)
+WHERE d._evidence_tier = 'NEURAL' AND d.confidence > 0.85
+RETURN d.label, d.confidence
+```
+
+---
+
+## Executor transports
+
+The `EXECUTOR` clause declares how the engine reaches the executor process:
+
+```gql
+-- Unix domain socket (recommended for same-machine deployment)
+EXECUTOR unix:///tmp/yolo.sock HEARTBEAT 5000
+
+-- TCP (for cross-machine or containerized deployments)
+EXECUTOR tcp://localhost:8765 HEARTBEAT 5000
+
+-- FFI (in-process Rust FFI — for WASM or native skills only)
+EXECUTOR ffi://detect_objects HEARTBEAT 0
+```
+
+`HEARTBEAT` sets the health-check interval in milliseconds. `0` disables heartbeats.
+
+---
+
+## Procedure API
+
+```gql
+-- List all installed programs
+CALL arcflow.programs.list()
+YIELD name, version, provides, cardinality, evidence_tier
+RETURN *
+
+-- Inspect a program's full manifest
+CALL arcflow.programs.describe('yolo_v11')
+YIELD input_schema, output_schema, output_edges, hardware_reqs, executor
+RETURN *
+
+-- Validate hardware requirements without installing
+CALL arcflow.programs.validate('yolo_v11')
+YIELD passed, details
+RETURN passed, details
+
+-- Check executor health
+CALL arcflow.programs.health('yolo_v11')
+YIELD status, last_heartbeat_ms, executor_address
+RETURN *
+
+-- Programmatic install (alternative to CREATE PROGRAM DDL)
+CALL arcflow.programs.install($manifest)
+YIELD name, installed_at
+RETURN *
+
+-- Remove a program
+CALL arcflow.programs.remove('yolo_v11')
+YIELD removed
+RETURN removed
+```
+
+---
+
+## How Programs compose with the graph
+
+A program's output nodes enter the graph as standard mutations. The graph does not know — and does not need to know — that `:Detection` nodes came from a YOLO executor versus a WASM skill versus a SYMBOLIC constructor. They are graph deltas.
+
+This means every ArcFlow primitive works on program outputs:
+
+```gql
+-- Standing query: notify when a detection enters a defined zone
+CREATE LIVE VIEW detections_in_zone AS
+  MATCH (d:Detection)-[:DETECTED_IN]->(f:Frame)<-[:CAPTURED]-(c:Camera)
+  WHERE d.confidence > 0.85
+    AND distance(d.position, point({x: 50, y: 50})) < 10.0
+  RETURN d.label, d.confidence, c.name AS camera, f.timestamp
+
+-- Trigger: when a new detection appears, run a downstream skill
+CREATE TRIGGER enrich_on_detection
+    ON :Detection WHEN CREATED
+    RUN SKILL score_and_link
+
+-- Graph algorithm over program outputs
+LIVE CALL algo.connectedComponents()
+MATCH (d:Detection) RETURN d.label, d.community
+```
+
+---
+
+## See also
+
+- [Triggers](/worldcypher/triggers) — `CREATE TRIGGER` syntax for fire-once event bindings
+- [Live Queries](/live-queries) — `CREATE LIVE VIEW` and `LIVE MATCH` for continuous standing queries
+- [Skills](/skills) — `CREATE SKILL` for compiled graph-pattern logic
+- [GPU Acceleration](/gpu) — compute-capability guards and CUDA kernel dispatch
+- [Use Case: Sports Analytics](/use-cases/sports-analytics) — Programs in a real-time broadcast pipeline
+- [Use Case: Autonomous Systems](/use-cases/autonomous-systems) — Programs for sensor fusion and perception

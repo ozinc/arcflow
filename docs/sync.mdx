@@ -76,13 +76,13 @@ Use fingerprints to verify sync consistency: after a sync cycle, both client and
 
 The sync engine uses a push/pull protocol with resume via high-water marks:
 
-1. **Push**: local WAL entries batched into a `SyncPayload` and POST'd to cloud
+1. **Push**: local WAL entries batched into a sync request and POST'd to cloud
 2. **Ack**: cloud responds with `acked_seq` + `fingerprint`
 3. **Pull**: client requests changes since its `remote_hwm`
 4. **Apply**: remote queries replayed locally
 5. **Verify**: fingerprints compared — match = consistent
 
-### SyncPayload
+### Sync request format
 
 ```json
 {
@@ -178,20 +178,18 @@ interface ArcflowDB {
 }
 ```
 
-## Engine primitives
+## Sync subsystem
 
-The sync protocol composes existing engine building blocks:
-
-| Primitive | Purpose |
+| Component | What it provides |
 |---|---|
-| Sync WAL | Captures mutating queries with sequence numbers |
-| SyncPayload | Batched queries for transport |
-| SyncEngine | Push/pull orchestration |
-| SyncTransport | Pluggable transport (memory mock, HTTP, WASM fetch) |
-| VectorClock | Causal ordering across peers |
-| ConflictResolver | Conflict detection + resolution |
-| `fingerprint()` | State hash for verification |
-| `apply_sync_queries()` | Replay remote queries locally |
+| WAL delta capture | Mutating queries recorded with sequence numbers |
+| Batched transport | Queries batched for efficient push/pull |
+| Push/pull orchestration | Coordinator for outbound and inbound sync |
+| Pluggable transport | Memory mock, HTTP, WASM fetch — same protocol |
+| Causal ordering | Vector clock across peers for consistent ordering |
+| Conflict detection | Entity-level detection and resolution |
+| Fingerprint verification | State hash ensures sync consistency |
+| Remote replay | Apply remote mutation queries locally |
 
 ## Architecture deep dive
 

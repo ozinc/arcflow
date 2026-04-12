@@ -7,7 +7,7 @@ since: "4.0.0"
 status: "stable"
 playground:
   seed: world
-  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WHERE s.reliability >= 0.91 AND d.confidence >= 0.88 WITH z.name AS zone, z.hazard AS hazard, count(r) AS entity_count, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS composite_trust RETURN zone, hazard, entity_count, avg_battery, composite_trust, CASE WHEN composite_trust >= 0.93 THEN 'tier-1-authoritative' WHEN composite_trust >= 0.88 THEN 'tier-2-confirmed' ELSE 'tier-3-uncertain' END AS retrieval_tier ORDER BY composite_trust DESC"
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WHERE s.reliability >= 0.91 AND d.confidence >= 0.88 WITH z.name AS zone, z.hazard AS hazard, count(r) AS entity_count, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS composite_trust RETURN zone, hazard, entity_count, avg_battery, composite_trust ORDER BY composite_trust DESC"
 
 ---
 
@@ -27,7 +27,7 @@ Graph databases close that gap. They don't approximate paths — they compute th
 
 ArcFlow's Trusted RAG is built on this insight: combine an LLM's language fluency with a graph engine's traversal capability, then add a layer the combination still needs — filtering by reliability, tracing every answer to its source, and distinguishing hard facts from statistical guesses.
 
-Standard RAG retrieves text chunks and hopes the LLM gets it right. There is no way to filter by reliability, trace an answer to its source document, or distinguish hard facts from statistical guesses. ArcFlow's Trusted RAG scores every fact (0.0-1.0), records which extraction model produced it, and filters low-confidence facts before the LLM ever sees them. The result: auditable answers with a verifiable evidence trail.
+Standard RAG retrieves text chunks and hopes the LLM gets it right. There is no way to filter by reliability, trace an answer to its source document, or distinguish hard facts from statistical guesses. ArcFlow's Trusted RAG scores every fact (0.0–1.0), records which sensor or extraction model produced it, and filters low-confidence facts before the LLM ever sees them. The result: auditable answers with a verifiable evidence trail.
 
 ```cypher
 -- Trusted GraphRAG: only facts with confidence >= 0.8 reach the LLM
@@ -39,201 +39,241 @@ CALL algo.graphRAGTrusted('warranty Widget Pro', 0.8)
 
 ---
 
-## The Problem with Standard RAG
+## The problem with standard RAG
 
 ```
-User: "What's the warranty on Product X?"
+User: "Which zones have active robots right now? Are they in hazard areas?"
 
 Standard RAG:
-  1. Vector search → find 10 nearest chunks
-  2. Stuff into prompt → hope the right chunk is in there
+  1. Vector search → find 10 nearest text chunks about zones and robots
+  2. Stuff into prompt → hope the right chunk is current
   3. LLM generates answer → no way to verify
 
 What can go wrong:
-  - Retrieved chunk is outdated (superseded by newer policy)
-  - Two chunks contradict each other (no conflict resolution)
-  - Answer is plausible but unsupported (hallucination)
-  - No audit trail (compliance nightmare)
+  - Returned chunks are from a stale snapshot (robot has moved)
+  - Two chunks contradict each other (sensor disagreement, no resolution)
+  - Answer is plausible but ungrounded (hallucination about Zone C)
+  - No audit trail — which sensor said this? How confident?
 ```
 
 ## Trusted RAG with ArcFlow
 
 ```
-User: "What's the warranty on Product X?"
+User: "Which zones have active robots right now? Are they in hazard areas?"
 
 ArcFlow Trusted RAG:
-  1. GraphRAG → traverse knowledge graph + vector similarity
-  2. Filter by confidence ≥ 0.8 (reject low-trust facts)
-  3. Check observation class → prefer "observed" over "inferred"
-  4. Temporal filter → only facts current AS OF now
-  5. Return answer WITH provenance chain
+  1. GraphRAG → traverse Sensor-DETECTED-Robot-OCCUPIES-Zone
+  2. Filter by sensor.reliability >= 0.9, detection.confidence >= 0.85
+  3. Check observation class → only "observed" facts from live sensors
+  4. Compute composite trust per zone (sensor reliability × detection confidence)
+  5. Return answer WITH evidence chain
 
-Result: "2-year warranty (source: product_manual_v3.pdf,
-         confidence: 0.95, class: observed, updated: 2026-01-15)"
+Result: "Lab Alpha — 1 active robot, hazard 0.2
+         (Cam-LabA: confidence 0.94, method: vision, sensor reliability: 0.95
+          composite trust: 0.893, tier-2-confirmed)"
 ```
 
 ---
 
-## How It Works
+## How it works
 
-### 1. Store Knowledge as a Graph
+### 1. The world model is a knowledge graph
 
-Documents aren't flat chunks — they're connected entities:
-
-```cypher
-CREATE (p:Product {name: 'Widget Pro', sku: 'WP-100'})
-CREATE (w:Warranty {duration: '2 years', type: 'full'})
-CREATE (m:Manual {version: 3, url: 'manual_v3.pdf'})
-
-CREATE (p)-[:HAS_WARRANTY]->(w)
-CREATE (w)-[:DOCUMENTED_IN {confidence: 0.95}]->(m)
-```
-
-### 2. Add Embeddings for Semantic Search
+Every physical entity is a node. Every observation is a relationship with evidence attached:
 
 ```cypher
-CREATE VECTOR INDEX product_embeddings
-  ON :Product(embedding)
-  DIMENSIONS 768
-  SIMILARITY cosine
+MERGE (z:Zone {id: 'lab-a', name: 'Lab Alpha', hazard: 0.2})
+MERGE (r:Robot {id: 'r1', name: 'Atlas-01', battery: 87, status: 'active'})
+MERGE (s:Sensor {id: 'cam-1', name: 'Cam-LabA', type: 'camera', reliability: 0.95})
+
+MERGE (r)-[:OCCUPIES {entered_seq: 1}]->(z)
+MERGE (s)-[:DETECTED {confidence: 0.94, method: 'vision'}]->(r)
 ```
 
-### 3. Query with Trusted GraphRAG
+The graph is not a flat index of text chunks — it is the live state of the world. Every robot knows its zone. Every detection knows its sensor. Every relationship carries the evidence used to form it.
+
+### 2. Multi-hop traversal reveals causal chains
 
 ```cypher
--- Standard GraphRAG (retrieval + graph traversal)
-CALL algo.graphRAG('What is the warranty on Widget Pro?')
-  YIELD node, score, path
-  RETURN node, score
-
--- Trusted GraphRAG (adds confidence filtering)
-CALL algo.graphRAGTrusted('warranty Widget Pro', 0.8)
-  YIELD node, score, confidence, observationClass
-  RETURN node, score, confidence, observationClass
+-- Who detected what, via which sensor, with what confidence, in which zone?
+MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone)
+RETURN s.name AS sensor, s.reliability AS sensor_trust,
+       d.confidence AS detection_confidence, d.method AS method,
+       r.name AS entity, r.battery AS battery,
+       z.name AS zone, z.hazard AS zone_hazard
+ORDER BY d.confidence DESC
 ```
 
-The `0.8` parameter is the minimum confidence threshold. Facts below this confidence are excluded from the result — the LLM never sees them.
+A vector search cannot answer this. It returns chunks. GraphRAG traverses the actual causal chain: detection event → detected entity → physical location → hazard classification.
 
-### 4. Verify with Temporal Awareness
+### 3. Filter by trust before the LLM sees it
 
 ```cypher
--- Only facts that are current (not superseded)
-MATCH (w:Warranty)-[:DOCUMENTED_IN]->(m:Manual)
-  WHERE w.confidence >= 0.8
-  RETURN w.duration, m.version, m.url
-
--- What was the warranty policy at an earlier checkpoint?
-MATCH (w:Warranty) AS OF seq 1000
-  RETURN w.duration
+-- Only high-confidence detections in hazard-rated zones reach the LLM
+MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone)
+WHERE s.reliability >= 0.9
+  AND d.confidence >= 0.85
+  AND z.hazard > 0.0
+RETURN z.name AS zone, z.hazard AS hazard_level,
+       r.name AS robot, r.battery AS battery,
+       s.reliability * d.confidence AS composite_trust
+ORDER BY composite_trust DESC
 ```
 
-See [Temporal Queries](/temporal) for full `AS OF` syntax, temporal comparison, and WAL-based time travel.
+The `composite_trust` value — sensor reliability × detection confidence — is a fact-level trust signal. Facts below threshold are excluded before the context window is assembled.
+
+### 4. Temporal awareness: what was true at a given checkpoint?
+
+The world model accumulates observations over time. Every state change is versioned. Query "what did we know at sequence 500?" using the fact's metadata:
+
+```cypher
+-- Current detections with high composite trust
+MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone)
+WHERE d.confidence >= 0.88
+RETURN z.name, r.name, d.confidence, d.method
+
+-- Filter to only the most recent detection per robot (by entered_seq)
+MATCH (r:Robot)-[o:OCCUPIES]->(z:Zone)
+WHERE o.entered_seq >= 2
+RETURN r.name AS robot, z.name AS current_zone
+```
+
+See [Temporal Queries](/temporal) for full time-travel and WAL-based sequence queries.
 
 ---
 
-## Observation Classes
+## Observation classes
 
 Every node in ArcFlow carries an observation class — the epistemological status of the fact:
 
-| Class | Meaning | Trust Level | Example |
+| Class | Meaning | Trust Level | World model example |
 |---|---|---|---|
-| **Observed** | Directly witnessed or documented | Highest | "Manual says 2-year warranty" |
-| **Inferred** | Derived from reasoning over observed facts | Medium | "Product X likely has same warranty as Product Y (same category)" |
-| **Predicted** | Model output, statistical projection | Lowest | "Based on trends, warranty will extend to 3 years next quarter" |
+| **Observed** | Directly witnessed by a sensor | Highest | "Cam-LabA detected Atlas-01 at position (18, 8.5)" |
+| **Inferred** | Derived from reasoning over observed facts | Medium | "Atlas-01 is probably still in Lab Alpha (no exit event)" |
+| **Predicted** | Model output, statistical projection | Lowest | "Based on task pattern, Atlas-01 will reach Zone C in ~4 minutes" |
 
 ```cypher
--- Only use hard facts for customer-facing answers
-MATCH (n) WHERE n._observation_class = 'observed'
-  AND n._confidence >= 0.9
-  RETURN n
+-- Only use hard sensor observations for safety-critical answers
+MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)
+WHERE d.confidence >= 0.9
+RETURN s.name, s.type, r.name, d.confidence, d.method
 
--- Allow inference for internal analysis
-MATCH (n) WHERE n._observation_class IN ['observed', 'inferred']
-  RETURN n
+-- Allow inference for planning queries
+MATCH (r:Robot)-[:OCCUPIES]->(z:Zone)
+WHERE z.hazard > 0.1
+RETURN r.name AS robot_in_hazard_zone, z.name AS zone, z.hazard AS hazard_level
 ```
 
 ---
 
-## Provenance Trails
+## Provenance trails
 
-Every relationship carries provenance metadata — who created it, when, with what tool, and how confident:
+Every relationship carries provenance metadata — which sensor, which method, what confidence score:
 
 ```cypher
-MATCH (a)-[r:HAS_WARRANTY]->(b)
-RETURN r._confidence,    -- 0.95
-       r._skill_id,      -- "warranty_extractor_v2"
-       r._skill_version, -- "2.1.0"
-       r._model,         -- "gpt-4-turbo-2024-04-09"
-       r._created_at     -- 1711324800000
+MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)
+RETURN s.name,          -- "Cam-LabA"
+       s.type,          -- "camera"
+       s.reliability,   -- 0.95
+       d.confidence,    -- 0.94
+       d.method,        -- "vision"
+       r.name           -- "Atlas-01"
 ```
 
-When the LLM says "2-year warranty," you can trace exactly which document, which extraction model, which version, and when it was processed.
+When the LLM says "Atlas-01 is active in Lab Alpha," you can trace exactly which camera, which detection method, which confidence score, and which sequence number produced that claim.
+
+### Cross-sensor corroboration
+
+Multiple sensors observing the same entity increase composite trust:
+
+```cypher
+-- Find entities detected by more than one sensor
+MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)
+WITH r.name AS entity, count(s) AS sensor_count,
+     avg(d.confidence) AS avg_confidence,
+     avg(s.reliability) AS avg_sensor_reliability
+WHERE sensor_count >= 2
+RETURN entity, sensor_count, avg_confidence, avg_sensor_reliability
+ORDER BY avg_confidence DESC
+```
+
+Single-sensor detections go to the LLM flagged as `tier-3-uncertain`. Multi-sensor corroboration with high average confidence becomes `tier-1-authoritative`.
 
 ---
 
-## Confidence-Weighted Traversal
+## Confidence-weighted retrieval
 
-Graph traversal respects confidence. Low-confidence paths are deprioritized:
+Graph traversal respects confidence. Low-trust paths are deprioritized in the context assembly:
 
 ```cypher
--- Confidence-weighted PageRank
-CALL algo.confidencePageRank()
+-- Tier world model facts by composite trust
+MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone)
+WITH z.name AS zone,
+     r.name AS robot,
+     s.reliability * d.confidence AS composite_trust
+RETURN zone, robot, composite_trust,
+  CASE
+    WHEN composite_trust >= 0.93 THEN 'tier-1-authoritative'
+    WHEN composite_trust >= 0.85 THEN 'tier-2-confirmed'
+    ELSE 'tier-3-uncertain'
+  END AS retrieval_tier
+ORDER BY composite_trust DESC
+```
+
+```cypher
+-- Graph algorithm: PageRank on the world model
+-- High-PageRank entities are most connected — most observed, most influential
+CALL algo.pageRank()
   YIELD nodeId, score
-  RETURN nodeId, score ORDER BY score DESC
-
--- Confidence-weighted shortest path
-CALL algo.confidencePath(startNode, endNode)
-  YIELD path, totalConfidence
-  RETURN path, totalConfidence
+  RETURN nodeId, score ORDER BY score DESC LIMIT 10
 ```
 
 ---
 
-## The Full Pipeline
+## The full pipeline
 
 ```cypher
--- 1. Ingest documents as nodes with embeddings
-CREATE (d:Document {
-  title: 'Product Manual v3',
-  content: '...',
-  embedding: [0.12, -0.34, ...],  -- 768d vector
-  _observation_class: 'observed'
-})
+-- 1. Seed the world model with sensor observations
+MERGE (z:Zone {id: 'assembly', name: 'Assembly Bay', hazard: 0.3})
+MERGE (r:Robot {id: 'bolt-01', name: 'BoltBot-01', task: 'assembly', battery: 72, status: 'active'})
+MERGE (s:Sensor {id: 'therm-1', name: 'ThermalCam-Bay', type: 'thermal', reliability: 0.93})
 
--- 2. Create vector index
-CREATE VECTOR INDEX docs ON :Document(embedding)
-  DIMENSIONS 768 SIMILARITY cosine
+MERGE (r)-[:OCCUPIES {entered_seq: 10}]->(z)
+MERGE (s)-[:DETECTED {confidence: 0.91, method: 'thermal'}]->(r)
 
--- 3. Extract entities and relationships (via constructors)
-CREATE SKILL warranty_extractor
-  FROM PROMPT 'Extract warranty terms from document text'
-  ALLOWED ON [Document]
-  TIER LLM
+-- 2. GraphRAG: retrieve context with trust filtering
+CALL algo.graphRAGTrusted('active robots in hazard zones', 0.85)
+  YIELD node, score, confidence, observationClass
+  RETURN node, score, confidence, observationClass
 
-PROCESS NODE (d:Document)  -- creates edges with confidence scores
+-- 3. Traverse the full causal chain: sensor -> robot -> zone
+MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone)
+WHERE s.reliability >= 0.9 AND d.confidence >= 0.85
+RETURN s.name, d.method, r.name, r.task, z.name, z.hazard,
+       s.reliability * d.confidence AS composite_trust
+ORDER BY composite_trust DESC
 
--- 4. Query with trusted RAG
-CALL algo.graphRAGTrusted('warranty duration', 0.8)
-
--- 5. Temporal: compare answers over time
-CALL db.temporalCompare(
-  'CALL algo.graphRAG("warranty") YIELD node RETURN node.name',
-  'CALL algo.graphRAG("warranty") YIELD node RETURN node.name'
-)
+-- 4. Aggregate trust by zone for LLM context assembly
+MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone)
+WITH z.name AS zone, count(r) AS robot_count,
+     avg(s.reliability * d.confidence) AS zone_trust
+WHERE zone_trust >= 0.85
+RETURN zone, robot_count, zone_trust
+ORDER BY zone_trust DESC
 ```
 
 ---
 
-## Compared to Other Approaches
+## Compared to other approaches
 
-### RAG / LLM Orchestration Frameworks?
-Your vector store retriever becomes `algo.vectorSearch()`. Your graph retriever becomes `algo.graphRAG()`. ArcFlow adds confidence filtering, provenance, and temporal awareness — your RAG pipeline distinguishes facts from guesses, traces every answer to its source, and detects stale information via `AS OF` queries. Trade-off: RAG frameworks have a larger connector ecosystem for third-party vector stores; ArcFlow's advantage is the integrated graph+vector+temporal stack with zero network hops.
+### RAG / LLM orchestration frameworks?
+Your vector store retriever becomes `algo.vectorSearch()`. Your graph retriever becomes `algo.graphRAG()`. ArcFlow adds confidence filtering, provenance, and temporal awareness — your RAG pipeline distinguishes facts from guesses, traces every answer to its source, and detects stale information via sequence-based queries. Trade-off: RAG frameworks have a larger connector ecosystem for third-party vector stores; ArcFlow's advantage is the integrated graph+vector+temporal stack with zero network hops.
 
-### Dedicated Vector Databases?
+### Dedicated vector databases?
 These are purpose-built for vector similarity. ArcFlow is a knowledge graph with vector search built in — you get similarity search AND graph traversal, temporal queries, confidence scoring, and relationship-aware retrieval in one in-process database. Trade-off: dedicated vector databases offer higher-throughput vector indexing at scale (millions of vectors); ArcFlow's strength is combining vector similarity with graph structure and provenance in a single query.
 
-### Traditional Graph Databases + GraphRAG?
-Traditional graph database GraphRAG typically requires a separate analytics product and has no confidence scoring, no observation classes, and no temporal awareness. ArcFlow's Trusted RAG is built in, with provenance on every edge and temporal `AS OF` queries on every node. Trade-off: traditional graph databases have a mature distributed clustering story; ArcFlow is single-process with in-process performance (2.7M nodes/sec creation, 154M PageRank nodes/sec).
+### Traditional graph databases + GraphRAG?
+Traditional graph database GraphRAG typically requires a separate analytics product and has no confidence scoring, no observation classes, and no temporal awareness. ArcFlow's Trusted RAG is built in, with provenance on every edge. Trade-off: traditional graph databases have a mature distributed clustering story; ArcFlow is single-process with in-process performance (2.7M nodes/sec creation, 154M PageRank nodes/sec).
 
 ---
 
@@ -241,13 +281,13 @@ Traditional graph database GraphRAG typically requires a separate analytics prod
 
 ArcFlow provides a trust-aware knowledge infrastructure where AI systems can reason about the reliability of their own knowledge.
 
-**Confidence calibration.** Confidence scores set at ingestion time can be automatically calibrated — measuring how often facts at a given confidence level turn out to be correct, then adjusting scores to match observed accuracy. A `0.9` confidence should mean "correct 90% of the time," verified empirically.
+**Confidence calibration.** Confidence scores set at ingestion time can be automatically calibrated — measuring how often detections at a given confidence level turn out to be accurate, then adjusting scores to match observed precision. A `0.9` confidence should mean "correct 90% of the time," verified empirically.
 
-**Automated fact verification.** Cross-referencing new facts against existing graph structure to detect contradictions before they enter the knowledge base. When a new document claims a different warranty period, the system flags the conflict with both sources and their confidence scores, rather than silently overwriting.
+**Automated fact verification.** Cross-referencing new sensor observations against existing graph structure to detect contradictions before they enter the world model. When two sensors disagree on a robot's location, the system flags the conflict with both observations and their confidence scores, rather than silently overwriting.
 
-**Knowledge graph construction from unstructured data.** Extending the skill/constructor pipeline to automatically extract entities, relationships, and confidence scores from documents, transcripts, and web pages — building the knowledge graph incrementally with full provenance from raw sources to structured facts.
+**Decay and freshness modeling.** Observations lose reliability as time passes. A robot detection from 10 minutes ago is less trusted than one from 10 seconds ago. Automatic confidence decay based on observation age and entity volatility ensures that temporal staleness is reflected in retrieval ranking without manual curation.
 
-**Decay and freshness modeling.** Facts lose reliability over time. Automatic confidence decay based on fact age and domain-specific half-lives ensures that temporal staleness is reflected in retrieval ranking without manual curation.
+**Knowledge graph construction from unstructured data.** Extending the skill pipeline to automatically extract entities, relationships, and confidence scores from logs, transcripts, and sensor streams — building the world model incrementally with full provenance from raw events to structured facts.
 
 ## See Also
 
@@ -256,3 +296,4 @@ ArcFlow provides a trust-aware knowledge infrastructure where AI systems can rea
 - [RAG Pipeline Guide](/guides/rag-pipeline) — step-by-step implementation with confidence filtering
 - [Confidence & Provenance](/concepts/confidence-and-provenance) — observation classes, scoring, and provenance edges
 - [Knowledge Management](/use-cases/knowledge-management) — persistent world model knowledge graph patterns
+- [Temporal Queries](/temporal) — sequence-based time travel and historical state queries

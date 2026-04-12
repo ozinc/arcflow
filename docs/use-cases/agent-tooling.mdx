@@ -1,6 +1,6 @@
 ---
 title: "Agent Tooling"
-description: "ArcFlow as ephemeral in-process tooling for coding agents — ad-hoc graph processing, testing, and data exploration"
+description: "ArcFlow as ephemeral in-process world model for coding agents — spin up a spatial-temporal graph, run 27 algorithms, query results, and discard. No server, no setup."
 section: "use-cases"
 status: "stable"
 playground:
@@ -20,7 +20,7 @@ When a coding agent is working on a task, it often needs to:
 - **Run algorithms** (PageRank for importance, community detection for clustering)
 - **Test queries** before writing them into application code
 - **Process structured data** temporarily (parse a CSV, build a graph, extract insights)
-- **Prototype** a knowledge graph before committing to a schema
+- **Prototype** a world model before committing to a schema
 
 With a graph database server, the agent would need to ask the user to provision and start it. With ArcFlow, the agent just does it:
 
@@ -60,9 +60,9 @@ const components = db.query("CALL algo.connectedComponents()")
 db.close()
 ```
 
-### Temporary knowledge graph
+### Temporary world model
 
-An agent building a research summary can create a knowledge graph, query it, then discard it:
+An agent building a research summary can create a world model, query it, then discard it:
 
 ```typescript
 const db = openInMemory()

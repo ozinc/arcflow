@@ -38,32 +38,15 @@ yarn add arcflow
 
 ## Local development (from source)
 
-If you're working alongside the ArcFlow source:
-
-```json
-// package.json
-{
-  "dependencies": {
-    "arcflow": "file:../arcflow/sdk/typescript"
-  }
-}
-```
-
-Build the native module:
+If you hold a source license and are building from the engine source:
 
 ```bash
-cd path/to/arcflow
-cargo build --release -p arcflow-node
-cp target/release/libarcflow_node.dylib bindings/typescript/arcflow.darwin-arm64.node
-```
-
-Then install dependencies in the SDK:
-
-```bash
-cd sdk/typescript
-npm install
+# Build and link the native module per the source license build guide
 npm run build
+npm install
 ```
+
+See the source license build guide for platform-specific instructions.
 
 ## Verify installation
 

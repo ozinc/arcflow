@@ -71,7 +71,7 @@ GQL is intentionally abstract in several areas, leaving implementation choices t
 | Persistent live views | `CREATE LIVE VIEW name AS ...` | CDC-maintained materialized view |
 | Confidence filtering | `WHERE r._confidence > 0.8` | Per-edge confidence score predicate |
 | Spatial predicates | `WHERE geo.distance(n.loc, $point) < 1000` | Geospatial filtering |
-| Skill constructors | `CREATE SKILL name FROM PROMPT ...` | Declarative AI skill definition |
+| Skills | `CREATE SKILL name FROM PROMPT ...` | Declarative relationship derivation programs |
 | Node processing | `PROCESS NODE (n:Label)` | Execute a skill across matching nodes |
 | Window functions | `avg(n.x) OVER (PARTITION BY ... ORDER BY ...)` | LAG, LEAD, STDDEV_POP, PERCENT_RANK, ROW_NUMBER |
 | Graph algorithms | `CALL algo.pageRank()` | 27 built-in — no projection lifecycle |

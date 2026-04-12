@@ -81,7 +81,7 @@ project-graph/
 
 The agent creates query files. The CLI executes them. Results appear as JSON files. The agent reads them. No protocol layer. No token overhead. Zero latency beyond disk I/O.
 
-Crucially, this pattern mirrors exactly how agents already work. They write code to files. They read output from files. They compose commands with pipes. ArcFlow gives them a graph database that works the same way — because it's built on the same substrate.
+Crucially, this pattern mirrors exactly how agents already work. They write code to files. They read output from files. They compose commands with pipes. ArcFlow gives them a world model that works the same way — because it's built on the same substrate.
 
 ### One-Shot Batch Execution
 
@@ -207,9 +207,9 @@ mkdir -p project-graph/queries
 
 # 2. Build the world model from codebase analysis
 cat > project-graph/queries/01-create.cypher << 'EOF'
-CREATE (c:Crate {name: 'wc-core', loc: 5500, tests: 120})
-CREATE (c:Crate {name: 'wc-runtime', loc: 17000, tests: 467})
-MATCH (a:Crate {name: 'wc-runtime'}) MATCH (b:Crate {name: 'wc-core'})
+CREATE (c:Crate {name: 'my-core', loc: 5500, tests: 120})
+CREATE (c:Crate {name: 'my-runtime', loc: 17000, tests: 467})
+MATCH (a:Crate {name: 'my-runtime'}) MATCH (b:Crate {name: 'my-core'})
 CREATE (a)-[:DEPENDS_ON]->(b)
 EOF
 
@@ -274,7 +274,7 @@ Available tools: `get_schema`, `read_query`, `write_query`, `graph_rag`. See [MC
 
 ## Vision
 
-Every shell-native AI agent deserves a persistent, queryable knowledge graph as its working memory — accessible through the same interface it already uses for everything else.
+Every shell-native AI agent deserves a persistent, queryable world model as its working memory — accessible through the same interface it already uses for everything else.
 
 **The world model as files.** Most agents lose context between sessions. ArcFlow's filesystem workspace persists across sessions, across agents, across machines. The graph is the agent's long-term memory, stored as files it can read, write, query, and version-control. Commit your world model. Diff it between runs. Share it across a team.
 
@@ -291,4 +291,5 @@ Every shell-native AI agent deserves a persistent, queryable knowledge graph as 
 - [ArcFlow for Coding Agents](/guides/agent-integration) — CLI patterns, structured errors, batch execution, and checkpointing
 - [Live Queries](/live-queries) — `LIVE MATCH` and `CREATE LIVE VIEW` for always-current agent state
 - [Temporal Queries](/temporal) — `AS OF seq N` for replay, debugging, and session reconstruction
+- [Skills](/skills) — teach the world model a new relationship rule in plain language; compiled once, executed at graph speed forever
 - [MCP Server](/mcp) — cloud chat UI integration (Claude.ai and similar)

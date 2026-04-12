@@ -1,6 +1,6 @@
 ---
 title: "Sync Architecture"
-description: "Local-first sync — browser/edge instances sync to cloud via HTTPS using WAL deltas and Z-set conflict resolution"
+description: "Local-first world model sync — browser, edge, and mobile instances sync to cloud via WAL deltas with vector clock conflict resolution"
 section: "operations"
 status: "stable"
 playground:
@@ -72,9 +72,9 @@ npx arcflow-mcp --sync https://api.oz.com/v1/graphs/my-graph --token af_xxx
 ```
 1. Local mutation
    ↓
-2. Append to WAL (WalOp with sequence number)
+2. Append to WAL (MutationOp with sequence number)
    ↓
-3. Batch into SyncDelta { peer_id, seq_start, seq_end, ops[], fingerprint }
+3. Batch into sync payload { peer_id, seq_start, seq_end, ops[], fingerprint }
    ↓
 4. POST to sync endpoint
    ↓
@@ -87,22 +87,22 @@ npx arcflow-mcp --sync https://api.oz.com/v1/graphs/my-graph --token af_xxx
 8. Fingerprint comparison — both sides should match
 ```
 
-### SyncDelta format
+### Sync batch format
 
 ```typescript
-interface SyncDelta {
+interface SyncBatch {
   peer_id: string           // Client identifier
   seq_start: number         // First sequence number in batch
   seq_end: number           // Last sequence number in batch
-  ops: WalOp[]              // Mutations (CreateNode, DeleteNode, SetProperty, etc.)
+  ops: MutationOp[]              // Mutations (CreateNode, DeleteNode, SetProperty, etc.)
   fingerprint: number       // Graph state hash after applying ops
 }
 ```
 
-### WalOp types
+### MutationOp types
 
 ```typescript
-type WalOp =
+type MutationOp =
   | { type: 'CreateNode', id: string, labels: string[], properties: Record<string, string> }
   | { type: 'CreateRelationship', id: string, start: string, end: string, rel_type: string, properties: Record<string, string> }
   | { type: 'UpdateNodeProperties', id: string, properties: Record<string, string> }
@@ -164,7 +164,7 @@ Client B writes: { name: 'Alice', confidence: 0.95, observation: 'observed' }
 Merge result: { name: 'Alice', confidence: 0.95, observation: 'observed' }
 ```
 
-This uses the Z-set `EvidenceWeight` algebra: `add(a, b) = (max_confidence, highest_observation)`.
+The engine's confidence-aware merge algebra picks the highest-confidence, highest-observation-class value across concurrent writes: `add(a, b) = (max_confidence, highest_observation)`.
 
 ### Fingerprint verification
 
@@ -206,26 +206,21 @@ db.query("MATCH (row) FROM VIEW top_scores RETURN row")
 
 Edge devices (IoT, mobile) that go offline and reconcile when back online. Full conflict log with manual resolution option.
 
-## Engine primitives used
+## Sync capabilities
 
-All building blocks exist in the engine:
+The sync engine provides all the primitives needed for local-first architectures:
 
-| Primitive | Location | Purpose |
-|---|---|---|
-| `WalOp` | wc-storage | Mutation representation |
-| `MemoryWal` | wc-storage | WAL with `append()` and `replay_from()` |
-| `SyncDelta` | wc-storage/sync | Batched changes with fingerprint |
-| `SyncTracker` | wc-storage/sync | Per-peer HWM and ack tracking |
-| `VectorClock` | wc-storage/sync | Causal ordering across peers |
-| `ConflictResolver` | wc-storage/sync | Entity-level conflict detection + resolution |
-| `GraphDelta` | wc-core | CDC events (NodeCreated, PropertyChanged, etc.) |
-| `walop_to_graph_deltas()` | wc-storage/sync | WAL → CDC bridge |
-| `ZSet<K>` | wc-core | Algebraic merge (insert/retract/consolidate) |
-| `EvidenceWeight` | wc-types | Confidence-aware merge algebra |
-| `fingerprint()` | wc-core | Graph state hash for verification |
-| `changes_since()` | wc-core | Mutation log query by sequence |
-| `snapshot_json()` | wc-core | Full state serialization |
-| `ReplicationState` | wc-types | Primary/Replica/Edge mode tracking |
+| Capability | What it gives you |
+|---|---|
+| WAL delta transport | Incremental mutations only — never re-sends unchanged state |
+| Conflict detection | Entity-level detection with causal ordering across peers |
+| Algebraic merge | Insert/retract/consolidate — converges without coordination |
+| Confidence-aware merge | Evidence weights propagate through conflict resolution |
+| Graph fingerprinting | Hash verification prevents tampering or partial sync |
+| CDC events | NodeCreated, PropertyChanged, and relationship events |
+| Mutation log query | `db.changesSince(seq)` — query mutations since any sequence number |
+| Full state snapshot | `db.snapshotJson()` — complete graph for initial peer sync |
+| Replication modes | Primary / Replica / Edge — runtime-configurable |
 
 ## HTTP API endpoints (planned)
 
