@@ -13,7 +13,7 @@ playground:
 
 GQL is to graph databases what SQL is to relational databases: a single standard query language that any conformant database speaks, giving tooling, drivers, and developers a shared foundation.
 
-SQL held that role for 50 years in the relational world. GQL, published as [ISO/IEC 39075](https://www.iso.org/standard/76120.html) in 2024, is designed to do the same for graph data — ending the era where every graph database shipped its own proprietary language (Cypher, Gremlin, GSQL, AQL) that didn't transfer between systems.
+SQL held that role for 50 years in the relational world. GQL, published as [ISO/IEC 39075](https://www.iso.org/standard/76120.html) in 2024, is designed to do the same for graph data — ending the era where every graph stack shipped its own language and portability suffered.
 
 What makes GQL notable beyond its own merits: it is the only standardized query language in the NoSQL landscape. Key-value stores, document databases, column-family systems — none have a formal ISO standard. Graph databases are uniquely positioned with a specifications committee, a defined conformance test suite, and vendor-neutral interoperability. Full GQL conformance is a meaningful guarantee, not a checkbox.
 
@@ -26,14 +26,14 @@ ArcFlow implements GQL in full — 100% of the openCypher TCK, complete ISO GQL 
 | openCypher TCK | ✅ 100% | 3881/3881 test scenarios pass |
 | ISO GQL V2 (ISO/IEC 39075) | ✅ Full | See feature list below |
 
-No partial conformance. No "in progress" list for mandatory features. If a query runs on Neo4j, Memgraph, or FalkorDB, it runs on ArcFlow.
+No partial conformance. No "in progress" list for mandatory features. If a query stays within the Cypher/openCypher family surface, it runs on ArcFlow.
 
 ## Standards lineage
 
 Understanding the relationship between Cypher, openCypher, and GQL helps set expectations:
 
 ```
-Cypher (Neo4j, ~2011)
+Cypher (~2011)
   └── openCypher (open specification, 2015 — basis for TCK)
         └── ISO GQL (ISO/IEC 39075, published 2024 — international standard)
               └── WorldCypher (ArcFlow's implementation — GQL + extensions)
@@ -83,19 +83,16 @@ GQL is intentionally abstract in several areas, leaving implementation choices t
 | Implementation | openCypher TCK | ISO GQL V2 | Notes |
 |---|---|---|---|
 | **ArcFlow (WorldCypher)** | ✅ 100% (3881/3881) | ✅ Full | Plus temporal, live queries, and AI extensions |
-| Neo4j (Cypher) | ✅ Full | ⚠️ Majority of mandatory features; partial optional; [actively working on gaps](https://neo4j.com/docs/cypher-manual/current/appendix/gql-conformance/) |
-| Microsoft Fabric | — | ⚠️ Partial — [long list of unsupported features](https://learn.microsoft.com/en-us/fabric/graph/limitations#gql-conformance) | Preview; many mandatory features still in progress |
-| Memgraph | ✅ Full | ⚠️ Partial | openCypher-native; GQL V2 in progress |
-| FalkorDB | ✅ Full | ⚠️ Partial | Redis-based; GQL V2 in progress |
+| Other graph implementations | Varies | Varies | ArcFlow focuses on full standards coverage plus operational extensions |
 
 ## What "100% openCypher TCK" means
 
 The openCypher Technology Compatibility Kit (TCK) is a suite of 3881 acceptance test scenarios covering the full openCypher specification — pattern matching, predicates, aggregations, path operations, null semantics, and edge cases. Passing 100% means every documented Cypher behavior is implemented exactly as specified, including corner cases around `null` propagation, `OPTIONAL MATCH` semantics, and aggregation ordering.
 
-Any query that runs on a Cypher-based database (Neo4j, Memgraph, FalkorDB) will produce identical results on ArcFlow.
+Any query that stays within the supported Cypher/openCypher surface should produce identical results on ArcFlow.
 
 ## Further reading
 
 - [GQL & WorldCypher Reference](./compatibility) — complete syntax and feature matrix
-- [Migration Guide](/guides/migrating-from-neo4j) — porting queries from Neo4j, Memgraph, FalkorDB
+- [Migration Guide](/guides/migration) — porting graph workloads into ArcFlow
 - [ISO/IEC 39075 GQL standard](https://www.iso.org/standard/76120.html) — the specification itself

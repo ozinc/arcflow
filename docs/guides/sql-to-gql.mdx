@@ -15,7 +15,7 @@ playground:
 
 SQL standardized how software talks to relational databases in 1983. That standard has held for over 40 years — not because SQL is perfect, but because a single standard creates an ecosystem. Every ORM, BI tool, query builder, and analytics pipeline speaks SQL because every relational database speaks SQL. Standardization is the network effect.
 
-Graph databases spent two decades without that. Every vendor shipped a different query language: Neo4j had Cypher, Apache TinkerPop had Gremlin, TigerGraph had GSQL, ArangoDB had AQL. Each powerful. None interoperable. You learned one, and your knowledge didn't transfer.
+Graph systems spent two decades without that. Every stack shipped a different query language. Each was powerful. Portability suffered, and knowledge transfer was poor.
 
 In 2024, ISO published GQL (ISO/IEC 39075) — the SQL for graph databases. The same arc: fragmented proprietary languages → single international standard → shared ecosystem. GQL is the only standardized query language in the NoSQL landscape; no other NoSQL category — key-value, document, column-family — has an equivalent.
 
@@ -210,4 +210,4 @@ For conformance details and a comparison with other implementations, see [GQL Co
 - [Server Modes & PG Wire](/server) — full protocol details and authentication options
 - [GQL / WorldCypher Reference](/worldcypher) — complete query language reference
 - [Quickstart](/quickstart) — get running in 5 minutes
-- [Migration Guide](/guides/migrating-from-neo4j) — coming from Neo4j or another graph database
+- [Migration Guide](/guides/migration) — moving an existing graph workload into ArcFlow

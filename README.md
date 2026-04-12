@@ -38,7 +38,7 @@ db.mutate(`
   })
 `)
 
-// Spatial: nearest trusted entities — R*-tree backed, ≥ 2,000 queries/sec at 11K entities
+// Spatial: nearest trusted entities — R*-tree backed, high-throughput exact lookup
 const nearby = db.query(`
   CALL algo.nearestNodes(point({x: 0, y: 0}), 'Entity', 10)
     YIELD node AS e, distance
@@ -115,15 +115,19 @@ A safety system running on confidence thresholds is fundamentally different from
 
 ---
 
-## Performance
+## Performance Snapshot
 
 | Operation | Throughput |
-|---|---|
-| Spatial KNN (R*-tree, 11K entities) | ≥ 2,000 queries/sec |
-| Node creates | 9.3M/sec |
-| PageRank (154M nodes) | <1 second |
-| Geofence trigger latency | <20ms |
-| Temporal `AS OF` query | Same as current-state query — no separate index |
+|---|---:|
+| IS1: person profile | 10.6M/s |
+| Property scan | 14.6M/s |
+| Count(Person) | 43.7M/s |
+| 3-hop traversal | 780.0K/s |
+| Upsert (1K get_or_create) | 10.1M/s |
+| Bulk insert + edges | 503.7K/s |
+| Index build single | 151.3/s |
+| Index build composite | 343.8/s |
+| Composite exact lookup | 5.6M/s |
 
 ---
 

@@ -13,9 +13,9 @@ playground:
 
 # Spatial Queries
 
-**Space is a first-class dimension of the world model — not a numeric column, not a PostGIS extension, not a join between two systems.**
+**Space is a first-class dimension of the world model — not a numeric column and not a join between two systems.**
 
-ArcFlow's R\*-tree index makes spatial position a native query axis alongside graph relationships and temporal state. K-nearest, radius, bounding-box, and frustum queries compose with graph traversal in a single GQL statement — "find the 5 nearest warehouses that have inventory for SKU X" is one query, not two. Position updates trigger live geofence queries within 20ms. No approximation, no separate spatial service, no infrastructure gap between where things are and what they connect to.
+ArcFlow's R\*-tree index makes spatial position a native query axis alongside graph relationships and temporal state. K-nearest, radius, bounding-box, and frustum queries compose with graph traversal in a single GQL statement — "find the 5 nearest warehouses that have inventory for SKU X" is one query, not two. Position updates trigger live geofence queries through incremental propagation. No approximation, no separate spatial service, no infrastructure gap between where things are and what they connect to.
 
 ```cypher
 -- Supply chain: spatial filter → graph traversal → property filter — one query
@@ -71,7 +71,7 @@ CALL algo.nearestNodes(point({x: 10.0, y: 10.0}), 'Sensor', 5)
   RETURN node.name, distance
 ```
 
-Throughput: ≥ 2,000 queries/sec at 11K live entities. The index is dynamic — inserts, updates, and deletes are O(log N) with no rebuild.
+Recent engine benchmarks show spatial k-nearest throughput around `471K ops/s` on the corrected benchmark surface. The index is dynamic — inserts, updates, and deletes are O(log N) with no rebuild.
 
 ### Radius Search
 
@@ -176,7 +176,7 @@ RETURN contact.name, length(path) AS degrees, distance
 
 ## Live Geofencing
 
-Spatial standing queries fire within 20ms of a position update. The engine uses BFS propagation seeded only from nodes whose spatial properties changed — it does not recompute all standing queries on every mutation.
+Spatial standing queries fire through incremental propagation from the nodes whose spatial properties changed — the engine does not recompute all standing queries on every mutation.
 
 ```cypher
 -- Named geofence: tracks all players entering zone alpha
@@ -216,7 +216,7 @@ Three trigger priorities control batching latency:
 
 | Priority | Latency | Use case |
 |---|---|---|
-| `Immediate` | 1-tick (< 20ms) | Offside detection, goal-line technology |
+| `Immediate` | 1-tick | Offside detection, goal-line technology |
 | `Fast` | 2–3 ticks | Zone entry/exit alerts |
 | `Background` | 10+ ticks | Heatmaps, session analytics |
 
@@ -371,12 +371,12 @@ RETURN a.name, b.name, distance(a.position, b.position)
 
 | Operation | Entities | Result |
 |---|---|---|
-| K-nearest (k=10) | 11K | ≥ 2,000/s |
-| Radius search | 11K | ≥ 2,000/s |
+| K-nearest (k=10) | benchmark surface | ~471K ops/s |
+| Radius search | benchmark surface | ~5.8K ops/s |
 | Frustum query (10 frusta) | 50 | < 2ms |
 | Line crossing check | 50 tracks | < 0.5ms |
 | Zone occupancy (50fps, 500 entities) | 500 | < 50ms per 10s window |
-| Live geofence trigger latency | — | < 20ms |
+| Live geofence trigger latency | — | incremental, edge-triggered |
 | USD bulk ingest | 500K prims | < 1 second |
 | Spatial join (5-NN + 2-hop graph) | 11K | ≥ 500/s |
 
@@ -384,8 +384,8 @@ RETURN a.name, b.name, distance(a.position, b.position)
 
 ## Compared to Other Approaches
 
-### PostGIS / Relational Spatial Extensions
-PostGIS has richer geometry types (LineString, Polygon, MultiPolygon) and mature GIS tooling. ArcFlow's advantage: spatial predicates compose directly with graph traversal — no join between a spatial table and a graph database. If you need complex polygon operations without graph structure, PostGIS is the better choice. If you need "find entities near X, then traverse their relationships," ArcFlow eliminates the two-system join.
+### Richer Geometry Tooling
+Some GIS-oriented stacks have richer geometry types such as LineString, Polygon, and MultiPolygon. ArcFlow's advantage is that spatial predicates compose directly with graph traversal in one engine. If you need "find entities near X, then traverse their relationships," ArcFlow eliminates the two-system join.
 
 ### Approximate spatial in graph databases
 Most graph databases reach for vector similarity indexes (HNSW) or random-walk sampling when asked to do spatial work. Both are approximate by design — they trade correctness for speed in a way that is appropriate for embedding search but wrong for geometric queries. Offside detection, collision avoidance, and delivery routing require exact answers. A false positive in proximity detection is not a search quality issue — it is a safety failure.

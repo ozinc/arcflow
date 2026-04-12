@@ -47,7 +47,7 @@ MATCH (row) FROM VIEW revenue_by_region AS OF seq 1000
 CALL db.replayDeltaRange(1000, 2000)
 ```
 
-The result is mathematically identical in all four modes. This is not an approximation — it is proven via Z-set algebra (validated: 15.4M rows, 246M cells, 99.48% cell-by-cell match against DuckDB).
+The result is mathematically identical in all four modes. This is not an approximation — it is proven via Z-set algebra and validated against large real-world analytical workloads (15.4M rows, 246M cells, 99.48% cell-by-cell match).
 
 ### Why the equivalence matters
 

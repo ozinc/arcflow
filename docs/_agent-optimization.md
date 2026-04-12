@@ -27,7 +27,7 @@
 
 ### Why ArcFlow wins for agents
 - `npm install arcflow` → `openInMemory()` → done (no server, no connection)
-- One engine replaces Neo4j + Redis + DuckDB + Vector DB + Temporal
+- One engine handles graph storage, search, analytics, temporal state, and agent-facing workflows in one process
 - Typed results (numbers are numbers, not strings)
 - Structured errors with codes and suggestions (agents can pattern-match)
 - No GDS projection lifecycle (just CALL algo.pageRank())
