@@ -11,46 +11,37 @@ playground:
 
 # World Model
 
-Neural world models simulate how the world evolves under actions — generative, action-conditioned, trained on petabytes of sensor data to predict possible futures. Persistence is a separate concern: a deterministic, queryable record of what actually happened, spatially indexed and versioned to the sequence number. These two layers serve different purposes, operate at different latency tiers, and are built on fundamentally different foundations.
-
-**ArcFlow is the persistence layer.** Simulation belongs in the neural tier. ArcFlow records what the simulation produces — and everything else the world sends in.
-
-Two distinct things go by the name "world model" today. Getting them confused — or trying to merge them — is costly.
+Two distinct things go by the name "world model" today. Understanding the difference clarifies what each layer is for.
 
 ## The two definitions
 
-**Neural world model** — a neural network trained to simulate how the world evolves under actions. Given an observation and an action, it predicts the next state. Action-conditioned, generative, trained on petabytes of sensor data. Architecturally: a Vision model compresses observations into latent space, a Memory model (RSSM / MDN-RNN) predicts how latents evolve given actions, a Controller selects actions — together they let agents rehearse inside a hallucinated future before acting in reality. This is the sense used by the leading neural world model platforms in research and production. These systems simulate. They are not databases. They do not store what actually happened. They cannot tell you where Robot-04 was at 14:23:07 with confidence 0.91 from lidar-03.
+**Neural world model** — a neural network trained to simulate how the world evolves under actions. Given an observation and an action, it predicts the next state. Action-conditioned, generative, trained on petabytes of sensor data. Architecturally: a Vision model compresses observations into latent space, a Memory model (RSSM / MDN-RNN) predicts how latents evolve given actions, a Controller selects actions. These systems simulate possible futures — they are generative engines, not databases.
 
-**Operational world model** — a persistent, queryable store of actual world state. What entities exist, where they are, how they relate to each other, how confident we are in each fact, what the world looked like at any previous moment. This is ArcFlow. It records. It does not hallucinate — it stores neural model outputs as they arrive (`_observation_class: 'predicted'`), alongside sensor-confirmed observations and inferred facts, all versioned and spatially indexed.
+**Operational world model** — a persistent, queryable store of actual world state. What entities exist, where they are, how they relate to each other, how confident we are in each fact, what the world looked like at any previous moment. This is ArcFlow. It records. Neural model outputs land here as they arrive (`_observation_class: 'predicted'`), alongside sensor-confirmed observations and inferred facts, all versioned and spatially indexed.
 
-These two layers are architecturally distinct but operationally complementary. Neural world models hallucinate possible futures → their outputs land in ArcFlow as queryable predicted state. ArcFlow's grounded observations feed back as the actual truth the neural model learns to predict from. One simulates, one records.
+These two layers are distinct but complementary. Neural world models generate possible futures → their outputs land in ArcFlow as queryable predicted state. ArcFlow's grounded observations feed back as the actual world state the neural model learns to predict from. One simulates, one records.
 
-**ArcFlow is the operational world model layer.** Not a simulation sandbox — a factual one.
+**ArcFlow is the operational world model layer.**
 
-The right test isn't "which layer does more?" — it's asking each layer the questions it was built to answer:
+The operational questions ArcFlow is built to answer:
 
 ```cypher
--- A question no neural world model can answer:
 MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone)
 WHERE d.confidence >= 0.90 AND z.hazard > 0.15 AND r.battery < 30
 RETURN r.name, z.name, avg(s.reliability * d.confidence) AS trust
 ```
 
-This runs in ~0.1ms. Deterministically. Against exact sensor history. Neural world models cannot answer it — they simulate plausible futures, not factual pasts.
+This runs in ~0.1ms. Deterministically. Against exact sensor history.
 
-| Operational question | Neural world model | ArcFlow |
-|---|---|---|
-| What did sensor-3 detect at seq 14,207 with confidence > 0.9? | Cannot answer | `AS OF seq 14207` — instant |
-| Which entity triggered the hazard alert, and which sensor saw it? | Cannot answer | Multi-hop graph traversal — exact |
-| What is the confidence-weighted state of Zone-B right now? | Cannot answer | Live view — sub-millisecond |
-| How has this entity's trajectory changed over the last 5 minutes? | Cannot answer | `AS OF seq N` comparison — deterministic |
-| Which agents are within 20m of a high-confidence obstacle? | Cannot answer | `algo.nearestNodes()` — ~0.1ms |
-| Is this observation class `observed` or `predicted`? | Not modeled | `_observation_class` on every node/edge |
-| What was the confidence score, and from which sensor? | Not stored | `_confidence` + provenance edge — always |
-
-Neural world models score zero on every row. These aren't edge cases — they're the operational baseline for any production robotic, fleet, or multi-agent system.
-
-The frontier of neural world modeling is converging on this gap. MosaicMem (2025): "spatial memory is the bottleneck for controllable world simulators." PERSIST: "interactive world models need a persistent latent 3D scene, not just pixel histories." These papers are trying to *learn* persistence — adding it into the generative model itself, approximate and expensive. ArcFlow's thesis is that persistence belongs in a separate, deterministic, queryable layer: exact, free, and already solved.
+| Question | ArcFlow |
+|---|---|
+| What did sensor-3 detect at seq 14,207 with confidence > 0.9? | `AS OF seq 14207` — instant |
+| Which entity triggered the hazard alert, and which sensor saw it? | Multi-hop graph traversal — exact |
+| What is the confidence-weighted state of Zone-B right now? | Live view — sub-millisecond |
+| How has this entity's trajectory changed over the last 5 minutes? | `AS OF seq N` comparison — deterministic |
+| Which agents are within 20m of a high-confidence obstacle? | `algo.nearestNodes()` — ~0.1ms |
+| Is this observation class `observed` or `predicted`? | `_observation_class` on every node/edge |
+| What was the confidence score, and from which sensor? | `_confidence` + provenance edge — always |
 
 A robot navigating a warehouse. A camera network tracking 22 players at 60fps. An AI agent coordinating with other agents across sessions. A digital twin mirroring a physical facility. All of these need the same underlying infrastructure: a continuously updated, spatially grounded, temporally aware, confidence-scored store of what is actually happening.
 

@@ -11,22 +11,19 @@ playground:
 
 # Get Started
 
-Neural world models simulate how the world evolves under actions — generative, action-conditioned, trained to predict possible futures. They are not designed to be a queryable store of what actually happened. Persistence, spatial indexing, temporal versioning, and confidence scoring require a separate, deterministic layer — one with different latency characteristics, different durability guarantees, and a completely different failure mode.
+Neural world models simulate how the world evolves under actions. ArcFlow records what actually happened. These are different tools for different jobs — simulation in the neural tier, persistence here.
 
-**ArcFlow is that layer.** Simulation belongs in the neural tier. Persistence belongs here — exact, versioned, queryable in microseconds.
-
-Neural world models are extraordinary at simulating possible futures. They don't remember anything. **ArcFlow is what you build underneath them** — the persistence tier that stores what actually happened, spatially indexed, versioned to the sequence number, and queryable in microseconds.
+**ArcFlow is the operational world model layer.** A persistent, spatially indexed, temporally versioned, confidence-scored store of actual world state — exact, queryable in microseconds, running in-process alongside whatever generates the data.
 
 ```cypher
--- A query no neural world model can answer:
 MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone)
 WHERE d.confidence >= 0.90 AND z.hazard > 0.15 AND r.battery < 30
 RETURN r.name, z.name, avg(s.reliability * d.confidence) AS trust
 ```
 
-This runs in ~0.1ms. Deterministic. Against exact history. The neural layer tells you what *might* happen next. ArcFlow tells you what *did* happen — which sensor, which detection, what confidence, which zone, at any moment in the past — with one query.
+This runs in ~0.1ms. Deterministic. Against exact history. ArcFlow tells you what *did* happen — which sensor, which detection, what confidence, which zone, at any moment in the past — with one query.
 
-The AI infrastructure stack has three tiers. Foundation models handle language and perception. Neural world models simulate how the world evolves under actions. The operational world model is the persistence tier that has been missing — the layer where actual world state lives, versioned, spatially indexed, confidence-scored, queryable. That is ArcFlow.
+The AI infrastructure stack has three tiers. Foundation models handle language and perception. Neural world models simulate how the world evolves under actions. ArcFlow is the persistence tier — the layer where actual world state lives, versioned, spatially indexed, confidence-scored, queryable.
 
 It runs in-process — **no server, no network hop, no inference cluster**. Neural world models require GPU infrastructure and return in 100–1000ms. ArcFlow returns in microseconds, co-located with the agent, robot, or vehicle that needs it. For any real-time control loop, this is an architectural requirement, not a convenience.
 

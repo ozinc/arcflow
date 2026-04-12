@@ -1,10 +1,8 @@
 # ArcFlow
 
-**The correct architectural separation.** Spatial-temporal, confidence-scored, embedded.
+**Spatial-temporal, confidence-scored, embedded.**
 
-The neural world model research community is trying to collapse simulation, memory, spatial grounding, and calibrated uncertainty into a single generative model. MosaicMem, PERSIST, and similar papers are adding persistence into the neural layer. It is the wrong direction.
-
-Simulation belongs in the neural layer. Persistence belongs in a separate, deterministic, queryable layer. These are not the same problem. Neural world models simulate. **ArcFlow records.**
+Neural world models simulate how the world evolves under actions. **ArcFlow records what actually happened.** These are different tools for different jobs — simulation in the neural tier, persistence in a separate, deterministic, queryable layer.
 
 ArcFlow is that layer. Not a vector index. Not a document store. A persistent, spatially grounded, temporally versioned store of what entities exist, where they are, how confident we are in each fact, and what the world looked like at any previous moment. Neural model outputs land here as `_observation_class: 'predicted'` facts. Sensor observations land here as `_observation_class: 'observed'` facts. Everything is queryable with the same ISO GQL syntax.
 
