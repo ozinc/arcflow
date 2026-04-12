@@ -285,7 +285,7 @@ Spatial queries are automatically routed to the appropriate execution lane based
 
 For multi-GPU setups, nodes are partitioned across GPUs by a stable hash of `node_id`. Queries spanning GPU boundaries fan out to all relevant GPUs and merge results. GPUs connected via NVLink or Infinity Fabric form peer islands that share work without PCIe transfer cost.
 
-The GPU-uploadable spatial index (`FlatSpatialIndex`) uses flat arrays of pointer-free BVH nodes — `#[repr(C)]` structs uploaded directly to GPU VRAM without transformation. Pointer-based tree structures cannot cross the CPU→GPU boundary.
+ArcFlow maintains a GPU-uploadable spatial index using a flat, pointer-free structure that transfers directly to GPU memory without transformation. Pointer-based tree structures cannot cross the CPU→GPU boundary — the GPU index is a parallel representation designed specifically for GPU traversal.
 
 ---
 

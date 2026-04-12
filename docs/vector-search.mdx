@@ -135,7 +135,7 @@ CALL db.indexes()
 
 GPU acceleration delivers 4.2x speedup on vector search when available. Dispatch is automatic based on index size — no configuration required.
 
-On CUDA hardware with 10K+ vectors, ArcFlow routes to **cuVS (CAGRA)** — NVIDIA's CUDA-native approximate nearest neighbor implementation. CAGRA uses a GPU-resident graph structure for traversal, achieving higher throughput than HNSW on large vector collections. Same query, automatic routing.
+On CUDA hardware with larger vector collections, ArcFlow automatically routes to its GPU-accelerated nearest neighbor backend — a GPU-resident graph structure that achieves higher throughput than CPU HNSW at scale. Same query, automatic routing.
 
 ## Use Cases
 
