@@ -5,7 +5,7 @@ section: "recipes"
 status: "stable"
 playground:
   seed: world
-  query: "MATCH (s:Sensor)-[:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) RETURN s.name AS sensor, s.type AS modality, s.reliability AS sensor_trust, r.name AS robot, r.task AS task, r.battery AS battery, r.speed AS velocity, r.x AS world_x, r.y AS world_y, z.name AS zone, z.hazard AS zone_hazard ORDER BY r.battery ASC"
+  query: "MATCH (r:Robot)-[:OCCUPIES]->(z:Zone) MATCH (s:Sensor)-[:DETECTED]->(r) WITH r.name AS robot, r.task AS task, r.battery AS battery, r.x AS x, r.y AS y, z.name AS zone, z.hazard AS hazard, count(s) AS sensors_tracking, avg(s.reliability) AS avg_sensor_reliability RETURN robot, task, battery, x, y, zone, hazard, sensors_tracking, avg_sensor_reliability ORDER BY avg_sensor_reliability DESC"
 
 ---
 

@@ -6,7 +6,7 @@ order: 1
 since: "0.1.0"
 status: "stable"
 playground:
-  query: "MERGE (r:Robot {id: 'type-demo', name: 'TypeTest-01', task: 'testing', battery: 87, speed: 1.2, x: 10.0, y: 5.5, status: 'active', certified: 1}) MATCH (r:Robot {id: 'type-demo'}) RETURN r.name AS string_prop, r.battery AS integer_prop, r.speed AS float_prop, r.x AS spatial_x, r.y AS spatial_y, r.certified AS bool_as_int, r.status AS enum_string"
+  query: "MERGE (r:Robot {id: 'type-demo', name: 'TypeTest-01', task: 'testing', battery: 87, speed: 1.2, x: 10.0, y: 5.5, status: 'active'}) MERGE (s:Sensor {id: 'type-demo-sensor', name: 'Sensor-TypeTest', type: 'camera', reliability: 0.95, x: 5.0, y: 3.0}) MERGE (z:Zone {id: 'type-demo-zone', name: 'Test-Lab', x: 12.0, y: 8.0, radius: 10.0, hazard: 0.05}) MERGE (r:Robot {id: 'type-demo'})-[:OCCUPIES {entered_seq: 1}]->(z:Zone {id: 'type-demo-zone'}) MATCH (r:Robot {id: 'type-demo'})-[:OCCUPIES]->(z:Zone) RETURN r.name AS string_prop, r.battery AS integer_prop, r.speed AS float_prop, r.x AS spatial_x, r.y AS spatial_y, r.status AS enum_string, z.name AS zone_string, z.hazard AS hazard_float, z.radius AS radius_float"
 
 ---
 

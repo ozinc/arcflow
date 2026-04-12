@@ -5,7 +5,7 @@ section: "reference"
 status: "stable"
 playground:
   seed: world
-  query: "MATCH (r:Robot)-[:OCCUPIES]->(z:Zone) WHERE r.battery >= 60 AND r.speed > 0.5 AND NOT z.hazard > 0.2 RETURN r.name AS robot, r.task AS task, r.battery AS battery, r.speed AS speed, r.x AS pos_x, r.y AS pos_y, z.name AS zone, z.hazard AS hazard ORDER BY r.battery DESC"
+  query: "MATCH (r:Robot)-[:OCCUPIES]->(z:Zone) OPTIONAL MATCH (s:Sensor)-[:DETECTED]->(r) WITH r.name AS robot, r.task AS task, r.battery AS battery, r.speed AS speed, r.x AS x, r.y AS y, z.name AS zone, z.hazard AS hazard, count(s) AS sensor_coverage, avg(s.reliability) AS coverage_quality RETURN robot, task, battery, speed, x, y, zone, hazard, sensor_coverage, coverage_quality ORDER BY battery DESC"
 
 ---
 

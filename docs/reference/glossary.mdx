@@ -5,7 +5,7 @@ section: "reference"
 status: "stable"
 playground:
   seed: world
-  query: "MATCH (s:Sensor)-[:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) RETURN s.name AS sensor, s.type AS modality, s.reliability AS sensor_reliability, r.name AS entity, r.task AS task, r.battery AS battery, r.speed AS velocity, r.x AS world_x, r.y AS world_y, z.name AS zone, z.hazard AS hazard_level ORDER BY sensor_reliability DESC"
+  query: "MATCH (s:Sensor)-[:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) RETURN s.name AS sensor, s.type AS observation_modality, s.reliability AS sensor_reliability, r.name AS entity, r.task AS current_task, r.battery AS energy_level, r.speed AS velocity, r.x AS world_x, r.y AS world_y, z.name AS zone, z.hazard AS hazard_coefficient, CASE WHEN z.hazard > 0.15 THEN 'restricted' WHEN z.hazard > 0.05 THEN 'monitored' ELSE 'open' END AS zone_classification ORDER BY zone_classification, entity"
 
 ---
 

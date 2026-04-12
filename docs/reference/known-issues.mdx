@@ -5,7 +5,7 @@ section: "reference"
 status: "stable"
 playground:
   seed: world
-  query: "MATCH (r:Robot) SET r.status = CASE WHEN r.battery >= 80 THEN 'active' WHEN r.battery >= 60 THEN 'nominal' ELSE 'low-power' END MATCH (r:Robot)-[:OCCUPIES]->(z:Zone) RETURN r.name AS robot, r.task AS task, r.battery AS battery, r.status AS status, r.x AS pos_x, r.y AS pos_y, z.name AS zone, z.hazard AS hazard ORDER BY r.battery DESC"
+  query: "MATCH (r:Robot) SET r.status = CASE WHEN r.battery >= 80 THEN 'active' WHEN r.battery >= 40 THEN 'nominal' ELSE 'critical' END MATCH (s:Sensor)-[:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS robots, avg(r.battery) AS avg_battery, min(r.battery) AS min_battery, avg(s.reliability) AS sensor_health RETURN zone, hazard, robots, avg_battery, min_battery, sensor_health, CASE WHEN min_battery < 40 THEN 'ISSUE: battery_critical' WHEN sensor_health < 0.92 THEN 'WARN: sensor_degraded' ELSE 'OK' END AS zone_health ORDER BY avg_battery ASC"
 
 ---
 

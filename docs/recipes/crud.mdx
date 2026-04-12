@@ -5,7 +5,7 @@ section: "recipes"
 status: "stable"
 playground:
   seed: world
-  query: "MERGE (r:Robot {id: 'r-patrol', name: 'Patrol-X1', task: 'standby', x: 0.0, y: 0.0, speed: 0.0, battery: 100, status: 'initializing'}) MATCH (r:Robot {id: 'r-patrol'}) SET r.task = 'patrol', r.speed = 1.1, r.x = 12.0, r.y = 8.0, r.status = 'active' MATCH (r:Robot) RETURN r.name AS robot, r.task AS task, r.battery AS battery, r.speed AS speed, r.status AS status, r.x AS pos_x, r.y AS pos_y ORDER BY r.battery DESC"
+  query: "MERGE (r:Robot {id: 'r-patrol', name: 'Patrol-X1', task: 'standby', x: 0.0, y: 0.0, speed: 0.0, battery: 100, status: 'initializing'}) MATCH (r:Robot {id: 'r-patrol'}) SET r.task = 'patrol', r.speed = 1.4, r.x = 20.0, r.y = 12.0, r.status = 'active' MATCH (r:Robot)-[:OCCUPIES]->(z:Zone) WITH r.name AS robot, r.task AS task, r.battery AS battery, r.speed AS speed, r.status AS status, r.x AS pos_x, r.y AS pos_y, z.name AS zone, z.hazard AS hazard RETURN robot, task, battery, speed, status, pos_x, pos_y, zone, hazard ORDER BY battery DESC"
 
 ---
 

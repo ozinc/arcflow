@@ -4,7 +4,7 @@ description: "MERGE upsert pattern for idempotent world model pipelines — find
 section: "recipes"
 status: "stable"
 playground:
-  query: "MERGE (r:Robot {id: 'r-sentinel'}) ON CREATE SET r.name = 'Sentinel-01', r.task = 'standby', r.battery = 100, r.x = 0.0, r.y = 0.0, r.speed = 0.0 ON MATCH SET r.battery = 88, r.task = 'patrol', r.x = 18.0, r.y = 9.0, r.speed = 1.2 MATCH (r:Robot) RETURN r.name AS robot, r.task AS task, r.battery AS battery, r.speed AS speed, r.x AS pos_x, r.y AS pos_y ORDER BY r.name"
+  query: "MERGE (r:Robot {id: 'r-sentinel'}) ON CREATE SET r.name = 'Sentinel-01', r.task = 'standby', r.battery = 100, r.x = 0.0, r.y = 0.0, r.speed = 0.0, r.status = 'initializing' ON MATCH SET r.battery = 85, r.task = 'inspection', r.x = 18.0, r.y = 9.5, r.speed = 1.2, r.status = 'active' MATCH (r:Robot)-[:OCCUPIES]->(z:Zone) RETURN r.name AS robot, r.task AS task, r.battery AS battery, r.speed AS speed, r.status AS status, r.x AS pos_x, r.y AS pos_y, z.name AS zone, z.hazard AS hazard ORDER BY r.name"
 
 ---
 

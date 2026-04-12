@@ -7,7 +7,7 @@ since: "0.1.0"
 status: "stable"
 playground:
   seed: world
-  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, count(r) AS entities, avg(d.confidence) AS avg_confidence, avg(s.reliability) AS avg_reliability, avg(s.reliability * d.confidence) AS composite_trust RETURN zone, entities, avg_confidence, avg_reliability, composite_trust, CASE WHEN composite_trust < 0.80 THEN 'E_TRUST_LOW' WHEN avg_reliability < 0.90 THEN 'W_SENSOR_DEGRADED' WHEN avg_confidence < 0.85 THEN 'W_DETECTION_WEAK' ELSE 'OK' END AS error_code ORDER BY composite_trust ASC"
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS entities, avg(d.confidence) AS detection_confidence, avg(s.reliability) AS sensor_health, avg(s.reliability * d.confidence) AS composite_trust RETURN zone, hazard, entities, detection_confidence, sensor_health, composite_trust, CASE WHEN composite_trust < 0.75 THEN 'CRITICAL: world_trust_failure' WHEN sensor_health < 0.90 THEN 'ERROR: sensor_degraded' WHEN detection_confidence < 0.85 THEN 'WARN: detection_weak' WHEN hazard > 0.15 AND composite_trust < 0.90 THEN 'WARN: hazard_zone_unverified' ELSE 'OK' END AS diagnostic ORDER BY composite_trust ASC"
 
 ---
 
