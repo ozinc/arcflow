@@ -1,8 +1,10 @@
 # ArcFlow
 
-**The operational world model layer.** Spatial-temporal, confidence-scored, embedded.
+**The correct architectural separation.** Spatial-temporal, confidence-scored, embedded.
 
-The AI stack now has three tiers. Foundation models handle language and perception. Neural world models (NVIDIA Cosmos, DeepMind Genie, Tesla FSD) simulate how the world evolves under actions — action-conditioned, generative, petabyte-trained. The missing piece is the persistence layer: a database where actual world state lives, versioned, queryable, confidence-scored. Neural world models simulate. ArcFlow records.
+The neural world model research community — Cosmos, Genie, FSD, V-JEPA — is trying to collapse simulation, memory, spatial grounding, and calibrated uncertainty into a single generative model. MosaicMem, PERSIST, and similar papers are adding persistence into the neural layer. It is the wrong direction.
+
+Simulation belongs in the neural layer. Persistence belongs in a separate, deterministic, queryable layer. These are not the same problem. Neural world models simulate. **ArcFlow records.**
 
 ArcFlow is that layer. Not a vector index. Not a document store. A persistent, spatially grounded, temporally versioned store of what entities exist, where they are, how confident we are in each fact, and what the world looked like at any previous moment. Neural model outputs land here as `_observation_class: 'predicted'` facts. Sensor observations land here as `_observation_class: 'observed'` facts. Everything is queryable with the same ISO GQL syntax.
 

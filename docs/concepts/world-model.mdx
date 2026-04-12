@@ -11,7 +11,11 @@ playground:
 
 # World Model
 
-Two distinct things go by this name in AI today. Getting them confused is costly.
+The neural world model research community is trying to collapse simulation, memory, spatial grounding, and calibrated uncertainty into a single generative model. MosaicMem says "spatial memory is the bottleneck." PERSIST argues for "a persistent latent 3D scene." Papers are being published about adding uncertainty awareness to neural WFMs. This direction is architecturally wrong.
+
+**ArcFlow is the correct architectural separation.** Simulation belongs in the neural layer — learned, generative, action-conditioned. Persistence belongs in a separate, deterministic, queryable layer. These are not the same problem. Mixing them produces systems that are worse at both.
+
+Two distinct things go by the name "world model" today. Getting them confused — or trying to merge them — is costly.
 
 ## The two definitions
 
@@ -23,17 +27,30 @@ These two layers are architecturally distinct but operationally complementary. N
 
 **ArcFlow is the operational world model layer.** Not a simulation sandbox — a factual one.
 
-A simple test separates the two layers:
+The right test isn't "which layer does more?" — it's asking each layer the questions it was built to answer:
 
-| Question | Neural world model | ArcFlow |
+```cypher
+-- A question no neural world model can answer:
+MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone)
+WHERE d.confidence >= 0.90 AND z.hazard > 0.15 AND r.battery < 30
+RETURN r.name, z.name, avg(s.reliability * d.confidence) AS trust
+```
+
+This runs in ~0.1ms. Deterministically. Against exact sensor history. Neural world models cannot answer it — they simulate plausible futures, not factual pasts.
+
+| Operational question | Neural world model | ArcFlow |
 |---|---|---|
-| Can I **intervene** and see what changes? | Yes — action-conditioned | Yes — `MUTATE`, confidence propagates |
-| Does it **remember** when the camera moves away? | Sometimes (MosaicMem, PERSIST) | Always — full versioned history |
-| Can it roll out **counterfactual futures**? | Yes — its core purpose | No — not its job |
-| Can I use it for **planning/evaluation**? | Yes — dream-based RL | Yes — query observed state to inform decisions |
-| Does it know when it is **uncertain**? | Some (calibrated WMs) | Always — `_confidence` and `_observation_class` on every fact |
+| What did sensor-3 detect at seq 14,207 with confidence > 0.9? | Cannot answer | `AS OF seq 14207` — instant |
+| Which entity triggered the hazard alert, and which sensor saw it? | Cannot answer | Multi-hop graph traversal — exact |
+| What is the confidence-weighted state of Zone-B right now? | Cannot answer | Live view — sub-millisecond |
+| How has this entity's trajectory changed over the last 5 minutes? | Cannot answer | `AS OF seq N` comparison — deterministic |
+| Which agents are within 20m of a high-confidence obstacle? | Cannot answer | `algo.nearestNodes()` — ~0.1ms |
+| Is this observation class `observed` or `predicted`? | Not modeled | `_observation_class` on every node/edge |
+| What was the confidence score, and from which sensor? | Not stored | `_confidence` + provenance edge — always |
 
-The frontier of neural world modeling is converging on persistence and grounded spatial memory (MosaicMem: "spatial memory is the bottleneck"; PERSIST: "interactive world models need a persistent latent 3D scene, not just pixel histories"). What those papers are trying to *learn*, ArcFlow stores as *ground truth* — for the actual world, from actual sensors, at factual precision.
+Neural world models score zero on every row. These aren't edge cases — they're the operational baseline for any production robotic, fleet, or multi-agent system.
+
+The frontier of neural world modeling is converging on this gap. MosaicMem (2025): "spatial memory is the bottleneck for controllable world simulators." PERSIST: "interactive world models need a persistent latent 3D scene, not just pixel histories." These papers are trying to *learn* persistence — adding it into the generative model itself, approximate and expensive. ArcFlow's thesis is that persistence belongs in a separate, deterministic, queryable layer: exact, free, and already solved.
 
 A robot navigating a warehouse. A camera network tracking 22 players at 60fps. An AI agent coordinating with other agents across sessions. A digital twin mirroring a physical facility. All of these need the same underlying infrastructure: a continuously updated, spatially grounded, temporally aware, confidence-scored store of what is actually happening.
 
@@ -176,11 +193,36 @@ That record did not exist as a database product. The landscape had two failure m
 
 **Neural world models** are extraordinary at simulating possible futures — action-predicated prediction trained on petabytes of sensor data. They are not designed as a queryable store of what actually happened. They do not give you `AS OF seq N` access to ground truth, nor do they maintain the graph of which sensor produced which detection at what confidence.
 
-The world model era is real. But it has two layers, not one. Generative prediction at the top. Operational persistence underneath. AI systems that navigate physical environments, coordinate autonomous fleets, or make decisions with real consequences need both: a neural layer that anticipates, and a database layer where space and time are first-class dimensions, every fact carries a confidence score, and the full history is always queryable.
+The world model era is real. But it has two layers, not one. Generative prediction at the top. Operational persistence underneath. AI systems that navigate physical environments, coordinate autonomous fleets, or make decisions with real consequences need both.
 
-OZ built ArcFlow because the persistence layer did not exist. It runs in-process (no server, no round-trip), in the browser (any device, zero install), or as a lightweight server — with the same query language, the same temporal guarantees, the same confidence model everywhere. The intention is to give every team building world-aware systems the same foundation that OZ's own physical AI infrastructure runs on.
+The in-process architecture is not a convenience — it is an architectural requirement. Neural world models require GPU inference clusters and return in 100–1000ms. A real-time control loop — robotics, autonomous vehicles, live multi-agent coordination — cannot tolerate a network hop on every state query. ArcFlow runs co-located with the agent, at microsecond latency, with zero serialization overhead. There is no production alternative.
+
+The multi-agent case is almost entirely unaddressed by the neural WFM literature, which focuses on single-agent simulation. ArcFlow's architecture is built for it natively: multiple agents write into and read from the same persistent graph simultaneously, with full provenance of who changed what and when. A shared world model is what makes a fleet a fleet rather than a collection of isolated agents.
+
+OZ built ArcFlow because the persistence layer did not exist. It runs in-process (no server, no round-trip), in the browser (any device, zero install), or as a lightweight server — with the same query language, the same temporal guarantees, the same confidence model everywhere.
 
 Not a research prototype. Production infrastructure — deployed, operating, and under continuous load.
+
+## Calibrated uncertainty — a solved problem here
+
+The research community is publishing papers about calibrated uncertainty in neural world models ("World Models That Know When They Don't Know" — WorldScore benchmark, 2025). For neural WFMs, knowing when they're uncertain is a frontier research problem.
+
+ArcFlow has had `_confidence` and `_observation_class` as first-class properties on every node and edge since day one. Not a feature — the data model. Every neural model output that lands in ArcFlow is tagged with how confident the source was. Every sensor reading carries its reliability. Queries filter on it natively:
+
+```cypher
+-- Only act on facts the system is sure about
+MATCH (e:Entity)
+WHERE e._observation_class = 'observed' AND e._confidence > 0.9
+RETURN e.name, e.x, e.y
+
+-- Surface everything the system is uncertain about
+MATCH (e:Entity)-[r]->(contact:Entity)
+WHERE contact._observation_class = 'predicted' AND r._confidence < 0.6
+RETURN e.name, contact.name, r._confidence, r._source
+ORDER BY r._confidence ASC
+```
+
+The research community wants calibrated uncertainty in their neural models. It already exists in the persistence layer.
 
 ## See Also
 

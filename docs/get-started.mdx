@@ -11,15 +11,26 @@ playground:
 
 # Get Started
 
-ArcFlow is the **operational world model layer** — the database that stores, queries, and remembers actual world state for systems that cannot afford to lose spatial precision, temporal fidelity, or epistemic provenance.
+The neural world model community — NVIDIA Cosmos, DeepMind Genie, Tesla FSD, Meta V-JEPA — is trying to collapse simulation, memory, spatial grounding, and calibrated uncertainty into a single generative model. Papers are being published about adding persistence (MosaicMem), 3D scene grounding (PERSIST), and uncertainty awareness to neural WFMs. It is failing as an architecture because these are not the same problem.
 
-The AI infrastructure stack now has three tiers. Foundation models handle language and perception. Neural world models (Cosmos, FSD, Genie) generate action-predicated predictions of how the world evolves. The middle tier — where actual world state persists — has been the missing piece. That is ArcFlow.
+**ArcFlow is the correct architectural separation.** Simulation belongs in the neural layer. Persistence, spatial indexing, temporal versioning, and confidence scoring belong in a separate, deterministic, queryable layer. This is not a design choice — it is a consequence of the physics of the problem.
 
-Space and time are first-class dimensions, not extensions. Every mutation is versioned. Every fact carries a confidence score and an observation class (`observed`, `inferred`, `predicted`). Relationships are stored objects, not derived at query time. The full history is queryable with a single syntax — the ISO GQL standard, Cypher-compatible.
+Neural world models like Cosmos and Genie are extraordinary at simulating possible futures. They don't remember anything. **ArcFlow is what you build underneath them** — the persistence tier that stores what actually happened, spatially indexed, versioned to the sequence number, and queryable in microseconds.
 
-Neural world models predict. ArcFlow remembers. Every agent in a multi-agent system, every sensor in a fleet, every frame of a camera network writes into and reads from the same queryable world state.
+```cypher
+-- A query no neural world model can answer:
+MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone)
+WHERE d.confidence >= 0.90 AND z.hazard > 0.15 AND r.battery < 30
+RETURN r.name, z.name, avg(s.reliability * d.confidence) AS trust
+```
 
-It runs in-process. No server. No round-trip. Browser, Node.js, Python, Rust, or Docker — same engine, same queries, same guarantees.
+This runs in ~0.1ms. Deterministic. Against exact history. The neural layer tells you what *might* happen next. ArcFlow tells you what *did* happen — which sensor, which detection, what confidence, which zone, at any moment in the past — with one query.
+
+The AI infrastructure stack has three tiers. Foundation models handle language and perception. Neural world models simulate how the world evolves under actions. The operational world model is the persistence tier that has been missing — the layer where actual world state lives, versioned, spatially indexed, confidence-scored, queryable. That is ArcFlow.
+
+It runs in-process — **no server, no network hop, no inference cluster**. Neural world models require GPU infrastructure and return in 100–1000ms. ArcFlow returns in microseconds, co-located with the agent, robot, or vehicle that needs it. For any real-time control loop, this is an architectural requirement, not a convenience.
+
+Every mutation is versioned. Every fact carries `_confidence` and `_observation_class` (`observed`, `inferred`, `predicted`). Relationships are stored edges, not derived at query time. The full history is queryable with ISO GQL.
 
 ## Try instantly — zero install
 

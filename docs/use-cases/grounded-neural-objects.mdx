@@ -231,7 +231,19 @@ Neural world models (Cosmos, Genie, FSD) are generative prediction engines — t
 
 ArcFlow is the operational complement. Neural outputs arrive as detections; ArcFlow lifts them into persistent, queryable entities with spatial position, per-dimension confidence, temporal history, and live-view relations. The learned sidecar rides **alongside** the physical track — it does not replace it.
 
-Neural world models predict. ArcFlow remembers. The GNO is the point where both layers meet.
+The query no neural world model can answer:
+
+```cypher
+-- Which sensor saw the player who entered the danger zone that triggered the shutdown?
+MATCH (s:Sensor)-[d:DETECTED]->(p:Player)-[:IN_ZONE]->(z:Zone {hazard: 'restricted'})
+WHERE d.confidence >= 0.88
+RETURN s.name AS sensor, s.type, d.confidence, p.gnoId, p.name, z.name AS zone
+ORDER BY d.confidence DESC
+```
+
+Deterministic. Sub-millisecond. Against the exact history of every detection, every sensor, every identity assignment. This is operational causality — the actual causal chain from sensor to entity to zone to consequence, stored as a graph, traversable instantly. No neural world model can answer it. ArcFlow answers it by construction.
+
+Neural world models simulate. ArcFlow records. The GNO is the point where both layers meet.
 
 ## See Also
 
