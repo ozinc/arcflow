@@ -26,7 +26,7 @@ User query
 [1] Embed query ────────────────────────► Embedding model (external)
     │
     ▼
-[2] Vector search ──────────────────────► ArcFlow HNSW index
+[2] Vector search ──────────────────────► ArcFlow vector index
     │
     ▼
 [3] Graph context + confidence filter ──► Traverse relationships, filter by _confidence
@@ -253,14 +253,14 @@ The MCP server's `graph_rag` tool runs the full retrieval pipeline. The LLM quer
 
 **Graph structure scales value**: The gap between flat vector retrieval and graph retrieval grows with relationship richness. A chunk graph with `RELATED_TO`, `CITES`, `CONTRADICTS`, and `SUPPORTS` edges gives the LLM reasoning structure that a chunk array cannot.
 
-**Embedding dimensions**: ArcFlow's HNSW index supports any dimensionality: 384 (small sentence models), 768 (BERT-size models), 1536 (large text embedding models), 3072 (extended embedding models).
+**Embedding dimensions**: ArcFlow's vector index supports any dimensionality: 384 (small sentence models), 768 (BERT-size models), 1536 (large text embedding models), 3072 (extended embedding models).
 
 **GPU acceleration**: On large graphs, vector search dispatches automatically to CUDA or Metal when available. No code changes.
 
 ## See Also
 
 - [Trusted RAG](/trusted-rag) — capability reference with confidence algebra and evidence chains
-- [Vector Search](/vector-search) — HNSW index configuration and query patterns
+- [Vector Search](/vector-search) — vector index configuration and query patterns
 - [Procedures](/worldcypher/functions/procedures) — `algo.vectorSearch`, `algo.graphRAGTrusted`, `algo.graphRAGContext`
 - [Confidence & Provenance](/concepts/confidence-and-provenance) — scoring model and provenance edges
 - [Building a World Model](/guides/world-model) — the foundational pattern

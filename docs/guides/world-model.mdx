@@ -24,7 +24,7 @@ An **operational world model** is the solution: a persistent, queryable store of
 This guide builds one from scratch. By the end you'll have:
 
 - 20 entities in 3D space, with velocities and epistemic states
-- Spatial proximity and frustum queries (R*-tree backed, ≥ 2000/s)
+- Spatial proximity and frustum queries (ArcFlow Spatial Index backed, ≥ 2000/s)
 - Temporal memory — query the world at any previous moment
 - Confidence-filtered decision making
 - Graph algorithms over the world structure
@@ -141,7 +141,7 @@ The detection edge is not a log entry. It is a first-class fact in the graph —
 Once entities exist in space, proximity becomes a native query — not a computed join, not a spatial extension, not an external GIS call.
 
 ```cypher
--- K-nearest: 5 entities closest to a point (R*-tree backed, ≥ 2000/s at 11K entities)
+-- K-nearest: 5 entities closest to a point (ArcFlow Spatial Index backed, ≥ 2000/s at 11K entities)
 CALL algo.nearestNodes(point({x: 40.0, y: 60.0}), 'Entity', 5)
   YIELD node, distance
 RETURN node.name, node.type, distance
@@ -421,7 +421,7 @@ Spatial + temporal + confidence + graph traversal — in a single GQL statement.
 
 | Capability | What it gives you |
 |---|---|
-| Spatial entities (R*-tree) | Proximity queries at ≥ 2000/s — no external spatial system |
+| Spatial entities (ArcFlow Spatial Index) | Proximity queries at ≥ 2000/s — no external spatial system |
 | Three epistemic states | Operational trust levels — not boolean, not decorative |
 | Confidence scores | Safety thresholds that compose with any query |
 | Sensor provenance | Every edge knows its source, range, and time |
@@ -443,5 +443,5 @@ This is the infrastructure layer the AI stack has been missing. Foundation model
 - [Robotics & Perception](/use-cases/robotics) — sensor fusion pipeline and ROS integration
 - [Live Queries](/live-queries) — standing queries and live views in depth
 - [Temporal Queries](/worldcypher/temporal) — `AS OF seq N` and temporal comparison
-- [Spatial Queries](/spatial-knowledge) — R*-tree, frustum, line-of-sight reference
+- [Spatial Queries](/spatial-knowledge) — ArcFlow Spatial Index, frustum, line-of-sight reference
 - [Confidence & Provenance](/concepts/confidence-and-provenance) — scoring and tracing every fact

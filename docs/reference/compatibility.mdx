@@ -101,7 +101,7 @@ Complete reference of supported features, syntax, and current implementation sta
 
 | Feature | Status | Syntax | Notes |
 |---|---|---|---|
-| CREATE VECTOR INDEX | ✅ | `CREATE VECTOR INDEX name FOR (n:Label) ON (n.prop) OPTIONS {dimensions: N, similarity: 'cosine'}` | HNSW k-NN |
+| CREATE VECTOR INDEX | ✅ | `CREATE VECTOR INDEX name FOR (n:Label) ON (n.prop) OPTIONS {dimensions: N, similarity: 'cosine'}` | vector similarity search |
 | CREATE FULLTEXT INDEX | ✅ | `CREATE FULLTEXT INDEX name FOR (n:Label) ON (n.prop)` | BM25 scoring |
 
 ## Parameterized Queries
@@ -133,7 +133,7 @@ Run directly — no projection lifecycle needed.
 | `algo.diameter()` | Graph diameter |
 | `algo.allPairsShortestPath()` | All-pairs shortest paths |
 | `algo.nearestNodes()` | Find nearest nodes |
-| `algo.vectorSearch(index, vector, k)` | HNSW k-NN vector search |
+| `algo.vectorSearch(index, vector, k)` | vector similarity search |
 | `algo.similarNodes()` | Find similar nodes |
 | `algo.hybridSearch()` | Hybrid vector + graph search |
 | `algo.graphRAG()` | Trusted GraphRAG pipeline |

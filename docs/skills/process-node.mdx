@@ -1,7 +1,7 @@
 ---
 title: "PROCESS NODE"
-description: "Run constructors against world model nodes to materialize confidence-scored dynamic edges — the engine's enrichment trigger."
-section: "constructors"
+description: "Run skills against world model nodes to materialize confidence-scored dynamic edges — the engine's enrichment trigger."
+section: "skills"
 order: 3
 since: "0.3.0"
 status: "stable"
@@ -12,7 +12,7 @@ playground:
 
 # PROCESS NODE
 
-PROCESS NODE runs all constructors against matched nodes, creating edges with confidence scores and provenance metadata.
+PROCESS NODE runs all skills against matched nodes, creating edges with confidence scores and provenance metadata.
 
 ## Syntax
 
@@ -27,11 +27,11 @@ PROCESS NODE (n:Person)
 ```
 
 For each matched Person node, the engine:
-1. Finds constructors where `allowed_on` includes `Person`
-2. Executes each constructor (symbolic tier)
+1. Finds skills where `allowed_on` includes `Person`
+2. Executes each skill (symbolic tier)
 3. Materializes new edges with `Confidence` and `EdgeProvenance`
 
 ## See Also
 
-- [REPROCESS EDGES](/constructors/reprocess-edges) — re-evaluate existing edges
-- [CREATE CONSTRUCTOR](/constructors/create-constructor) — register constructors
+- [REPROCESS EDGES](/skills/reprocess-edges) — re-evaluate existing edges
+- [CREATE SKILL](/skills/create-skill) — register skills

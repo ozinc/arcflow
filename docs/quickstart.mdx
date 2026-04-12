@@ -41,7 +41,7 @@ The playground opens with a pre-loaded world model scene. Try the queries that s
 -- Entities in the scene with their observation classes
 MATCH (e:Entity) RETURN e.name, e.type, e._observation_class, e._confidence
 
--- Spatial: k-nearest entities to a point (R*-tree backed)
+-- Spatial: k-nearest entities to a point (ArcFlow Spatial Index backed)
 CALL algo.nearestNodes(point({x: 0.0, y: 0.0}), 'Entity', 5)
 YIELD node, distance
 RETURN node.name, distance
@@ -112,7 +112,7 @@ CREATE (e3:Entity {
 })
 ```
 
-### Spatial proximity query (R*-tree, ≥ 2,000/s at 11K entities)
+### Spatial proximity query (ArcFlow Spatial Index, ≥ 2,000/s at 11K entities)
 
 ```cypher
 CALL algo.nearestNodes(point({x: 0.0, y: 0.0}), 'Entity', 10)
@@ -236,9 +236,9 @@ arcflow-mcp
 | In-memory cache | In-memory, zero-copy |
 | Columnar analytics engine | Columnar scans, window functions |
 | Streaming broker | CDC + standing queries |
-| Vector database | HNSW vector index |
+| Vector database | vector index |
 | Workflow orchestrator | Graph-native durable workflows |
-| Separate spatial database | R*-tree indexed, composable with graph traversal |
+| Separate spatial database | spatially indexed, composable with graph traversal |
 
 All share one `GraphStore` in unified memory. No serialization. No network hops.
 

@@ -1,0 +1,131 @@
+---
+title: "Skills"
+description: "Executable, versioned, confidence-scored relationship builders — the world model's enrichment layer, no external pipelines"
+section: "concepts"
+order: 2
+since: "0.2.0"
+status: "stable"
+playground:
+  query: "MERGE (sk:Skill {id: 'zone-watch', name: 'ZoneWatch', version: 3, min_confidence: 0.82, active: 1}) MERGE (s1:Sensor {id: 'cam-1', name: 'Cam-LabA', type: 'camera', reliability: 0.95, freq_hz: 25, config: 'high-freq'}) MERGE (s2:Sensor {id: 'lidar-1', name: 'Lidar-LabB', type: 'lidar', reliability: 0.91, freq_hz: 10, config: 'standard'}) MERGE (s3:Sensor {id: 'rfid-1', name: 'RFID-Gate', type: 'rfid', reliability: 0.99, freq_hz: 5, config: 'entry-point'}) MERGE (sk1:Skill {id: 'zone-watch'})-[:GOVERNS]->(s1a:Sensor {id: 'cam-1'}) MERGE (sk2:Skill {id: 'zone-watch'})-[:GOVERNS]->(s2a:Sensor {id: 'lidar-1'}) MERGE (sk3:Skill {id: 'zone-watch'})-[:GOVERNS]->(s3a:Sensor {id: 'rfid-1'}) MATCH (sk:Skill)-[:GOVERNS]->(s:Sensor) RETURN sk.name AS skill, sk.version AS version, sk.min_confidence AS min_confidence, s.name AS sensor, s.type AS sensor_type, s.reliability AS reliability, s.freq_hz AS poll_rate, s.config AS sensor_config ORDER BY s.reliability DESC"
+
+---
+
+# Skills
+
+A Skill is a named, versioned, graph-native enrichment program. It processes nodes with a specific label, builds relationships with confidence scores and provenance, and can be re-run when source data changes — no external pipeline, no nightly batch job, no drift between runs.
+
+---
+
+## World Model Use Case
+
+In a robotic environment, sensors observe entities. Skills derive the relationships between them — which robots share a zone, which sensors have co-detected the same entity, which coverage gaps exist. These are *inferred* relationships that don't come from a sensor directly, but from reasoning over what sensors have observed.
+
+```cypher
+-- Register a skill: derive co-detection relationships from sensor observations
+CREATE SKILL CoDetectionLinker
+  FROM PROMPT 'Link two Robots if the same Sensor detected both within 30 seconds'
+  ALLOWED ON [Robot]
+  TIER SYMBOLIC
+
+-- Materialize derived edges across all robots in the world model
+PROCESS NODE (n:Robot)
+-- => Created 23 CO_DETECTED edges, avg confidence 0.87
+
+-- Every derived edge carries provenance — which skill, which version
+MATCH (a:Robot)-[r:CO_DETECTED]->(b:Robot)
+WHERE r._confidence > 0.8
+RETURN a.name, b.name, r._confidence, r._skill_version, r._created_at
+ORDER BY r._confidence DESC
+
+-- As sensors improve, reprocess uncertain edges
+REPROCESS EDGES WHERE confidence < 0.7
+-- => Re-evaluated 6 edges with CoDetectionLinker v2, avg confidence now 0.91
+```
+
+No ETL pipeline. No external enrichment service. The world model derives and refines its own relationship layer.
+
+---
+
+## What is a Skill?
+
+A Skill is a first-class graph primitive — an executable program stored inside the world model that *builds* relationships. Think of it as a materialized view that produces edges instead of rows, with confidence scores and full provenance on every edge it creates.
+
+Skills sit alongside Nodes and Relationships as native graph objects. The world model is not just a passive store — it is an active system that can derive, score, and re-evaluate its own knowledge.
+
+## Mental Model
+
+| Traditional approach | ArcFlow Skills |
+|---|---|
+| Relationships inserted manually | Edges materialized by executable programs |
+| Batch ETL to derive relationships | `PROCESS NODE` runs inline, no external system |
+| No confidence scoring on derived edges | Every edge carries `_confidence` (0.0–1.0) |
+| No audit trail | Every edge carries provenance: skill name, version, timestamp |
+| Re-derive = rewrite the pipeline | `REPROCESS EDGES WHERE confidence < 0.7` |
+
+## Skill Properties
+
+Every Skill has:
+
+| Property | Description |
+|---|---|
+| `name` | Unique identifier |
+| `version` | Semantic version — edges carry the version that built them |
+| `prompt_template` | The rule or instruction the skill applies |
+| `allowed_on` | Which node labels this skill applies to |
+| `min_confidence` | Minimum score for an edge to be materialized |
+| `active` | Whether the skill runs on `PROCESS NODE` calls |
+
+## Execution Tiers
+
+| Tier | Latency | Status |
+|---|---|---|
+| `SYMBOLIC` | < 1ms | Active — pattern matching, rule-based logic |
+| `WASM` | < 10ms | Planned |
+| `LLM` | seconds | Planned |
+
+Only `TIER SYMBOLIC` is active. WASM and LLM tiers will extend skills to compiled logic and batched model inference without changing the query interface.
+
+## WorldCypher Operations
+
+### Register a skill
+
+```cypher
+CREATE SKILL ZoneCoOccupancy
+  FROM PROMPT 'Link two Robots if they occupy the same Zone simultaneously'
+  ALLOWED ON [Robot]
+  TIER SYMBOLIC
+```
+
+### Materialize edges
+
+```cypher
+PROCESS NODE (n:Robot)
+```
+
+Evaluates all active skills against matched nodes. Each produces edges with `_confidence` and `_skill_version`. Low-confidence edges can be re-evaluated later as skills improve or new observations arrive.
+
+### Re-evaluate weak edges
+
+```cypher
+REPROCESS EDGES WHERE confidence < 0.6
+```
+
+Deletes edges below the threshold and re-runs their skills. This is how the world model self-heals: as skill versions improve, stale or low-quality edges are replaced with higher-confidence ones.
+
+---
+
+## Why Skills Matter
+
+Most graph databases treat edges as static assertions: they are inserted once and never questioned. Skills make edges *derived* — built by programs, scored by confidence, traceable to the version that produced them, and re-evaluable as evidence improves.
+
+For world model applications: every relationship between entities in your world model — co-location, shared detection, causal proximity — can be derived automatically from observed facts, with a full evidence chain traceable back to the sensor or model that produced it.
+
+For AI applications: every RAG answer can trace its evidence chain back to the specific skill version and confidence threshold that produced each supporting edge.
+
+## See Also
+
+- [Confidence & Provenance](/concepts/confidence-and-provenance) — how skill edges carry scores and evidence chains
+- [CREATE SKILL](/skills/create-skill) — syntax reference
+- [PROCESS NODE](/skills/process-node) — executing skills
+- [REPROCESS EDGES](/skills/reprocess-edges) — re-evaluating low-confidence edges
+- [Using Skills](/guides/using-skills) — step-by-step guide with world model examples

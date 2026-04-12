@@ -108,13 +108,15 @@ CALL db.clock()
 | tick  | 1700000042 |
 ```
 
-### Clock Domains
+### ArcFlow Clock Domains
 
-View all active clock domains and their current state:
+Real-world data arrives from sources that run at different rates — a camera at 25Hz, a LIDAR at 10Hz, an RFID reader at 1Hz. **ArcFlow Clock Domains** let each source maintain its own independent temporal sequence while the world model merges them into a coherent view. No external time-series middleware, no alignment preprocessing — each domain advances at its own rate and the graph stays consistent.
 
 ```cypher
 CALL db.clockDomains()
 ```
+
+Each domain reports its current tick, last mutation timestamp, and source identity. Observations ingested from different clock domains carry their originating domain in provenance metadata — so a query can distinguish a LIDAR reading from tick 1420 and a camera reading from tick 356, even when both describe the same entity at the same wall-clock instant.
 
 ## AS OF Queries
 

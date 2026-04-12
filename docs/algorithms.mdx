@@ -157,7 +157,7 @@ Returns the same schema as Louvain (nodeId, name, community).
 
 ### Connected Components (WCC)
 
-Weakly connected components via union-find. Identifies disconnected subgraphs.
+Weakly connected components. Identifies disconnected subgraphs.
 
 ```cypher
 CALL algo.connectedComponents()
@@ -213,7 +213,7 @@ RETURN b.name
 
 ### Dijkstra Shortest Path
 
-Weighted shortest path. Uses a 4-ary min-heap with thread-local buffer reuse. Pass the property key to use as edge weight.
+Weighted shortest path with optimized memory reuse. Pass the property key to use as edge weight.
 
 ```cypher
 CALL algo.dijkstra(startNodeId, endNodeId, 'weight')
@@ -338,7 +338,7 @@ CALL algo.diameter()
 
 ### Biconnected Components
 
-Tarjan's algorithm for biconnected components — maximal subgraphs with no articulation points. O(V+E) iterative stack-based implementation.
+Biconnected components — maximal subgraphs with no articulation points. O(V+E) time complexity.
 
 ```cypher
 CALL algo.biconnectedComponents()
@@ -353,7 +353,7 @@ CALL algo.biconnectedComponents()
 
 ### Node2Vec
 
-Generate node embeddings via random walk + skip-gram. Captures structural position in the graph.
+Generate node embeddings via structural random walk. Captures structural position in the graph.
 
 ```cypher
 CALL algo.node2vec(128, 80, 10)
@@ -544,8 +544,8 @@ Six algorithms also support `LIVE CALL` for incremental maintenance -- see the I
 
 ## See Also
 
-- [Vector Search](/vector-search) — HNSW k-NN, hybrid search, and embedding management
+- [Vector Search](/vector-search) — vector similarity search, hybrid search, and embedding management
 - [Live Queries](/live-queries) — `LIVE CALL` for incremental algorithm maintenance as standing queries
 - [GPU Acceleration](/gpu) — automatic CUDA/Metal dispatch, multi-GPU routing
-- [Spatial Queries](/worldcypher/spatial) — `algo.nearestNodes()`, frustum queries, R*-tree indexes
+- [Spatial Queries](/worldcypher/spatial) — `algo.nearestNodes()`, frustum queries, ArcFlow Spatial Index
 - [Trusted RAG](/trusted-rag) — `algo.graphRAG()`, `algo.graphRAGTrusted()` in pipeline context

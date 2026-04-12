@@ -27,7 +27,7 @@ The AI infrastructure stack has three tiers. Foundation models handle language a
 
 It runs in-process — **no server, no network hop, no inference cluster**. Neural world models require GPU infrastructure and return in 100–1000ms. ArcFlow returns in microseconds, co-located with the agent, robot, or vehicle that needs it. For any real-time control loop, this is an architectural requirement, not a convenience.
 
-Every mutation is versioned. Every fact carries `_confidence` and `_observation_class` (`observed`, `inferred`, `predicted`). Relationships are stored edges, not derived at query time. The full history is queryable with ISO GQL.
+Every mutation is versioned via **ArcFlow Clock Domains** — each source advances at its own rate, the world model merges them. Every fact is graded by the **ArcFlow Evidence Model** — observation class (`observed`, `inferred`, `predicted`), confidence score, and provenance chain are storage primitives, not optional annotations. The full history is queryable with ISO GQL.
 
 ## Try instantly — zero install
 

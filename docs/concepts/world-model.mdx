@@ -53,7 +53,7 @@ Most databases store facts. A world model stores facts *plus* the spatial contex
 
 | Dimension | Conventional database | ArcFlow World Model |
 |---|---|---|
-| **Space** | Coordinates as numeric columns | Spatial predicates native — R*-tree indexed, frustum queries, proximity algorithms |
+| **Space** | Coordinates as numeric columns | Spatial predicates native — spatially indexed, frustum queries, proximity algorithms |
 | **Time** | Timestamps on rows | Every mutation versioned — query any previous state with `AS OF seq N` |
 | **Confidence** | Binary (is it there or not) | Scored [0.0, 1.0] on every node and relationship |
 | **Provenance** | Absent or logged separately | Built-in — every edge records which sensor, model, or process produced it |
@@ -94,7 +94,7 @@ This distinction is what makes world model queries trustworthy, not just fast.
 
 Space and time are not columns in ArcFlow — they are native dimensions.
 
-**Spatial**: `point({x, y, z})` values are indexed by an R*-tree. Nearest-neighbor queries, radius queries, bounding boxes, frustum queries, and line-of-sight calculations are built in — not implemented in application code.
+**Spatial**: `point({x, y, z})` values are indexed by the ArcFlow Spatial Index. Nearest-neighbor queries, radius queries, bounding boxes, frustum queries, and line-of-sight calculations are built in — not implemented in application code.
 
 **Temporal**: every mutation is versioned. The graph at any previous point in time is fully queryable. Not from an audit log or a separate history table — from the same graph, the same queries, just `AS OF seq N`.
 
@@ -103,7 +103,7 @@ Space and time are not columns in ArcFlow — they are native dimensions.
 MATCH (e:Entity) AS OF seq 500
 RETURN e.name, e.x, e.y, e.z
 
--- K-nearest entities to a point (R*-tree backed)
+-- K-nearest entities to a point (ArcFlow Spatial Index backed)
 CALL algo.nearestNodes(point({x: 40.0, y: 60.0}), 'Entity', 10)
 YIELD node, distance
 RETURN node.name, distance

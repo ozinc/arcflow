@@ -78,7 +78,7 @@ CREATE (r1)-[:MEMBER_OF {role: 'lead', position: 1}]->(f)
 ## Spatial queries — what is around me?
 
 ```cypher
--- All entities within 15m of Robot-01 (R*-tree backed)
+-- All entities within 15m of Robot-01 (ArcFlow Spatial Index backed)
 CALL algo.nearestNodes(point({x: 12.4, y: 8.7}), 'Obstacle', 10)
   YIELD node AS obs, distance
 WHERE distance < 15.0
@@ -229,7 +229,7 @@ The operational world model layer is the piece most autonomous stacks are missin
 - [World Model](/concepts/world-model) — the two-layer framing: neural world models simulate, ArcFlow records
 - [Building a World Model](/guides/world-model) — step-by-step with spatial, temporal, and confidence
 - [Grounded Neural Objects](/use-cases/grounded-neural-objects) — lifting neural world models detections into persistent entities
-- [Spatial Queries](/spatial-knowledge) — R*-tree, frustum, line-of-sight
+- [Spatial Queries](/spatial-knowledge) — ArcFlow Spatial Index, frustum, line-of-sight
 - [Temporal Queries](/worldcypher/temporal) — `AS OF seq N`, replay, comparison
 - [Live Queries](/live-queries) — standing queries and live views
 - [Digital Twins](/use-cases/digital-twins) — live mirror of physical systems

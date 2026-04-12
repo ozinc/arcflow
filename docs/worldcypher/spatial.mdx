@@ -1,6 +1,6 @@
 ---
 title: "WorldCypher: Spatial Queries"
-description: "Exact spatial predicates, KNN, frustum, live geofencing — backed by a dynamic R*-tree, no approximate indexing"
+description: "Exact spatial predicates, KNN, frustum, live geofencing — backed by the ArcFlow Spatial Index, no approximate indexing"
 section: "worldcypher"
 status: "stable"
 playground:
@@ -11,7 +11,7 @@ playground:
 
 # WorldCypher: Spatial Queries
 
-ArcFlow extends GQL with exact spatial predicates backed by a **dynamic R\*-tree index**. Spatial queries run against the index directly — no full-node scan, no approximation.
+ArcFlow extends GQL with exact spatial predicates backed by the **ArcFlow Spatial Index**. Spatial queries run against the index directly — no full-node scan, no approximation.
 
 ## Storing Spatial Properties
 
@@ -46,7 +46,7 @@ WHERE distance(r.position, point({x: 10.0, y: 10.0})) < 20.0
 RETURN r.name, r.position
 ```
 
-The query compiler detects `distance()` predicates and pushes them into the R\*-tree index (SpatialIndexScan plan node). A coarse grid prefilter reduces candidate sets by ~95% before R\*-tree evaluation.
+The query compiler detects `distance()` predicates and pushes them into the ArcFlow Spatial Index (SpatialIndexScan plan node). A coarse grid prefilter reduces candidate sets by ~95% before ArcFlow Spatial Index evaluation.
 
 ## Bounding Box
 
@@ -145,9 +145,9 @@ CALL arcflow.spatial.dispatch_stats()
 |---|---|
 | `lane_chosen` | `CpuLive`, `CpuBatch`, `GpuLocal`, or `GpuMulti` |
 | `estimated_candidates` | Candidates estimated by coarse grid prefilter |
-| `actual_candidates` | Candidates after R\*-tree filtering |
+| `actual_candidates` | Candidates after ArcFlow Spatial Index filtering |
 | `prefilter_us` | Coarse grid filter time (μs) |
-| `rtree_us` | R\*-tree traversal time (μs) |
+| `rtree_us` | ArcFlow Spatial Index traversal time (μs) |
 | `gpu_transfer_us` | Host→device transfer time (μs; 0 for CPU lanes) |
 | `kernel_us` | GPU kernel execution (μs; 0 for CPU lanes) |
 | `total_us` | End-to-end query latency (μs) |
@@ -161,10 +161,10 @@ CALL arcflow.spatial.trigger_stats()
 
 ## Index Behavior
 
-- **Insert:** node with spatial property → R\*-tree entry added in O(log N)
+- **Insert:** node with spatial property → ArcFlow Spatial Index entry added in O(log N)
 - **Update:** position changes → old entry removed, new entry inserted
 - **Delete:** node deleted → entry retracted
-- **Bulk ingest:** Sort-Tile-Recursive packing via `ingestUsdPrims()` — 500K prims in under 1 second, 5–10× faster than incremental insert
+- **Bulk ingest:** optimized bulk packing via `ingestUsdPrims()` — 500K prims in under 1 second, 5–10× faster than incremental insert
 
 The index is dynamic. No rebuild required on updates.
 

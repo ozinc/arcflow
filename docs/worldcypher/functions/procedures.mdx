@@ -85,7 +85,7 @@ Returns one row per node, sorted by rank. Uses 20 iterations with damping factor
 
 | Procedure | Return Columns | Description | Since |
 |---|---|---|---|
-| `CALL algo.connectedComponents()` | `nodeId`, `name`, `component` | Connected component IDs via union-find | 0.26.0 |
+| `CALL algo.connectedComponents()` | `nodeId`, `name`, `component` | Connected component IDs | 0.26.0 |
 | `CALL algo.communityDetection()` | `nodeId`, `name`, `community` | Community IDs via label propagation. GPU-accelerated when available. | 0.26.0 |
 | `CALL algo.louvain()` | `nodeId`, `name`, `community` | Community IDs via Louvain modularity optimization. GPU-accelerated when available. | 3.0.0 |
 | `CALL algo.leiden()` | `nodeId`, `community` | Community IDs via Leiden algorithm (20 iterations) | 5.0.0 |
@@ -118,7 +118,7 @@ Returns a single row with the total number of triangles.
 |---|---|---|---|
 | `CALL algo.allPairsShortestPath()` | `source`, `target`, `distance` | Shortest path distances between all node pairs (capped at 100 rows). GPU-accelerated when available. | 3.0.0 |
 | `CALL algo.confidencePath(startId, endId)` | `path`, `cost`, `length` | Shortest path between two nodes weighted by confidence | 5.0.0 |
-| `CALL algo.dijkstra(startId, endId, 'weight')` | `path`, `distance` | Weighted shortest path using 4-ary min-heap | 10.0.0 |
+| `CALL algo.dijkstra(startId, endId, 'weight')` | `path`, `distance` | Weighted shortest path | 10.0.0 |
 | `CALL algo.astar(startId, endId, 'weight', 'heuristic')` | `path`, `distance` | Heuristic-guided shortest path (A\*) | 10.0.0 |
 
 ```cypher
@@ -134,7 +134,7 @@ Returns the path as "id1 -> id2 -> id3", total cost, and hop count.
 |---|---|---|---|
 | `CALL algo.nodeSimilarity()` | `node1`, `node2`, `similarity` | Pairs of nodes with Jaccard similarity scores (top 20) | 4.0.0 |
 | `CALL algo.similarNodes()` | `nodeId`, `score` | Nodes similar to the first vector-bearing node (cosine similarity) | 5.0.0 |
-| `CALL algo.nearestNodes(point, label, k)` | `node`, `distance` | K nearest nodes by exact spatial distance (R\*-tree, ≥ 2000/s at 11K entities) | 5.0.0 |
+| `CALL algo.nearestNodes(point, label, k)` | `node`, `distance` | K nearest nodes by exact spatial distance (ArcFlow Spatial Index, ≥ 2000/s at 11K entities) | 5.0.0 |
 | `CALL algo.objectsInFrustum($frustum)` | `node`, `distance` | Entities within a camera frustum (6-plane containment, < 2ms for 50 entities) | 10.0.0 |
 | `CALL algo.nearestVisible($pos, label, k)` | `node`, `distance` | Nearest entities with direct line-of-sight from a point | 10.0.0 |
 | `CALL spatial.raycast(origin, direction, maxDist)` | `hit`, `distance` | First node along a ray within max distance | 10.0.0 |
@@ -143,7 +143,7 @@ Returns the path as "id1 -> id2 -> id3", total cost, and hop count.
 
 | Procedure | Return Columns | Description | Since |
 |---|---|---|---|
-| `CALL algo.vectorSearch()` | `nodeId`, `score`, `labels` | Vector similarity search over HNSW index. Accepts optional query vector argument. GPU-accelerated when available. | 5.0.0 |
+| `CALL algo.vectorSearch()` | `nodeId`, `score`, `labels` | Vector similarity search over vector index. Accepts optional query vector argument. GPU-accelerated when available. | 5.0.0 |
 | `CALL algo.hybridSearch()` | `nodeId`, `score`, `hops` | Combined vector + graph traversal search | 5.0.0 |
 | `CALL algo.graphRAG()` | `nodeId`, `score`, `hops`, `labels` | Graph-augmented retrieval for RAG pipelines. Accepts optional query vector argument. | 5.0.0 |
 | `CALL algo.graphRAGContext()` | `context`, `node_count`, `tokens_approx` | Formatted LLM context from graph retrieval. Accepts optional query vector and max_tokens arguments. | 5.0.0 |
@@ -169,7 +169,7 @@ Generate node embeddings for downstream vector search, classification, and simil
 
 | Procedure | Return Columns | Description | Since |
 |---|---|---|---|
-| `CALL algo.node2vec(dims, walkLen, walks)` | _(sets node.embedding)_ | Random walk + skip-gram embeddings | 10.0.0 |
+| `CALL algo.node2vec(dims, walkLen, walks)` | _(sets node.embedding)_ | Structural random walk embeddings | 10.0.0 |
 | `CALL algo.struc2vec(dims)` | _(sets node.embedding)_ | Structural equivalence embeddings | 10.0.0 |
 | `CALL algo.graphSAGE(dims)` | _(sets node.embedding)_ | Inductive neighborhood aggregation embeddings | 10.0.0 |
 | `CALL algo.staleEmbeddings()` | `nodeId`, `name` | Nodes whose embeddings are outdated (property changed after last embed) | 10.0.0 |

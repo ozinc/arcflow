@@ -27,7 +27,7 @@ If these appear in an arcflow-docs PR, reject it.
 | Graph algorithms (27+) | `docs/algorithms.mdx` | Complete |
 | Workspace CLI (arcflow workspace init) | `docs/guides/filesystem-workspace.mdx` | Complete |
 | Proof artifacts (snapshot-based) | `docs/concepts/proof-artifacts.mdx` | Complete |
-| Skill / Constructor GQL syntax | `docs/constructors/create-constructor.mdx` | Complete |
+| Skill GQL syntax | `docs/skills/create-skill.mdx` | Complete |
 
 ---
 
@@ -84,7 +84,7 @@ The existing examples remain valid.
 **What to cover:**
 - `db.queryAsOf(cypher, timestamp, params?)` — typed wrapper over AS OF
 - `db.provenanceChain(nodeId, maxDepth?)` — walk from a node back to its origin
-- `ProvenanceNode` shape: constructorName, version, confidence, tick, sourceFacts
+- `ProvenanceNode` shape: skillName, version, confidence, tick, sourceFacts
 - Pattern: "Who created this relationship and when?"
 - Pattern: "What did the graph look like at seq N?"
 - Pattern: "Which facts supported this inference?"
@@ -93,7 +93,7 @@ The existing examples remain valid.
 // Who created this and when?
 const chain = db.provenanceChain('node_42', 3)
 for (const node of chain) {
-  console.log(`${node.constructorName} v${node.constructorVersion} @ tick ${node.tick}`)
+  console.log(`${node.skillName} v${node.skillVersion} @ tick ${node.tick}`)
   console.log(`confidence: ${node.confidence}, from: ${node.sourceFacts.join(', ')}`)
 }
 
@@ -141,13 +141,13 @@ testDb.workspace.drop(testDb.workspace.id)
 
 **Blocked on:** SDK-04 (`registerSkill()` napi-rs binding)
 
-**Where:** New section in `docs/constructors/create-constructor.mdx`
+**Where:** New section in `docs/skills/create-skill.mdx`
 ("TypeScript Registration API" section after the existing GQL section)
 
 **What to cover:**
 - `db.registerSkill(spec)` — SYMBOLIC skill registration without raw GQL
-- `SkillSpec` shape: name, version, tier, allowedLabels, relConstructor
-- `RelConstructorFn` signature: (source, candidates) → results
+- `SkillSpec` shape: name, version, tier, allowedLabels, deriveFn
+- `DeriveFn` signature: (source, candidates) → results
 - `db.listSkills()` — introspect registered skills
 - Pattern: domain-level registration (not hardcoded in query strings)
 
@@ -157,7 +157,7 @@ db.registerSkill({
   version: 4,
   tier: 'SYMBOLIC',
   allowedLabels: ['Person', 'Organization'],
-  relConstructor: (source, candidates) => {
+  deriveFn: (source, candidates) => {
     return candidates
       .filter(c => c.get('industry') === source.get('industry'))
       .map(c => ({

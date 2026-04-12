@@ -11,7 +11,7 @@ playground:
 
 # Observations & Evidence
 
-ArcFlow classifies every piece of knowledge by how it was obtained. This lets you distinguish hard evidence from inference, and inference from prediction.
+The **ArcFlow Evidence Model** classifies every fact in the graph by how it was obtained. Each node and relationship carries three pieces of epistemic context: an observation class (how it was acquired), a confidence score (how reliable it is), and a provenance chain (which source, skill, or model produced it). This lets queries filter not just on *what* is known, but on *how well* it is known — the foundation for trusted RAG, confidence-gated coordination, and audit trails that survive scrutiny.
 
 ## Three observation classes
 
@@ -102,4 +102,4 @@ CALL db.causalChain
 - [Confidence & Provenance](/concepts/confidence-and-provenance) — `_confidence` scores and provenance edges in depth
 - [Proof Artifacts & Gates](/concepts/proof-artifacts) — cryptographic state proofs built from observation history
 - [Trusted RAG](/trusted-rag) — confidence-filtered retrieval that surfaces observation class alongside facts
-- [Constructors](/concepts/constructors) — rules that infer new edges from observed nodes
+- [Skills](/concepts/skills) — rules that infer new edges from observed nodes

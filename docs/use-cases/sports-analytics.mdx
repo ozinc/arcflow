@@ -42,7 +42,7 @@ db.batchMutate([
   "CREATE (ball:Ball {id: 'ball', position: point({x: 50.0, y: 33.5}), speed: 12.4})",
 ])
 
-// Spatial: nearest players to ball (R*-tree, ≥ 2000/s at 22 entities)
+// Spatial: nearest players to ball (ArcFlow Spatial Index, ≥ 2000/s at 22 entities)
 db.query("CALL algo.nearestNodes(ball.position, 'Player', 5) YIELD node, distance RETURN node.name, distance")
 
 // Spatial: offside check — attacking players ahead of last defender

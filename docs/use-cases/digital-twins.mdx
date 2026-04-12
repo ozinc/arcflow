@@ -75,7 +75,7 @@ CREATE (sensor)-[:MONITORS {
 ## Spatial queries
 
 ```cypher
--- All assets within 10m of a location (R*-tree indexed)
+-- All assets within 10m of a location (ArcFlow Spatial Index)
 CALL algo.nearestNodes(point({x: 24.5, y: 18.2}), 'Asset', 20)
   YIELD node AS asset, distance
 WHERE distance < 10.0
@@ -216,7 +216,7 @@ local.mutate(`MATCH (a:Asset {id: 'PUMP-07'}) SET a.temp_c = $temp`, { temp: 71.
 ## See Also
 
 - [Building a World Model](/guides/world-model) — the core pattern
-- [Spatial Queries](/spatial-knowledge) — R*-tree, frustum, proximity
+- [Spatial Queries](/spatial-knowledge) — ArcFlow Spatial Index, frustum, proximity
 - [Temporal Queries](/worldcypher/temporal) — `AS OF seq N`, replay
 - [Live Queries](/live-queries) — live alerts and materialized views
 - [Autonomous Systems](/use-cases/autonomous-systems) — autonomous systems in the same world model

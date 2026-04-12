@@ -81,7 +81,7 @@ The ArcFlow GPU Index is the structure that makes `GpuLocal` and `GpuMulti` lane
 
 ### Multi-GPU Partitioning
 
-Spatial data is partitioned across GPU devices by a stable hash of `node_id`. Queries spanning partition boundaries fan out to all relevant GPUs and merge results. Devices connected via NVLink, NVSwitch, or Infinity Fabric form peer islands — within an island, work-stealing happens without PCIe transfer cost.
+Spatial data is partitioned across GPU devices by a stable hash of `node_id`. Queries spanning partition boundaries fan out to all relevant GPUs and merge results. Devices connected via high-bandwidth GPU interconnects form peer islands — within an island, work-stealing happens without PCIe transfer cost.
 
 ```cypher
 -- Same spatial query — Adaptive Dispatch routes to GpuMulti when warranted

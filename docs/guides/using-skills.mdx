@@ -1,0 +1,179 @@
+---
+title: "Using Skills"
+description: "Skills derive confidence-scored relationships from world model entities — register a rule once, and the graph materializes edges with provenance automatically."
+section: "guides"
+order: 2
+since: "0.3.0"
+status: "stable"
+playground:
+  seed: world
+  query: "MERGE (skill:Skill {id: 'entity-tracker', name: 'EntityTracker', version: 3, min_confidence: 0.82, active: 1}) MERGE (s1:Sensor {id: 'cam-1', name: 'Cam-LabA', type: 'camera', reliability: 0.95, confidence_floor: 0.85, poll_hz: 25}) MERGE (s2:Sensor {id: 'lidar-1', name: 'Lidar-LabB', type: 'lidar', reliability: 0.91, confidence_floor: 0.80, poll_hz: 10}) MERGE (agent:Agent {id: 'tracker-agent', name: 'TrackerPrime', role: 'tracking', active: 1}) MERGE (sk1:Skill {id: 'entity-tracker'})-[:APPLIED_TO]->(s1:Sensor {id: 'cam-1'}) MERGE (sk2:Skill {id: 'entity-tracker'})-[:APPLIED_TO]->(s2:Sensor {id: 'lidar-1'}) MERGE (ag:Agent {id: 'tracker-agent'})-[:EXECUTES]->(sk:Skill {id: 'entity-tracker'}) MATCH (a:Agent)-[:EXECUTES]->(sk:Skill)-[:APPLIED_TO]->(s:Sensor) RETURN a.name AS agent, sk.name AS skill, sk.version AS version, s.name AS sensor, s.type AS sensor_type, s.reliability AS reliability, s.confidence_floor AS min_confidence, s.poll_hz AS poll_rate ORDER BY s.poll_hz DESC"
+
+---
+
+# Using Skills
+
+Skills register a derivation rule once. Every time `PROCESS NODE` runs, the world model materializes the resulting edges with confidence scores and provenance — which skill built them, which version, when.
+
+This guide walks through the full lifecycle using a robotics scenario: detecting which robots are operating in the same zone and should coordinate.
+
+---
+
+## The scenario
+
+You have a world model with `Robot` nodes, each carrying position and observation state from sensors. You want to derive `ZONE_PEER` relationships between robots that share a zone — but not store them as raw assertions. Instead, you want them derived automatically, confidence-scored, and re-evaluable as sensor quality improves.
+
+---
+
+## Step 1: Register the skill
+
+```cypher
+CREATE SKILL ZonePeerDetector
+  FROM PROMPT 'Link two Robot nodes as ZONE_PEER if they occupy the same Zone with combined confidence above 0.75'
+  ALLOWED ON [Robot]
+  TIER SYMBOLIC
+```
+
+The skill is now stored in the world model. It does not run yet — registration and execution are separate.
+
+---
+
+## Step 2: Populate the world model
+
+```cypher
+-- Observed robots in zones (from sensor fusion)
+CREATE (r1:Robot {
+  name: 'Atlas-01', zone: 'assembly-floor',
+  x: 12.4, y: 8.7,
+  _observation_class: 'observed', _confidence: 0.95
+})
+CREATE (r2:Robot {
+  name: 'Rover-02', zone: 'assembly-floor',
+  x: 14.1, y: 9.2,
+  _observation_class: 'observed', _confidence: 0.88
+})
+CREATE (r3:Robot {
+  name: 'Welder-03', zone: 'staging-bay',
+  x: 45.0, y: 3.1,
+  _observation_class: 'observed', _confidence: 0.91
+})
+CREATE (r4:Robot {
+  name: 'Scout-04', zone: 'assembly-floor',
+  x: 13.0, y: 8.0,
+  _observation_class: 'inferred', _confidence: 0.72
+})
+```
+
+---
+
+## Step 3: Run the skill
+
+```cypher
+PROCESS NODE (n:Robot)
+```
+
+The engine evaluates `ZonePeerDetector` against all Robot nodes. It materializes `ZONE_PEER` edges between robots that satisfy the rule:
+
+```
+=> Created 2 ZONE_PEER edges (Atlas-01 ↔ Rover-02, Atlas-01 ↔ Scout-04)
+   avg confidence: 0.83
+   Scout-04 edge: confidence 0.68 (below threshold — not materialized for Rover-02 pair)
+```
+
+Each edge carries:
+- `_confidence` — the skill's certainty score
+- `_skill_version` — the version that built it
+- `_created_at` — timestamp
+
+---
+
+## Step 4: Query derived edges with provenance
+
+```cypher
+MATCH (a:Robot)-[r:ZONE_PEER]->(b:Robot)
+RETURN
+  a.name AS robot_a,
+  b.name AS robot_b,
+  a.zone AS zone,
+  r._confidence AS confidence,
+  r._skill_version AS built_by_version,
+  r._created_at AS derived_at
+ORDER BY r._confidence DESC
+```
+
+Every derived relationship is traceable. If a coordination decision was made based on a `ZONE_PEER` edge, you can reconstruct exactly which skill version produced it, at what confidence.
+
+---
+
+## Step 5: Re-evaluate as sensors improve
+
+Over time, sensor fusion improves and `Scout-04`'s confidence rises from 0.72 to 0.89. The existing `ZONE_PEER` edge to `Rover-02` was never materialized because the original confidence was too low.
+
+```cypher
+REPROCESS EDGES WHERE confidence < 0.75
+```
+
+This:
+1. Finds all dynamic edges below threshold
+2. Deletes them
+3. Re-runs their skills against the current world model state
+4. Materializes new edges with fresh confidence scores
+
+```
+=> Re-evaluated 1 edge pair
+=> Created 1 new ZONE_PEER edge: Rover-02 ↔ Scout-04, confidence 0.86
+```
+
+The world model now reflects the higher-quality sensor state — without any manual update.
+
+---
+
+## Step 6: Version the skill
+
+When the coordination logic improves, create a new version:
+
+```cypher
+CREATE SKILL ZonePeerDetector_v2
+  FROM PROMPT 'Link two Robot nodes as ZONE_PEER if they share a zone AND have overlapping sensor coverage, with combined confidence above 0.80'
+  ALLOWED ON [Robot]
+  TIER SYMBOLIC
+```
+
+Run it selectively, then reprocess to upgrade the weakest edges:
+
+```cypher
+PROCESS NODE (n:Robot)
+REPROCESS EDGES WHERE confidence < 0.80
+-- => Upgraded 3 edges from ZonePeerDetector to ZonePeerDetector_v2
+--    avg confidence: 0.73 → 0.88
+```
+
+Old edges carry `_skill_version: 'ZonePeerDetector'`. New edges carry `_skill_version: 'ZonePeerDetector_v2'`. Both coexist until reprocessed — the version trail is never lost.
+
+---
+
+## Multiple skills on the same nodes
+
+Nodes can have multiple skills applied simultaneously. Each runs independently and produces its own edge type:
+
+```cypher
+CREATE SKILL SensorCoverageLinker
+  FROM PROMPT 'Link two Robots as SHARED_COVERAGE if a single Sensor has detected both within 60 seconds'
+  ALLOWED ON [Robot]
+  TIER SYMBOLIC
+
+PROCESS NODE (n:Robot)
+-- ZonePeerDetector    => ZONE_PEER edges
+-- SensorCoverageLinker => SHARED_COVERAGE edges
+-- Each edge type carries its own confidence and provenance
+```
+
+---
+
+## See Also
+
+- [Concepts: Skills](/concepts/skills) — what skills are and why they matter
+- [CREATE SKILL](/skills/create-skill) — full syntax reference
+- [REPROCESS EDGES](/skills/reprocess-edges) — re-evaluation reference
+- [Confidence & Provenance](/concepts/confidence-and-provenance) — how scores flow through derived edges
+- [Use Case: Knowledge Management](/use-cases/knowledge-management) — skills in an entity extraction pipeline

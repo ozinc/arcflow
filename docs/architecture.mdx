@@ -16,7 +16,7 @@ One process, zero serialization, all modules share memory. ArcFlow is a **SoC mo
 
 <img src="/diagrams/architecture-soc.svg" alt="ArcFlow SoC Architecture" style={{width:"100%",margin:"1.5rem 0",borderRadius:"8px"}} />
 
-This architecture eliminates entire categories of infrastructure: no external cache service (the graph is already in-process), no separate vector database (HNSW indexes live alongside graph data), no workflow engine for orchestration (procedures run in the same runtime). The result is fewer moving parts, lower latency, and a single binary to deploy.
+This architecture eliminates entire categories of infrastructure: no external cache service (the graph is already in-process), no separate vector database (vector indexes live alongside graph data), no workflow engine for orchestration (procedures run in the same runtime). The result is fewer moving parts, lower latency, and a single binary to deploy.
 
 ## Design Principles
 
@@ -25,6 +25,7 @@ This architecture eliminates entire categories of infrastructure: no external ca
 - **Agent-native**: Structured output, typed errors, machine-readable contracts.
 - **Rust-native**: Zero-cost abstractions, memory safety, single binary.
 - **Zero serialization**: Modules communicate through shared Rust types, not wire protocols.
+- **Evidence-first**: Every fact carries the ArcFlow Evidence Model — observation class, confidence score, provenance chain. Trust is a query dimension, not an afterthought.
 
 ## Three-Plane Architecture
 

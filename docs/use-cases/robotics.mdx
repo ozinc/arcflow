@@ -24,7 +24,7 @@ lidar               nodes: entities             spatial queries
 camera              edges: relationships         temporal replay
 radar               _confidence scores           confidence filters
 IMU                 _observation_class           graph algorithms
-GPS                 spatial index (R*-tree)      live triggers
+GPS                 spatial index (ArcFlow Spatial Index)      live triggers
 ```
 
 Every sensor reading flows into the world model as a versioned mutation. The history of every entity is preserved. Confidence is tracked per observation. The planning layer reads from a single, consistent source — not a patchwork of ROS topics and CSV logs.
@@ -73,7 +73,7 @@ CREATE (lidar)-[:DETECTED {
 ## Spatial perception queries
 
 ```cypher
--- All entities within 20m (k-nearest, R*-tree backed, >2000/s at 11K entities)
+-- All entities within 20m (k-nearest, ArcFlow Spatial Index backed, >2000/s at 11K entities)
 CALL algo.nearestNodes(point({x: 0.0, y: 0.0}), 'Entity', 50)
   YIELD node AS e, distance
 WHERE distance < 20.0
@@ -239,7 +239,7 @@ rclnodejs.init().then(() => {
 ## See Also
 
 - [Building a World Model](/guides/world-model) — the foundational guide
-- [Spatial Queries](/spatial-knowledge) — full R*-tree and frustum reference
+- [Spatial Queries](/spatial-knowledge) — full ArcFlow Spatial Index and frustum reference
 - [Temporal Queries](/worldcypher/temporal) — replay, `AS OF seq N`
 - [Grounded Neural Objects](/use-cases/grounded-neural-objects) — entity identity persistence
 - [Autonomous Systems](/use-cases/autonomous-systems) — fleet coordination

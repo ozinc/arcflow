@@ -1,7 +1,7 @@
 ---
 title: "REPROCESS EDGES"
-description: "Re-evaluate world model edges below a confidence threshold — delete stale edges and re-run their constructors for fresh, higher-quality relationships."
-section: "constructors"
+description: "Re-evaluate world model edges below a confidence threshold — delete stale edges and re-run their skills for fresh, higher-quality relationships."
+section: "skills"
 order: 4
 since: "0.4.0"
 status: "stable"
@@ -13,7 +13,7 @@ playground:
 
 # REPROCESS EDGES
 
-Re-evaluate low-confidence edges when constructors improve. Deletes edges below a threshold and re-runs their constructors for fresh scores.
+Re-evaluate low-confidence edges when skills improve. Deletes edges below a threshold and re-runs their skills for fresh scores.
 
 ## Syntax
 
@@ -30,10 +30,10 @@ REPROCESS EDGES WHERE confidence < 0.6
 This:
 1. Finds all dynamic edges with confidence below 0.6
 2. Deletes them
-3. Re-executes the originating constructors
+3. Re-executes the originating skills
 4. New edges get fresh confidence scores and updated provenance
 
 ## See Also
 
-- [PROCESS NODE](/constructors/process-node)
+- [PROCESS NODE](/skills/process-node)
 - [Confidence & Provenance](/concepts/confidence-and-provenance)

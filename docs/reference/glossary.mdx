@@ -178,9 +178,9 @@ These two layers are complementary: neural world models simulate → ArcFlow rec
 
 ---
 
-## Constructor
+## Skill
 
-**ArcFlow.** A named, persistent graph procedure that processes nodes with a specific label. Defined with `CREATE SKILL`, triggered with `PROCESS NODE`. Constructors implement extraction pipelines, enrichment steps, and transformation logic as graph-native operations.
+**ArcFlow.** A named, versioned, graph-native program that processes nodes with a specific label and derives confidence-scored relationships. Defined with `CREATE SKILL`, triggered with `PROCESS NODE`. Skills implement extraction pipelines, enrichment steps, and relationship derivation as first-class graph objects — each edge they produce carries provenance, a confidence score, and the version that built it.
 
 ---
 
@@ -210,7 +210,7 @@ A test suite for verifying query language conformance. The openCypher TCK contai
 
 ## SWMR (Single Writer, Multiple Readers)
 
-**ArcFlow.** ArcFlow's replication topology. One primary node writes; read replicas follow the WAL via Arrow Flight. Reads on replicas are fully consistent with the primary's committed state.
+**ArcFlow.** ArcFlow's replication topology. One primary node writes; read replicas follow via ArcFlow WAL Stream. Reads on replicas are fully consistent with the primary's committed state.
 
 ---
 
@@ -232,11 +232,38 @@ A test suite for verifying query language conformance. The openCypher TCK contai
 
 ---
 
+## ArcFlow Spatial Index
+
+**ArcFlow.** The exact spatial indexing system for world model data. Backs all CPU-path spatial queries — K-nearest-neighbor, radius, bounding-box, frustum, and raycast. Returns exact answers, never approximate. Optimized for dynamic data: entities that move, zones that change, and sensors that update at frame rate. At GPU dispatch thresholds, ArcFlow Adaptive Dispatch promotes the index to the ArcFlow GPU Index for hardware-accelerated traversal.
+
+---
+
+## ArcFlow WAL Stream
+
+**ArcFlow.** The high-throughput replication transport. In SWMR topology, the primary node streams WAL entries to read replicas via ArcFlow WAL Stream; replicas apply them in order and maintain full query consistency with the primary. The same transport drives object-store fan-out for durable cross-region replication (S3/GCS/Azure).
+
+---
+
+## ArcFlow Evidence Model
+
+**ArcFlow.** The system that makes every fact in the graph epistemically graded. Every node and relationship carries three pieces of context: an **observation class** (observed, inferred, or predicted), a **confidence score** (0.0–1.0), and a **provenance chain** (which source, skill, or model produced it). Together these let queries filter not just on what is known, but on how well it is known — the foundation for trusted RAG, confidence-gated decisions, and audit trails that survive scrutiny.
+
+---
+
+## ArcFlow Clock Domains
+
+**ArcFlow.** The mechanism for managing multi-rate temporal data from heterogeneous sources. Real-world environments produce observations from sources running at different rates — sensors, cameras, RFID readers, and models each advance at their own frequency. ArcFlow Clock Domains let each source maintain its own independent temporal sequence. The world model merges them without external alignment preprocessing, and each observation retains its originating domain in provenance metadata, so a query can distinguish readings from a 25Hz camera and a 1Hz RFID reader even when both describe the same entity at the same wall-clock instant.
+
+---
+
 ## See Also
 
 - [Graph Model](/concepts/graph-model) — detailed node/relationship/property model
 - [Graph Patterns](/concepts/graph-patterns) — how to write pattern queries
 - [SQL vs GQL](/concepts/sql-vs-gql) — mental model shift from relational to graph
 - [GQL Conformance](/reference/gql-conformance) — standards coverage
+- [Observations & Evidence](/concepts/observations) — ArcFlow Evidence Model in depth
 - [Confidence & Provenance](/concepts/confidence-and-provenance) — scoring and tracing facts
+- [Temporal](/temporal) — ArcFlow Clock Domains and AS OF queries
 - [GPU Acceleration](/gpu) — ArcFlow Graph Kernel, Adaptive Dispatch, and GPU Index in depth
+- [Sync](/sync) — ArcFlow WAL Stream and SWMR replication

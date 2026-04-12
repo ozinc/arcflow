@@ -37,7 +37,7 @@ If you've used behavior trees before, everything maps directly:
 |---|---|---|
 | Behavior Tree | Workflow subgraph | Persistent, queryable, versioned |
 | Blackboard | GraphStore (knowledge graph) | Full GQL queries, not just key-value |
-| Tick | `TemporalClock.tick()` | Multi-clock domains, temporal history |
+| Tick | `TemporalClock.tick()` | ArcFlow Clock Domains, temporal history |
 | Node Status (SUCCESS/FAILURE/RUNNING) | FactLifecycle (8 states) | Decay, supersession, dispute resolution |
 | Sequence Node | Workflow steps (sequential) | WAL-durability, retry policies |
 | Selector / Fallback | `StepKind::Conditional` | Graph-pattern predicates, not just booleans |
@@ -267,8 +267,8 @@ ArcFlow Behavior Graph combines the BT mental model with graph-native infrastruc
 - **WAL-backed persistence** — trees and state survive process restart
 - **Temporal reasoning** — query any agent's state at any past timestamp via `AS OF`
 - **Graph-queryable blackboard** — full GQL over the knowledge graph, not key-value lookup
-- **Multi-clock domains** — sensors tick at independent rates, ArcFlow reconciles across domains
-- **Confidence scoring** — edges carry provenance and trust weights (0.0-1.0)
+- **ArcFlow Clock Domains** — sensors tick at independent rates, each domain maintains its own sequence, ArcFlow merges into a coherent view
+- **ArcFlow Evidence Model** — edges carry observation class, confidence score, and provenance chain (0.0–1.0)
 - **GPU acceleration** — PageRank at 154M nodes/sec, vector search at 25K queries/sec (CUDA/Metal)
 
 ---
@@ -279,7 +279,7 @@ ArcFlow Behavior Graph combines the BT mental model with graph-native infrastruc
 Your BT Blueprint nodes map to `:BehaviorNode` graph nodes. The Blackboard becomes the full graph. Environment queries become GQL patterns. The difference: ArcFlow trees persist across restarts, carry temporal history, and scale to thousands of concurrent agents sharing a single knowledge graph. Trade-off: ArcFlow runs outside the game engine process, so you need FFI or MCP integration for tight game-loop coupling.
 
 ### C++ Behavior Tree Libraries / ROS2?
-Same tick-based evaluation model. ArcFlow adds WAL-durable persistence, GQL queries as conditions/actions, multi-robot coordination via partitioned workspaces, and temporal sensor fusion across clock domains. Trade-off: dedicated BT libraries have lower per-tick overhead for pure in-memory evaluation; ArcFlow's advantage is queryable persistent state and multi-agent coordination.
+Same tick-based evaluation model. ArcFlow adds WAL-durable persistence, GQL queries as conditions/actions, multi-robot coordination via partitioned workspaces, and temporal sensor fusion via ArcFlow Clock Domains. Trade-off: dedicated BT libraries have lower per-tick overhead for pure in-memory evaluation; ArcFlow's advantage is queryable persistent state and multi-agent coordination.
 
 ### LLM Orchestration Frameworks?
 Replace your agent's ad-hoc state dict with a knowledge graph. Behavior trees give your agent structured decision-making instead of prompt chains. `algo.graphRAG()` + behavior tree ticking = agents with persistent memory and traceable reasoning. Trade-off: higher initial setup than a state dict, but the graph pays for itself when you need to debug agent decisions or coordinate multiple agents.

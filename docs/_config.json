@@ -49,7 +49,7 @@
         { "slug": "concepts/observations", "title": "Observations & Evidence", "order": 10 },
         { "slug": "concepts/confidence-and-provenance", "title": "Confidence & Provenance", "order": 11 },
         { "slug": "concepts/proof-artifacts", "title": "Proof Artifacts & Gates", "order": 12 },
-        { "slug": "concepts/constructors", "title": "Constructors", "order": 13 }
+        { "slug": "concepts/skills", "title": "Skills", "order": 13 }
       ]
     },
     {
@@ -98,13 +98,13 @@
       ]
     },
     {
-      "id": "constructors",
-      "title": "Constructors",
+      "id": "skills",
+      "title": "Skills",
       "items": [
-        { "slug": "constructors", "title": "Overview", "order": 1 },
-        { "slug": "constructors/create-constructor", "title": "CREATE SKILL", "order": 2 },
-        { "slug": "constructors/process-node", "title": "PROCESS NODE", "order": 3 },
-        { "slug": "constructors/reprocess-edges", "title": "REPROCESS EDGES", "order": 4 }
+        { "slug": "skills", "title": "Overview", "order": 1 },
+        { "slug": "skills/create-skill", "title": "CREATE SKILL", "order": 2 },
+        { "slug": "skills/process-node", "title": "PROCESS NODE", "order": 3 },
+        { "slug": "skills/reprocess-edges", "title": "REPROCESS EDGES", "order": 4 }
       ]
     },
     {
@@ -131,7 +131,7 @@
         { "slug": "guides/world-model", "title": "World Model", "order": 2 },
         { "slug": "guides/modeling-a-social-graph", "title": "Graph Model Fundamentals", "order": 3 },
         { "slug": "guides/rag-pipeline", "title": "Trusted RAG", "order": 4 },
-        { "slug": "guides/using-constructors", "title": "Using Constructors", "order": 5 },
+        { "slug": "guides/using-skills", "title": "Using Skills", "order": 5 },
         { "slug": "guides/behavior-graphs", "title": "Behavior Graphs", "order": 6 },
         { "slug": "guides/swarm-agents", "title": "Swarm & Multi-Agent", "order": 7 },
         { "slug": "guides/migration", "title": "Migration Guide", "order": 8 },
