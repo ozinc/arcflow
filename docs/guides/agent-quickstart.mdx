@@ -3,8 +3,11 @@ title: "Agent Integration Guide"
 description: "Embed a world model database in any project — spatial-temporal, confidence-scored, in-process. For Claude Code, Codex, Cursor, Copilot."
 section: "guides"
 status: "stable"
-playground:
   query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS entity_count, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS composite_trust RETURN zone, hazard, entity_count, avg_battery, composite_trust, CASE WHEN composite_trust >= 0.90 THEN 'optimal' WHEN composite_trust >= 0.75 THEN 'nominal' ELSE 'degraded' END AS status ORDER BY composite_trust DESC"
+playground:
+  seed: world
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS entity_count, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS composite_trust RETURN zone, hazard, entity_count, avg_battery, composite_trust, CASE WHEN composite_trust >= 0.90 THEN 'optimal' WHEN composite_trust >= 0.75 THEN 'nominal' ELSE 'degraded' END AS status ORDER BY composite_trust DESC"
+
 ---
 
 # Add ArcFlow to a Project
