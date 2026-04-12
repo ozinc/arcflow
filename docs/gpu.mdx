@@ -1,9 +1,8 @@
 ---
-title: "GPU & Sparse Linear Algebra"
-description: "World model algorithms at GPU speed — graph traversal and community detection as sparse matrix operations, automatic Metal/CUDA dispatch, same query syntax."
+title: "GPU Acceleration"
+description: "World model algorithms at GPU speed — graph traversal, community detection, and spatial queries dispatched automatically to the best available hardware."
 section: "gpu"
 order: 1
-since: "9.0.0"
 status: "stable"
 playground:
   seed: world
@@ -12,91 +11,34 @@ playground:
 
 # GPU Acceleration
 
-ArcFlow implements graph algorithms as **sparse linear algebra operations** — not as edge traversals. Most graph databases walk the graph one edge at a time: visit a node, follow an edge, visit the next node. That is sequential and cache-hostile. It does not map to GPU hardware.
+ArcFlow runs graph algorithms as **parallel operations across the entire graph at once** — not as sequential edge traversals. Most graph databases walk the graph one node at a time: visit a node, follow an edge, visit the next. That is sequential, cache-hostile, and does not map to GPU hardware.
 
-ArcFlow represents the graph as a **sparse matrix** and runs algorithms as **linear algebra operations**. PageRank becomes a sparse matrix-vector multiply. BFS becomes a boolean matrix-vector multiply. Triangle counting becomes a masked sparse matrix-matrix multiply. These operations are massively parallel, cache-friendly, and map directly to GPU hardware.
+ArcFlow's graph engine represents the world model as a compact parallel structure and processes algorithms across all nodes simultaneously. PageRank, BFS, connected components, community detection — each runs as a single parallel pass, not a recursive walk. This maps directly to GPU thread blocks.
 
-This is **GraphBLAS** — the Graph Basic Linear Algebra Subprograms standard. ArcFlow implements it natively in Rust.
-
----
-
-## The Insight: Graphs Are Matrices
-
-Every graph is a sparse matrix. An edge from node A to node B is a non-zero entry at position (A, B) in the adjacency matrix. Most entries are zero (sparse) — a 10K-node graph with 50K edges has 10K x 10K = 100M potential entries, but only 50K are non-zero (0.05% density).
-
-ArcFlow stores this matrix in **CSR (Compressed Sparse Row)** format — three flat arrays instead of a nested HashMap:
-
-```
-offsets: [0, 3, 5, 8, ...]     // Where each row starts
-targets: [2, 5, 7, 1, 4, ...]  // Column indices (target nodes)
-values:  [1.0, 1.0, 0.8, ...]  // Edge weights
-```
-
-CSR is cache-friendly (sequential memory access), GPU-friendly (flat arrays transfer to GPU in one copy), and compact (no pointer chasing, no HashMap overhead).
-
----
-
-## Semirings: One Abstraction, Many Algorithms
-
-The key insight of GraphBLAS: different graph algorithms are the same matrix operation with different **semirings** — different definitions of "add" and "multiply."
-
-| Algorithm | Semiring | "Multiply" | "Add" | What it computes |
-|---|---|---|---|---|
-| **PageRank** | Plus-Times | `a * b` | `a + b` | Authority scores via iterative SpMV |
-| **BFS** | Logical OR-AND | `a AND b` | `a OR b` | Reachability frontier expansion |
-| **Shortest Path** | Min-Plus | `a + b` | `min(a, b)` | Minimum cost paths |
-| **Connected Components** | Min-Second | `b` | `min(a, b)` | Component labeling |
-| **Widest Path** | Max-First | `a` | `max(a, b)` | Maximum bottleneck path |
-| **Triangle Count** | Plus-Times (masked) | `a * b` | `a + b` | Count via masked SpGEMM |
-
-ArcFlow implements 8 semirings:
-
-```
-PlusTimesFP32    — standard linear algebra (PageRank, triangle count)
-MinPlusUint32    — shortest paths (Dijkstra, APSP)
-MinPlusFP32      — weighted shortest paths
-MaxFirstUint32   — widest/bottleneck paths
-LogicalOrAnd     — BFS, reachability
-PlusMinFP32      — alternative path metrics
-MinSecondUint32  — connected components (label propagation)
-MaxPlusFP32      — longest paths
-```
-
-One SpMV kernel. Eight semirings. Twenty-seven algorithms. The same matrix operation — just with different definitions of "add" and "multiply."
-
----
-
-## GPU Dispatch: Same Query, Automatic Routing
+The developer writes one query. The engine picks the fastest path.
 
 ```cypher
 CALL algo.pageRank()
 ```
 
-This query runs the same on every platform. ArcFlow auto-detects hardware and routes:
+---
 
-1. **Graph has fewer than 200 nodes** → CPU (dispatch overhead exceeds GPU benefit)
-2. **Metal GPU available (macOS/iOS)** → SpMV runs on Apple Silicon GPU, UMA zero-copy
-3. **CUDA GPU available (Linux)** → SpMV runs on NVIDIA GPU, managed memory
-4. **No GPU** → CPU SpMV (still fast — CSR + semirings are inherently efficient)
+## Automatic Hardware Dispatch
 
-The developer writes one query. The engine picks the fastest path. Zero configuration.
+ArcFlow detects available hardware at startup and routes each operation to the fastest available backend:
 
-### Metal GPU (Apple Silicon)
+1. **Small graphs (< 200 nodes)** — CPU (dispatch overhead exceeds GPU benefit at this scale)
+2. **Apple Silicon (macOS / iOS)** — GPU compute via Metal. Unified memory means no CPU→GPU copy overhead.
+3. **NVIDIA GPU (Linux / Windows)** — GPU compute via CUDA kernels. Dynamic driver loading — no compile-time GPU dependency.
+4. **CPU fallback** — ArcFlow's own parallel CPU implementation when no GPU is present.
 
-On macOS and iOS, ArcFlow dispatches SpMV operations to Metal compute shaders. Apple Silicon's Unified Memory Architecture means **zero-copy** — the CSR matrix doesn't need to be transferred to the GPU. CPU and GPU read the same memory.
+Zero configuration. The same GQL query runs on a laptop, a workstation, or a GPU cluster.
 
-```
-CPU: PageRank on 10K nodes → 0.6ms
-GPU: PageRank on 10K nodes → 0.25ms (2.4x)
-```
+---
 
-Metal dispatch is automatic. The `grb_mxv()` function checks if a Metal SpMV backend is registered and the matrix exceeds the minimum size threshold (200 rows). If both conditions are true, it dispatches to GPU. If Metal fails or isn't available, it falls back to CPU transparently.
+## Benchmark Results
 
-### CUDA GPU (Linux / Windows)
-
-On systems with NVIDIA GPUs, ArcFlow dispatches to CUDA kernels via dynamic loading (`libcuda.so`). No compile-time CUDA dependency — the driver is discovered at runtime.
-
-14 CUDA kernels (SpMV, SpGEMM, reduce, apply, eWise operations) covering PageRank, BFS, vector distance, triangle counting, community detection, and spatial operations. 25 Metal GPU kernels on macOS for the same operations via Apple Silicon's unified memory.
+Performance measured against ArcFlow's own CPU path on the same hardware:
 
 | Algorithm | CPU | GPU Speedup |
 |---|---|---|
@@ -106,97 +48,13 @@ On systems with NVIDIA GPUs, ArcFlow dispatches to CUDA kernels via dynamic load
 | Triangle Count | 943K nodes/sec | 19.8x |
 | Community Detection | 185K nodes/sec | 29.6x |
 
----
-
-## GraphBLAS Operations
-
-### SpMV: Sparse Matrix-Vector Multiply
-
-The workhorse. Every iterative algorithm (PageRank, BFS, SSSP, label propagation) is a sequence of SpMV operations.
-
-```
-y = A ⊕.⊗ x
-
-Where:
-  A = adjacency matrix (CSR)
-  x = input vector (node values)
-  y = output vector (new node values)
-  ⊗ = "multiply" (depends on semiring)
-  ⊕ = "add" (depends on semiring)
-```
-
-ArcFlow's `grb_mxv()` auto-dispatches to Metal GPU when available, falls back to CPU.
-
-### SpGEMM: Sparse Matrix-Matrix Multiply
-
-Used for multi-hop operations and triangle counting. `C = A * B` where both A and B are sparse.
-
-Triangle count: `C = A * A` masked by A — non-zero entries in C where A also has an entry indicate triangles.
-
-### Masked SpGEMM
-
-SpGEMM with a mask matrix — only compute entries where the mask is non-zero. Critical for triangle counting and filtered graph operations.
-
-### Reduce
-
-Collapse a matrix to a scalar or vector. Used for computing graph metrics (density, total weight, degree distribution).
-
----
-
-## Why This Matters
-
-Most graph databases implement algorithms as **graph traversals** — recursive walks through adjacency lists. This is:
-- **Sequential** — each step depends on the previous
-- **Cache-hostile** — pointer chasing through scattered memory
-- **Hard to parallelize** — dependencies between steps prevent concurrent execution
-- **Hard to GPU-accelerate** — irregular memory access patterns don't map to GPU cores
-
-GraphBLAS reformulates these same algorithms as **sparse linear algebra** — matrix operations on flat arrays. This is:
-- **Parallel** — each row of the matrix is independent
-- **Cache-friendly** — CSR format is sequential memory
-- **GPU-native** — SpMV maps directly to GPU thread blocks
-- **Composable** — new algorithms are new semirings, not new code
-
-The result: ArcFlow runs the same algorithms as separate graph analytics libraries or distributed graph databases, but on a fundamentally different computational substrate — one that was designed for parallel hardware from the start.
-
----
-
-## CUDA Library Integrations
-
-For graphs and vectors above certain size thresholds, ArcFlow routes to dedicated NVIDIA CUDA libraries rather than its own kernels. These are battle-tested implementations from the RAPIDS ecosystem that outperform custom kernels on large-scale workloads:
-
-| Library | What it powers | Threshold |
-|---|---|---|
-| **cuGraph** | Louvain, Leiden, PageRank, BFS, triangle count, connected components | 10K+ nodes |
-| **cuSPARSE** | SpMV, SpGEMM, CSR matrix operations | 500K+ non-zeros |
-| **cuVS (CAGRA)** | GPU-accelerated HNSW approximate nearest neighbor search | 10K+ vectors |
-
-### cuGraph
-
-cuGraph is NVIDIA's GPU-accelerated graph analytics library. At scale (10K+ node graphs on CUDA hardware), ArcFlow delegates Louvain, Leiden, and several centrality algorithms to cuGraph rather than its own kernels. The same GQL query — `CALL algo.louvain()` — automatically uses cuGraph when the graph exceeds the threshold and CUDA is available.
-
-Leiden additionally requires CUDA compute capability 9.0+ (H100 and later hardware). On older CUDA hardware it falls back to ArcFlow's own CPU implementation.
-
-### cuSPARSE
-
-cuSPARSE handles large sparse matrix operations. When the CSR representation exceeds 500K non-zeros on CUDA hardware, SpMV and SpGEMM operations route to cuSPARSE rather than ArcFlow's own CUDA kernels. Same result, better throughput at scale.
-
-### cuVS / CAGRA
-
-cuVS (CUDA Vector Search) with the CAGRA (CUDA Approximate Graph-based Retrieval Algorithm) index accelerates nearest-neighbor vector search on CUDA hardware. Standard HNSW vector search gets 4.2x GPU speedup; CAGRA on large collections (10K+ vectors) can achieve higher throughput through GPU-native graph traversal.
-
-```cypher
--- Same query — routes to CAGRA on CUDA hardware when index size warrants
-CALL algo.vectorSearch('my_index', $vector, 10)
-```
-
-All routing is automatic. The developer writes one query; the engine picks the fastest available backend based on hardware and data size.
+Speedup is most pronounced for algorithms with high parallelism (community detection, triangle counting). For simpler traversals, the CPU path is already fast — GPU dispatch adds value when the graph is large and the algorithm is inherently parallel.
 
 ---
 
 ## GPU Spatial Queries
 
-Spatial queries follow a separate dispatch path from graph algorithms. The cost model accounts for query shape, candidate count, and GPU transfer overhead to choose the right lane automatically:
+Spatial queries follow a separate dispatch path from graph algorithms. The cost model accounts for query shape, candidate count, and GPU transfer overhead:
 
 | Lane | When | Typical use |
 |---|---|---|
@@ -205,53 +63,44 @@ Spatial queries follow a separate dispatch path from graph algorithms. The cost 
 | `GpuLocal` | > 50K candidates, fits single GPU | High-density spatial |
 | `GpuMulti` | Exceeds single GPU memory | Stadium-scale entity tracking |
 
-The routing decision is cost-based — kernel launch overhead and PCIe bandwidth are measured per device and factored into the estimate. There are no hardcoded size thresholds.
-
-### GPU-Uploadable Spatial Index
-
-The R\*-tree index that runs on CPU cannot cross the CPU→GPU memory boundary — pointer-based trees contain virtual addresses that are meaningless to GPU threads. ArcFlow maintains a parallel flat BVH representation for GPU upload:
-
-```
-FlatSpatialIndex:
-  nodes[]   — flat array of BVH nodes (#[repr(C)], child references are array indices)
-  entries[] — leaf data (SpatialEntry)
-
-GPU upload: wgpu::Buffer::new(device, bytemuck::cast_slice(&flat_index.nodes))
-Buffer sizes: nodes_byte_size() + entries_byte_size() — deterministic, no runtime sizing
-```
-
-No pointer fixup required on upload. The same `FlatSpatialIndex` is uploaded to GPU and traversed by a compute shader without transformation.
+Routing is cost-based — kernel launch overhead and memory bandwidth are measured per device and factored in. There are no hardcoded size thresholds.
 
 ### Multi-GPU Spatial Partitioning
 
-Spatial data is partitioned across GPU devices by a stable hash of `node_id`. Queries that span partition boundaries fan out to all relevant GPUs and merge results. GPUs connected via NVLink, NVSwitch, or Infinity Fabric form peer islands — within an island, work-stealing happens without PCIe transfer cost.
+Spatial data is partitioned across GPU devices by a stable hash of `node_id`. Queries spanning partition boundaries fan out to all relevant GPUs and merge results. Devices connected via NVLink, NVSwitch, or Infinity Fabric form peer islands — within an island, work-stealing happens without PCIe transfer cost.
 
 ```cypher
 -- Same spatial query — routes to GpuMulti automatically when warranted
 CALL algo.nearestNodes($center, 'Entity', 100) YIELD node, distance RETURN node.name
 ```
 
-### Instanced Geometry Sharing
+---
 
-For USD stages with thousands of identical geometry instances (seats, sensors, obstacles), the GPU spatial index is shared. 10,000 instances of the same prim geometry use one GPU buffer allocation. Queries into an instanced prim transform the query coordinates into prim-local space — no copy, no rebuild.
+## Metal GPU (Apple Silicon)
 
-### Observability
+On macOS and iOS, ArcFlow dispatches graph and spatial operations to Metal compute shaders. Apple Silicon's Unified Memory Architecture means the graph representation does not need to be copied to the GPU — CPU and GPU share the same physical memory.
 
-```cypher
-CALL arcflow.spatial.dispatch_stats()
-  YIELD lane_chosen, estimated_candidates, actual_candidates,
-        prefilter_us, rtree_us, gpu_transfer_us, kernel_us, total_us
+```
+PageRank on 10K nodes — CPU: 0.6ms / GPU: 0.25ms (2.4x)
 ```
 
-`gpu_transfer_us` and `kernel_us` are non-zero only when a GPU lane was chosen. Use these to validate that the cost model is routing as expected.
+Metal dispatch is automatic. If Metal is available and the graph exceeds the minimum dispatch threshold, it routes to GPU. If Metal fails or is unavailable, it falls back to CPU transparently.
 
 ---
 
-## GPU Introspection Procedures
+## CUDA GPU (Linux / Windows)
+
+On systems with NVIDIA GPUs, ArcFlow dispatches to CUDA via dynamic loading. No compile-time CUDA dependency — the driver is discovered at runtime. Covering PageRank, BFS, vector distance, triangle counting, community detection, and spatial operations across different workload scales.
+
+All routing is automatic. The developer writes one query; the engine selects the appropriate backend based on hardware and data size.
+
+---
+
+## GPU Introspection
 
 ### `CALL db.gpuStatus()`
 
-Returns one row per CUDA device in the pool. Use this to check device availability and current load before submitting expensive GPU workloads.
+Returns one row per CUDA device in the pool. Use this to check device availability and current load.
 
 ```cypher
 CALL db.gpuStatus() YIELD device_id, inflight, sm_count, vram_mib, status
@@ -265,11 +114,11 @@ CALL db.gpuStatus() YIELD device_id, inflight, sm_count, vram_mib, status
 | `vram_mib` | int | Device VRAM in MiB |
 | `status` | string | `"available"` (inflight < 8) or `"saturated"` |
 
-Returns a single row `{device_id: "N/A", status: "no CUDA devices"}` when no CUDA hardware is present.
+Returns `{device_id: "N/A", status: "no CUDA devices"}` when no CUDA hardware is present.
 
 ### `CALL dbms.gpuThresholds()`
 
-Returns the GPU kernel dispatch registry — the H2D cost gate and minimum requirements for each algorithm. Use this to understand why an algorithm is or isn't routing to GPU.
+Returns the GPU dispatch registry — the minimum requirements for each algorithm. Use this to understand why an algorithm is or isn't routing to GPU.
 
 ```cypher
 CALL dbms.gpuThresholds()
@@ -280,21 +129,21 @@ CALL dbms.gpuThresholds()
 |---|---|
 | `algorithm` | Algorithm name (e.g. `"pageRank"`, `"leiden"`) |
 | `min_input_size` | Minimum node count before GPU dispatch is considered |
-| `bytes_per_element` | Per-node memory estimate for H2D transfer cost calculation |
+| `bytes_per_element` | Per-node memory estimate for transfer cost calculation |
 | `validated` | Whether the kernel has been validated on this hardware |
 | `cuda_min_cc` | Minimum CUDA compute capability required (e.g. `"9.0"`) or `"none"` |
 
----
+### `CALL arcflow.spatial.dispatch_stats()`
 
-## Vision
+Observability for spatial query routing decisions.
 
-ArcFlow provides a complete GraphBLAS runtime where the entire algorithm suite runs on sparse linear algebra primitives. Every graph operation — from simple traversal to complex analytics — expressed as matrix operations, automatically dispatched to the best available hardware.
+```cypher
+CALL arcflow.spatial.dispatch_stats()
+  YIELD lane_chosen, estimated_candidates, actual_candidates,
+        prefilter_us, rtree_us, gpu_transfer_us, kernel_us, total_us
+```
 
-**Full GraphBLAS C API compatibility.** ArcFlow's GraphBLAS primitives can be exposed through the standard C API, allowing any GraphBLAS-compatible library or tool to use ArcFlow as a backend.
-
-**Fused kernel pipelines.** Beyond per-algorithm SpMV sequences, fused kernel pipelines run multiple operations in a single GPU kernel launch — PageRank + triangle count + community detection in one pass through the graph, sharing the CSR representation.
-
-**Adaptive precision.** FP16 on GPU for algorithms where full precision isn't needed (BFS, reachability) and FP64 where it is (PageRank convergence, shortest path weights). Half-precision doubles throughput on modern GPUs.
+`gpu_transfer_us` and `kernel_us` are non-zero only when a GPU lane was chosen. Use these to validate that the cost model is routing as expected for your workload.
 
 ---
 
@@ -302,5 +151,5 @@ ArcFlow provides a complete GraphBLAS runtime where the entire algorithm suite r
 
 - [Graph Algorithms](/algorithms) — full algorithm catalog with signatures and output schemas
 - [Algorithms Reference](/worldcypher/algorithms) — GQL syntax for all 27 procedures
-- [Architecture](/architecture) — how the query engine, storage, and algorithm dispatch share memory
-- [Spatial Queries](/worldcypher/spatial) — GPU-dispatched spatial queries and the BVH index
+- [Architecture](/architecture) — how the query engine, storage, and dispatch share memory
+- [Spatial Queries](/worldcypher/spatial) — GPU-dispatched spatial queries
