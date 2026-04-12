@@ -3,9 +3,11 @@ title: "WorldCypher: Spatial Queries"
 description: "Exact spatial predicates, KNN, frustum, live geofencing — backed by a dynamic R*-tree, no approximate indexing"
 section: "worldcypher"
 status: "stable"
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS entity_count, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS composite_trust RETURN zone, hazard, entity_count, avg_battery, composite_trust, CASE WHEN composite_trust >= 0.90 THEN 'optimal' WHEN composite_trust >= 0.75 THEN 'nominal' ELSE 'degraded' END AS status ORDER BY composite_trust DESC"
 playground:
   seed: world
-  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS entity_count, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS composite_trust RETURN zone, hazard, entity_count, avg_battery, composite_trust, CASE WHEN composite_trust >= 0.90 THEN 'optimal' WHEN composite_trust >= 0.75 THEN 'nominal' ELSE 'degraded' END AS status ORDER BY composite_trust DESC"
+  query: "MATCH (r:Robot)-[:OCCUPIES]->(z:Zone) RETURN r.name AS robot, r.task AS task, r.x AS world_x, r.y AS world_y, r.speed AS speed, r.battery AS battery, z.name AS zone, z.hazard AS hazard, CASE WHEN z.hazard > 0.3 THEN 'high-risk' WHEN z.hazard > 0.1 THEN 'moderate' ELSE 'safe' END AS spatial_risk ORDER BY z.hazard DESC"
+
 ---
 
 # WorldCypher: Spatial Queries
