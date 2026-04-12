@@ -1,6 +1,6 @@
 # ArcFlow
 
-> The operational world model layer — the persistence tier for actual world state. Neural world models (leading neural world models) simulate; ArcFlow records. Spatial-temporal, confidence-scored, embedded. Runs in browser (WASM), Node.js, Python, Rust, Docker. No server needed. Space and time are first-class dimensions; every fact carries an observation class (observed/inferred/predicted) and confidence score.
+> The operational world model layer — the persistence tier for actual world state. Neural world models simulate; ArcFlow records. Spatial-temporal, confidence-scored, embedded. Runs in browser (WASM), Node.js, Python, Rust, Docker. No server needed. Space and time are first-class dimensions; every fact carries an observation class (observed/inferred/predicted) and confidence score.
 
 ## Try instantly (zero install)
 

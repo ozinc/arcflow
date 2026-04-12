@@ -1,6 +1,6 @@
 # ArcFlow SDK — Complete Agent Reference
 
-ArcFlow is the operational world model layer — the persistence tier for actual world state. Neural world models (leading neural world models) simulate possible futures; ArcFlow records what actually happened. Spatial-temporal, confidence-scored, embedded. Space and time are first-class dimensions (not extensions). Every node carries an observation class (observed/inferred/predicted) and confidence score. Full GQL (ISO/IEC 39075) with Cypher compatibility. Runs in-process: browser (WASM), Node.js, Python, Rust, Docker. No server needed.
+ArcFlow is the operational world model layer — the persistence tier for actual world state. Neural world models simulate possible futures; ArcFlow records what actually happened. Spatial-temporal, confidence-scored, embedded. Space and time are first-class dimensions (not extensions). Every node carries an observation class (observed/inferred/predicted) and confidence score. Full GQL (ISO/IEC 39075) with Cypher compatibility. Runs in-process: browser (WASM), Node.js, Python, Rust, Docker. No server needed.
 
 This file contains the complete API surface, GQL (WorldCypher) syntax, and all patterns
 needed to integrate ArcFlow into any TypeScript/Node.js application.
