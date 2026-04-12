@@ -5,9 +5,10 @@ section: "constructors"
 order: 1
 since: "0.2.0"
 status: "stable"
-playground:
-  seed: world
   query: "MERGE (sk:Skill {id: 'zone-watch', name: 'ZoneWatch', version: 3, min_confidence: 0.82, radius: 25.0, active: 1}) MERGE (a1:Agent {id: 'agent-01', name: 'Scout-Alpha', role: 'observer', active: 1, zone: 'lab-a'}) MERGE (a2:Agent {id: 'agent-02', name: 'Scout-Beta', role: 'observer', active: 1, zone: 'lab-b'}) MERGE (s1:Sensor {id: 'cam-1', name: 'Cam-LabA', type: 'camera', reliability: 0.95}) MERGE (s2:Sensor {id: 'lidar-1', name: 'Lidar-LabB', type: 'lidar', reliability: 0.91}) MERGE (sk:Skill {id: 'zone-watch'})-[:GOVERNS {since_seq: 1, priority: 1}]->(a1:Agent {id: 'agent-01'}) MERGE (sk:Skill {id: 'zone-watch'})-[:GOVERNS {since_seq: 1, priority: 2}]->(a2:Agent {id: 'agent-02'}) MERGE (a1:Agent {id: 'agent-01'})-[:MONITORS {freq_hz: 25, since_seq: 1}]->(s1:Sensor {id: 'cam-1'}) MERGE (a2:Agent {id: 'agent-02'})-[:MONITORS {freq_hz: 10, since_seq: 1}]->(s2:Sensor {id: 'lidar-1'}) MATCH (sk:Skill)-[g:GOVERNS]->(a:Agent)-[m:MONITORS]->(s:Sensor) RETURN sk.name AS constructor, sk.version, sk.min_confidence, g.priority, a.name AS agent, a.role, m.freq_hz AS sensor_poll_hz, s.name AS sensor, s.type, s.reliability ORDER BY g.priority"
+playground:
+  query: "MERGE (sk:Skill {id: 'zone-watch', name: 'ZoneWatch', version: 3, min_confidence: 0.82, radius: 25.0, active: 1})\n\nMERGE (a1:Agent {id: 'agent-01', name: 'Scout-Alpha', role: 'observer', active: 1, zone: 'lab-a', priority: 1})\n\nMERGE (a2:Agent {id: 'agent-02', name: 'Scout-Beta', role: 'observer', active: 1, zone: 'lab-b', priority: 2})\n\nMERGE (s1:Sensor {id: 'cam-1', name: 'Cam-LabA', type: 'camera', reliability: 0.95, poll_hz: 25})\n\nMERGE (s2:Sensor {id: 'lidar-1', name: 'Lidar-LabB', type: 'lidar', reliability: 0.91, poll_hz: 10})\n\nMERGE (sk1:Skill {id: 'zone-watch'})-[:GOVERNS]->(a1:Agent {id: 'agent-01'})\n\nMERGE (sk2:Skill {id: 'zone-watch'})-[:GOVERNS]->(a2:Agent {id: 'agent-02'})\n\nMERGE (a1m:Agent {id: 'agent-01'})-[:MONITORS]->(s1:Sensor {id: 'cam-1'})\n\nMERGE (a2m:Agent {id: 'agent-02'})-[:MONITORS]->(s2:Sensor {id: 'lidar-1'})\n\nMATCH (sk:Skill)-[:GOVERNS]->(a:Agent)-[:MONITORS]->(s:Sensor) RETURN sk.name AS constructor, sk.version AS version, sk.min_confidence AS min_confidence, a.name AS agent, a.role AS role, a.priority AS priority, s.name AS sensor, s.type AS sensor_type, s.reliability AS reliability, s.poll_hz AS poll_hz ORDER BY a.priority"
+
 ---
 
 # Constructor Operations
