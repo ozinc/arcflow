@@ -534,9 +534,11 @@ Benchmarked on a MacBook Air M4 (10-core, 24GB) with 10K-node graphs, single-thr
 | Node Similarity | — | GPU-accelerated | 100 nodes |
 | Leiden | — | CUDA 9.0+ (H100+) only | 10M nodes |
 
-GPU dispatch is automatic — the engine measures graph size at query time and routes to the fastest available backend. No configuration required.
+GPU dispatch is handled by **ArcFlow Adaptive Dispatch** — which measures graph size at query time and routes to the fastest available backend automatically. No configuration required.
 
-Multi-GPU dispatch is also automatic: when multiple CUDA devices are present, the engine selects the least-loaded device via load-aware selection, converts to the optimal GPU-side format for transfer, and gates dispatch on a per-algorithm H2D cost model. Use `CALL db.gpuStatus()` to inspect per-device load and `CALL dbms.gpuThresholds()` to see the per-algorithm dispatch registry.
+When multiple CUDA devices are present, Adaptive Dispatch selects the least-loaded device and gates dispatch on a per-algorithm cost model. Use `CALL db.gpuStatus()` to inspect per-device load and `CALL dbms.gpuThresholds()` to see the per-algorithm dispatch registry.
+
+The parallel execution itself runs through the **ArcFlow Graph Kernel** — a single-pass parallel structure that maps directly to GPU thread blocks rather than walking the graph one edge at a time.
 
 Six algorithms also support `LIVE CALL` for incremental maintenance -- see the Incremental Algorithms section above.
 

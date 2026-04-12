@@ -85,7 +85,13 @@ Dependencies flow inward. Transport/CLI depend on core, never reverse.
 
 A typical knowledge-graph stack requires 4-6 services: a graph database, a vector store, an analytics engine, a job runner, a cache, and a message bus. Each introduces serialization overhead, operational complexity, and failure modes. ArcFlow collapses this to one process and one binary — graph storage, incremental computation, vector search, and PostgreSQL wire protocol compatibility all in the same unified address space.
 
-For AI workloads, in-process execution means a GraphRAG query can traverse the graph, run vector similarity, execute PageRank, and score confidence -- all without a single network call or data format conversion. Measured end-to-end on a MacBook Air M4 (10-core, 24GB), this architecture delivers 154M PageRank nodes/sec and 25K vector queries/sec on CPU alone -- on a fanless laptop.
+For AI workloads, in-process execution means a GraphRAG query can traverse the graph, run vector similarity, execute PageRank, and score confidence — all without a single network call or data format conversion. Measured end-to-end on a MacBook Air M4 (10-core, 24GB), this architecture delivers 154M PageRank nodes/sec and 25K vector queries/sec on CPU alone — on a fanless laptop.
+
+Three execution innovations sit at the core of this performance:
+
+- **ArcFlow Graph Kernel** — processes graph algorithms as a single parallel pass across all nodes, not sequential traversal
+- **ArcFlow Adaptive Dispatch** — routes each operation to the fastest available hardware (CPU, Metal, CUDA) via a live cost model at runtime
+- **ArcFlow GPU Index** — a pointer-free spatial index that transfers directly to GPU memory, enabling high-density spatial queries at GPU speed
 
 **Forward vision:** The unified address space is the foundation for in-process AI inference, real-time sensor fusion, and perception pipelines where latency budgets are measured in microseconds, not milliseconds. Same architecture, same query language, expanded compute fabric across CPU, CUDA, and Metal.
 

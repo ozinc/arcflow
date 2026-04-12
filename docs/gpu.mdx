@@ -1,6 +1,6 @@
 ---
 title: "GPU Acceleration"
-description: "World model algorithms at GPU speed — graph traversal, community detection, and spatial queries dispatched automatically to the best available hardware."
+description: "World model algorithms at GPU speed — ArcFlow Graph Kernel, Adaptive Dispatch, and GPU Index deliver parallel execution across CPU, Metal, and CUDA automatically."
 section: "gpu"
 order: 1
 status: "stable"
@@ -11,11 +11,13 @@ playground:
 
 # GPU Acceleration
 
-ArcFlow runs graph algorithms as **parallel operations across the entire graph at once** — not as sequential edge traversals. Most graph databases walk the graph one node at a time: visit a node, follow an edge, visit the next. That is sequential, cache-hostile, and does not map to GPU hardware.
+ArcFlow provides three distinct execution innovations for high-performance world model queries:
 
-ArcFlow's graph engine represents the world model as a compact parallel structure and processes algorithms across all nodes simultaneously. PageRank, BFS, connected components, community detection — each runs as a single parallel pass, not a recursive walk. This maps directly to GPU thread blocks.
+- **ArcFlow Graph Kernel** — executes graph algorithms as a single parallel pass across all nodes simultaneously, not as sequential edge traversals
+- **ArcFlow Adaptive Dispatch** — routes every operation to the fastest available hardware at runtime, cost-model driven, zero configuration
+- **ArcFlow GPU Index** — a pointer-free spatial index designed for direct GPU traversal without transformation
 
-The developer writes one query. The engine picks the fastest path.
+The developer writes one query. These three layers work together to pick the fastest path.
 
 ```cypher
 CALL algo.pageRank()
@@ -23,16 +25,28 @@ CALL algo.pageRank()
 
 ---
 
-## Automatic Hardware Dispatch
+## ArcFlow Graph Kernel
 
-ArcFlow detects available hardware at startup and routes each operation to the fastest available backend:
+Most graph databases walk the graph one edge at a time: visit a node, follow an edge, visit the next. That is sequential, cache-hostile, and does not map to GPU hardware.
 
-1. **Small graphs (< 200 nodes)** — CPU (dispatch overhead exceeds GPU benefit at this scale)
-2. **Apple Silicon (macOS / iOS)** — GPU compute via Metal. Unified memory means no CPU→GPU copy overhead.
-3. **NVIDIA GPU (Linux / Windows)** — GPU compute via CUDA kernels. Dynamic driver loading — no compile-time GPU dependency.
-4. **CPU fallback** — ArcFlow's own parallel CPU implementation when no GPU is present.
+The ArcFlow Graph Kernel processes algorithms differently. The world model is held as a compact parallel structure — every algorithm executes as a single pass across all nodes simultaneously, not a recursive walk. PageRank, BFS, connected components, community detection, triangle counting — each runs as one parallel operation. This maps directly to GPU thread blocks and enables the speedups below.
 
-Zero configuration. The same GQL query runs on a laptop, a workstation, or a GPU cluster.
+The same kernel runs on CPU when no GPU is present. The parallel structure is inherently more efficient than pointer-chasing traversal on any hardware.
+
+---
+
+## ArcFlow Adaptive Dispatch
+
+ArcFlow Adaptive Dispatch measures available hardware at startup and routes each operation to the fastest available backend based on a live cost model:
+
+1. **Small graphs (< 200 nodes)** — CPU path (dispatch overhead exceeds GPU benefit at this scale)
+2. **Apple Silicon (macOS / iOS)** — Metal GPU. Unified memory means no CPU→GPU copy overhead — CPU and GPU read the same physical memory.
+3. **NVIDIA GPU (Linux / Windows)** — CUDA GPU. Dynamic driver loading — no compile-time GPU dependency, same binary runs everywhere.
+4. **CPU fallback** — ArcFlow's parallel CPU implementation when no GPU is present.
+
+The cost model accounts for kernel launch overhead, memory bandwidth per device, and algorithm parallelism characteristics. There are no hardcoded thresholds — routing adapts to the actual hardware measured at runtime.
+
+Zero configuration. The same GQL query runs identically on a laptop, a workstation, or a GPU cluster.
 
 ---
 
@@ -52,9 +66,9 @@ Speedup is most pronounced for algorithms with high parallelism (community detec
 
 ---
 
-## GPU Spatial Queries
+## ArcFlow GPU Index
 
-Spatial queries follow a separate dispatch path from graph algorithms. The cost model accounts for query shape, candidate count, and GPU transfer overhead:
+Spatial queries require a different execution path from graph algorithms — a spatial index, not graph traversal. ArcFlow Adaptive Dispatch routes spatial queries across four lanes based on candidate count and GPU transfer cost:
 
 | Lane | When | Typical use |
 |---|---|---|
@@ -63,36 +77,38 @@ Spatial queries follow a separate dispatch path from graph algorithms. The cost 
 | `GpuLocal` | > 50K candidates, fits single GPU | High-density spatial |
 | `GpuMulti` | Exceeds single GPU memory | Stadium-scale entity tracking |
 
-Routing is cost-based — kernel launch overhead and memory bandwidth are measured per device and factored in. There are no hardcoded size thresholds.
+The ArcFlow GPU Index is the structure that makes `GpuLocal` and `GpuMulti` lanes possible. It is a pointer-free spatial index designed specifically for GPU traversal — transferring directly to GPU memory without transformation. Traditional pointer-based spatial indexes contain virtual memory addresses that are meaningless to GPU threads; the ArcFlow GPU Index eliminates this boundary entirely.
 
-### Multi-GPU Spatial Partitioning
+### Multi-GPU Partitioning
 
 Spatial data is partitioned across GPU devices by a stable hash of `node_id`. Queries spanning partition boundaries fan out to all relevant GPUs and merge results. Devices connected via NVLink, NVSwitch, or Infinity Fabric form peer islands — within an island, work-stealing happens without PCIe transfer cost.
 
 ```cypher
--- Same spatial query — routes to GpuMulti automatically when warranted
+-- Same spatial query — Adaptive Dispatch routes to GpuMulti when warranted
 CALL algo.nearestNodes($center, 'Entity', 100) YIELD node, distance RETURN node.name
 ```
+
+### Instanced Geometry
+
+For scenes with thousands of identical geometry instances (seats, sensors, obstacles), the ArcFlow GPU Index is shared — one allocation serves all instances. Queries transform coordinates into instance-local space rather than rebuilding the index per instance.
 
 ---
 
 ## Metal GPU (Apple Silicon)
 
-On macOS and iOS, ArcFlow dispatches graph and spatial operations to Metal compute shaders. Apple Silicon's Unified Memory Architecture means the graph representation does not need to be copied to the GPU — CPU and GPU share the same physical memory.
+On macOS and iOS, ArcFlow Adaptive Dispatch routes to Metal compute shaders. Apple Silicon's unified memory means the ArcFlow Graph Kernel and GPU Index operate in the same physical memory as the CPU — zero copy overhead.
 
 ```
 PageRank on 10K nodes — CPU: 0.6ms / GPU: 0.25ms (2.4x)
 ```
 
-Metal dispatch is automatic. If Metal is available and the graph exceeds the minimum dispatch threshold, it routes to GPU. If Metal fails or is unavailable, it falls back to CPU transparently.
+If Metal is unavailable or the graph is below the dispatch threshold, routing falls back to CPU transparently.
 
 ---
 
 ## CUDA GPU (Linux / Windows)
 
-On systems with NVIDIA GPUs, ArcFlow dispatches to CUDA via dynamic loading. No compile-time CUDA dependency — the driver is discovered at runtime. Covering PageRank, BFS, vector distance, triangle counting, community detection, and spatial operations across different workload scales.
-
-All routing is automatic. The developer writes one query; the engine selects the appropriate backend based on hardware and data size.
+On NVIDIA hardware, Adaptive Dispatch routes to CUDA via dynamic driver loading. No compile-time GPU dependency — the driver is discovered at runtime. If CUDA is unavailable, the same binary falls back to CPU. Covering graph algorithms, vector search, and spatial operations at different workload scales.
 
 ---
 
@@ -100,7 +116,7 @@ All routing is automatic. The developer writes one query; the engine selects the
 
 ### `CALL db.gpuStatus()`
 
-Returns one row per CUDA device in the pool. Use this to check device availability and current load.
+Returns one row per CUDA device. Use this to check availability and load before submitting large GPU workloads.
 
 ```cypher
 CALL db.gpuStatus() YIELD device_id, inflight, sm_count, vram_mib, status
@@ -118,7 +134,7 @@ Returns `{device_id: "N/A", status: "no CUDA devices"}` when no CUDA hardware is
 
 ### `CALL dbms.gpuThresholds()`
 
-Returns the GPU dispatch registry — the minimum requirements for each algorithm. Use this to understand why an algorithm is or isn't routing to GPU.
+Returns the Adaptive Dispatch registry — minimum requirements for each algorithm before GPU routing is considered.
 
 ```cypher
 CALL dbms.gpuThresholds()
@@ -135,7 +151,7 @@ CALL dbms.gpuThresholds()
 
 ### `CALL arcflow.spatial.dispatch_stats()`
 
-Observability for spatial query routing decisions.
+Observability for ArcFlow GPU Index routing decisions.
 
 ```cypher
 CALL arcflow.spatial.dispatch_stats()
@@ -143,7 +159,7 @@ CALL arcflow.spatial.dispatch_stats()
         prefilter_us, rtree_us, gpu_transfer_us, kernel_us, total_us
 ```
 
-`gpu_transfer_us` and `kernel_us` are non-zero only when a GPU lane was chosen. Use these to validate that the cost model is routing as expected for your workload.
+`gpu_transfer_us` and `kernel_us` are non-zero only when a GPU lane was chosen.
 
 ---
 
@@ -151,5 +167,5 @@ CALL arcflow.spatial.dispatch_stats()
 
 - [Graph Algorithms](/algorithms) — full algorithm catalog with signatures and output schemas
 - [Algorithms Reference](/worldcypher/algorithms) — GQL syntax for all 27 procedures
-- [Architecture](/architecture) — how the query engine, storage, and dispatch share memory
+- [Architecture](/architecture) — how Graph Kernel, Adaptive Dispatch, and GPU Index share memory
 - [Spatial Queries](/worldcypher/spatial) — GPU-dispatched spatial queries
