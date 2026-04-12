@@ -11,9 +11,9 @@ playground:
 
 # Get Started
 
-The neural world model research community is trying to collapse simulation, memory, spatial grounding, and calibrated uncertainty into a single generative model. Papers have proposed baking persistence directly into the neural layer (MosaicMem), embedding 3D scene grounding inside the network (PERSIST), and adding uncertainty awareness to the generative system itself. This is the wrong architectural direction — these are not the same problem, and mixing them makes systems worse at both.
+Neural world models simulate how the world evolves under actions — generative, action-conditioned, trained to predict possible futures. They are not designed to be a queryable store of what actually happened. Persistence, spatial indexing, temporal versioning, and confidence scoring require a separate, deterministic layer — one with different latency characteristics, different durability guarantees, and a completely different failure mode.
 
-**ArcFlow is the correct architectural separation.** Simulation belongs in the neural layer — learned, generative, action-conditioned. Persistence, spatial indexing, temporal versioning, and confidence scoring belong in a separate, deterministic, queryable layer. The two layers have different latency requirements, different failure modes, different update rates. They should not be one thing.
+**ArcFlow is that layer.** Simulation belongs in the neural tier. Persistence belongs here — exact, versioned, queryable in microseconds.
 
 Neural world models are extraordinary at simulating possible futures. They don't remember anything. **ArcFlow is what you build underneath them** — the persistence tier that stores what actually happened, spatially indexed, versioned to the sequence number, and queryable in microseconds.
 

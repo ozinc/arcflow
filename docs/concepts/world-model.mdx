@@ -11,9 +11,9 @@ playground:
 
 # World Model
 
-The neural world model research community is trying to collapse simulation, memory, spatial grounding, and calibrated uncertainty into a single generative model. MosaicMem says "spatial memory is the bottleneck." PERSIST argues for "a persistent latent 3D scene." Papers are being published about adding uncertainty awareness to neural WFMs. This direction is architecturally wrong.
+Neural world models simulate how the world evolves under actions — generative, action-conditioned, trained on petabytes of sensor data to predict possible futures. Persistence is a separate concern: a deterministic, queryable record of what actually happened, spatially indexed and versioned to the sequence number. These two layers serve different purposes, operate at different latency tiers, and are built on fundamentally different foundations.
 
-**ArcFlow is the correct architectural separation.** Simulation belongs in the neural layer — learned, generative, action-conditioned. Persistence belongs in a separate, deterministic, queryable layer. These are not the same problem. Mixing them produces systems that are worse at both.
+**ArcFlow is the persistence layer.** Simulation belongs in the neural tier. ArcFlow records what the simulation produces — and everything else the world sends in.
 
 Two distinct things go by the name "world model" today. Getting them confused — or trying to merge them — is costly.
 
