@@ -81,7 +81,7 @@ RETURN hit.name, distance
 
 ## Spatial Join
 
-Spatial filter and graph traversal compose in a single query. The engine executes them as a fused DAG — spatial prefilter and CSR graph traversal run concurrently, merge fires when both branches complete:
+Spatial filter and graph traversal compose in a single query. The engine executes them as a fused DAG — spatial prefilter and graph traversal run concurrently, merge fires when both branches complete:
 
 ```cypher
 -- 5 nearest warehouses → traverse SUPPLIES edges → check inventory

@@ -125,7 +125,7 @@ Performance: `objectsInFrustum` over 50 entities, 10 frusta: < 2ms.
 
 ## Spatial + Graph in One Query
 
-The R\*-tree and the graph share unified in-process memory. No serialization. No network hop between a spatial service and a graph database. Fused spatial+graph query plans execute as a DAG — the spatial prefilter and CSR traversal run concurrently, and the result merge fires as soon as both branches complete. No intermediate materialization.
+The R\*-tree and the graph share unified in-process memory. No serialization. No network hop between a spatial service and a graph database. Fused spatial+graph query plans execute as a DAG — the spatial prefilter and graph traversal run concurrently, and the result merge fires as soon as both branches complete. No intermediate materialization.
 
 ### Supply Chain
 ```cypher
