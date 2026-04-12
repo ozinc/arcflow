@@ -5,7 +5,7 @@ section: "recipes"
 status: "stable"
 playground:
   seed: world
-  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS active_entities, avg(r.battery) AS avg_energy, avg(r.speed) AS avg_velocity, avg(s.reliability * d.confidence) AS observation_quality RETURN zone, hazard, active_entities, avg_energy, avg_velocity, observation_quality, CASE WHEN observation_quality >= 0.90 THEN 'current' WHEN observation_quality >= 0.75 THEN 'recent' ELSE 'stale' END AS data_freshness ORDER BY observation_quality DESC"
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS tracked_entities, avg(r.battery) AS avg_energy, avg(r.speed) AS avg_velocity, avg(s.reliability * d.confidence) AS observation_quality, min(s.reliability * d.confidence) AS min_observation_quality RETURN zone, hazard, tracked_entities, avg_energy, avg_velocity, observation_quality, min_observation_quality, CASE WHEN observation_quality >= 0.92 THEN 'high_fidelity' WHEN observation_quality >= 0.80 THEN 'operational' WHEN observation_quality >= 0.70 THEN 'degraded' ELSE 'unreliable' END AS temporal_confidence ORDER BY observation_quality DESC"
 
 ---
 
