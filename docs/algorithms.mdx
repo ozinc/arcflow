@@ -14,7 +14,7 @@ playground:
 
 27 graph algorithms built into the world model — no projection lifecycle, no separate analytics service, no plugin installation. Every algorithm operates over the same confidence-scored, temporally-versioned graph that your queries run against. Centrality rankings respect observation class. Community detection propagates across fact confidence. Contradiction detection surfaces conflicting beliefs in the knowledge graph. Six algorithms run incrementally via `LIVE CALL`, maintaining results as standing queries that update with every mutation.
 
-154M PageRank nodes/sec on CPU. 29.6x GPU speedup on community detection. 19.8x on triangle count. GPU acceleration is automatic when hardware is available: same query, same syntax, automatic routing (see [GPU Acceleration](/gpu)).
+154M PageRank nodes/sec on CPU. 29.6x GPU speedup on community detection. 19.8x on triangle count. GPU acceleration is automatic when hardware is available: same query, same syntax — **ArcFlow Adaptive Dispatch** routes to the fastest backend at runtime (see [GPU Acceleration](/gpu)).
 
 ## Centrality
 

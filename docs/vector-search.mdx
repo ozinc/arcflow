@@ -135,7 +135,7 @@ CALL db.indexes()
 
 GPU acceleration delivers 4.2x speedup on vector search when available. Dispatch is automatic based on index size — no configuration required.
 
-On CUDA hardware with larger vector collections, ArcFlow automatically routes to its GPU-accelerated nearest neighbor backend — a GPU-resident graph structure that achieves higher throughput than CPU HNSW at scale. Same query, automatic routing.
+On CUDA hardware with larger vector collections, **ArcFlow Adaptive Dispatch** routes automatically to the GPU-accelerated nearest neighbor path — higher throughput than CPU HNSW at scale. Same query, zero configuration.
 
 ## Use Cases
 

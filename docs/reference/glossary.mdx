@@ -214,6 +214,24 @@ A test suite for verifying query language conformance. The openCypher TCK contai
 
 ---
 
+## ArcFlow Graph Kernel
+
+**ArcFlow.** The execution model for graph algorithms. Instead of walking the graph one edge at a time, the Graph Kernel processes every algorithm as a single parallel pass across all nodes simultaneously. Maps directly to GPU thread blocks, but also runs more efficiently than pointer-chasing traversal on CPU.
+
+---
+
+## ArcFlow Adaptive Dispatch
+
+**ArcFlow.** The cost-model-driven hardware router. At query time, Adaptive Dispatch measures graph size, available hardware (CPU, Metal, CUDA), and transfer overhead — then routes each operation to the fastest available backend with zero configuration. The developer writes one query; Adaptive Dispatch decides where it runs.
+
+---
+
+## ArcFlow GPU Index
+
+**ArcFlow.** A pointer-free spatial index built for direct GPU traversal. Traditional spatial indexes use pointer-based tree structures that contain virtual memory addresses meaningless to GPU threads. The ArcFlow GPU Index is built as a flat, parallel structure that transfers to GPU memory without transformation, enabling the `GpuLocal` and `GpuMulti` dispatch lanes.
+
+---
+
 ## See Also
 
 - [Graph Model](/concepts/graph-model) — detailed node/relationship/property model
@@ -221,3 +239,4 @@ A test suite for verifying query language conformance. The openCypher TCK contai
 - [SQL vs GQL](/concepts/sql-vs-gql) — mental model shift from relational to graph
 - [GQL Conformance](/reference/gql-conformance) — standards coverage
 - [Confidence & Provenance](/concepts/confidence-and-provenance) — scoring and tracing facts
+- [GPU Acceleration](/gpu) — ArcFlow Graph Kernel, Adaptive Dispatch, and GPU Index in depth
