@@ -196,6 +196,31 @@ Algorithms for reasoning over facts, confidence, and semantic relationships.
 | `CALL algo.entityFreshness()` | `nodeId`, `name`, `freshness`, `last_observed_at` | Freshness of each entity based on last observation | 10.0.0 |
 | `CALL algo.semanticDedup()` | `nodeId1`, `nodeId2`, `similarity` | Near-duplicate nodes via embedding similarity | 10.0.0 |
 
+## Physical AI Algorithms (2)
+
+Procedures for multi-agent world models: sensor reliability scoring and multi-agent belief fusion.
+
+| Procedure | Return Columns | Description | Since | Mutating |
+|---|---|---|---|---|
+| `CALL algo.sensorReliability('sensor-id')` | `accuracy`, `drift_rate`, `sample_count`, `calibration_recommended` | Compute mean confidence across all Entity nodes sourced from this sensor. Updates `reliability_7d` or `reliability_30d` on the Sensor node. Pass `'30d'` as second arg for 30-day window. | 1.6.47 | Yes |
+| `CALL algo.beliefReconcile('entity-id')` | `fused_confidence`, `source_agents`, `source_confidences`, `reconciliation_method`, `observation_seq` | Kalman precision-weighted fusion of all Agent `BELIEVES` edges pointing to the entity. Writes `_observation_class: 'inferred'`, `_propagation_rule: 'kalman-fusion'`, `_source_agents`, `_source_count` back onto the entity. Algorithm: `fused = Σ(cᵢ²) / Σ(cᵢ)`. | 1.6.51 | Yes |
+
+```cypher
+-- Check sensor reliability after a calibration run
+CALL algo.sensorReliability('lidar-front')
+YIELD accuracy, drift_rate, sample_count, calibration_recommended
+```
+
+Returns mean confidence of all Entity nodes attributed to `lidar-front`, plus a calibration flag when accuracy < 0.85.
+
+```cypher
+-- Fuse two agents' conflicting observations of 'player-07' into one inferred fact
+CALL algo.beliefReconcile('player-07')
+YIELD fused_confidence, source_agents, reconciliation_method
+```
+
+Scans all `[:BELIEVES]` edges ending at the entity, computes precision-weighted Kalman mean, writes the result as `_observation_class: 'inferred'` on the entity. See [Fleet Coordination guide](/guides/fleet-coordination) for the full multi-agent pattern.
+
 ```cypher
 -- Find entities that may refer to the same person
 CALL algo.entityResolution()

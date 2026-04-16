@@ -1,0 +1,297 @@
+---
+title: "Fleet Coordination"
+description: "Multi-agent world models — typed agent identity, per-observation attribution, Kalman belief fusion, and agent-scoped queries for robot fleets and autonomous deployments."
+section: "guides"
+status: "stable"
+since: "1.6.50"
+playground:
+  seed: world
+  query: "MERGE (:Agent {id: 'robot-01', role: 'scout', zone: 'sector-A', modalities: 'lidar,camera', observation_rate_hz: 10}) MERGE (:Agent {id: 'robot-02', role: 'scout', zone: 'sector-A', modalities: 'camera', observation_rate_hz: 5}) MERGE (:Entity {id: 'target-07', x: 10.5, y: 7.2, _observation_class: 'observed', _confidence: 0.91, _agent_id: 'robot-01'}) MATCH (a:Agent) RETURN a.id, a.role, a.zone, a.observation_rate_hz"
+---
+
+# Fleet Coordination
+
+Every multi-agent deployment faces one question the research community has not answered: *how does agent-2 read what agent-1 just observed?*
+
+ArcFlow's native multi-writer graph handles concurrent agent writes — but without typed agent identity, there is no standard model for which agent wrote what, or how to query "what does the fleet collectively believe about entity X?" This guide covers the fleet coordination layer: typed Agent nodes, per-observation attribution, automatic belief edges, Kalman fusion of conflicting observations, and agent-scoped queries.
+
+---
+
+## Agent nodes
+
+Agents are first-class nodes with a standard schema. Create one with `CREATE AGENT` or an equivalent `CREATE`:
+
+```cypher
+-- Declare a physical agent with capability metadata
+CREATE (:Agent {
+  id:                   'robot-01',
+  modalities:           'lidar,camera',
+  role:                 'scout',
+  zone:                 'sector-A',
+  observation_rate_hz:  10
+})
+```
+
+Standard Agent properties:
+
+| Property | Type | Meaning |
+|---|---|---|
+| `id` | String | Unique agent identifier |
+| `modalities` | String | Comma-separated sensor types (`lidar`, `camera`, `radar`) |
+| `role` | String | Operational role (`scout`, `inspector`, `coordinator`) |
+| `zone` | String | Assigned operational zone |
+| `observation_rate_hz` | Float | Maximum observation write rate |
+
+```cypher
+-- List all agents and their zones
+MATCH (a:Agent)
+RETURN a.id, a.role, a.zone, a.observation_rate_hz
+ORDER BY a.zone, a.id
+```
+
+---
+
+## Per-observation attribution
+
+Every observation can be attributed to the agent that recorded it. When `_agent_id` is set, the engine automatically creates fleet edges (see below).
+
+```cypher
+-- Write an observation attributed to robot-01
+MATCH (e:Entity {id: 'player-07'})
+SET e.x = 10.5,
+    e.y = 7.2,
+    e._observation_class = 'observed',
+    e._confidence = 0.91,
+    e._agent_id = 'robot-01'
+```
+
+```cypher
+-- Query attribution: who observed this entity, and how confident?
+MATCH (e:Entity {id: 'player-07'})
+RETURN e.x, e.y, e._agent_id, e._observation_class, e._confidence
+-- Returns: 10.5, 7.2, 'robot-01', 'observed', 0.91
+```
+
+`_agent_id` is indexed alongside `_observation_class` and `_confidence` for fast agent-scoped filtering.
+
+---
+
+## Fleet edges — BELIEVES and DETECTED
+
+The engine auto-creates two typed edges when an observation is attributed to an agent. No manual edge creation is required.
+
+**`[:BELIEVES]`** — created for every observation, prediction, and inference:
+
+```
+(:Agent {id: 'robot-01'})-[:BELIEVES {_confidence: 0.91, _timestamp_ms: ...}]->(:Entity {id: 'player-07'})
+```
+
+Encodes the agent's current working belief about the entity at a given confidence.
+
+**`[:DETECTED]`** — created only for `_observation_class: 'observed'`:
+
+```
+(:Agent {id: 'robot-01'})-[:DETECTED {_confidence: 0.91, _observation_class: 'observed'}]->(:Entity {id: 'player-07'})
+```
+
+Captures direct sensor contact as distinct from belief derived from other agents' data.
+
+---
+
+## Fleet-wide state queries
+
+Standard GQL patterns for querying across the entire fleet — no custom procedures required:
+
+```cypher
+-- What does each agent believe about entity 'player-07'?
+MATCH (a:Agent)-[:BELIEVES]->(e:Entity {id: 'player-07'})
+RETURN a.id, e.x, e.y, e._confidence, e._observation_class
+ORDER BY e._confidence DESC
+```
+
+```cypher
+-- Which agents have direct sensor contact with 'player-07'?
+MATCH (a:Agent)-[:DETECTED]->(e:Entity {id: 'player-07'})
+RETURN a.id, a.zone, e._confidence
+```
+
+```cypher
+-- Fleet-wide entity coverage: which entities no agent currently observes?
+MATCH (e:Entity)
+WHERE NOT EXISTS {
+  MATCH (a:Agent)-[:BELIEVES]->(e)
+  WHERE e._observation_class = 'observed'
+}
+RETURN e.id, e._observation_class, e._confidence
+```
+
+```cypher
+-- Full fleet belief state: every agent's view of every entity
+MATCH (a:Agent)-[:BELIEVES]->(e:Entity)
+RETURN a.id, a.zone, e.id, e.x, e.y, e._confidence, e._observation_class
+ORDER BY e.id, e._confidence DESC
+```
+
+---
+
+## algo.beliefReconcile — Kalman fusion
+
+When two or more agents have conflicting `observed` positions for the same entity, `algo.beliefReconcile` fuses them into a single `inferred` fact using Kalman precision-weighted averaging.
+
+```cypher
+CALL algo.beliefReconcile('player-07')
+YIELD fused_confidence,
+      source_agents,
+      source_confidences,
+      reconciliation_method,
+      observation_seq
+```
+
+**Return columns:**
+
+| Column | Type | Meaning |
+|---|---|---|
+| `fused_confidence` | Float | Weighted fused confidence — always ≥ any single source |
+| `source_agents` | String | Comma-separated agent IDs that contributed |
+| `source_confidences` | String | Comma-separated per-agent confidence values |
+| `reconciliation_method` | String | Always `kalman-fusion` |
+| `observation_seq` | Int | Number of source observations fused |
+
+**Algorithm:** precision-weighted Kalman mean — `fused = Σ(cᵢ²) / Σ(cᵢ)` where `cᵢ` is the `_confidence` on each `BELIEVES` edge. A single source with confidence 0.8 fuses to exactly 0.8. Two sources at 0.9 and 0.7 fuse to 0.8125 (higher than either alone due to information gain).
+
+**What it writes back on the entity:**
+
+```
+_observation_class: 'inferred'
+_confidence:        <fused_confidence>
+_propagation_rule:  'kalman-fusion'
+_source_agents:     'robot-01,robot-02'
+_source_count:      2
+```
+
+**Example — two cameras observe the same player:**
+
+```cypher
+-- robot-01 observes at 0.91 confidence
+MATCH (e:Entity {id: 'player-07'})
+SET e._agent_id = 'robot-01', e._confidence = 0.91, e._observation_class = 'observed'
+
+-- robot-02 observes at 0.78 confidence
+MATCH (e:Entity {id: 'player-07'})
+SET e._agent_id = 'robot-02', e._confidence = 0.78, e._observation_class = 'observed'
+
+-- Fuse: Σ(0.91² + 0.78²) / Σ(0.91 + 0.78) = (0.8281 + 0.6084) / 1.69 ≈ 0.851
+CALL algo.beliefReconcile('player-07')
+YIELD fused_confidence, source_agents, reconciliation_method
+
+-- Entity now has: _observation_class='inferred', _confidence≈0.851, _propagation_rule='kalman-fusion'
+MATCH (e:Entity {id: 'player-07'})
+RETURN e._observation_class, e._confidence, e._propagation_rule, e._source_agents
+```
+
+**When to use it:** Call `beliefReconcile` when multiple agents have written `BELIEVES` edges to the same entity within a fusion window — typically triggered by a live skill that fires on new observations.
+
+**Reactive pattern — auto-fuse on every new observation:**
+
+```cypher
+-- Register a skill that runs beliefReconcile whenever a new BELIEVES edge is created
+CREATE SKILL fleet.autoFuse AS
+MATCH (a:Agent)-[:BELIEVES]->(e:Entity)
+WHERE e._observation_class = 'observed'
+CALL algo.beliefReconcile(e.id)
+YIELD fused_confidence
+RETURN e.id, fused_confidence
+```
+
+---
+
+## AS AGENT — agent-scoped queries
+
+`AS AGENT 'name'` scopes a query to an agent's operational context. The `agent.*` binding resolves to the named Agent node's properties without any application-level filtering.
+
+```cypher
+-- robot-01's control loop: process only entities in its own zone
+AS AGENT 'robot-01'
+MATCH (e:Entity)
+WHERE e.zone = agent.zone
+RETURN e.id, e.x, e.y, e._confidence
+```
+
+**Available bindings:**
+
+| Binding | Resolves to |
+|---|---|
+| `agent.id` | The agent's `id` property |
+| `agent.zone` | The agent's `zone` property |
+| `agent.role` | The agent's `role` property |
+| `agent.observation_rate_hz` | The agent's `observation_rate_hz` property |
+
+The bindings are substituted before compilation — no runtime cost beyond a node lookup.
+
+**Error handling:** If the named agent does not exist, the query returns `AGENT_NOT_FOUND`:
+
+```cypher
+-- Unknown agent name → AGENT_NOT_FOUND error
+AS AGENT 'nonexistent-robot'
+MATCH (e:Entity) RETURN e.id
+```
+
+**Zone-scoped tasking example:**
+
+```cypher
+-- Each robot's perception loop queries only its own zone's entities
+AS AGENT 'robot-02'
+MATCH (e:Entity)
+WHERE e.zone = agent.zone
+  AND e._confidence > 0.7
+  AND e._observation_class IN ['observed', 'inferred']
+RETURN e.id, e.x, e.y, e._confidence
+ORDER BY e._confidence DESC
+```
+
+---
+
+## Putting it together — a multi-robot observation pipeline
+
+```cypher
+-- 1. Declare agents at deployment startup
+CREATE (:Agent {id: 'cam-left',  role: 'scout', zone: 'pitch', modalities: 'camera', observation_rate_hz: 25})
+CREATE (:Agent {id: 'cam-right', role: 'scout', zone: 'pitch', modalities: 'camera', observation_rate_hz: 25})
+CREATE (:Agent {id: 'lidar-top', role: 'scout', zone: 'pitch', modalities: 'lidar',  observation_rate_hz: 10})
+
+-- 2. Agents write observations (BELIEVES + DETECTED edges created automatically)
+MATCH (e:Entity {id: 'ball'})
+SET e._agent_id = 'cam-left', e._confidence = 0.94, e._observation_class = 'observed',
+    e.x = 34.2, e.y = 22.1
+
+MATCH (e:Entity {id: 'ball'})
+SET e._agent_id = 'cam-right', e._confidence = 0.89, e._observation_class = 'observed',
+    e.x = 34.5, e.y = 22.0
+
+-- 3. Check fleet belief state
+MATCH (a:Agent)-[:BELIEVES]->(e:Entity {id: 'ball'})
+RETURN a.id, e._confidence, e._observation_class
+ORDER BY e._confidence DESC
+
+-- 4. Fuse conflicting observations into a single ground truth
+CALL algo.beliefReconcile('ball')
+YIELD fused_confidence, source_agents, reconciliation_method
+
+-- 5. Downstream agents query the fused entity
+AS AGENT 'lidar-top'
+MATCH (e:Entity)
+WHERE e.zone = agent.zone
+  AND e._observation_class = 'inferred'
+  AND e._confidence > 0.85
+RETURN e.id, e.x, e.y, e._confidence, e._propagation_rule
+```
+
+---
+
+## See Also
+
+- [Physical AI Deployment](/use-cases/physical-ai) — the two-tier architecture this fleet layer sits in
+- [Observations & Evidence](/concepts/observations) — `_observation_class`, `_confidence`, and provenance
+- [Swarm & Multi-Agent](/guides/swarm-agents) — LLM agent coordination on a shared world model
+- [Procedures Reference](/worldcypher/functions/procedures) — full `algo.beliefReconcile` signature
+- [Live Queries](/live-queries) — standing queries for reactive fleet monitoring
