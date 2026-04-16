@@ -5,8 +5,8 @@ Thanks for your interest in contributing to the ArcFlow SDK!
 ## Development setup
 
 ```bash
-git clone https://github.com/ArcFlowLabs/arcflow-sdk.git
-cd arcflow-sdk/typescript
+git clone https://github.com/ozinc/arcflow.git
+cd arcflow/typescript
 npm install
 npm run build
 npm test

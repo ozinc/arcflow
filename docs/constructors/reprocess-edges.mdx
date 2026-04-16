@@ -1,0 +1,35 @@
+---
+title: "REPROCESS EDGES"
+description: "Re-evaluate edges below a confidence threshold"
+section: "constructors"
+order: 4
+since: "0.4.0"
+status: "stable"
+---
+
+# REPROCESS EDGES
+
+Re-evaluate low-confidence edges when constructors improve. Deletes edges below a threshold and re-runs their constructors for fresh scores.
+
+## Syntax
+
+```sql
+REPROCESS EDGES WHERE confidence < <threshold>
+```
+
+## Example
+
+```sql
+REPROCESS EDGES WHERE confidence < 0.6
+```
+
+This:
+1. Finds all dynamic edges with confidence below 0.6
+2. Deletes them
+3. Re-executes the originating constructors
+4. New edges get fresh confidence scores and updated provenance
+
+## See Also
+
+- [PROCESS NODE](/constructors/process-node)
+- [Confidence & Provenance](/concepts/confidence-and-provenance)

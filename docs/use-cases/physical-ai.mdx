@@ -1,0 +1,223 @@
+---
+title: "Use Case: Physical AI Deployment"
+description: "ArcFlow as the operational persistence layer for physical AI systems — robots, autonomous vehicles, and multi-agent deployments"
+section: "use-cases"
+status: "stable"
+---
+
+# Use Case: Physical AI Deployment
+
+Physical AI systems — robots, autonomous vehicles, drones, industrial agents — run neural world models that generate predictions. ArcFlow is the operational layer those predictions land in: the persistence tier that stores what actually happened, makes it queryable, and closes the training loop.
+
+## The Two-Tier Architecture
+
+Every mature physical AI deployment needs both tiers:
+
+```
+SIMULATION TIER (neural)
+  Neural World Model (Cosmos, Dreamer, V-JEPA, Genie)
+  → generates action-conditioned predictions
+  → trains policies in imagination
+  → outputs: trajectory forecasts, next-state rollouts, confidence heatmaps
+
+OPERATIONAL TIER (ArcFlow)
+  → stores sensor-measured ground truth (observed)
+  → stores neural WFM predictions alongside (predicted)
+  → stores derived state — fusion, filtering, inference (inferred)
+  → multi-agent shared state: all robots read the same graph
+  → AS OF seq N: reconstruct exact world state at any past moment
+  → delta between predicted and observed closes the training loop
+```
+
+The simulation tier generates possible futures. ArcFlow records what actually occurred.
+
+Without the operational tier, physical AI deployments have no answer to:
+- "What did the robot actually see at timestamp T?" (debugging)
+- "How accurate were the neural WFM predictions over the last 10,000 episodes?" (training feedback)
+- "What is the shared state across all 50 robots in this warehouse?" (multi-agent coordination)
+- "What happened 3 seconds before the collision?" (incident reconstruction)
+
+## The Handoff Pattern
+
+Neural WFM outputs write to ArcFlow as `_observation_class: 'predicted'`. Sensor measurements write as `_observation_class: 'observed'`. Both persist in the same graph.
+
+```typescript
+import { open } from 'arcflow'
+
+const db = open('./deployment')
+
+// 1. Neural WFM generates a 500ms trajectory prediction for robot-07
+async function writeNeuralPrediction(robotId: string, seq: number, predicted: Pose3d, confidence: number) {
+  await db.mutate(`
+    CREATE (p:Prediction {
+      entity_id: $robotId,
+      seq: $seq,
+      x: $x, y: $y, z: $z,
+      qw: $qw, qx: $qx, qy: $qy, qz: $qz,
+      _observation_class: 'predicted',
+      _confidence: $confidence,
+      model_id: 'dreamer-v4',
+      horizon_ms: 500
+    })
+  `, { robotId, seq, ...predicted, confidence })
+}
+
+// 2. Sensor fusion pipeline writes confirmed position
+async function writeSensorObservation(robotId: string, seq: number, actual: Pose3d, sensorConf: number) {
+  await db.mutate(`
+    MERGE (r:Robot {id: $robotId})
+    SET r.x = $x, r.y = $y, r.z = $z,
+        r.qw = $qw, r.qx = $qx, r.qy = $qy, r.qz = $qz,
+        r._observation_class = 'observed',
+        r._confidence = $conf,
+        r.last_observed_seq = $seq
+  `, { robotId, seq, ...actual, conf: sensorConf })
+}
+
+// 3. Compute prediction error — training signal
+function getPredictionDeltas(robotId: string, lastN: number) {
+  return db.query(`
+    MATCH (pred:Prediction {entity_id: $robotId})
+    MATCH (r:Robot {id: $robotId}) AS OF seq(pred.seq)
+    WHERE pred.seq > (max_seq() - $lastN)
+    RETURN
+      pred.seq,
+      pred._confidence AS predicted_confidence,
+      sqrt((pred.x - r.x)^2 + (pred.y - r.y)^2 + (pred.z - r.z)^2) AS position_error_m
+    ORDER BY pred.seq DESC
+  `, { robotId, lastN })
+}
+```
+
+## Multi-Agent Shared State
+
+Every robot in a fleet reads from the same ArcFlow graph. No separate world models per agent — no consistency problem between them.
+
+```typescript
+// Robot-07 writes its own observed position
+await db.mutate(`
+  MERGE (r:Robot {id: 'robot-07'})
+  SET r.x = $x, r.y = $y, r.z = $z,
+      r._observation_class = 'observed',
+      r._confidence = $conf,
+      r.seq = $seq
+`, { x: 14.5, y: 7.9, z: 0.0, conf: 0.97, seq: 4821 })
+
+// Any other robot (or supervisor) reads the fleet's current state
+const fleetState = db.query(`
+  MATCH (r:Robot)
+  WHERE r._observation_class = 'observed'
+    AND r._confidence > 0.8
+  RETURN r.id, r.x, r.y, r.z, r.seq
+  ORDER BY r.seq DESC
+`)
+
+// Live view: which robots are within 5m of each other?
+await db.mutate(`
+  CREATE LIVE VIEW robot_proximity AS
+    MATCH (a:Robot), (b:Robot)
+    WHERE a.id < b.id
+      AND a._confidence > 0.8 AND b._confidence > 0.8
+      AND sqrt((a.x - b.x)^2 + (a.y - b.y)^2) < 5.0
+    RETURN a.id, b.id,
+           sqrt((a.x - b.x)^2 + (a.y - b.y)^2) AS distance_m
+`)
+```
+
+The `LIVE VIEW` updates in real time as robot positions change — delta propagation, not full recompute.
+
+## Temporal Reconstruction
+
+Every state change is logged. Reconstruct exact world state at any past sequence number — essential for incident analysis, policy evaluation, and compliance audit.
+
+```typescript
+// Where was every robot at seq 4800?
+const pastState = db.query(`
+  MATCH (r:Robot) AS OF seq(4800)
+  RETURN r.id, r.x, r.y, r.z, r._confidence
+`)
+
+// Replay: what did robot-07's neural WFM predict vs what actually happened?
+const replay = db.query(`
+  MATCH (pred:Prediction {entity_id: 'robot-07'})
+  WHERE pred.seq BETWEEN 4700 AND 4900
+  MATCH (actual:Robot {id: 'robot-07'}) AS OF seq(pred.seq + 50)
+  RETURN pred.seq,
+         pred.x AS pred_x, pred.y AS pred_y,
+         actual.x AS actual_x, actual.y AS actual_y,
+         abs(pred.x - actual.x) + abs(pred.y - actual.y) AS manhattan_error
+  ORDER BY pred.seq
+`)
+```
+
+## The Training Flywheel
+
+The delta between predicted and observed is the training signal. ArcFlow makes this queryable at any granularity.
+
+```
+Neural WFM predicts → ArcFlow stores (predicted)
+Sensors confirm    → ArcFlow stores (observed)
+                   → delta is queryable (AS OF seq N)
+                   → delta feeds next training run
+                   → neural WFM improves
+                   → better predictions into ArcFlow
+                   → repeat
+```
+
+```typescript
+// Extract training batch: all prediction errors over the last 24h
+const trainingBatch = db.query(`
+  MATCH (pred:Prediction)
+  WHERE pred.created_at > (timestamp() - 86400000)
+  MATCH (r:Robot {id: pred.entity_id}) AS OF seq(pred.seq + 50)
+  RETURN
+    pred.entity_id AS robot_id,
+    pred.seq,
+    [pred.x, pred.y, pred.z] AS predicted_pose,
+    [r.x, r.y, r.z] AS actual_pose,
+    pred._confidence AS predicted_confidence,
+    sqrt((pred.x - r.x)^2 + (pred.y - r.y)^2 + (pred.z - r.z)^2) AS error_m
+`)
+
+// Feed trainingBatch to neural WFM fine-tuning pipeline
+```
+
+## Confidence as First-Class Data
+
+ArcFlow ships `_confidence` on every node and edge — from day one. Neural world models are actively working toward "calibrated uncertainty" (knowing how reliable a prediction is before it's confirmed); this is a research frontier as of 2025–26. At the operational tier, confidence is already first-class: every sensor reading, every inference, every neural prediction carries a `_confidence` score that flows through all graph queries.
+
+```typescript
+// Trust-gated query: only act on high-confidence robot positions
+const trustedPositions = db.query(`
+  MATCH (r:Robot)
+  WHERE r._observation_class = 'observed'
+    AND r._confidence >= 0.9
+  RETURN r.id, r.x, r.y, r.z
+`)
+
+// Flag robots with degraded position confidence
+const degraded = db.query(`
+  MATCH (r:Robot)
+  WHERE r._observation_class = 'observed'
+    AND r._confidence < 0.6
+  RETURN r.id, r._confidence, r.last_observed_seq
+`)
+```
+
+## Applicable Domains
+
+| Domain | Agents | Neural WFM role | ArcFlow role |
+|--------|--------|-----------------|--------------|
+| Warehouse robotics | 10–500 mobile robots | Trajectory prediction, collision avoidance | Fleet state, incident replay, training data |
+| Autonomous vehicles | 1 vehicle + pedestrians | Occupancy forecasting, scenario generation | Sensor log, policy evaluation, compliance |
+| Drone swarms | Multi-UAV formation | Formation prediction, obstacle avoidance | Shared formation state, waypoint log |
+| Sports production | Players + ball | Trajectory prediction, framing | Entity positions, replay, director state |
+| Industrial IoT | Sensors + actuators | Anomaly prediction, maintenance forecast | Asset state, alert history, audit trail |
+
+## Key Properties
+
+- **Deterministic** — same `AS OF seq N` query always returns the same result. Neural WFMs generate plausible futures; ArcFlow records exact pasts.
+- **Multi-agent native** — one graph, many writers. No per-agent world models to keep in sync.
+- **Confidence first-class** — `_confidence` on every node and edge, from sensor reading to neural prediction.
+- **Infinite temporal horizon** — append-only log with no positional encoding limit. `AS OF seq N` for any N.
+- **Schema-flexible** — any entity type, any relationship. Robot, pedestrian, vehicle, zone, obstacle, waypoint — same graph.

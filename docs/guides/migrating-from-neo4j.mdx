@@ -1,0 +1,235 @@
+---
+title: "Migration Guide"
+description: "Practical guide for moving to ArcFlow from existing graph databases. Covers Cypher dialect differences, architecture trade-offs, and migration steps."
+section: "Guides"
+order: 10
+since: "4.0.0"
+status: "stable"
+---
+
+# Migration Guide
+
+If you've worked with Neo4j, Memgraph, FalkorDB, TigerGraph, or Cosmos DB's Gremlin API, most of what you know transfers. ArcFlow's WorldCypher is Cypher-inspired; your existing `MATCH`, `CREATE`, `MERGE`, and `WHERE` clauses work without modification. What changes: the deployment model (in-process or lightweight server, no JVM), built-in GPU-accelerated algorithms, confidence scoring, temporal queries, and vector search with no add-ons.
+
+This guide covers what stays the same, what's different, and how to move your data.
+
+## Architecture Differences
+
+| Aspect | Typical Graph Database | ArcFlow |
+|---|---|---|
+| **Deployment** | Client-server (Neo4j, TigerGraph) or embedded (FalkorDB, Memgraph) | In-process library or lightweight server mode |
+| **Runtime** | JVM (Neo4j, TigerGraph), C/C++ (Memgraph, FalkorDB), .NET (Cosmos DB) | Native binary, no runtime dependency |
+| **Memory model** | Off-heap page cache or shared memory | In-process shared memory (SoC architecture) |
+| **Serialization** | Wire protocol (Bolt, Gremlin, GSQL) | None (in-process) or TCP/HTTP |
+| **Query language** | Cypher, Gremlin, GSQL, openCypher | WorldCypher (Cypher-inspired with spatial/temporal primitives) |
+| **Indexes** | B-tree, full-text, vector (varies by vendor) | Property index, HNSW vector index |
+| **Transactions** | Full ACID (most vendors) | WAL-based journaling |
+| **Clustering** | Causal clustering, replication (varies) | Single-node (replication planned) |
+| **GPU acceleration** | None | CUDA + Metal (17 kernels each) |
+| **Vector search** | Add-on or separate product (varies) | HNSW index + algo.graphRAG built-in |
+| **Temporal** | None, plugin, or limited (varies) | Built-in: AS OF, clock domains, temporal replay |
+| **Confidence scoring** | None | Built-in: 0.0-1.0 per node/edge |
+
+ArcFlow can run as an in-process engine with zero network overhead, or as a standalone server. The in-process mode eliminates serialization and connection management entirely.
+
+## Cypher Dialect Compatibility
+
+If you're coming from Neo4j, Memgraph, or FalkorDB (all openCypher-family), most of your queries port directly. Coming from TigerGraph (GSQL) or Cosmos DB (Gremlin) requires a query rewrite, but the graph modeling concepts transfer.
+
+### Fully Compatible (openCypher family)
+
+These Cypher features work identically in WorldCypher:
+
+**Statements**: CREATE, MATCH, OPTIONAL MATCH, WHERE, RETURN, ORDER BY, SKIP, LIMIT, DELETE, DETACH DELETE, SET, REMOVE, MERGE, WITH, UNION, UNWIND, CASE WHEN
+
+**Predicates**: AND, OR, NOT, XOR, `=`, `<>`, `<`, `>`, `<=`, `>=`, IS NULL, IS NOT NULL, IN, CONTAINS, STARTS WITH, ENDS WITH, EXISTS
+
+**Functions**: id(), labels(), type(), count(), sum(), avg(), min(), max(), collect(), coalesce(), toString(), toInteger(), toFloat(), toLower(), toUpper(), trim(), substring(), left(), right(), replace(), split(), reverse()
+
+**Patterns**: Node patterns `(n:Label {prop: val})`, relationship patterns `-[:TYPE]->`, variable-length paths `[*1..5]`, shortestPath()
+
+**Schema**: CREATE INDEX, CREATE CONSTRAINT (unique), DROP INDEX, DROP CONSTRAINT
+
+### WorldCypher Extensions
+
+Features in WorldCypher that don't exist in standard Cypher or other graph query languages:
+
+| Feature | Syntax | Purpose |
+|---|---|---|
+| **Temporal snapshots** | `MATCH (n) AS OF 1700000000000` | Point-in-time queries |
+| **Confidence scoring** | `confidence(n)`, `observationClass(n)` | Trust metadata on every node/edge |
+| **Authority planes** | `authorityPlane(n)` | Semantic vs scene classification |
+| **Clock domains** | `clockDomain(n)` | Multi-clock temporal modeling |
+| **Observation source** | `observationSource(n)` | Provenance tracking |
+| **Map projection** | `RETURN n {.name, .age}` | Project specific properties |
+| **toJson** | `toJson(n)` | Serialize node to JSON |
+| **hash** | `hash(n.prop)` | FNV-1a deterministic hashing |
+| **Graph algorithms** | `CALL algo.pageRank()` | 20+ built-in algorithms (no separate plugin) |
+| **PROCESS NODE** | `PROCESS NODE (n:Label) ...` | Batch node processing with constructors |
+| **REPROCESS** | `REPROCESS` | Re-run edge constructors |
+| **Vector search** | `CALL algo.vectorSearch()` | HNSW nearest-neighbor search |
+| **GraphRAG** | `CALL algo.graphRAGTrusted()` | Confidence-filtered RAG pipeline |
+| **EXPLAIN / PROFILE** | `EXPLAIN MATCH ...` | Query plan introspection |
+
+### Not Yet Supported
+
+Features in standard Cypher or other vendors not available in WorldCypher:
+
+| Feature | Status | Alternative |
+|---|---|---|
+| `FOREACH` | Not implemented | Use UNWIND + CREATE |
+| `CALL {} IN TRANSACTIONS` | Not applicable | In-process, no batching needed |
+| `LOAD CSV` | Different syntax | `:import csv path/to/file.csv` |
+| Plugin/extension procedures | Not applicable | Built-in equivalents where needed |
+| `SHOW DATABASES` | Single database | `CALL db.stats()` |
+| Subqueries (`CALL {}`) | Not implemented | Use WITH for pipeline queries |
+| `CREATE ... SET` chaining | Use comma syntax | `CREATE (n:Label {prop1: v1, prop2: v2})` |
+| Multi-database | Not implemented | Single graph store |
+| Role-based access | Planned | Currently single-user |
+
+## Performance Comparison
+
+Honest comparison. ArcFlow wins on in-process latency and GPU-accelerated algorithms. Established graph databases win on concurrent multi-user workloads and enterprise features.
+
+| Workload | ArcFlow | Established Graph DBs | Notes |
+|---|---|---|---|
+| **Single-query latency** | Lower (no network hop) | Higher (wire protocol) | ArcFlow advantage when embedded |
+| **Node creation** | 2.7M nodes/sec | ~100K-500K nodes/sec | In-process vs client-server (varies by vendor) |
+| **PageRank (CPU)** | 12.8M edges/sec | ~2-5M edges/sec | Both scale with graph size |
+| **PageRank (GPU)** | 29.6x CPU speed | N/A | CUDA/Metal acceleration |
+| **Traversal** | 13.9M edges/sec | Comparable | Most graph DBs are optimized for traversal |
+| **Concurrent users** | Limited (RwLock) | Strong (varies by vendor) | Established DBs have the advantage at scale |
+| **ACID transactions** | WAL journaling | Full ACID (most vendors) | Established DBs have the advantage for strict ACID |
+| **Data volume** | In-memory | Disk + page cache | Established DBs handle larger-than-RAM |
+| **Vector search** | HNSW + graph context | Varies (add-on or separate) | ArcFlow has graphRAG built-in |
+
+## Migration Steps
+
+### Step 1: Export from Your Current Database
+
+Export your data as Cypher statements or CSV. The method varies by vendor:
+
+- **Neo4j**: `apoc.export.cypher.all()` or `neo4j-admin database dump`
+- **Memgraph**: `DUMP DATABASE` or CSV export via `LOAD CSV` in reverse
+- **FalkorDB**: Export via RedisGraph commands or Cypher MATCH + file write
+- **TigerGraph**: GSQL export, then convert to Cypher CREATE statements
+- **Cosmos DB**: Export via Gremlin queries to JSON, then convert to Cypher
+
+```sql
+-- Most openCypher databases support exporting as CREATE statements
+-- Adapt vendor-specific export commands to your setup
+```
+
+### Step 2: Adapt the Export
+
+WorldCypher accepts most Cypher CREATE statements directly. Key adaptations:
+
+1. Remove vendor-specific syntax (proprietary ID functions, internal properties)
+2. Replace `FOREACH` with `UNWIND`
+3. Remove `CALL {} IN TRANSACTIONS` wrappers
+4. Convert GSQL or Gremlin to Cypher if coming from TigerGraph or Cosmos DB
+5. Keep CREATE, MERGE, and SET statements as-is
+
+### Step 3: Import into ArcFlow
+
+```bash
+# Start ArcFlow CLI
+arcflow --data-dir ./my-graph
+
+# Import CSV files
+:import csv /tmp/nodes.csv
+```
+
+Or use CREATE statements directly:
+
+```sql
+-- Nodes import directly
+CREATE (n:Person {name: 'Alice', age: 30})
+CREATE (n:Person {name: 'Bob', age: 25})
+```
+
+```sql
+-- Relationships
+MATCH (a:Person {name: 'Alice'}), (b:Person {name: 'Bob'})
+CREATE (a)-[:KNOWS {since: 2020}]->(b)
+```
+
+### Step 4: Recreate Indexes
+
+```sql
+CREATE INDEX ON :Person(name)
+CREATE INDEX ON :Person(email)
+CREATE CONSTRAINT ON (p:Person) ASSERT p.email IS UNIQUE
+```
+
+### Step 5: Verify
+
+```sql
+-- Check counts match
+CALL db.stats()
+```
+
+```sql
+-- Check schema
+CALL db.schema()
+```
+
+```sql
+-- Run diagnostics
+CALL db.doctor()
+```
+
+## Graph Analytics: Built-in vs Plugin
+
+Most graph databases require a separate analytics library or plugin (Neo4j GDS, TigerGraph's built-in GSQL analytics, Memgraph's MAGE). ArcFlow ships all algorithms built-in. No projection step, no separate installation.
+
+| Common Analytics Procedure | ArcFlow Equivalent |
+|---|---|
+| PageRank stream | `CALL algo.pageRank()` |
+| Betweenness centrality | `CALL algo.betweenness()` |
+| Closeness centrality | `CALL algo.closeness()` |
+| Degree centrality | `CALL algo.degreeCentrality()` |
+| Weakly connected components | `CALL algo.connectedComponents()` |
+| Louvain community detection | `CALL algo.louvain()` |
+| Leiden community detection | `CALL algo.leiden()` |
+| Local clustering coefficient | `CALL algo.clusteringCoefficient()` |
+| Triangle count | `CALL algo.triangleCount()` |
+| K-core decomposition | `CALL algo.kCore()` |
+| Node similarity | `CALL algo.nodeSimilarity()` |
+| All-pairs shortest path | `CALL algo.allPairsShortestPath()` |
+| K-nearest neighbors | `CALL algo.nearestNodes()` |
+
+Key difference: no projection step. With most graph analytics libraries, you first create an in-memory graph projection, run the algorithm, then optionally write results back. In ArcFlow, algorithms run directly on the live graph store with zero copy.
+
+```sql
+-- Traditional analytics workflow (3 steps):
+-- 1. Project graph into analytics engine
+-- 2. Run algorithm on projection
+-- 3. Drop projection
+
+-- ArcFlow (1 step):
+CALL algo.pageRank()
+```
+
+## When to Use Which
+
+**Use ArcFlow when:**
+- Embedding a graph engine in your application (no server management)
+- You need GPU-accelerated graph algorithms
+- You want built-in vector search + graph context (GraphRAG)
+- Temporal queries and confidence scoring matter for your domain
+- You want a single binary with no runtime dependency
+
+**Use an established graph database when:**
+- You need multi-user concurrent access at scale
+- Full ACID transactions are a hard requirement
+- Your graph exceeds available RAM
+- You need a large plugin ecosystem
+- You need enterprise features (RBAC, causal clustering, CDC)
+
+## See Also
+
+- [QuickStart](/quickstart) -- get running in 5 minutes
+- [Built-in Functions](/worldcypher/functions/built-in) -- all 81 functions
+- [Procedures](/worldcypher/functions/procedures) -- all 68 procedures
+- [RAG Pipeline](/guides/rag-pipeline) -- building RAG with ArcFlow

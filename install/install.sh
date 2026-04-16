@@ -1,6 +1,6 @@
 #!/bin/sh
 # ArcFlow installer — detects platform and downloads the correct binary.
-# Usage: curl -fsSL https://arcflow.dev/install | sh
+# Usage: curl -fsSL https://oz.com/install | sh
 
 set -e
 

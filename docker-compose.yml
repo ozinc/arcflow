@@ -1,6 +1,6 @@
 services:
   arcflow:
-    image: ghcr.io/oz-global/arcflow:latest
+    image: ghcr.io/ozinc/arcflow:latest
     ports:
       - "7687:7687"    # Bolt protocol
       - "8080:8080"    # HTTP API

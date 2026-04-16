@@ -18,7 +18,7 @@ One engine, every language.
 curl -fsSL https://oz.com/install | sh  # Native binary
 pip install arcflow        # Python
 npm install arcflow        # TypeScript
-docker run ghcr.io/oz-global/arcflow:latest  # Docker
+docker run ghcr.io/ozinc/arcflow:latest  # Docker
 ```
 
 All bindings wrap a single C ABI shared library (`libarcflow`). Direct function calls when in-process. TCP/HTTP/MCP when you need network access. Docker when you need isolation.
@@ -295,13 +295,13 @@ g++ -std=c++17 \
 Scratch base image, statically linked binary, under 20MB. NVIDIA bare-metal strategy — the container adds zero runtime overhead.
 
 ```bash
-docker pull ghcr.io/oz-global/arcflow:latest
+docker pull ghcr.io/ozinc/arcflow:latest
 ```
 
 ```bash
 # Run with data directory mounted
 docker run -v /data/arcflow:/data \
-    ghcr.io/oz-global/arcflow:latest \
+    ghcr.io/ozinc/arcflow:latest \
     --data-dir /data
 ```
 

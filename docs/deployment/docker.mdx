@@ -14,7 +14,7 @@ Run ArcFlow in Docker — zero build tools, 30 seconds to first query.
 ## Quick start
 
 ```bash
-docker run -p 7687:7687 -p 8080:8080 ghcr.io/oz-global/arcflow:latest
+docker run -p 7687:7687 -p 8080:8080 ghcr.io/ozinc/arcflow:latest
 ```
 
 ## docker-compose
@@ -22,7 +22,7 @@ docker run -p 7687:7687 -p 8080:8080 ghcr.io/oz-global/arcflow:latest
 ```yaml
 services:
   arcflow:
-    image: ghcr.io/oz-global/arcflow:latest
+    image: ghcr.io/ozinc/arcflow:latest
     ports:
       - "7687:7687"
       - "8080:8080"
@@ -61,7 +61,7 @@ curl -X POST http://localhost:8080/query \
 Mount a volume to `/data` to persist graph data across container restarts:
 
 ```bash
-docker run -v ./my-data:/data ghcr.io/oz-global/arcflow:latest
+docker run -v ./my-data:/data ghcr.io/ozinc/arcflow:latest
 ```
 
 ## Image details

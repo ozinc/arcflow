@@ -11,6 +11,22 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  schema-sync:
+    name: Schema sync (snapshot ↔ TypeScript)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Validates that typescript/src/code-intelligence.ts mirrors
+      # schemas/schema-snapshot.json (which is the committed cross-repo contract
+      # derived from arcflow/sdk/code-intelligence/src/schema.rs).
+      # When schema.rs changes in the engine repo, both schema-snapshot.json
+      # and code-intelligence.ts must be updated in the same PR here.
+      - name: Check schema sync
+        run: node scripts/check-schema-sync.js
+
   typecheck:
     name: Typecheck
     runs-on: ubuntu-latest

@@ -1,0 +1,53 @@
+---
+title: "Using Constructors"
+description: "Add dynamic, confidence-scored relationships to your graph"
+section: "guides"
+order: 2
+since: "0.3.0"
+status: "stable"
+---
+
+# Using Constructors
+
+Build a self-building graph: register a proximity rule, process nodes, and watch relationships materialize with confidence scores.
+
+## Step 1: Create a constructor
+
+```sql
+CREATE SKILL ProximityDetector
+  FROM PROMPT 'Determine if two Person nodes are in the same city'
+  ALLOWED ON [Person]
+  TIER SYMBOLIC
+```
+
+## Step 2: Process nodes
+
+```sql
+PROCESS NODE (n:Person)
+```
+
+The engine evaluates `ProximityDetector` against all Person nodes. For each pair
+in the same city, it materializes a `NEAR` relationship with confidence and provenance.
+
+## Step 3: Query dynamic edges
+
+```sql
+MATCH (a)-[r]->(b) RETURN a.name, type(r), b.name, r.confidence
+```
+
+Dynamic edges carry:
+- `confidence` — how certain the constructor is (0.0–1.0)
+- `provenance` — which constructor, which version, which model
+
+## Step 4: Re-evaluate low-confidence edges
+
+```sql
+REPROCESS EDGES WHERE confidence < 0.6
+```
+
+Deletes weak edges and re-runs their constructors for fresh evaluation.
+
+## See Also
+
+- [Concepts: Constructors](/concepts/constructors) — design philosophy
+- [CREATE CONSTRUCTOR](/constructors/create-constructor) — syntax reference
