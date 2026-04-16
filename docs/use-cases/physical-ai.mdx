@@ -214,10 +214,57 @@ const degraded = db.query(`
 | Sports production | Players + ball | Trajectory prediction, framing | Entity positions, replay, director state |
 | Industrial IoT | Sensors + actuators | Anomaly prediction, maintenance forecast | Asset state, alert history, audit trail |
 
+## Multi-agent fleet coordination
+
+For deployments with multiple agents observing the same entities, ArcFlow provides typed fleet infrastructure — no application-level coordination required.
+
+**Typed Agent nodes** declare each agent's capabilities, role, and operational zone:
+
+```cypher
+CREATE (:Agent {
+  id: 'cam-03', role: 'scout', zone: 'pitch-north',
+  modalities: 'camera', observation_rate_hz: 25
+})
+```
+
+**Fleet edges** are auto-created when an observation is attributed to an agent. Two edge types:
+
+- `[:BELIEVES]` — the agent's working belief about the entity (created for every observation, prediction, inference)
+- `[:DETECTED]` — direct sensor contact, `_observation_class: 'observed'` only
+
+```cypher
+-- Fleet-wide belief query: who sees what, at what confidence?
+MATCH (a:Agent)-[:BELIEVES]->(e:Entity {id: 'ball'})
+RETURN a.id, a.zone, e._confidence, e._observation_class
+ORDER BY e._confidence DESC
+```
+
+**Kalman belief fusion** resolves conflicting multi-agent observations into a single `inferred` fact:
+
+```cypher
+-- Two cameras disagree on ball position → fuse them
+CALL algo.beliefReconcile('ball')
+YIELD fused_confidence, source_agents, reconciliation_method
+-- Entity now has: _observation_class='inferred', _propagation_rule='kalman-fusion'
+```
+
+Algorithm: precision-weighted Kalman mean `Σ(cᵢ²) / Σ(cᵢ)`. The fused confidence is always higher than any single source — information gain from independent measurements.
+
+**Agent-scoped queries** scope a control loop to one agent's zone without application-level filtering:
+
+```cypher
+AS AGENT 'cam-03'
+MATCH (e:Entity)
+WHERE e.zone = agent.zone AND e._confidence > 0.8
+RETURN e.id, e.x, e.y
+```
+
+See [Fleet Coordination](/guides/fleet-coordination) for the complete guide.
+
 ## Key Properties
 
 - **Deterministic** — same `AS OF seq N` query always returns the same result. Neural WFMs generate plausible futures; ArcFlow records exact pasts.
-- **Multi-agent native** — one graph, many writers. No per-agent world models to keep in sync.
+- **Multi-agent native** — typed Agent nodes, `[:BELIEVES]`/`[:DETECTED]` edges, and Kalman belief fusion. No per-agent world models to sync.
 - **Confidence first-class** — `_confidence` on every node and edge, from sensor reading to neural prediction.
 - **Infinite temporal horizon** — append-only log with no positional encoding limit. `AS OF seq N` for any N.
 - **Schema-flexible** — any entity type, any relationship. Robot, pedestrian, vehicle, zone, obstacle, waypoint — same graph.

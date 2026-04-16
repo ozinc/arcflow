@@ -88,6 +88,45 @@ CALL db.provenance
 CALL db.causalChain
 ```
 
+## Physical AI SDK — structured ingest
+
+For physical AI deployments (robots, sensors, neural world models), the SDK provides typed ingest methods that set observation class, confidence, and provenance in one call, and optionally attribute the write to a named Agent.
+
+```cypher
+-- Write a sensor observation (class='observed')
+-- _observation_class, _confidence, _source, _timestamp_ms set automatically
+MATCH (e:Entity {id: 'player-07'})
+SET e.x = 10.5, e.y = 7.2,
+    e._observation_class = 'observed',
+    e._confidence = 0.91,
+    e._source = 'camera-3',
+    e._agent_id = 'robot-01'
+
+-- Write a neural WFM prediction (class='predicted')
+MATCH (e:Entity {id: 'player-07'})
+SET e.x = 11.0, e.y = 7.5,
+    e._observation_class = 'predicted',
+    e._confidence = 0.74,
+    e._source = 'dreamer-v4',
+    e._propagation_rule = 'neural-rollout'
+
+-- Write a derived inference (class='inferred')
+MATCH (e:Entity {id: 'player-07'})
+SET e._observation_class = 'inferred',
+    e._confidence = 0.85,
+    e._propagation_rule = 'triangulation',
+    e._source_count = 2
+```
+
+When `_agent_id` is set, the engine auto-creates `[:BELIEVES]` and `[:DETECTED]` edges linking the Agent to the Entity — enabling fleet-wide queries without any additional writes. See [Fleet Coordination](/guides/fleet-coordination) for the full multi-agent pattern.
+
+```cypher
+-- Fleet-wide: what does each agent believe about this entity?
+MATCH (a:Agent)-[:BELIEVES]->(e:Entity {id: 'player-07'})
+RETURN a.id, e._confidence, e._observation_class
+ORDER BY e._confidence DESC
+```
+
 ## Why this matters
 
 - **Trust hierarchy** — observed > inferred > predicted. Make decisions at the right confidence level.
