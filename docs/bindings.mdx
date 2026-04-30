@@ -288,26 +288,24 @@ g++ -std=c++17 \
 
 ## Docker
 
-Scratch base image, statically linked binary, under 20MB. NVIDIA bare-metal
-strategy — the container adds zero runtime overhead.
+ArcFlow is **not packaged as a Docker image** for the engine itself. The
+binary is a 5MB statically-linked library, and Docker would add ~20MB of
+container overhead while subverting the in-process embedded design.
 
-The published image and `docker run` command come from the install matrix on
-the [Installation page](/installation). Once installed, mount your data
-directory:
+For embedded use, install the language binding from the
+[Installation page](/installation) — the engine runs in your process, no
+container needed. For one-shot scripting, the native CLI binary suffices.
+For zero-install demos, the WASM playground at
+[staging.oz.com/engine](https://staging.oz.com/engine) runs the same
+engine in your browser.
 
-```bash
-# Replace <image> with the docker row from the install matrix.
-docker run -v /data/arcflow:/data <image> --data-dir /data
-```
-
-```dockerfile
-# The ArcFlow Dockerfile
-FROM scratch
-COPY arcflow /arcflow
-ENTRYPOINT ["/arcflow"]
-```
-
-Volume-mount your data directory. The binary is fully static (musl libc). No dependencies inside the container.
+The decision is recorded as `status: refused` in the engine release manifest
+([RELEASE-MATRIX.toml](https://github.com/ozinc/arcflow/blob/main/RELEASE-MATRIX.toml)).
+If a future use case (long-running `arcflow-mcp` service, shared multi-tenant
+deployment) needs a containerized shape, that will land as a separate
+artifact kind, not generic engine Docker. See
+[Why ArcFlow doesn't ship a Docker image](/deployment/docker) for the full
+rationale.
 
 ## MCP Server
 

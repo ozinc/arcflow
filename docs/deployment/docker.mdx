@@ -1,96 +1,55 @@
 ---
-title: "Deployment: Docker"
-description: "Docker deployment for the world model engine — volume mounts for WAL persistence, environment configuration, and HTTP API exposure for containerized deployments."
+title: "Why ArcFlow doesn't ship a Docker image"
+description: "ArcFlow is a 5MB embedded library; Docker would add ~20MB of container overhead and subvert the in-process design. The deliberate choice and the alternatives."
 section: "deployment"
 status: "stable"
-playground:
-  query: "MERGE (r:Robot {id: 'r1', name: 'Atlas-01', task: 'assembly', battery: 87}) MATCH (r:Robot) RETURN r.name, r.task, r.battery"
 ---
 
-# Deployment: Docker
+# Why ArcFlow doesn't ship a Docker image
 
-Run ArcFlow in Docker — zero build tools, 30 seconds to first query.
+ArcFlow is a 5MB statically-linked library. Wrapping it in a Docker image
+adds ~20MB of container overhead and subverts the central design point —
+the engine runs **in your process**, not in a sidecar.
 
-The Docker image and `docker run` command come from the install matrix on
-the [Installation page](/installation). Once you have the image name, the
-patterns below show how to wire it up.
+This page exists because it's the question we get asked. The answer is in
+the engine release manifest:
 
-## Quick start
-
-Substitute `$ARCFLOW_IMAGE` with the docker row from the install matrix.
-
-```bash
-docker run -p 7687:7687 -p 8080:8080 "$ARCFLOW_IMAGE"
+```toml
+# RELEASE-MATRIX.toml — engine repo
+[[artifacts]]
+kind = "docker"
+status = "refused"
 ```
 
-## docker-compose
+`status: refused` is a first-class lifecycle state. It signals a deliberate
+decision not to ship, with a recorded reason. See
+[PAT-0042 (Release Artifact Manifest as SSoT)](https://github.com/ozinc/arcflow/blob/main/kanban/patterns/PAT-0042-Release-Artifact-Manifest.md)
+for the governance.
 
-Set `image:` to whatever the install matrix shows for the docker row.
+## What to use instead
 
-```yaml
-services:
-  arcflow:
-    image: ${ARCFLOW_IMAGE}    # see /docs/installation
-    ports:
-      - "7687:7687"
-      - "8080:8080"
-    volumes:
-      - arcflow-data:/data
-    environment:
-      - ARCFLOW_DATA_DIR=/data
-      - ARCFLOW_LOG_LEVEL=info
+| Use case | Right shape |
+|---|---|
+| Embedded in a Python / Node / Rust application | The matching language binding from the [Installation page](/installation) — the engine runs in your process |
+| One-shot scripting or CLI workflow | The native CLI binary from the [Installation page](/installation) — 5MB, runs anywhere |
+| Zero-install kick-the-tires demo | [staging.oz.com/engine](https://staging.oz.com/engine) — the WASM playground runs the same engine in your browser |
+| Long-running `arcflow-mcp` service for cloud LLM clients | See [MCP Server](/mcp) — runs as a child process of your LLM client, stdin/stdout JSON-RPC |
 
-volumes:
-  arcflow-data:
-```
+## When this might change
 
-```bash
-docker compose up -d
-```
+If a future use case needs a containerized shape — a shared multi-tenant
+deployment, an `arcflow-mcp` service that benefits from isolation, an
+edge-cache image — it will land as a **separate** artifact kind in the
+manifest (e.g., `kind = "mcp-docker"` or `kind = "service-docker"`), not as
+a revival of generic engine Docker.
 
-## Connect from SDK
-
-```typescript
-import { open } from 'arcflow'
-
-// In-process: embed ArcFlow directly (same machine, no Docker needed)
-const db = open('./data/graph')
-```
-
-Or query the Docker container over HTTP:
-
-```bash
-curl -X POST http://localhost:8080/query \
-  -d "MATCH (n:Person) RETURN n.name"
-```
-
-## Data persistence
-
-Mount a volume to `/data` to persist graph data across container restarts:
-
-```bash
-docker run -v ./my-data:/data "$ARCFLOW_IMAGE"
-```
-
-## Image details
-
-- **Base:** scratch (no OS, minimal attack surface)
-- **Binary:** statically linked, <20MB
-- **Architecture:** `linux/amd64`, `linux/arm64`
-
-## Environment variables
-
-| Variable | Default | Description |
-|---|---|---|
-| `ARCFLOW_DATA_DIR` | `/data` | Data directory |
-| `ARCFLOW_LOG_LEVEL` | `info` | Log level (debug, info, warn, error) |
-| `ARCFLOW_METAL_FORCE_UNAVAILABLE` | `false` | Disable Metal GPU |
-
----
+The discipline matters. Conflating "the engine binary in a container" with
+"a service that happens to use the engine" is what made the original
+install matrix lie to customers in the first place. The manifest tracks
+shape, not aspiration.
 
 ## See Also
 
-- [Platform](/platform) — all runtime environments: Node.js, Python, Rust, WASM, Docker
-- [Installation](/installation) — pre-built binaries and npm/pip/cargo install
-- [Server Modes](/server) — in-process, HTTP, TCP, and MCP server configuration
-- [Architecture](/architecture) — how storage, query, and algorithms share a process
+- [Installation](/installation) — the full manifest-driven install matrix
+- [Language Bindings](/bindings) — embedded use, the primary path
+- [MCP Server](/mcp) — the one place a service shape might justify Docker, eventually
