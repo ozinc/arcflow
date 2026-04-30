@@ -1,0 +1,88 @@
+# Public crates.io publish for the ArcFlow Rust crate.
+#
+# This workflow lives in ozinc/arcflow (public) for supply-chain audit
+# transparency. The crate source lives in ozinc/arcflow-core (private)
+# at crates/wc-sdk/ and is checked out via ARCFLOW_CORE_RO_PAT.
+#
+# crates.io DOES NOT support OIDC / Trusted Publishers yet (RFC 3691
+# pending). This workflow uses a long-lived API token in
+# CARGO_REGISTRY_TOKEN. Rotate annually; crates.io's max token expiry
+# is 365 days.
+#
+# Operator setup (one-time):
+#   1. Create crates.io API token at crates.io/me → API Tokens →
+#      New Token. Name: "arcflow CI publish (rotates YYYY-MM-DD)".
+#      Endpoints: publish-update + publish-new (or split: claim-only
+#      token for first publish, then rotate to publish-update-only).
+#      Crate scope: list every crate this token can publish — at minimum
+#      `arcflow` (the public-facing name). If wc-sdk's Cargo.toml has
+#      package.name = "arcflow" the token covers it; otherwise verify
+#      the actual published name and scope accordingly.
+#      Expiration: 365 days max. Set a calendar reminder for day 335.
+#   2. Store under this repo's Settings → Secrets and variables → Actions
+#      as CARGO_REGISTRY_TOKEN (exact name — cargo reads this env var
+#      by default).
+#   3. First publish must be run manually with `cargo publish` to claim
+#      the name on crates.io. Subsequent releases run via this workflow.
+#   4. Provision ARCFLOW_CORE_RO_PAT (same secret as publish-python.yml).
+#
+# Trigger: GitHub release published. Re-run via workflow_dispatch.
+
+name: publish-cargo
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify CARGO_REGISTRY_TOKEN is set
+        if: ${{ secrets.CARGO_REGISTRY_TOKEN == '' }}
+        run: |
+          echo "::error::CARGO_REGISTRY_TOKEN is not set. Provision a crates.io token (publish-update + publish-new, scoped to arcflow, ≤365 day expiry) under this repo's Settings → Secrets and variables → Actions."
+          exit 1
+
+      - name: Verify ARCFLOW_CORE_RO_PAT is set
+        if: ${{ secrets.ARCFLOW_CORE_RO_PAT == '' }}
+        run: |
+          echo "::error::ARCFLOW_CORE_RO_PAT is not set. Provision a fine-grained PAT scoped to ozinc/arcflow-core (Contents: Read)."
+          exit 1
+
+      - name: Checkout arcflow-core
+        uses: actions/checkout@v4
+        with:
+          repository: ozinc/arcflow-core
+          path: arcflow-core
+          token: ${{ secrets.ARCFLOW_CORE_RO_PAT }}
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Verify version aligns with RELEASE-MATRIX.toml
+        working-directory: arcflow-core
+        run: |
+          manifest_v=$(python3 -c "import tomllib; print(tomllib.loads(open('RELEASE-MATRIX.toml').read())['engine']['version'])")
+          sdk_v=$(grep -m1 '^version' crates/wc-sdk/Cargo.toml | cut -d'"' -f2)
+          if [ "$manifest_v" != "$sdk_v" ]; then
+            echo "Version drift: RELEASE-MATRIX.toml=$manifest_v wc-sdk=$sdk_v"
+            exit 1
+          fi
+          echo "version: $sdk_v"
+
+      - name: Cargo publish
+        working-directory: arcflow-core/crates/wc-sdk
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          # NOTE: `cargo publish -p wc-sdk` publishes the crate under
+          # whatever name is set in crates/wc-sdk/Cargo.toml's
+          # [package].name. Engine-side intent is for that name to be
+          # `arcflow` (public). Verify before first publish.
+          cargo publish --dry-run -p wc-sdk
+          cargo publish -p wc-sdk

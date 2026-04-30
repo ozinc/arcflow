@@ -1,0 +1,98 @@
+# Public Docker image publish to GHCR.
+#
+# This workflow lives in ozinc/arcflow (public) for supply-chain audit
+# transparency. The Dockerfile and engine source live in
+# ozinc/arcflow-core (private) and are checked out via ARCFLOW_CORE_RO_PAT.
+#
+# Image: ghcr.io/ozinc/arcflow (multi-arch: linux/amd64, linux/arm64)
+# Authentication: workflow's auto-provisioned GITHUB_TOKEN with
+# `permissions: packages: write`. No long-lived secret.
+#
+# Operator pre-flight (one-time, MUST be confirmed before first run):
+#   1. github.com/organizations/ozinc/settings/packages → Container creation
+#      policy: must allow this repo to create packages. If set to
+#      "Disabled" or "Selected repositories" without ozinc/arcflow listed,
+#      the first push fails with "denied: installation not allowed".
+#   2. Provision ARCFLOW_CORE_RO_PAT (same secret as publish-python.yml).
+#   3. First push creates ghcr.io/ozinc/arcflow as a PRIVATE package.
+#      Manually flip to public at
+#      github.com/orgs/ozinc/packages/container/arcflow/settings →
+#      Change visibility.
+#   4. Cross-repo pushes (e.g., from a future split CI repo) require
+#      manual link at the package settings page → Manage Actions access.
+#      Auto-linking only happens for the first-push source repo.
+#
+# Trigger: GitHub release published. Re-run via workflow_dispatch.
+
+name: publish-docker
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ozinc/arcflow
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify ARCFLOW_CORE_RO_PAT is set
+        if: ${{ secrets.ARCFLOW_CORE_RO_PAT == '' }}
+        run: |
+          echo "::error::ARCFLOW_CORE_RO_PAT is not set. Provision a fine-grained PAT scoped to ozinc/arcflow-core (Contents: Read)."
+          exit 1
+
+      - name: Checkout arcflow-core (Dockerfile + engine source)
+        uses: actions/checkout@v4
+        with:
+          repository: ozinc/arcflow-core
+          path: arcflow-core
+          token: ${{ secrets.ARCFLOW_CORE_RO_PAT }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up QEMU (multi-arch)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract version from RELEASE-MATRIX.toml
+        id: ver
+        working-directory: arcflow-core
+        run: |
+          v=$(python3 -c "import tomllib; print(tomllib.loads(open('RELEASE-MATRIX.toml').read())['engine']['version'])")
+          echo "version=$v" >> $GITHUB_OUTPUT
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest
+            type=raw,value=${{ steps.ver.outputs.version }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: arcflow-core
+          file: arcflow-core/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

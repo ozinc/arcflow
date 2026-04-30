@@ -1,5 +1,5 @@
 {
-  "name": "arcflow",
+  "name": "@ozinc/arcflow",
   "version": "0.1.0",
   "description": "Embedded graph database with vector search, algorithms, and live queries. No server needed. Like SQLite, but for graphs.",
   "type": "module",
