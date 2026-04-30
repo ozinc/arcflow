@@ -1,0 +1,15 @@
+slug = "agent-knowledge-base"
+title = "Agent Knowledge Base via Confidence-Scored GraphRAG"
+audience = ["python", "agent"]
+arcflow_apis = [
+    "python.ArcFlow.execute",
+    "python.ArcFlow.close",
+    "python.QueryResult.row_count",
+    "python.QueryResult.columns",
+    "python.QueryResult.get",
+]
+external_deps = []
+runtime_minutes = 5
+gpu_required = false
+manifest_pin = "1.6.6"
+data_provenance = "synthesized"

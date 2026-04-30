@@ -1,0 +1,70 @@
+# PAT-0044 — Cookbook CI runner.
+#
+# On every push and PR: walks cookbooks/<slug>/, validates meta.toml,
+# installs deps via uv (or pip), runs every numbered step in order.
+# Fails closed if any recipe step fails or any meta.toml schema check
+# rejects the recipe.
+#
+# Pre-requisite: a built ArcFlow wheel for the runner platform. CI builds
+# it from the engine repo via a setup step (or downloads from the engine's
+# release-matrix.json verify URL once status: shipped).
+
+name: cookbook-test
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "cookbooks/**"
+      - ".github/workflows/cookbook-test.yml"
+  pull_request:
+    paths:
+      - "cookbooks/**"
+      - ".github/workflows/cookbook-test.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recipes:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-14]
+        python: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Check out engine repo for wheel build
+        uses: actions/checkout@v4
+        with:
+          repository: ozinc/arcflow
+          path: arcflow-engine
+          token: ${{ secrets.ARCFLOW_ENGINE_RO_PAT }}
+          # Operator must provision ARCFLOW_ENGINE_RO_PAT (a read-only PAT
+          # for the closed engine repo). Until then this job will fail at
+          # this step — flip cookbook-test to "off" or remove the matrix
+          # entry until the PAT is available.
+
+      - name: Build ArcFlow wheel
+        run: |
+          cd arcflow-engine
+          cargo build --release -p wc-ffi
+          cd python
+          python -m pip install --upgrade pip build
+          bash build_wheel.sh
+
+      - name: Run cookbook CI
+        run: |
+          export ARCFLOW_WHEEL="$(pwd)/arcflow-engine/python/dist/oz_arcflow-1.6.6-py3-none-any.whl"
+          bash cookbooks/run-ci.sh

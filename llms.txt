@@ -8,9 +8,15 @@ Open https://oz.com/engine in your browser. Paste any query. Persistent storage.
 
 ## Install
 
-```
-npm install arcflow
-```
+The current shipping install matrix is at:
+https://oz.com/docs/installation
+Source: https://pub-a0a196dbe10340f8af22524547fdd476.r2.dev/releases/arcflow/release-matrix.json
+(schema: arcflow/schemas/release-matrix.schema.json)
+
+During alpha:
+  curl -fsSL https://oz.com/install/arcflow | sh   # native CLI
+Other bindings (Python, Node.js, Rust, Docker) are in progress —
+see the matrix above for current status.
 
 ## 5 essential patterns
 

@@ -7,9 +7,23 @@ needed to integrate ArcFlow into any TypeScript/Node.js application.
 
 ## Installation
 
+The current shipping install matrix is at:
+https://oz.com/docs/installation
+Source manifest:
+https://pub-a0a196dbe10340f8af22524547fdd476.r2.dev/releases/arcflow/release-matrix.json
+(schema: arcflow/schemas/release-matrix.schema.json — schema_version: 1)
+
+During alpha (2026-Q2), only the native CLI is shipped:
+
 ```bash
-npm install arcflow
+curl -fsSL https://oz.com/install/arcflow | sh
 ```
+
+The Python, Node, Rust, and Docker bindings are status: planned. Check the
+release-matrix.json for current target_quarter. Do not attempt the public
+package-manager install commands during alpha — the registries will 404.
+The install matrix at https://oz.com/docs/installation always shows the
+current shipping state.
 
 ## Complete API
 

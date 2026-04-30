@@ -1,0 +1,18 @@
+[project]
+name = "arcflow-cookbook-temporal-spatial-parquet-ingest"
+version = "1.6.6"
+description = "ArcFlow seed recipe: large-batch temporal + spatial Parquet → graph world model."
+requires-python = ">=3.10"
+dependencies = [
+    "oz-arcflow==1.6.6",
+    "pyarrow>=16",
+    "duckdb>=1.0",
+    "numpy>=1.26",
+]
+
+[tool.uv.sources]
+# During alpha (release-matrix.json says python: status=planned), the recipe
+# pins to the local wheel built from the engine repo. When the manifest flips
+# to python: shipped, remove this stanza so uv resolves from PyPI.
+# Distribution name on PyPI is `oz-arcflow`; import name stays `arcflow`.
+oz-arcflow = { path = "../../../../arcflow/python/dist/oz_arcflow-1.6.6-py3-none-any.whl" }

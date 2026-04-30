@@ -1,6 +1,6 @@
 ---
 title: "Installation"
-description: "Pre-built native binaries for all platforms — npm, pip, cargo, Docker, or a standalone binary. One install, no build tools."
+description: "Install ArcFlow — manifest-driven matrix sourced from the release manifest. One source of truth for every binding."
 section: "get-started"
 status: "stable"
 playground:
@@ -10,43 +10,27 @@ playground:
 
 # Installation
 
-Pre-built native binaries for all platforms. No build tools, no compiler required.
+ArcFlow ships across multiple registries. This page is generated from a
+single source of truth — the engine's `RELEASE-MATRIX.toml`. Every binding
+listed below was probed by CI before this page was published; planned
+artifacts are flagged with their target quarter and never advertised as if
+they were live.
 
-## npm (recommended)
+<InstallMatrix />
 
-```bash
-npm install arcflow
-```
+## How this page stays accurate
 
-The SDK includes pre-built native binaries for all major platforms:
+The matrix above is rendered from
+[`release-matrix.json`](https://pub-a0a196dbe10340f8af22524547fdd476.r2.dev/releases/arcflow/release-matrix.json),
+published by the engine repo on every release. CI in the engine repo asserts
+on every commit that:
 
-| Platform | Architecture | Binary |
-|---|---|---|
-| macOS | Apple Silicon (M1/M2/M3/M4) | `arcflow.darwin-arm64.node` |
-| macOS | Intel | `arcflow.darwin-x64.node` |
-| Linux | x64 (glibc) | `arcflow.linux-x64-gnu.node` |
-| Linux | ARM64 (glibc) | `arcflow.linux-arm64-gnu.node` |
-| Windows | x64 | `arcflow.win32-x64-msvc.node` |
+- A `status: shipped` artifact's registry returns HTTP 200.
+- A `status: planned` artifact's registry returns HTTP 4xx (no false advertising).
 
-## pnpm / yarn
-
-```bash
-pnpm add arcflow
-# or
-yarn add arcflow
-```
-
-## Local development (from source)
-
-If you hold a source license and are building from the engine source:
-
-```bash
-# Build and link the native module per the source license build guide
-npm run build
-npm install
-```
-
-See the source license build guide for platform-specific instructions.
+If the manifest is unreachable at build time, the docs build fails — there is
+no fallback to a hand-rolled list. See
+[PAT-0042 (Release Artifact Manifest as SSoT)](https://github.com/ozinc/arcflow/blob/main/kanban/patterns/PAT-0042-Release-Artifact-Manifest.md).
 
 ## Verify installation
 
@@ -60,16 +44,32 @@ console.log(result.rows[0].get('message'))  // "It works!"
 db.close()
 ```
 
+```python
+from arcflow import ArcFlow
+
+with ArcFlow() as db:
+    db.execute("CREATE (n:Hello {message: 'It works!'})")
+    for row in db.execute("MATCH (n:Hello) RETURN n.message"):
+        print(row)  # {'message': 'It works!'}
+```
+
+The TypeScript example assumes the `arcflow` npm package is installed; the
+Python example assumes the `arcflow` Python wheel is installed. The matrix
+above shows you the install command for whichever path is currently shipped.
+
 ## Environment variables
 
 | Variable | Default | Description |
 |---|---|---|
 | `ARCFLOW_METAL_FORCE_UNAVAILABLE` | `false` | Set to `true` to disable Metal GPU acceleration (useful if module load hangs) |
+| `ARCFLOW_NATIVE_DIR` | unset | Python only. Override the directory containing `libarcflow.{so,dylib,dll}` (used during alpha when running against a freshly-built engine, not a wheel-bundled binary). |
 
 ## Requirements
 
-- Node.js 18+ (LTS recommended)
-- No native build tools needed — pre-built binaries are included
+- Node.js 18+ (LTS recommended) for the npm path.
+- Python 3.8+ for the pip path.
+- No native build tools required — pre-built binaries are bundled in the
+  installable artifacts.
 
 ---
 
@@ -78,3 +78,4 @@ db.close()
 - [Quickstart](/quickstart) — first query in under 5 minutes
 - [Project Setup](/project-setup) — world model workspace layout and configuration
 - [Language Bindings](/bindings) — Node.js, Python, Rust, Go, WASM, and CLI
+- [Cookbook](https://github.com/ozinc/arcflow-docs/tree/main/cookbooks) — runnable, manifest-aligned recipes

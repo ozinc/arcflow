@@ -12,14 +12,10 @@ playground:
 
 # Language Bindings
 
-One engine, every language.
+One engine, every language. The full install matrix is sourced from the
+engine release manifest — no hand-rolled commands here.
 
-```bash
-curl -fsSL https://oz.com/install | sh  # Native binary
-pip install arcflow        # Python
-npm install arcflow        # TypeScript
-docker run ghcr.io/ozinc/arcflow:latest  # Docker
-```
+<InstallMatrix />
 
 All bindings wrap a single C ABI shared library (`libarcflow`). Direct function calls when in-process. TCP/HTTP/MCP when you need network access. Docker when you need isolation.
 
@@ -163,17 +159,17 @@ db.close()
 
 ### Install
 
-```bash
-npm install arcflow
-```
+See the [Installation page](/installation) for the manifest-driven install
+matrix. The TypeScript binding ships in the same `arcflow` package — pick
+the npm row in the matrix above.
 
 ## React
 
 React hooks for live graph data in components.
 
-```bash
-npm install arcflow @arcflow/react
-```
+The `@arcflow/react` package is published alongside `arcflow` once the npm
+row in the install matrix flips to shipped — install both per the
+[Installation page](/installation).
 
 ```tsx
 import { openInMemory } from 'arcflow'
@@ -292,17 +288,16 @@ g++ -std=c++17 \
 
 ## Docker
 
-Scratch base image, statically linked binary, under 20MB. NVIDIA bare-metal strategy — the container adds zero runtime overhead.
+Scratch base image, statically linked binary, under 20MB. NVIDIA bare-metal
+strategy — the container adds zero runtime overhead.
+
+The published image and `docker run` command come from the install matrix on
+the [Installation page](/installation). Once installed, mount your data
+directory:
 
 ```bash
-docker pull ghcr.io/ozinc/arcflow:latest
-```
-
-```bash
-# Run with data directory mounted
-docker run -v /data/arcflow:/data \
-    ghcr.io/ozinc/arcflow:latest \
-    --data-dir /data
+# Replace <image> with the docker row from the install matrix.
+docker run -v /data/arcflow:/data <image> --data-dir /data
 ```
 
 ```dockerfile

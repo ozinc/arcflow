@@ -1,0 +1,11 @@
+[project]
+name = "arcflow-cookbook-agent-knowledge-base"
+version = "1.6.6"
+description = "ArcFlow recipe: confidence-scored GraphRAG over a small synthesized document corpus."
+requires-python = ">=3.10"
+dependencies = [
+    "oz-arcflow==1.6.6",
+]
+
+[tool.uv.sources]
+oz-arcflow = { path = "../../../../arcflow/python/dist/oz_arcflow-1.6.6-py3-none-any.whl" }

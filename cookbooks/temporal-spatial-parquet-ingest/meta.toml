@@ -1,0 +1,17 @@
+slug = "temporal-spatial-parquet-ingest"
+title = "Temporal + Spatial Parquet Ingestion"
+audience = ["python", "data-engineer"]
+arcflow_apis = [
+    "python.ArcFlow.execute",
+    "python.ArcFlow.close",
+    "python.QueryResult.row_count",
+    "python.QueryResult.columns",
+]
+external_deps = [
+    "pyarrow >= 16",
+    "duckdb >= 1.0",
+]
+runtime_minutes = 5
+gpu_required = false
+manifest_pin = "1.6.6"
+data_provenance = "synthesized"

@@ -1,0 +1,11 @@
+# Per-recipe local virtualenvs and bytecode caches.
+# Recipes regenerate these on each CI run; committing them is noise.
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Build artifacts (recipes don't build; if a recipe ever does, exclude here).
+*.egg-info/
+build/
+dist/

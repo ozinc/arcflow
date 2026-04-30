@@ -1,0 +1,13 @@
+[project]
+name = "arcflow-cookbook-sensor-fusion-livequery"
+version = "1.6.6"
+description = "ArcFlow recipe: multi-sensor fusion with trust-weighted live-polling alerts."
+requires-python = ">=3.10"
+dependencies = [
+    "oz-arcflow==1.6.6",
+    "pyarrow>=16",
+    "numpy>=1.26",
+]
+
+[tool.uv.sources]
+oz-arcflow = { path = "../../../../arcflow/python/dist/oz_arcflow-1.6.6-py3-none-any.whl" }

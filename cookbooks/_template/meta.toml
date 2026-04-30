@@ -1,0 +1,12 @@
+slug = "TEMPLATE"   # MUST match folder name; rename when copying
+title = "Template Recipe"
+audience = ["python"]
+arcflow_apis = [
+    "python.ArcFlow.execute",
+    "python.ArcFlow.close",
+]
+external_deps = []
+runtime_minutes = 5
+gpu_required = false
+manifest_pin = "1.6.6"
+data_provenance = "synthesized"

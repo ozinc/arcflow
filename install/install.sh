@@ -1,13 +1,13 @@
 #!/bin/sh
 # ArcFlow installer
-# Usage: curl -fsSL https://oz.com/install | sh
+# Usage: curl -fsSL https://oz.com/install/arcflow | sh
 #
-# This script is the canonical source. It is deployed to oz.com/install
-# via oz-platform/apps/cloud/website/public/install.
+# This script is the canonical source. It is deployed to oz.com/install/arcflow
+# via oz-platform/apps/cloud/website/public/install/arcflow.
 #
 # When modifying: update BOTH files and keep them identical.
-#   arcflow-docs/install/install.sh  ← source of truth (this file)
-#   oz-platform/.../public/install   ← deployed copy (oz.com/install)
+#   arcflow-docs/install/install.sh        ← source of truth (this file)
+#   oz-platform/.../public/install/arcflow ← deployed copy (oz.com/install/arcflow)
 #
 # Naming convention:
 #   arcflow-{VERSION}-{OS}-{ARCH}[-{LIBC}].tar.gz

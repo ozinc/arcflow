@@ -1,0 +1,637 @@
+{
+  "documents": [
+    {
+      "doc_id": "D01",
+      "title": "Aspartin in early-onset hypertension",
+      "source": "Synth Press"
+    },
+    {
+      "doc_id": "D02",
+      "title": "GeneX5 expression and inflammation pathways",
+      "source": "Synth Press"
+    },
+    {
+      "doc_id": "D03",
+      "title": "Clinical trial of Calmovir vs migraine",
+      "source": "TrialNet"
+    },
+    {
+      "doc_id": "D04",
+      "title": "Aspartin off-target effects review",
+      "source": "Synth Press"
+    },
+    {
+      "doc_id": "D05",
+      "title": "Hypertension and KLR2 expression",
+      "source": "GenoTimes"
+    },
+    {
+      "doc_id": "D06",
+      "title": "Calmovir mechanism of action",
+      "source": "Synth Press"
+    },
+    {
+      "doc_id": "D07",
+      "title": "Tretinex chemistry and oncology",
+      "source": "OncoBrief"
+    },
+    {
+      "doc_id": "D08",
+      "title": "ZyloFX2 in autoimmune disease",
+      "source": "ImmunoNotes"
+    },
+    {
+      "doc_id": "D09",
+      "title": "Migraine genetics: a survey",
+      "source": "GenoTimes"
+    },
+    {
+      "doc_id": "D10",
+      "title": "ZyloFX2 trial \u2014 phase II",
+      "source": "TrialNet"
+    },
+    {
+      "doc_id": "D11",
+      "title": "Tretinex resistance and KLR2",
+      "source": "OncoBrief"
+    },
+    {
+      "doc_id": "D12",
+      "title": "Inflammation cascades and Aspartin",
+      "source": "ImmunoNotes"
+    },
+    {
+      "doc_id": "D13",
+      "title": "GeneX5 knockout study",
+      "source": "GenoTimes"
+    },
+    {
+      "doc_id": "D14",
+      "title": "Calmovir generic equivalence",
+      "source": "Synth Press"
+    },
+    {
+      "doc_id": "D15",
+      "title": "Cardiovascular risk and KLR2",
+      "source": "Synth Press"
+    },
+    {
+      "doc_id": "D16",
+      "title": "Tretinex safety profile in trials",
+      "source": "TrialNet"
+    },
+    {
+      "doc_id": "D17",
+      "title": "Migraine drug pipeline 2026",
+      "source": "OncoBrief"
+    },
+    {
+      "doc_id": "D18",
+      "title": "Autoimmune therapeutics \u2014 perspective",
+      "source": "ImmunoNotes"
+    }
+  ],
+  "entities": [
+    {
+      "entity_id": "E01",
+      "name": "Aspartin",
+      "type": "Drug"
+    },
+    {
+      "entity_id": "E02",
+      "name": "Calmovir",
+      "type": "Drug"
+    },
+    {
+      "entity_id": "E03",
+      "name": "Tretinex",
+      "type": "Drug"
+    },
+    {
+      "entity_id": "E04",
+      "name": "ZyloFX2",
+      "type": "Drug"
+    },
+    {
+      "entity_id": "E10",
+      "name": "hypertension",
+      "type": "Disease"
+    },
+    {
+      "entity_id": "E11",
+      "name": "migraine",
+      "type": "Disease"
+    },
+    {
+      "entity_id": "E12",
+      "name": "carcinoma-X",
+      "type": "Disease"
+    },
+    {
+      "entity_id": "E13",
+      "name": "autoimmune-Y",
+      "type": "Disease"
+    },
+    {
+      "entity_id": "E14",
+      "name": "inflammation",
+      "type": "Disease"
+    },
+    {
+      "entity_id": "E20",
+      "name": "GeneX5",
+      "type": "Gene"
+    },
+    {
+      "entity_id": "E21",
+      "name": "KLR2",
+      "type": "Gene"
+    },
+    {
+      "entity_id": "E22",
+      "name": "TM4",
+      "type": "Gene"
+    },
+    {
+      "entity_id": "E23",
+      "name": "BRX1",
+      "type": "Gene"
+    }
+  ],
+  "mentions": [
+    {
+      "mention_id": "M0001",
+      "doc_id": "D01",
+      "entity_id": "E01",
+      "snippet": "Aspartin reduced systolic blood pressure",
+      "confidence": 0.96
+    },
+    {
+      "mention_id": "M0002",
+      "doc_id": "D01",
+      "entity_id": "E10",
+      "snippet": "patients with early-onset hypertension",
+      "confidence": 0.95
+    },
+    {
+      "mention_id": "M0003",
+      "doc_id": "D01",
+      "entity_id": "E14",
+      "snippet": "low-grade inflammation",
+      "confidence": 0.71
+    },
+    {
+      "mention_id": "M0004",
+      "doc_id": "D02",
+      "entity_id": "E20",
+      "snippet": "GeneX5 expression upregulated",
+      "confidence": 0.93
+    },
+    {
+      "mention_id": "M0005",
+      "doc_id": "D02",
+      "entity_id": "E14",
+      "snippet": "inflammatory pathways",
+      "confidence": 0.84
+    },
+    {
+      "mention_id": "M0006",
+      "doc_id": "D03",
+      "entity_id": "E02",
+      "snippet": "Calmovir 50mg arm",
+      "confidence": 0.97
+    },
+    {
+      "mention_id": "M0007",
+      "doc_id": "D03",
+      "entity_id": "E11",
+      "snippet": "chronic migraine cohort",
+      "confidence": 0.94
+    },
+    {
+      "mention_id": "M0008",
+      "doc_id": "D04",
+      "entity_id": "E01",
+      "snippet": "Aspartin off-target binding",
+      "confidence": 0.9
+    },
+    {
+      "mention_id": "M0009",
+      "doc_id": "D04",
+      "entity_id": "E22",
+      "snippet": "TM4 receptor",
+      "confidence": 0.62
+    },
+    {
+      "mention_id": "M0010",
+      "doc_id": "D05",
+      "entity_id": "E10",
+      "snippet": "essential hypertension",
+      "confidence": 0.95
+    },
+    {
+      "mention_id": "M0011",
+      "doc_id": "D05",
+      "entity_id": "E21",
+      "snippet": "KLR2 polymorphisms",
+      "confidence": 0.91
+    },
+    {
+      "mention_id": "M0012",
+      "doc_id": "D06",
+      "entity_id": "E02",
+      "snippet": "Calmovir is a partial agonist",
+      "confidence": 0.96
+    },
+    {
+      "mention_id": "M0013",
+      "doc_id": "D06",
+      "entity_id": "E22",
+      "snippet": "TM4-mediated signalling",
+      "confidence": 0.74
+    },
+    {
+      "mention_id": "M0014",
+      "doc_id": "D07",
+      "entity_id": "E03",
+      "snippet": "Tretinex synthesis",
+      "confidence": 0.95
+    },
+    {
+      "mention_id": "M0015",
+      "doc_id": "D07",
+      "entity_id": "E12",
+      "snippet": "carcinoma-X cell lines",
+      "confidence": 0.92
+    },
+    {
+      "mention_id": "M0016",
+      "doc_id": "D08",
+      "entity_id": "E04",
+      "snippet": "ZyloFX2 dosing",
+      "confidence": 0.94
+    },
+    {
+      "mention_id": "M0017",
+      "doc_id": "D08",
+      "entity_id": "E13",
+      "snippet": "refractory autoimmune-Y",
+      "confidence": 0.89
+    },
+    {
+      "mention_id": "M0018",
+      "doc_id": "D08",
+      "entity_id": "E23",
+      "snippet": "BRX1 inhibitors",
+      "confidence": 0.69
+    },
+    {
+      "mention_id": "M0019",
+      "doc_id": "D09",
+      "entity_id": "E11",
+      "snippet": "migraine etiology",
+      "confidence": 0.92
+    },
+    {
+      "mention_id": "M0020",
+      "doc_id": "D09",
+      "entity_id": "E22",
+      "snippet": "TM4 variants",
+      "confidence": 0.83
+    },
+    {
+      "mention_id": "M0021",
+      "doc_id": "D10",
+      "entity_id": "E04",
+      "snippet": "ZyloFX2 phase II",
+      "confidence": 0.97
+    },
+    {
+      "mention_id": "M0022",
+      "doc_id": "D10",
+      "entity_id": "E13",
+      "snippet": "autoimmune-Y arm",
+      "confidence": 0.95
+    },
+    {
+      "mention_id": "M0023",
+      "doc_id": "D11",
+      "entity_id": "E03",
+      "snippet": "Tretinex-resistant clones",
+      "confidence": 0.94
+    },
+    {
+      "mention_id": "M0024",
+      "doc_id": "D11",
+      "entity_id": "E21",
+      "snippet": "KLR2 amplification",
+      "confidence": 0.83
+    },
+    {
+      "mention_id": "M0025",
+      "doc_id": "D11",
+      "entity_id": "E12",
+      "snippet": "carcinoma-X resistance",
+      "confidence": 0.89
+    },
+    {
+      "mention_id": "M0026",
+      "doc_id": "D12",
+      "entity_id": "E01",
+      "snippet": "Aspartin reduces NLRP3",
+      "confidence": 0.91
+    },
+    {
+      "mention_id": "M0027",
+      "doc_id": "D12",
+      "entity_id": "E14",
+      "snippet": "chronic inflammation",
+      "confidence": 0.86
+    },
+    {
+      "mention_id": "M0028",
+      "doc_id": "D13",
+      "entity_id": "E20",
+      "snippet": "GeneX5 knockout model",
+      "confidence": 0.95
+    },
+    {
+      "mention_id": "M0029",
+      "doc_id": "D13",
+      "entity_id": "E14",
+      "snippet": "inflammatory phenotype",
+      "confidence": 0.79
+    },
+    {
+      "mention_id": "M0030",
+      "doc_id": "D14",
+      "entity_id": "E02",
+      "snippet": "generic Calmovir",
+      "confidence": 0.93
+    },
+    {
+      "mention_id": "M0031",
+      "doc_id": "D14",
+      "entity_id": "E11",
+      "snippet": "migraine prophylaxis",
+      "confidence": 0.89
+    },
+    {
+      "mention_id": "M0032",
+      "doc_id": "D15",
+      "entity_id": "E10",
+      "snippet": "cardiovascular hypertension",
+      "confidence": 0.94
+    },
+    {
+      "mention_id": "M0033",
+      "doc_id": "D15",
+      "entity_id": "E21",
+      "snippet": "KLR2 expression",
+      "confidence": 0.92
+    },
+    {
+      "mention_id": "M0034",
+      "doc_id": "D16",
+      "entity_id": "E03",
+      "snippet": "Tretinex tolerability",
+      "confidence": 0.91
+    },
+    {
+      "mention_id": "M0035",
+      "doc_id": "D16",
+      "entity_id": "E12",
+      "snippet": "carcinoma-X cohort",
+      "confidence": 0.86
+    },
+    {
+      "mention_id": "M0036",
+      "doc_id": "D17",
+      "entity_id": "E11",
+      "snippet": "migraine drug landscape",
+      "confidence": 0.9
+    },
+    {
+      "mention_id": "M0037",
+      "doc_id": "D17",
+      "entity_id": "E02",
+      "snippet": "Calmovir as anchor",
+      "confidence": 0.83
+    },
+    {
+      "mention_id": "M0038",
+      "doc_id": "D18",
+      "entity_id": "E13",
+      "snippet": "autoimmune-Y biologics",
+      "confidence": 0.91
+    },
+    {
+      "mention_id": "M0039",
+      "doc_id": "D18",
+      "entity_id": "E04",
+      "snippet": "ZyloFX2 positioning",
+      "confidence": 0.88
+    },
+    {
+      "mention_id": "M0040",
+      "doc_id": "D18",
+      "entity_id": "E23",
+      "snippet": "BRX1 axis",
+      "confidence": 0.66
+    }
+  ],
+  "relations": [
+    {
+      "relation_id": "R0001",
+      "head": "E01",
+      "tail": "E10",
+      "predicate": "TREATS",
+      "confidence": 0.94,
+      "doc_id": "D01"
+    },
+    {
+      "relation_id": "R0002",
+      "head": "E01",
+      "tail": "E14",
+      "predicate": "TREATS",
+      "confidence": 0.78,
+      "doc_id": "D12"
+    },
+    {
+      "relation_id": "R0003",
+      "head": "E02",
+      "tail": "E11",
+      "predicate": "TREATS",
+      "confidence": 0.96,
+      "doc_id": "D03"
+    },
+    {
+      "relation_id": "R0004",
+      "head": "E02",
+      "tail": "E11",
+      "predicate": "TREATS",
+      "confidence": 0.88,
+      "doc_id": "D14"
+    },
+    {
+      "relation_id": "R0005",
+      "head": "E02",
+      "tail": "E11",
+      "predicate": "TREATS",
+      "confidence": 0.77,
+      "doc_id": "D17"
+    },
+    {
+      "relation_id": "R0006",
+      "head": "E03",
+      "tail": "E12",
+      "predicate": "TREATS",
+      "confidence": 0.93,
+      "doc_id": "D07"
+    },
+    {
+      "relation_id": "R0007",
+      "head": "E03",
+      "tail": "E12",
+      "predicate": "TREATS",
+      "confidence": 0.83,
+      "doc_id": "D16"
+    },
+    {
+      "relation_id": "R0008",
+      "head": "E04",
+      "tail": "E13",
+      "predicate": "TREATS",
+      "confidence": 0.95,
+      "doc_id": "D08"
+    },
+    {
+      "relation_id": "R0009",
+      "head": "E04",
+      "tail": "E13",
+      "predicate": "TREATS",
+      "confidence": 0.92,
+      "doc_id": "D10"
+    },
+    {
+      "relation_id": "R0010",
+      "head": "E04",
+      "tail": "E13",
+      "predicate": "TREATS",
+      "confidence": 0.85,
+      "doc_id": "D18"
+    },
+    {
+      "relation_id": "R0011",
+      "head": "E01",
+      "tail": "E22",
+      "predicate": "TARGETS",
+      "confidence": 0.61,
+      "doc_id": "D04"
+    },
+    {
+      "relation_id": "R0012",
+      "head": "E02",
+      "tail": "E22",
+      "predicate": "TARGETS",
+      "confidence": 0.74,
+      "doc_id": "D06"
+    },
+    {
+      "relation_id": "R0013",
+      "head": "E03",
+      "tail": "E21",
+      "predicate": "TARGETS",
+      "confidence": 0.79,
+      "doc_id": "D11"
+    },
+    {
+      "relation_id": "R0014",
+      "head": "E04",
+      "tail": "E23",
+      "predicate": "TARGETS",
+      "confidence": 0.66,
+      "doc_id": "D08"
+    },
+    {
+      "relation_id": "R0015",
+      "head": "E04",
+      "tail": "E23",
+      "predicate": "TARGETS",
+      "confidence": 0.69,
+      "doc_id": "D18"
+    },
+    {
+      "relation_id": "R0016",
+      "head": "E20",
+      "tail": "E14",
+      "predicate": "ASSOCIATED_WITH",
+      "confidence": 0.86,
+      "doc_id": "D02"
+    },
+    {
+      "relation_id": "R0017",
+      "head": "E20",
+      "tail": "E14",
+      "predicate": "ASSOCIATED_WITH",
+      "confidence": 0.81,
+      "doc_id": "D13"
+    },
+    {
+      "relation_id": "R0018",
+      "head": "E21",
+      "tail": "E10",
+      "predicate": "ASSOCIATED_WITH",
+      "confidence": 0.91,
+      "doc_id": "D05"
+    },
+    {
+      "relation_id": "R0019",
+      "head": "E21",
+      "tail": "E10",
+      "predicate": "ASSOCIATED_WITH",
+      "confidence": 0.92,
+      "doc_id": "D15"
+    },
+    {
+      "relation_id": "R0020",
+      "head": "E21",
+      "tail": "E12",
+      "predicate": "ASSOCIATED_WITH",
+      "confidence": 0.83,
+      "doc_id": "D11"
+    },
+    {
+      "relation_id": "R0021",
+      "head": "E22",
+      "tail": "E11",
+      "predicate": "ASSOCIATED_WITH",
+      "confidence": 0.81,
+      "doc_id": "D09"
+    },
+    {
+      "relation_id": "R0022",
+      "head": "E22",
+      "tail": "E11",
+      "predicate": "ASSOCIATED_WITH",
+      "confidence": 0.74,
+      "doc_id": "D06"
+    },
+    {
+      "relation_id": "R0023",
+      "head": "E23",
+      "tail": "E13",
+      "predicate": "ASSOCIATED_WITH",
+      "confidence": 0.69,
+      "doc_id": "D08"
+    },
+    {
+      "relation_id": "R0024",
+      "head": "E23",
+      "tail": "E13",
+      "predicate": "ASSOCIATED_WITH",
+      "confidence": 0.66,
+      "doc_id": "D18"
+    }
+  ]
+}
