@@ -1,0 +1,37 @@
+# Enforce the durable-vs-intake split documented in docs/CONTRIBUTING.md.
+#
+# Two checks run on every push/PR:
+#   1. scripts/check-docs-structure.py — every MDX is registered, no slug
+#      collisions, generated:true frontmatter only under docs/reference/.
+#   2. scripts/generate-reference.py --check — regenerated MDX matches the
+#      tree (no hand-edited drift on generated pages, no stale data).
+#
+# If either fails, the underlying issue must be fixed. Do not bypass.
+
+name: docs-structure
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  structure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Structural integrity (registration, duplicates, generated boundary)
+        run: python3 scripts/check-docs-structure.py
+
+      - name: Generated reference up-to-date with vendored data
+        run: python3 scripts/generate-reference.py --check
