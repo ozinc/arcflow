@@ -1,0 +1,35 @@
+---
+title: "Reactive Write-Back Views"
+description: "ArcFlow extension beyond ISO/IEC 39075 GQL — Reactive Write-Back Views (EXT-0005)."
+section: "extensions-reference"
+status: "stable"
+generated: true
+extension_code: "EXT-0005"
+---
+
+{/* GENERATED — do not hand-edit. Source: docs/reference/data/. Regenerate with scripts/generate-reference.py. */}
+
+# Reactive Write-Back Views
+
+**Extension code:** `EXT-0005`  
+**Type:** ArcFlow extension beyond GQL
+
+**Syntax:**
+```gql
+CREATE LIVE VIEW doc_embeddings AS
+  MATCH (d:Document) WHERE d.embedding IS NULL
+  SET d.embedding = arcflow.embed(d.content)
+  RETURN d
+```
+
+**GQL compatibility:** MATCH/WHERE/RETURN are standard GQL; SET inside LIVE VIEW is ArcFlow extension.  
+**Semantics:** Fires imperatively after each graph mutation. Enables AI-in-the-database pipelines with zero application code.  
+**Evidence:** EXT-0005, `reactive_views` field in GraphStore
+
+## Standards relationship
+
+This is an extension to ISO/IEC 39075:2024 (GQL Edition 1 + V2 accepted proposals). It does not affect the engine's full conformance to the ISO standard — the extension surface is opt-in syntax that GQL leaves to implementations.
+
+---
+
+_Source: `docs/reference/data/arcflow-extensions-catalog.md` (engine v1.6.42, synced 2026-04-30T08:31:28Z). This page is regenerated; edit the upstream data, not the MDX._

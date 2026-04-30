@@ -1,0 +1,34 @@
+---
+title: "LIVE Queries"
+description: "ArcFlow extension beyond ISO/IEC 39075 GQL — LIVE Queries (PAT-0022)."
+section: "extensions-reference"
+status: "stable"
+generated: true
+extension_code: "PAT-0022"
+---
+
+{/* GENERATED — do not hand-edit. Source: docs/reference/data/. Regenerate with scripts/generate-reference.py. */}
+
+# LIVE Queries
+
+**Extension code:** `PAT-0022`  
+**Type:** ArcFlow extension beyond GQL
+
+**Syntax:**
+```gql
+CREATE LIVE VIEW friends AS MATCH (a:Person)-[:KNOWS]->(b) RETURN a, b
+LIVE MATCH (n:Person) RETURN n.name
+DROP LIVE VIEW friends
+```
+
+**GQL compatibility:** Uses standard MATCH/RETURN inside LIVE prefix. No GQL equivalent.  
+**Semantics:** Incremental Z-set evaluation (PAT-0021) — batch↔delta equivalence proven.  
+**Evidence:** I-INIT-0025, wave-ext-0005
+
+## Standards relationship
+
+This is an extension to ISO/IEC 39075:2024 (GQL Edition 1 + V2 accepted proposals). It does not affect the engine's full conformance to the ISO standard — the extension surface is opt-in syntax that GQL leaves to implementations.
+
+---
+
+_Source: `docs/reference/data/arcflow-extensions-catalog.md` (engine v1.6.42, synced 2026-04-30T08:31:28Z). This page is regenerated; edit the upstream data, not the MDX._

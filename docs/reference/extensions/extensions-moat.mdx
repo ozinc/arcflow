@@ -1,0 +1,33 @@
+---
+title: "Extensions Moat"
+description: "ArcFlow extension beyond ISO/IEC 39075 GQL — Extensions Moat (PAT-0031)."
+section: "extensions-reference"
+status: "stable"
+generated: true
+extension_code: "PAT-0031"
+---
+
+{/* GENERATED — do not hand-edit. Source: docs/reference/data/. Regenerate with scripts/generate-reference.py. */}
+
+# Extensions Moat
+
+**Extension code:** `PAT-0031`  
+**Type:** ArcFlow extension beyond GQL
+
+The unique ArcFlow value proposition is the **embed → store → skill → auto-link → live-recompute flywheel**:
+
+1. Insert document
+2. `CREATE LIVE VIEW` with `SET ... = arcflow.embed(...)` auto-embeds
+3. Relationship skill auto-links similar documents (cosine > threshold)
+4. LIVE incremental query recomputes PageRank on updated graph
+5. Evidence algebra tracks confidence of each link
+
+**No competitor (Ultipa, Neo4j, Spanner) can express this pipeline in a single graph query language.** Each step in ArcFlow is a GQL-compatible query; together they form a self-reinforcing AI loop with zero application code.
+
+## Standards relationship
+
+This is an extension to ISO/IEC 39075:2024 (GQL Edition 1 + V2 accepted proposals). It does not affect the engine's full conformance to the ISO standard — the extension surface is opt-in syntax that GQL leaves to implementations.
+
+---
+
+_Source: `docs/reference/data/arcflow-extensions-catalog.md` (engine v1.6.42, synced 2026-04-30T08:31:28Z). This page is regenerated; edit the upstream data, not the MDX._

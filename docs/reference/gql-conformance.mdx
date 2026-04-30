@@ -1,98 +1,86 @@
 ---
 title: "GQL Conformance"
-description: "ArcFlow's conformance to ISO/IEC 39075 GQL and the openCypher TCK — standards coverage, lineage, and extensions beyond the specification"
+description: "ArcFlow conformance to ISO/IEC 39075:2024 GQL — 57/60 features supported, 3881/3881 openCypher TCK, 13 extensions documented."
 section: "reference"
 status: "stable"
-playground:
-  seed: world
-  query: "MATCH (r:Robot)-[:OCCUPIES]->(z:Zone) OPTIONAL MATCH (s:Sensor)-[:DETECTED]->(r) WITH r.name AS robot, r.task AS task, r.battery AS battery, r.speed AS speed, r.x AS pos_x, r.y AS pos_y, z.name AS zone, z.hazard AS hazard, z.radius AS zone_radius, count(s) AS sensor_coverage, avg(s.reliability) AS avg_sensor_reliability RETURN robot, task, battery, speed, pos_x, pos_y, zone, hazard, zone_radius, sensor_coverage, avg_sensor_reliability ORDER BY battery DESC"
-
+generated: true
 ---
+
+{/* GENERATED — do not hand-edit. Source: docs/reference/data/. Regenerate with scripts/generate-reference.py. */}
 
 # GQL Conformance
 
-GQL is to graph databases what SQL is to relational databases: a single standard query language that any conformant database speaks, giving tooling, drivers, and developers a shared foundation.
+ArcFlow implements **ISO/IEC 39075:2024** (GQL Edition 1 + V2 accepted proposals) at conformance level **full**.
 
-SQL held that role for 50 years in the relational world. GQL, published as [ISO/IEC 39075](https://www.iso.org/standard/76120.html) in 2024, is designed to do the same for graph data — ending the era where every graph stack shipped its own language and portability suffered.
+## At a glance
 
-What makes GQL notable beyond its own merits: it is the only standardized query language in the NoSQL landscape. Key-value stores, document databases, column-family systems — none have a formal ISO standard. Graph databases are uniquely positioned with a specifications committee, a defined conformance test suite, and vendor-neutral interoperability. Full GQL conformance is a meaningful guarantee, not a checkbox.
-
-ArcFlow implements GQL in full — 100% of the openCypher TCK, complete ISO GQL V2 specification, and extensions for workloads the standard deliberately leaves to implementations.
-
-## Conformance at a glance
-
-| Standard | Status | Detail |
+| Surface | Result | Detail |
 |---|---|---|
-| openCypher TCK | ✅ 100% | 3881/3881 test scenarios pass |
-| ISO GQL V2 (ISO/IEC 39075) | ✅ Full | See feature list below |
+| openCypher TCK | **3881/3881** | release 2024.3, full suite |
+| ISO GQL features | **57/60** supported | 3 unsupported (vendor choice) |
+| ArcFlow extensions | **13 documented** | beyond-standard surface |
+| Engine version | `1.6.42` | as of 2026-04-11 |
 
-No partial conformance. No "in progress" list for mandatory features. If a query stays within the Cypher/openCypher family surface, it runs on ArcFlow.
+## Vendor choices
 
-## Standards lineage
+ISO GQL leaves several decisions to implementations. ArcFlow's:
 
-Understanding the relationship between Cypher, openCypher, and GQL helps set expectations:
+| Decision | Choice |
+|---|---|
+| `label_cardinality_nodes` | `exactly_one` |
+| `label_cardinality_edges` | `exactly_one` |
+| `edge_directionality` | `directed_by_default` |
+| `identifier_domain_nodes` | `u64` |
+| `identifier_domain_edges` | `u64` |
+| `property_value_type` | `PropertyValue_dynamic_union` |
 
-```
-Cypher (~2011)
-  └── openCypher (open specification, 2015 — basis for TCK)
-        └── ISO GQL (ISO/IEC 39075, published 2024 — international standard)
-              └── WorldCypher (ArcFlow's implementation — GQL + extensions)
-```
+## GQLSTATUS codes
 
-GQL was heavily influenced by Cypher. If you know Cypher, you already know GQL — the core clauses (`MATCH`, `CREATE`, `MERGE`, `WHERE`, `RETURN`, `WITH`, `UNWIND`) are identical in semantics. ISO GQL V2 adds new features on top: label predicates, element identity, conditional pipelines, GQLSTATUS codes, and transaction control.
+Every query result carries a 5-digit GQLSTATUS code per the standard.
 
-WorldCypher sits at the top of this hierarchy: it passes the full openCypher TCK, implements ISO GQL V2 in its entirety, and adds capabilities that the standard deliberately leaves to implementations.
+| Code | Meaning |
+|---|---|
+| `00000` | successful completion with data |
+| `02000` | no data |
+| `22G01` | numeric value out of range |
+| `40001` | serialization failure |
+| `42000` | syntax error |
+| `53000` | insufficient resources |
+| `57014` | query cancelled |
+| `58000` | system error |
+| `G1000` | general error |
+| `G1001` | constraint violation |
+| `G1002` | type mismatch |
+| `G1003` | invalid argument |
 
-## ISO GQL V2 features
+## Phases
 
-These features are specified in ISO GQL V2 and fully supported in WorldCypher:
+Conformance was achieved across these phases (initiative `I-INIT-0088`, status `CLOSED`):
 
-| Feature | Syntax | Notes |
+| Phase | Name | Status |
 |---|---|---|
-| Label predicate | `WHERE n IS LABELED :Person` | ISO GQL V2 label test |
-| Element identity | `ELEMENT_ID(n)` | Stable node/edge identifier |
-| Conditional pipeline | `NEXT WHEN c THEN ... ELSE ... END` | GQL-native branching |
-| GQLSTATUS codes | Structured error codes | Standard-conformant status reporting |
-| `UNIQUE` constraint | `CREATE CONSTRAINT ON :L(p) ASSERT UNIQUE` | |
-| `PRIMARY KEY` constraint | `CREATE CONSTRAINT ON :L(p) ASSERT PRIMARY KEY` | |
-| Transaction control | `START TRANSACTION [READ ONLY]`, `COMMIT`, `ROLLBACK` | |
-| `OPTIONAL MATCH` | `OPTIONAL MATCH (a)-[:R]->(b)` | Left-outer join semantics |
-| `CASE WHEN` | `CASE n.status WHEN 'a' THEN ... END` | |
+| `GQL-0001` | gap analysis | COMPLETE |
+| `GQL-0002` | type system syntax basics | COMPLETE |
+| `GQL-0003` | pattern matching label expressions | COMPLETE |
+| `GQL-0004` | execution model formalization | COMPLETE |
+| `GQL-0005` | conditional execution gql v2 | COMPLETE |
+| `GQL-0006` | primary keys constraints merge gql v2 | COMPLETE |
+| `GQL-0007` | conformance statement | COMPLETE |
 
-## WorldCypher extensions beyond the GQL standard
+## Per-feature reference
 
-GQL is intentionally abstract in several areas, leaving implementation choices to vendors. WorldCypher makes the following choices and adds capabilities beyond the spec:
+Every named feature in the conformance catalog has its own page under [`/reference/gql/`](/reference/gql/match-basic). The full list is in the sidebar.
 
-| Extension | Syntax | What it does |
-|---|---|---|
-| Temporal snapshots | `MATCH (n) AS OF seq N` | Query the graph at a past checkpoint |
-| Live queries | `LIVE MATCH (n:Label) RETURN n` | Standing query, re-evaluates on change |
-| Live algorithms | `LIVE CALL algo.pageRank()` | Incrementally maintained graph algorithm |
-| Persistent live views | `CREATE LIVE VIEW name AS ...` | CDC-maintained materialized view |
-| Confidence filtering | `WHERE r._confidence > 0.8` | Per-edge confidence score predicate |
-| Spatial predicates | `WHERE geo.distance(n.loc, $point) < 1000` | Geospatial filtering |
-| Skills | `CREATE SKILL name FROM PROMPT ...` | Declarative relationship derivation programs |
-| Node processing | `PROCESS NODE (n:Label)` | Execute a skill across matching nodes |
-| Window functions | `avg(n.x) OVER (PARTITION BY ... ORDER BY ...)` | LAG, LEAD, STDDEV_POP, PERCENT_RANK, ROW_NUMBER |
-| Graph algorithms | `CALL algo.pageRank()` | 27 built-in — no projection lifecycle |
-| Vector search | `CALL algo.vectorSearch(index, $vec, k)` | vector similarity search |
-| Hybrid search | `CALL algo.hybridSearch()` | Vector + graph traversal in one call |
+## Beyond GQL
 
-## Comparison with other implementations
+ArcFlow ships 13 documented extensions beyond the standard (live queries, Z-set incremental evaluation, evidence algebra, ASOF joins, GPU GraphBLAS, HNSW vector index, durable workflows, AI function namespace, and more). Each has its own page under [`/reference/extensions/`](/reference/extensions/live-queries).
 
-| Implementation | openCypher TCK | ISO GQL V2 | Notes |
-|---|---|---|---|
-| **ArcFlow (WorldCypher)** | ✅ 100% (3881/3881) | ✅ Full | Plus temporal, live queries, and AI extensions |
-| Other graph implementations | Varies | Varies | ArcFlow focuses on full standards coverage plus operational extensions |
+Extensions do not affect ISO conformance — they are opt-in syntax the standard explicitly leaves to implementations.
 
-## What "100% openCypher TCK" means
+## Test corpus
 
-The openCypher Technology Compatibility Kit (TCK) is a suite of 3881 acceptance test scenarios covering the full openCypher specification — pattern matching, predicates, aggregations, path operations, null semantics, and edge cases. Passing 100% means every documented Cypher behavior is implemented exactly as specified, including corner cases around `null` propagation, `OPTIONAL MATCH` semantics, and aggregation ordering.
+The full openCypher TCK (3881/3881) plus ArcFlow's regression corpus runs on every engine release. See [TCK Results](/reference/tck) and [Extension Regressions](/reference/extensions-regressions).
 
-Any query that stays within the supported Cypher/openCypher surface should produce identical results on ArcFlow.
+---
 
-## Further reading
-
-- [GQL & WorldCypher Reference](./compatibility) — complete syntax and feature matrix
-- [Migration Guide](/guides/migration) — porting graph workloads into ArcFlow
-- [ISO/IEC 39075 GQL standard](https://www.iso.org/standard/76120.html) — the specification itself
+_Source: `docs/reference/data/gql-conformance.json` (engine v1.6.42, synced 2026-04-30T08:31:28Z). This page is regenerated; edit the upstream data, not the MDX._

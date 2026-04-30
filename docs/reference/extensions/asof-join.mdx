@@ -1,0 +1,34 @@
+---
+title: "ASOF JOIN"
+description: "ArcFlow extension beyond ISO/IEC 39075 GQL — ASOF JOIN (I-INIT-0030)."
+section: "extensions-reference"
+status: "stable"
+generated: true
+extension_code: "I-INIT-0030"
+---
+
+{/* GENERATED — do not hand-edit. Source: docs/reference/data/. Regenerate with scripts/generate-reference.py. */}
+
+# ASOF JOIN
+
+**Extension code:** `I-INIT-0030`  
+**Type:** ArcFlow extension beyond GQL
+
+**Syntax:**
+```gql
+MATCH (a:Price), (b:Fundamental)
+WHERE a.ts ASOF <= b.ts AND a.symbol = b.symbol
+RETURN a, b
+```
+
+**GQL compatibility:** No GQL equivalent. Temporal join extends standard WHERE clause.  
+**Semantics:** Latest-at-or-before timestamp join. Essential for time-series/financial data.  
+**Evidence:** I-INIT-0030, trading validator (99.48% DuckDB match)
+
+## Standards relationship
+
+This is an extension to ISO/IEC 39075:2024 (GQL Edition 1 + V2 accepted proposals). It does not affect the engine's full conformance to the ISO standard — the extension surface is opt-in syntax that GQL leaves to implementations.
+
+---
+
+_Source: `docs/reference/data/arcflow-extensions-catalog.md` (engine v1.6.42, synced 2026-04-30T08:31:28Z). This page is regenerated; edit the upstream data, not the MDX._

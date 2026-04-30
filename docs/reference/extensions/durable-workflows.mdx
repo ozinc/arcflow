@@ -1,0 +1,32 @@
+---
+title: "Durable Workflows"
+description: "ArcFlow extension beyond ISO/IEC 39075 GQL — Durable Workflows (PAT-0020, I-INIT-0013)."
+section: "extensions-reference"
+status: "stable"
+generated: true
+extension_code: "PAT-0020, I-INIT-0013"
+---
+
+{/* GENERATED — do not hand-edit. Source: docs/reference/data/. Regenerate with scripts/generate-reference.py. */}
+
+# Durable Workflows
+
+**Extension code:** `PAT-0020, I-INIT-0013`  
+**Type:** ArcFlow extension beyond GQL
+
+**Syntax:**
+```gql
+CREATE WORKFLOW approval STEP review NEXT approve STEP approve NEXT done
+```
+
+**GQL compatibility:** No GQL equivalent. Graph-native execution — workflows are subgraphs.  
+**Semantics:** Steps as nodes, NEXT edges for flow. WAL-backed durability. Memoization via properties.  
+**Evidence:** I-INIT-0013, PAT-0020
+
+## Standards relationship
+
+This is an extension to ISO/IEC 39075:2024 (GQL Edition 1 + V2 accepted proposals). It does not affect the engine's full conformance to the ISO standard — the extension surface is opt-in syntax that GQL leaves to implementations.
+
+---
+
+_Source: `docs/reference/data/arcflow-extensions-catalog.md` (engine v1.6.42, synced 2026-04-30T08:31:28Z). This page is regenerated; edit the upstream data, not the MDX._

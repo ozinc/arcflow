@@ -1,0 +1,34 @@
+---
+title: "Evidence Algebra"
+description: "ArcFlow extension beyond ISO/IEC 39075 GQL — Evidence Algebra (PAT-0023)."
+section: "extensions-reference"
+status: "stable"
+generated: true
+extension_code: "PAT-0023"
+---
+
+{/* GENERATED — do not hand-edit. Source: docs/reference/data/. Regenerate with scripts/generate-reference.py. */}
+
+# Evidence Algebra
+
+**Extension code:** `PAT-0023`  
+**Type:** ArcFlow extension beyond GQL
+
+**Syntax:**
+```gql
+MATCH ()-[r:LINKS]->() REFINE EDGE r SET confidence = 0.9, observation = 'observed'
+WHERE r._confidence > 0.8
+RETURN arcflow.path_confidence(r)
+```
+
+**GQL compatibility:** No GQL equivalent. `r._confidence` uses GQL property access syntax.  
+**Semantics:** Z-set retract+insert. Confidence as Z-set weight. Observation replaces prediction. Multi-hop product via `arcflow.path_confidence(r)`.  
+**Evidence:** EXT-0003, PAT-0023
+
+## Standards relationship
+
+This is an extension to ISO/IEC 39075:2024 (GQL Edition 1 + V2 accepted proposals). It does not affect the engine's full conformance to the ISO standard — the extension surface is opt-in syntax that GQL leaves to implementations.
+
+---
+
+_Source: `docs/reference/data/arcflow-extensions-catalog.md` (engine v1.6.42, synced 2026-04-30T08:31:28Z). This page is regenerated; edit the upstream data, not the MDX._
