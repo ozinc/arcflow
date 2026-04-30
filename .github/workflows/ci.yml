@@ -35,8 +35,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: typescript/package-lock.json
       - run: cd typescript && npm ci
       - run: cd typescript && npm run typecheck
 
@@ -48,8 +46,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: typescript/package-lock.json
       - run: cd typescript && npm ci
       - run: cd typescript && npm run lint
 
@@ -61,8 +57,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: typescript/package-lock.json
       - run: cd typescript && npm ci
       - run: cd typescript && npm run build
       - uses: actions/upload-artifact@v4
@@ -84,8 +78,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: npm
-          cache-dependency-path: typescript/package-lock.json
       - run: cd typescript && npm ci
       - run: cd typescript && npm run build
       - run: cd typescript && npm test
@@ -117,8 +109,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: typescript/package-lock.json
           registry-url: 'https://registry.npmjs.org'
       - run: cd typescript && npm ci
       - run: cd typescript && npm run build
