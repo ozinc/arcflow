@@ -1,0 +1,55 @@
+---
+title: "Cookbook"
+description: "Runnable, manifest-aligned ArcFlow recipes — every step CI-tested against the engine version it pins to."
+section: "recipes"
+status: "stable"
+---
+
+{/* AUTO-GENERATED FROM cookbooks/*/meta.toml — DO NOT EDIT BY HAND.
+    Regenerate with: python3 scripts/generate-cookbook-index.py
+    Governed by PAT-0044 (Cookbook Recipe Governance). */}
+
+# Cookbook
+
+Runnable, end-to-end ArcFlow recipes. Every recipe ships its data, runs
+in CI on every commit, and uses only `status: shipped` APIs from
+[`release-matrix.json`](https://pub-a0a196dbe10340f8af22524547fdd476.r2.dev/releases/arcflow/release-matrix.json).
+
+The recipes live in [`cookbooks/`](https://github.com/ozinc/arcflow-docs/tree/main/cookbooks)
+in this repository. Each recipe is a self-contained directory with its own
+`README.md`, numbered steps, sample data, and `meta.toml`.
+
+## Recipes
+
+| Recipe | Audience | Runtime | Engine | GPU |
+|---|---|---|---|---|
+| [Agent Knowledge Base via Confidence-Scored GraphRAG](https://github.com/ozinc/arcflow-docs/tree/main/cookbooks/agent-knowledge-base) | python, agent | ≤ 5 min | `1.6.6` | no |
+| [Fraud Detection via Graph Traversal](https://github.com/ozinc/arcflow-docs/tree/main/cookbooks/fraud-graph-traversal) | python, data-engineer | ≤ 5 min | `1.6.6` | no |
+| [Multi-Sensor Fusion with Trust-Weighted Live Alerts](https://github.com/ozinc/arcflow-docs/tree/main/cookbooks/sensor-fusion-livequery) | python, ml | ≤ 5 min | `1.6.6` | no |
+| [Temporal + Spatial Parquet Ingestion](https://github.com/ozinc/arcflow-docs/tree/main/cookbooks/temporal-spatial-parquet-ingest) | python, data-engineer | ≤ 5 min | `1.6.6` | no |
+
+## Run a recipe locally
+
+```bash
+git clone https://github.com/ozinc/arcflow-docs
+cd arcflow-docs/cookbooks/<recipe-slug>
+uv sync                       # installs deps, including arcflow
+uv run python 00-make-sample.py
+uv run python 02-*.py
+# ... continue through the numbered steps in order
+```
+
+ArcFlow itself is installed via the [InstallMatrix](/installation) — every
+recipe references the same source of truth, so installation never drifts.
+
+## Recipe governance
+
+Recipes are governed by **PAT-0044** in the engine repository. See
+[`cookbooks/CONTRIBUTING.md`](https://github.com/ozinc/arcflow-docs/blob/main/cookbooks/CONTRIBUTING.md)
+for the operational summary. Key rules:
+
+- Each recipe demonstrates one ArcFlow capability end-to-end.
+- Recipes use only `status: shipped` ArcFlow APIs at the recipe's
+  `meta.toml.manifest_pin`.
+- Sample data is in-tree and ≤ 5 MB.
+- CI runs every recipe end-to-end on every commit. Fail closed.
