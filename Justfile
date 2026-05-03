@@ -43,6 +43,11 @@ format:
 lint-mdx-urls:
     python3 scripts/lint-mdx-urls.py
 
+# Probe every /docs/<slug> on a deployed site (default: staging.oz.com)
+# for MDX-compile breakage (no article h1) and broken external links.
+audit-docs-pages base="https://staging.oz.com":
+    python3 scripts/audit-docs-pages.py --base {{base}}
+
 # Aggregate lint — runs every gate this repo enforces
 lint-all: lint lint-mdx-urls
 
