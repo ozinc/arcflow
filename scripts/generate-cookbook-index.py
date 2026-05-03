@@ -34,7 +34,7 @@ section: "recipes"
 status: "stable"
 ---
 
-{/* AUTO-GENERATED FROM cookbooks/*/meta.toml — DO NOT EDIT BY HAND.
+{/* AUTO-GENERATED FROM cookbooks/<recipe>/meta.toml — DO NOT EDIT BY HAND.
     Regenerate with: python3 scripts/generate-cookbook-index.py
     Governed by PAT-0044 (Cookbook Recipe Governance). */}
 
