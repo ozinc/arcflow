@@ -1,0 +1,75 @@
+# P-93 / AP-70 enforcement on the arcflow-docs slice.
+# Sibling of oz-platform/.github/workflows/lint-install-commands.yml which
+# enforces the same rule on the website's TS/TSX/MDX/JSON sources.
+#
+# Two layers checked on every push and PR:
+#
+#   1. lint-mdx-urls.py — fails on `https://(staging\.)?oz\.com\b` literals
+#      in MDX prose (skips frontmatter + fenced code blocks; allowlists
+#      docs/README.md as the GitHub-rendered canonical pointer).
+#
+#   2. audit-docs-pages.py (informational, opt-in) — probes every /docs/<slug>
+#      on the deployed staging site for MDX-compile breakage and broken
+#      external links. Runs on workflow_dispatch only — it depends on the
+#      live deployment, so PR runs would race against the deploy. Operators
+#      run this manually before promoting staging → production.
+#
+# See:
+#   kanban/patterns/design-patterns.md § P-93 (Deployment-Aware URL Resolution)
+#   kanban/patterns/antipatterns.md § AP-70 (Hardcoded Customer-Facing URL)
+#   scripts/lint-mdx-urls.py
+#   scripts/audit-docs-pages.py
+
+name: lint-urls
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**/*.mdx"
+      - "scripts/lint-mdx-urls.py"
+      - ".github/workflows/lint-urls.yml"
+  pull_request:
+    paths:
+      - "docs/**/*.mdx"
+      - "scripts/lint-mdx-urls.py"
+      - ".github/workflows/lint-urls.yml"
+  workflow_dispatch:
+    inputs:
+      run_audit:
+        description: "Also run audit-docs-pages.py against staging.oz.com"
+        required: false
+        default: "false"
+        type: choice
+        options: ["false", "true"]
+
+permissions:
+  contents: read
+
+jobs:
+  lint-mdx-urls:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run lint-mdx-urls
+        run: python3 scripts/lint-mdx-urls.py
+
+  audit-docs-pages:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.run_audit == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Audit deployed pages on staging
+        run: python3 scripts/audit-docs-pages.py --base https://staging.oz.com
