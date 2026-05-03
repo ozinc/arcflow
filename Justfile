@@ -39,7 +39,7 @@ lint-fix:
 format:
     cd typescript && npm run format
 
-# Lint MDX docs for hardcoded customer-facing URLs (P-86)
+# Lint MDX docs for hardcoded customer-facing URLs (P-93)
 lint-mdx-urls:
     python3 scripts/lint-mdx-urls.py
 

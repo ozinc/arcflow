@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Lint docs/**/*.mdx for hardcoded customer-facing URLs.
 
-P-86 (Deployment-Aware URL Resolution): customer-facing URLs are functions
+P-93 (Deployment-Aware URL Resolution): customer-facing URLs are functions
 of rendering context, not strings. The website's docs renderer rewrites
 own-origin absolute URLs to relative paths at render time, but enforcing
 the relative form *at the source* keeps the content portable to staging,
@@ -23,8 +23,8 @@ Behaviour:
 
 Exit codes: 0 = clean, 1 = offenders found, 2 = no MDX files found.
 
-See: kanban/patterns/design-patterns.md (P-86)
-     kanban/patterns/antipatterns.md (AP-61)
+See: kanban/patterns/design-patterns.md (P-93)
+     kanban/patterns/antipatterns.md (AP-70)
 """
 from __future__ import annotations
 
@@ -133,7 +133,7 @@ def main() -> int:
             "Resolution: use a site-relative path (`/docs/installation`, "
             "not `https://oz.com/docs/installation`). Install commands inside "
             "fenced code blocks are exempt — those flow through the T3 "
-            "generator that reads `release-matrix.json`. See P-86 / AP-61.",
+            "generator that reads `release-matrix.json`. See P-93 / AP-70.",
             file=sys.stderr,
         )
         return 1
