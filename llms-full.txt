@@ -52,10 +52,16 @@ result.rows                                  // TypedRow[]
 result.rowCount                              // number
 result.computeMs                             // number (ms)
 result.gqlstatus()                           // "00000" (rows) | "02000" (no data) — ISO GQL
+result.snapshotUri                           // "arcflow://snapshot/<hex>" — content-addressed
 result.rows[0].get('name')                   // "Alice" (string)
 result.rows[0].get('age')                    // 30 (number)
 result.rows[0].get('nonexistent')            // null
 result.rows[0].toObject()                    // { 'n.name': 'Alice', 'n.age': 30 }
+
+// ── Provenanced replay ──
+const tagged = db.queryAt(result.snapshotUri, "MATCH (n:Person) RETURN n.name, n.age")
+// tagged.rows is bit-for-bit identical to result.rows for the same snapshot URI
+// returns TaggedQueryResult { snapshotUri, columns, rows, ... }
 
 // ── Mutations ──
 const mr = db.mutate("CREATE (n:Person {name: $name, age: $age})", { name: 'Alice', age: 30 })
@@ -593,6 +599,134 @@ The PG wire protocol is an adoption on-ramp. When ready, switch to `open()` / `o
 - **code-intelligence.mdx** — codebase as a live graph: ingest symbols/calls/imports/commits via CodeGraph.ingest(), blast-radius with impactSubgraph(), live views for stale embedding detection, CLI binary commands (arcflow symbol, arcflow impact, arcflow slice, arcflow git-blame)
 - **sql-to-gql.mdx** — PostgreSQL wire protocol adoption path: connect any PG-compatible client, send WorldCypher over the PG wire, migrate to in-process open() for zero-latency
 - **filesystem-workspace.mdx** — persistent workspace (arcflow workspace init → auto-discovery via .arcflow/config.yaml), three persistence modes, multi-agent shared graph, HTTP server for concurrent writes
+
+## Snapshot-Pinned Reads — provenanced answers
+
+Every committed snapshot has a citeable, content-addressed URI:
+
+```
+arcflow://snapshot/<hex-hash>
+```
+
+The hash is computed over the write set. Identical writes produce identical URIs across
+processes and machines — replicas that ingested the same WAL agree on URIs without
+coordination.
+
+Every read surface emits the URI of the snapshot it observed, and accepts that URI back
+to pin a replay:
+
+```typescript
+// SDK
+const r = db.query("MATCH (e:Entity {id: 'unit-01'}) RETURN e._confidence")
+r.snapshotUri                               // "arcflow://snapshot/9c3b…"
+const replay = db.queryAt(r.snapshotUri,
+  "MATCH (e:Entity {id: 'unit-01'}) RETURN e._confidence")
+// replay.rows is bit-for-bit identical to r.rows
+// replay is a TaggedQueryResult { snapshotUri, columns, rows, ... }
+```
+
+```bash
+# CLI — every --json result has a __snapshot field
+arcflow query "MATCH (n) RETURN count(*)" --json
+# {"__snapshot":"arcflow://snapshot/9c3b…","columns":[...],"rows":[...]}
+
+# Pin a query to a historical snapshot
+arcflow query "MATCH (e:Entity {id: $id}) RETURN e._confidence" \
+  --param id=unit-01 \
+  --at-snapshot arcflow://snapshot/9c3b…
+
+# Convenience wrapper that always pins
+arcflow rerun \
+  --snapshot arcflow://snapshot/9c3b… \
+  --query "MATCH (n) RETURN count(*)"
+```
+
+```
+# HTTP — response headers
+X-Arcflow-Snapshot-Id: arcflow://snapshot/9c3b…
+X-Arcflow-Manifest-Pin: arcflow://snapshot/9c3b…
+
+# Pin a read via the at= query string
+GET /query?cypher=MATCH%20(n)%20RETURN%20count(*)&at=arcflow://snapshot/9c3b…
+```
+
+```json
+// MCP — read_query and graph_rag envelope
+{
+  "snapshot_id": "arcflow://snapshot/9c3b…",
+  "rows": [ ... ]
+}
+// Both tools accept an optional snapshot_uri input to pin the call.
+```
+
+The customer story: every customer-facing answer carries the snapshot URI it observed.
+A surprising answer becomes investigable — re-run against the same URI to either
+reproduce (data is fixed) or diff URIs (data has moved). No more "works on my machine"
+for world model state.
+
+## Filesystem Projection — the agent-grep workflow
+
+`arcflow project <mountpoint>` writes the current world model snapshot to a directory
+tree any Unix tool can read. This unlocks the agent-grep workflow: agents that speak
+`rg`, `grep`, `cat`, `jq`, and `find` natively now reason about the world model with no
+MCP, no Cypher, no special integration.
+
+```bash
+arcflow project ./world-model
+arcflow project ./world-model --json
+# {"snapshot_uri":"arcflow://snapshot/9c3b…","node_count":1248,"edge_count":5821,"layout_version":1}
+```
+
+On-disk layout (deterministic — two projections of the same snapshot are byte-identical):
+
+```
+<mountpoint>/
+  __snapshot.toml              # snapshot_uri + layout_version
+  nodes/<Label>/<id>.json
+  edges/<Type>/<id>.json
+  indexes/labels.txt           # all node labels (sorted)
+  indexes/types.txt            # all edge types (sorted)
+  views/                       # reserved for future named views
+```
+
+A node file (`nodes/Robot/r-01.json`):
+
+```json
+{
+  "label": "Robot",
+  "id": "r-01",
+  "properties": {
+    "name": "Atlas-01",
+    "x": 18.0,
+    "y": 8.5,
+    "battery": 92,
+    "_observation_class": "observed",
+    "_confidence": 0.97
+  }
+}
+```
+
+Example agent-grep patterns:
+
+```bash
+# Low-battery observed robots
+rg -l '"_observation_class": "observed"' ./world-model/nodes/Robot/ \
+  | xargs -I {} jq 'select(.properties.battery < 30)' {}
+
+# Which sensors detect Atlas-01?
+rg -l '"to_id": "r-01"' ./world-model/edges/DETECTED/ \
+  | xargs -I {} jq -r '.from_id' {}
+
+# Diff two snapshots (this is a true graph-state diff, not an encoding artifact)
+arcflow project ./before
+# ... pipeline runs ...
+arcflow project ./after
+diff -r ./before/nodes ./after/nodes
+```
+
+`arcflow project` is read-only. To mutate the world model, use the SDK / CLI / HTTP /
+MCP and re-project. A FUSE bridge is also available for environments where macFUSE is
+installed; `arcflow project` is the broadly portable form (no FUSE driver needed).
 
 ## Caveats
 

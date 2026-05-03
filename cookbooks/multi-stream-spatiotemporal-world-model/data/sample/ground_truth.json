@@ -1,0 +1,18 @@
+{
+  "n_frames": 900,
+  "n_entities": 22,
+  "n_observations": 19800,
+  "groups": {
+    "alpha": 11,
+    "beta": 11
+  },
+  "low_quality_observations": 99,
+  "n_scenes": 450,
+  "n_imu": 3000,
+  "n_events": 30,
+  "session_id": "session-2026-05-01-a",
+  "track_hz": 60,
+  "scene_hz": 30,
+  "imu_hz": 200,
+  "duration_s": 15
+}

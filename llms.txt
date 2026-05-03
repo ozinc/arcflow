@@ -72,7 +72,8 @@ cat result.json
 
 - `openInMemory()` → ArcflowDB
 - `open(dataDir)` → ArcflowDB (persistent)
-- `db.query(cypher, params?)` → { columns, rows, rowCount, computeMs, gqlstatus() }
+- `db.query(cypher, params?)` → { columns, rows, rowCount, computeMs, gqlstatus(), snapshotUri }
+- `db.queryAt(snapshotUri, cypher, params?)` → TaggedQueryResult (provenanced replay)
 - `db.mutate(cypher, params?)` → MutationResult
 - `db.batchMutate(queries[])` → number
 - `db.subscribe(query, handler, opts?)` → LiveQuery (cancel())
@@ -80,6 +81,25 @@ cat result.json
 - `row.get('column')` → string | number | boolean | null (typed)
 - `ArcflowError` → { code, category, suggestion }
 - `@arcflow/react` → useQuery(db, q, params), useLiveQuery(db, q)
+
+## Snapshot-pinned reads (provenanced answers)
+
+Every result envelope carries a snapshot URI: `arcflow://snapshot/<hex>` (content-addressed).
+
+- SDK: `result.snapshotUri`; replay with `db.queryAt(uri, cypher, params?)`
+- CLI: `--json` emits `__snapshot`; pin with `--at-snapshot <uri>` or `arcflow rerun --snapshot <uri> --query "..."`
+- HTTP: response headers `X-Arcflow-Snapshot-Id`, `X-Arcflow-Manifest-Pin`; pin with `?at=<uri>`
+- MCP: `read_query`/`graph_rag` envelopes carry `snapshot_id`; accept optional `snapshot_uri` input
+
+See docs/concepts/snapshots.mdx.
+
+## Filesystem projection (the agent-grep workflow)
+
+`arcflow project <mountpoint>` writes the current snapshot to a deterministic directory tree:
+nodes/<Label>/<id>.json, edges/<Type>/<id>.json, indexes/labels.txt, indexes/types.txt,
+plus __snapshot.toml. Two projections of the same snapshot are byte-identical. `--json`
+returns `{snapshot_uri, node_count, edge_count, layout_version}`. Agents reason about
+the world model with `rg`, `grep`, `cat`, `jq` — no MCP, no Cypher. See docs/cli/project.mdx.
 
 ## GQL / WorldCypher (ISO/IEC 39075 GQL) — 100% openCypher TCK (3881/3881)
 
@@ -129,6 +149,8 @@ See docs/guides/agent-quickstart.mdx for the 10-step integration guide.
 
 ## Key guides (stable)
 
+- docs/concepts/snapshots.mdx — snapshot URI scheme, query_at, --at-snapshot, arcflow rerun, MCP/HTTP envelopes
+- docs/cli/project.mdx — arcflow project: deterministic on-disk layout, the agent-grep workflow
 - docs/concepts/world-model.mdx — what a world model is: spatial-temporal, confidence-scored, observed/inferred/predicted
 - docs/guides/world-model.mdx — step-by-step: entities in space, spatial queries, temporal replay, live monitoring
 - docs/use-cases/autonomous-systems.mdx — robot fleets, UAVs, shared world model, multi-agent coordination

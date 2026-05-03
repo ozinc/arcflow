@@ -16,6 +16,7 @@ contract: see [`CONTRIBUTING.md`](./CONTRIBUTING.md) and the governance pattern
 | Recipe | Audience | Runtime | Engine version |
 |---|---|---|---|
 | [temporal-spatial-parquet-ingest](./temporal-spatial-parquet-ingest/) | python, data-engineer | ~5 min | 1.6.6 |
+| [multi-stream-spatiotemporal-world-model](./multi-stream-spatiotemporal-world-model/) | python, data-engineer, ml, agent | ~8 min | 1.6.6 |
 
 More recipes land in I-INIT-0117 wave CB-0004:
 sensor-fusion-livequery, fraud-graph-traversal, agent-knowledge-base.

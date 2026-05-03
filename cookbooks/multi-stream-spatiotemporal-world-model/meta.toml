@@ -1,0 +1,17 @@
+slug = "multi-stream-spatiotemporal-world-model"
+title = "Multi-Stream Spatiotemporal World Model — 60 Hz Live Tracking + Synced Auxiliary Streams"
+audience = ["python", "data-engineer", "ml", "agent"]
+arcflow_apis = [
+    "python.ArcFlow.execute",
+    "python.ArcFlow.close",
+    "python.QueryResult.row_count",
+    "python.QueryResult.columns",
+]
+external_deps = [
+    "pyarrow >= 16",
+    "numpy >= 1.26",
+]
+runtime_minutes = 8
+gpu_required = false
+manifest_pin = "1.6.6"
+data_provenance = "synthesized"

@@ -67,5 +67,9 @@ to keep CI fast.
 ## Notes
 
 - Pinned to ArcFlow 1.6.6 (see `meta.toml.manifest_pin`).
-- Install command via the local wheel during alpha; flips to
-  `pip install oz-arcflow` once `release-matrix.json` shows `python: shipped`.
+- During alpha, `oz-arcflow` resolves through OZ's PEP 503 simple index at
+  `https://staging.oz.com/pypi/simple/` — the same protocol PyPI uses, so
+  `uv sync` treats `oz-arcflow` like any normal package. When the engine
+  release manifest flips `python: planned` → `python: shipped`, the index
+  pin becomes redundant and `pip install oz-arcflow` works against public
+  PyPI as the canonical path.

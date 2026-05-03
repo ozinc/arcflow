@@ -6,8 +6,14 @@ dependencies = [
     "oz-arcflow==1.6.6",
 ]
 
+# `oz-arcflow` resolves through OZ's PEP 503 simple index during alpha. When
+# `python: shipped` lands in release-matrix.json, this stanza becomes
+# redundant — uv falls back to PyPI by default. PEP 503 protocol means the
+# customer's config looks identical to any normal Python package install.
+[[tool.uv.index]]
+name = "oz"
+url = "https://staging.oz.com/pypi/simple/"
+explicit = true
+
 [tool.uv.sources]
-# During alpha (status=planned in release-matrix.json), pin the local wheel.
-# Replace with PyPI when oz-arcflow is published (status=shipped).
-# The PyPI distribution name is `oz-arcflow`; the import name stays `arcflow`.
-oz-arcflow = { path = "../../../../arcflow/python/dist/oz_arcflow-1.6.6-py3-none-any.whl" }
+oz-arcflow = { index = "oz" }
