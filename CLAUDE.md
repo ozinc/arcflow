@@ -153,3 +153,37 @@ scan for them before editing any file, address them before closing a PR.
 - **No docs for unshipped features** — only document what's in the current stable release
 - **WorldCypher examples** — always include runnable query examples; prefer copy-pasteable snippets
 - **Cross-references** — link to `docs.rs/arcflow` for Rust SDK API, never duplicate Rust API docs here
+
+## URL Discipline (P-93)
+
+Customer-facing URLs are functions of rendering context, not strings.
+The same content lives across four consumer surfaces (GitHub raw view,
+oz-platform docs renderer, AI agents pasting `llms.txt`, customers
+cloning cookbooks); a single literal string is necessarily wrong on at
+least one surface.
+
+Three tiers, three rules:
+
+- **MDX prose** (`docs/**/*.mdx`): use site-relative paths
+  (`/docs/installation`, never `https://oz.com/docs/installation`).
+  Install commands inside fenced code blocks stay absolute. Verify:
+
+  ```bash
+  just lint-mdx-urls          # source-side: enforces relative-path rule
+  just audit-docs-pages       # deploy-side: probes staging.oz.com
+  ```
+
+- **Static text** (`llms.txt`, `llms-full.txt`, `README.md`, `AGENTS.md`,
+  `cookbooks/*/README.md`): production URLs canonical.
+  Cookbook `pyproject.toml` `tool.uv.index.url` is the documented
+  exception (`staging.oz.com/pypi/simple/` until arcflow-core RAM-C2
+  ships public PyPI publish).
+
+- **Code** (the website's TSX/TS) lives in oz-platform — see its
+  `lint-disclosure-url.test.ts`. Companion gate to `lint-mdx-urls.py`.
+
+CI: `.github/workflows/lint-urls.yml` runs `lint-mdx-urls` on every push
+to main and every PR; `audit-docs-pages` is opt-in via workflow_dispatch.
+
+Pattern: `oz-platform/kanban/patterns/design-patterns.md § P-93`.
+Anti-pattern: `oz-platform/kanban/patterns/antipatterns.md § AP-70`.
