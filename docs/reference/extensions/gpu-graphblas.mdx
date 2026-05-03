@@ -1,17 +1,15 @@
 ---
 title: "GPU GraphBLAS"
-description: "ArcFlow extension beyond ISO/IEC 39075 GQL — GPU GraphBLAS (I-INIT-0026)."
+description: "ArcFlow extension beyond ISO/IEC 39075 GQL — GPU GraphBLAS."
 section: "extensions-reference"
 status: "stable"
 generated: true
-extension_code: "I-INIT-0026"
 ---
 
 {/* GENERATED — do not hand-edit. Source: docs/reference/data/. Regenerate with scripts/generate-reference.py. */}
 
 # GPU GraphBLAS
 
-**Extension code:** `I-INIT-0026`  
 **Type:** ArcFlow extension beyond GQL
 
 **Syntax:**
@@ -21,8 +19,7 @@ CALL algo.leiden()        -- community detection
 ```
 
 **GQL compatibility:** CALL procedure syntax. GPU dispatch is transparent.  
-**Semantics:** 8 SpMV semiring kernels (f64, CAS atomics). Auto-dispatch: Metal → CUDA → Rayon CSR → HashMap.  
-**Evidence:** I-INIT-0026, PAT-0033, ANTI-0019
+**Semantics:** 8 SpMV semiring kernels (f64, CAS atomics). Auto-dispatch: Metal → CUDA → Rayon CSR → HashMap.
 
 ## Standards relationship
 

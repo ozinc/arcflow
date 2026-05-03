@@ -1,17 +1,15 @@
 ---
 title: "Graph Embedding Algorithms"
-description: "ArcFlow extension beyond ISO/IEC 39075 GQL — Graph Embedding Algorithms (EXT-0004)."
+description: "ArcFlow extension beyond ISO/IEC 39075 GQL — Graph Embedding Algorithms."
 section: "extensions-reference"
 status: "stable"
 generated: true
-extension_code: "EXT-0004"
 ---
 
 {/* GENERATED — do not hand-edit. Source: docs/reference/data/. Regenerate with scripts/generate-reference.py. */}
 
 # Graph Embedding Algorithms
 
-**Extension code:** `EXT-0004`  
 **Type:** ArcFlow extension beyond GQL
 
 **Syntax:**
@@ -22,8 +20,7 @@ CALL algo.graphSAGE(256) YIELD nodeId, embedding
 ```
 
 **GQL compatibility:** CALL procedure syntax.  
-**Semantics:** node2vec (biased random walk + hash projection), struc2vec (degree sequence hash), graphSAGE (2-layer mean aggregation). All L2-normalized.  
-**Evidence:** EXT-0004
+**Semantics:** node2vec (biased random walk + hash projection), struc2vec (degree sequence hash), graphSAGE (2-layer mean aggregation). All L2-normalized.
 
 ## Standards relationship
 

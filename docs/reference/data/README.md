@@ -37,5 +37,4 @@ stale relative to vendored data.
 ## Boundary
 
 This repo mirrors **shipped, public** conformance data only. Roadmap and
-in-progress work (e.g. `kanban/roadmap/feature-parity.md`) stays in the engine
-repo per `REPO-SPLIT.md`.
+in-progress work stays upstream in the engine repo per `REPO-SPLIT.md`.

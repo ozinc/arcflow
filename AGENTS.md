@@ -419,7 +419,7 @@ CALL dbms.gpuThresholds()
 CALL db.gpuStack()
 ```
 
-### Execution context (ANTI-0019)
+### Execution context
 ```cypher
 -- Read current context
 CALL db.executionContext() YIELD context

@@ -234,10 +234,22 @@ def parse_extensions(md: str) -> list[ExtensionEntry]:
     return entries
 
 
+EVIDENCE_LINE_RE = re.compile(r"^\*\*Evidence:\*\*[^\n]*\n?", re.MULTILINE)
+INLINE_CODE_REF_RE = re.compile(r"\s*\((?:PAT|I-INIT|EXT|ANTI|RAM|SPR|AFP|ARF)-[0-9A-Z]+\)")
+
+
+def strip_internal_codes(text: str) -> str:
+    """Remove internal initiative/pattern/wave codes from public-facing prose."""
+    text = EVIDENCE_LINE_RE.sub("", text)
+    # Drop parentheticals like "(PAT-0021)" inline in semantics descriptions.
+    text = INLINE_CODE_REF_RE.sub("", text)
+    # Tidy any double blank lines introduced by the strip.
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
+
+
 def render_extension(ext: ExtensionEntry, conformance: dict, sync: dict) -> str:
-    description = (
-        f"ArcFlow extension beyond ISO/IEC 39075 GQL — {ext.name} ({ext.code})."
-    )
+    description = f"ArcFlow extension beyond ISO/IEC 39075 GQL — {ext.name}."
     fm = [
         "---",
         f'title: "{ext.name}"',
@@ -245,7 +257,6 @@ def render_extension(ext: ExtensionEntry, conformance: dict, sync: dict) -> str:
         'section: "extensions-reference"',
         'status: "stable"',
         "generated: true",
-        f'extension_code: "{ext.code}"',
         "---",
     ]
     body = [
@@ -254,10 +265,9 @@ def render_extension(ext: ExtensionEntry, conformance: dict, sync: dict) -> str:
         "",
         f"# {ext.name}",
         "",
-        f"**Extension code:** `{ext.code}`  ",
         "**Type:** ArcFlow extension beyond GQL",
         "",
-        ext.body,
+        strip_internal_codes(ext.body),
         "",
         "## Standards relationship",
         "",
@@ -333,8 +343,7 @@ def render_dashboard(conformance: dict, state: dict, extensions: list[ExtensionE
         "",
         "## Phases",
         "",
-        "Conformance was achieved across these phases (initiative "
-        f"`{conformance['initiative']}`, status `{conformance['initiative_status']}`):",
+        "Conformance was achieved across these phases:",
         "",
         "| Phase | Name | Status |",
         "|---|---|---|",

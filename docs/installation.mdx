@@ -29,8 +29,8 @@ on every commit that:
 - A `status: planned` artifact's registry returns HTTP 4xx (no false advertising).
 
 If the manifest is unreachable at build time, the docs build fails — there is
-no fallback to a hand-rolled list. See
-[PAT-0042 (Release Artifact Manifest as SSoT)](https://github.com/ozinc/arcflow/blob/main/kanban/patterns/PAT-0042-Release-Artifact-Manifest.md).
+no fallback to a hand-rolled list. The matrix above is the live data; this
+page never ships an install command that the registry can't actually serve.
 
 ## Verify installation
 
@@ -62,7 +62,7 @@ above shows you the install command for whichever path is currently shipped.
 | Variable | Default | Description |
 |---|---|---|
 | `ARCFLOW_METAL_FORCE_UNAVAILABLE` | `false` | Set to `true` to disable Metal GPU acceleration (useful if module load hangs) |
-| `ARCFLOW_NATIVE_DIR` | unset | Python only. Override the directory containing `libarcflow.{so,dylib,dll}` (used during alpha when running against a freshly-built engine, not a wheel-bundled binary). |
+| `ARCFLOW_NATIVE_DIR` | unset | Python only. Override the directory containing `libarcflow.{so,dylib,dll}` (used when running against a locally-built engine instead of the wheel-bundled binary). |
 
 ## Requirements
 
@@ -78,4 +78,4 @@ above shows you the install command for whichever path is currently shipped.
 - [Quickstart](/quickstart) — first query in under 5 minutes
 - [Project Setup](/project-setup) — world model workspace layout and configuration
 - [Language Bindings](/bindings) — Node.js, Python, Rust, Go, WASM, and CLI
-- [Cookbook](https://github.com/ozinc/arcflow-docs/tree/main/cookbooks) — runnable, manifest-aligned recipes
+- [Cookbook](https://github.com/ozinc/arcflow/tree/main/cookbooks) — runnable, manifest-aligned recipes

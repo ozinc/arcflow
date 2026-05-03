@@ -1,17 +1,15 @@
 ---
 title: "Durable Workflows"
-description: "ArcFlow extension beyond ISO/IEC 39075 GQL — Durable Workflows (PAT-0020, I-INIT-0013)."
+description: "ArcFlow extension beyond ISO/IEC 39075 GQL — Durable Workflows."
 section: "extensions-reference"
 status: "stable"
 generated: true
-extension_code: "PAT-0020, I-INIT-0013"
 ---
 
 {/* GENERATED — do not hand-edit. Source: docs/reference/data/. Regenerate with scripts/generate-reference.py. */}
 
 # Durable Workflows
 
-**Extension code:** `PAT-0020, I-INIT-0013`  
 **Type:** ArcFlow extension beyond GQL
 
 **Syntax:**
@@ -20,8 +18,7 @@ CREATE WORKFLOW approval STEP review NEXT approve STEP approve NEXT done
 ```
 
 **GQL compatibility:** No GQL equivalent. Graph-native execution — workflows are subgraphs.  
-**Semantics:** Steps as nodes, NEXT edges for flow. WAL-backed durability. Memoization via properties.  
-**Evidence:** I-INIT-0013, PAT-0020
+**Semantics:** Steps as nodes, NEXT edges for flow. WAL-backed durability. Memoization via properties.
 
 ## Standards relationship
 

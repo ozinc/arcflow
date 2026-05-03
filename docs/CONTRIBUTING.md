@@ -85,9 +85,7 @@ generated: true                # MUST be present on every page under
 
 ## The compounding rule
 
-Following the harness model from
-[`oz-platform/kanban/references/knowledge-base/AGENTS.md`](https://github.com/oz-com/oz-platform):
-when you add a page, you owe an answer to **"what does this replace, deepen, or
+When you add a page, you owe an answer to **"what does this replace, deepen, or
 sit beside?"**
 
 - **Replace** an existing page when the new one covers the same idea more
@@ -165,8 +163,8 @@ To improve a generated page, you have three options:
 - Don't bypass `--no-verify` to skip the linter — fix the underlying issue.
 - Don't commit the same idea in two pages because you weren't sure where it
   belonged. Pick one home and cross-link.
-- Don't document an unshipped engine feature. The
-  `TODO(wave-A):` rule in `CLAUDE.md` is a hard gate.
+- Don't document an unshipped engine feature. Only ship docs for what
+  the current engine release actually supports.
 
 ## Repo boundary (important)
 
@@ -186,7 +184,7 @@ Use the GitHub issue tracker. Common categories:
   should live (concept? guide? reference?).
 - **Broken example** — open an issue with the exact query and the error.
 - **Doc claims feature that isn't shipped** — high priority. Tag with
-  `wave-A-violation`.
+  `unshipped-feature`.
 - **Generated page is wrong** — point at the upstream data file, not the MDX.
 
 ## Final note

@@ -13,21 +13,25 @@ Source manifest:
 https://pub-a0a196dbe10340f8af22524547fdd476.r2.dev/releases/arcflow/release-matrix.json
 (schema: arcflow/schemas/release-matrix.schema.json — schema_version: 1)
 
-During alpha (2026-Q2), only the native CLI is shipped:
+Currently shipped:
 
 ```bash
+# Native CLI
 curl -fsSL https://oz.com/install/arcflow | sh
+
+# Python (resolves through OZ's PEP 503 simple index)
+uv add --index https://staging.oz.com/pypi/simple/ oz-arcflow
+# or: pip install --index-url https://staging.oz.com/pypi/simple/ oz-arcflow
+# distribution: oz-arcflow; import: `import arcflow`
 ```
 
-The Python, Node, and Rust bindings are status: planned. The Docker
-artifact is status: refused — ArcFlow is a 5MB embedded library and
-shipping the engine as a Docker image would subvert the in-process design;
-see https://oz.com/docs/deployment/docker. Check the release-matrix.json
-for current target_quarter on the planned bindings. Do not attempt the
-public package-manager install commands during alpha — the registries
-will 404.
-The install matrix at https://oz.com/docs/installation always shows the
-current shipping state.
+The Node and Rust bindings are status: planned — check the
+release-matrix.json for the current shipping state. The Docker artifact is
+status: refused — ArcFlow is a 5MB embedded library and shipping the
+engine as a Docker image would subvert the in-process design; see
+https://oz.com/docs/deployment/docker.
+The install matrix at https://oz.com/docs/installation always reflects the
+live release manifest.
 
 ## Complete API
 
@@ -341,7 +345,7 @@ CALL dbms.gpuThresholds() YIELD algorithm, min_input_size, bytes_per_element,
 CALL db.gpuStack()
 ```
 
-### Execution context (ANTI-0019)
+### Execution context
 ```cypher
 CALL db.executionContext()              YIELD context
 -- context: "local_cpu" | "local_gpu" | "distributed"
