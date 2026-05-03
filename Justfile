@@ -39,6 +39,13 @@ lint-fix:
 format:
     cd typescript && npm run format
 
+# Lint MDX docs for hardcoded customer-facing URLs (P-86)
+lint-mdx-urls:
+    python3 scripts/lint-mdx-urls.py
+
+# Aggregate lint — runs every gate this repo enforces
+lint-all: lint lint-mdx-urls
+
 # ── Release ──
 
 # Add a changeset

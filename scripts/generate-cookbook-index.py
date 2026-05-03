@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Generate docs/cookbooks-index.mdx from cookbooks/*/meta.toml.
 
-PAT-0044 invariant: the cookbook index is data-driven. The recipe list
-on the index page is regenerated from each recipe's meta.toml, never
-hand-edited.
+The cookbook index is data-driven: the recipe list on the index page is
+regenerated from each recipe's meta.toml, never hand-edited.
 
 Run from repo root:
     python3 scripts/generate-cookbook-index.py
@@ -35,8 +34,7 @@ status: "stable"
 ---
 
 {/* AUTO-GENERATED FROM cookbooks/<recipe>/meta.toml — DO NOT EDIT BY HAND.
-    Regenerate with: python3 scripts/generate-cookbook-index.py
-    Governed by PAT-0044 (Cookbook Recipe Governance). */}
+    Regenerate with: python3 scripts/generate-cookbook-index.py */}
 
 # Cookbook
 
@@ -44,7 +42,7 @@ Runnable, end-to-end ArcFlow recipes. Every recipe ships its data, runs
 in CI on every commit, and uses only `status: shipped` APIs from
 [`release-matrix.json`](https://pub-a0a196dbe10340f8af22524547fdd476.r2.dev/releases/arcflow/release-matrix.json).
 
-The recipes live in [`cookbooks/`](https://github.com/ozinc/arcflow-docs/tree/main/cookbooks)
+The recipes live in [`cookbooks/`](https://github.com/ozinc/arcflow/tree/main/cookbooks)
 in this repository. Each recipe is a self-contained directory with its own
 `README.md`, numbered steps, sample data, and `meta.toml`.
 
@@ -57,8 +55,8 @@ FOOTER = """\
 ## Run a recipe locally
 
 ```bash
-git clone https://github.com/ozinc/arcflow-docs
-cd arcflow-docs/cookbooks/<recipe-slug>
+git clone https://github.com/ozinc/arcflow
+cd arcflow/cookbooks/<recipe-slug>
 uv sync                       # installs deps, including arcflow
 uv run python 00-make-sample.py
 uv run python 02-*.py
@@ -70,8 +68,9 @@ recipe references the same source of truth, so installation never drifts.
 
 ## Recipe governance
 
-Recipes are governed by **PAT-0044** in the engine repository. See
-[`cookbooks/CONTRIBUTING.md`](https://github.com/ozinc/arcflow-docs/blob/main/cookbooks/CONTRIBUTING.md)
+Each recipe ships with a `meta.toml` declaring its engine version pin,
+runtime budget, audience tags, and verification expectations. See
+[`cookbooks/CONTRIBUTING.md`](https://github.com/ozinc/arcflow/blob/main/cookbooks/CONTRIBUTING.md)
 for the operational summary. Key rules:
 
 - Each recipe demonstrates one ArcFlow capability end-to-end.
@@ -134,7 +133,7 @@ def render_table(recipes: list[dict]) -> str:
     ]
     for r in recipes:
         slug = r["slug"]
-        link = f"[{r['title']}](https://github.com/ozinc/arcflow-docs/tree/main/cookbooks/{slug})"
+        link = f"[{r['title']}](https://github.com/ozinc/arcflow/tree/main/cookbooks/{slug})"
         audience = ", ".join(r["audience"]) if r["audience"] else "—"
         runtime = f"≤ {r['runtime_minutes']} min" if r["runtime_minutes"] else "—"
         engine = f"`{r['manifest_pin']}`"

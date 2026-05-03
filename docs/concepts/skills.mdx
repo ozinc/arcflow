@@ -27,7 +27,7 @@ CREATE SKILL ZoneCoOccupancy
   TIER SYMBOLIC
 ```
 
-At creation time, ArcFlow sends the prompt and relevant schema context to OZ's compiler endpoint — authenticated automatically through your [oz.com/world](https://oz.com/world) connection. No API keys to manage. Compilation results are cached: the same rule against the same schema returns an instant response at no cost to your allowance. On a cache miss, the schema context is prefix-cached across calls, so you pay only for the rule text itself. The compiled WorldCypher pattern is returned and stored in the skill alongside the original prompt.
+At creation time, ArcFlow sends the prompt and relevant schema context to OZ's compiler endpoint — authenticated automatically through your [ArcFlow World](/world) connection. No API keys to manage. Compilation results are cached: the same rule against the same schema returns an instant response at no cost to your allowance. On a cache miss, the schema context is prefix-cached across calls, so you pay only for the rule text itself. The compiled WorldCypher pattern is returned and stored in the skill alongside the original prompt.
 
 ```
 Skill stored in graph:
@@ -143,7 +143,7 @@ The model call happens at authoring time. Production is model-free.
 | `REPROCESS EDGES` — refresh | No | Pure graph computation, unlimited |
 | Query derived edges | No | Read-only graph traversal, unlimited |
 
-Compilation uses your [oz.com/world](https://oz.com/world) connection — credentials are managed through your account, no separate API keys required. Compilation results are cached: the same rule against the same schema returns an instant response at no cost on repeat calls.
+Compilation uses your [ArcFlow World](/world) connection — credentials are managed through your account, no separate API keys required. Compilation results are cached: the same rule against the same schema returns an instant response at no cost on repeat calls.
 
 For AI applications: every RAG answer can trace its evidence chain back to the specific skill version and compiled pattern that produced each supporting edge — with the original human-readable prompt preserved alongside it.
 

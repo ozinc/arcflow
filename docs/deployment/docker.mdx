@@ -22,9 +22,9 @@ status = "refused"
 ```
 
 `status: refused` is a first-class lifecycle state. It signals a deliberate
-decision not to ship, with a recorded reason. See
-[PAT-0042 (Release Artifact Manifest as SSoT)](https://github.com/ozinc/arcflow/blob/main/kanban/patterns/PAT-0042-Release-Artifact-Manifest.md)
-for the governance.
+decision not to ship, with a recorded reason. The same release manifest
+drives the live install matrix on the [Installation page](/installation),
+so this is never a stale claim — it's what the engine actually ships.
 
 ## What to use instead
 
@@ -32,7 +32,7 @@ for the governance.
 |---|---|
 | Embedded in a Python / Node / Rust application | The matching language binding from the [Installation page](/installation) — the engine runs in your process |
 | One-shot scripting or CLI workflow | The native CLI binary from the [Installation page](/installation) — 5MB, runs anywhere |
-| Zero-install kick-the-tires demo | [staging.oz.com/engine](https://staging.oz.com/engine) — the WASM playground runs the same engine in your browser |
+| Zero-install kick-the-tires demo | [WASM playground](/engine) — runs the same engine in your browser |
 | Long-running `arcflow-mcp` service for cloud LLM clients | See [MCP Server](/mcp) — runs as a child process of your LLM client, stdin/stdout JSON-RPC |
 
 ## When this might change
