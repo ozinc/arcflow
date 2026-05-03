@@ -100,8 +100,8 @@ def load(verbose: bool = False) -> ArcFlow:
             )
 
     # 3. Frame nodes at 60 Hz.
-    # NOTE: The schema (01-schema-design.md) describes Frame.NEXT as an
-    # explicit linked list. At recipe scale (~hundreds of frames per second
+    # NOTE: The schema (see README.md "Schema design") describes Frame.NEXT
+    # as an explicit linked list. At recipe scale (~hundreds of frames per second
     # of session) the per-edge MATCH+CREATE round-trip dominates load time
     # and trajectory queries can ORDER BY frame_idx for the same result.
     # NEXT is left for a future production-shape variant where bulk-load

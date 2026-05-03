@@ -9,10 +9,8 @@ dependencies = [
     "numpy>=1.26",
 ]
 
-# `oz-arcflow` resolves through OZ's PEP 503 simple index during alpha; same
-# protocol PyPI implements, so `uv sync` treats it like any normal package.
-# When the manifest flips to `python: shipped` and `oz-arcflow` lands on
-# public PyPI, this stanza becomes redundant.
+# `oz-arcflow` resolves through OZ's PEP 503 simple index — same protocol
+# PyPI implements, so `uv sync` treats it like any normal package.
 [[tool.uv.index]]
 name = "oz"
 url = "https://staging.oz.com/pypi/simple/"

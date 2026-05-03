@@ -1,7 +1,7 @@
 [project]
 name = "arcflow-cookbook-temporal-spatial-parquet-ingest"
 version = "1.6.6"
-description = "ArcFlow seed recipe: large-batch temporal + spatial Parquet → graph world model."
+description = "ArcFlow recipe: large-batch temporal + spatial Parquet → graph world model."
 requires-python = ">=3.10"
 dependencies = [
     "oz-arcflow==1.6.6",
@@ -10,12 +10,10 @@ dependencies = [
     "numpy>=1.26",
 ]
 
-# `oz-arcflow` resolves through OZ's PEP 503 simple index during alpha; same
-# protocol PyPI implements, so `uv sync` treats it like any normal package.
-# When the manifest flips to `python: shipped` and `oz-arcflow` lands on
-# public PyPI, this stanza becomes redundant (uv falls back to PyPI by
-# default) and can be removed. Distribution name on PyPI is `oz-arcflow`;
-# import name stays `arcflow` (Pillow/PIL split).
+# `oz-arcflow` resolves through OZ's PEP 503 simple index — same protocol
+# PyPI implements, so `uv sync` treats it like any normal package.
+# Distribution name on the index is `oz-arcflow`; import name is `arcflow`
+# (Pillow/PIL split).
 [[tool.uv.index]]
 name = "oz"
 url = "https://staging.oz.com/pypi/simple/"

@@ -6,10 +6,9 @@ dependencies = [
     "oz-arcflow==1.6.6",
 ]
 
-# `oz-arcflow` resolves through OZ's PEP 503 simple index during alpha. When
-# `python: shipped` lands in release-matrix.json, this stanza becomes
-# redundant — uv falls back to PyPI by default. PEP 503 protocol means the
-# customer's config looks identical to any normal Python package install.
+# `oz-arcflow` resolves through OZ's PEP 503 simple index. PEP 503 is the
+# same protocol PyPI implements, so `uv sync` treats it like any normal
+# Python package install.
 [[tool.uv.index]]
 name = "oz"
 url = "https://staging.oz.com/pypi/simple/"

@@ -6,17 +6,17 @@ Conceptually:
       ON :Frame WHEN CREATED
       RUN SKILL classify_zone_occupancy
 
-A TRIGGER is a fire-once event binding (PAT-0037). When a Frame node is
+A TRIGGER is a fire-once event binding. When a Frame node is
 inserted, the engine evaluates the trigger's condition and, if matched,
 invokes a SKILL — either a built-in behavior procedure or a registered
-external action. SKILLs are RelConstructors (PAT-0036) that operate over
+external action. SKILLs are relationship constructors that operate over
 the recently-changed subgraph.
 
 In TypeScript, the engine fires the callback on every Frame insert
-(20 ms tail latency at 60 Hz). In Python during alpha, this step
-demonstrates the SHAPE of trigger evaluation by walking the frames and
-applying the same condition+action logic explicitly. The pattern is
-identical; only the dispatch site differs.
+(20 ms tail latency at 60 Hz). In Python today, this step demonstrates
+the SHAPE of trigger evaluation by walking the frames and applying the
+same condition+action logic explicitly. The pattern is identical; only
+the dispatch site differs.
 
 Run:
     uv run python 10-triggers-and-skills.py
@@ -120,13 +120,12 @@ def main() -> None:
     db.close()
     print(
         "\nOK\n\n"
-        "Pattern note: PAT-0036 (Program Manifest) and PAT-0037 (Trigger as\n"
-        "Event Binding) describe how triggers + SKILLs compose at runtime.\n"
-        "The engine evaluates trigger conditions on every relevant mutation\n"
-        "and dispatches SKILLs via the executor IPC bridge (PAT-0039), which\n"
-        "keeps DNN inference and other heavy logic in a separate crash domain\n"
-        "(ANTI-0020). This step demonstrates the LOGIC; production deployments\n"
-        "wire the dispatch via CREATE TRIGGER / CREATE SKILL once the Python\n"
+        "Pattern note: triggers and SKILLs compose at runtime — the engine\n"
+        "evaluates trigger conditions on every relevant mutation and\n"
+        "dispatches SKILLs via an executor IPC bridge that keeps DNN\n"
+        "inference and other heavy logic in a separate crash domain. This\n"
+        "step demonstrates the LOGIC; production deployments wire the\n"
+        "dispatch via CREATE TRIGGER / CREATE SKILL once the Python\n"
         "binding's reactive surface lands."
     )
 

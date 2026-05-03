@@ -10,10 +10,10 @@ In TypeScript, ArcFlow exposes the reactive layer directly:
     )
 
 The callback fires per-mutation; updates land within ~20 ms of the
-graph change (PAT-0034 reactive spatial layer).
+graph change.
 
-The Python ctypes binding doesn't yet expose subscribe callbacks during
-alpha. The pattern still works — you poll the maintained query state at
+The Python ctypes binding doesn't yet expose subscribe callbacks. The
+pattern still works — you poll the maintained query state at
 the source tick rate, and compute the precise distance in Python over a
 spatial-index-narrowed candidate set. At 60 Hz that's a 16.67 ms loop;
 ArcFlow's query path resolves well under that bound, so polling delivers

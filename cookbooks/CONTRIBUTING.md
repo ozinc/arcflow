@@ -1,7 +1,6 @@
 # Contributing to the ArcFlow Cookbook
 
-Recipes are governed by **PAT-0044 (Cookbook Recipe Governance)** in the
-engine repo. This file is the operational summary; the pattern is authoritative.
+This file is the operational summary for adding or updating a recipe.
 
 ## Folder layout (every recipe)
 
@@ -53,8 +52,9 @@ data_provenance = "synthesized"     # in {synthesized, anonymized, public}
 - Require external data downloads. Sample data is in-tree, ≤ 5 MB.
 - Include real customer data (anonymized samples may approximate shape; they
   may not invent quantitative claims). `data_provenance` field is mandatory.
-- Embed install commands hand-rolled. Install commands flow from
-  `<InstallMatrix />` (PAT-0043).
+- Embed install commands hand-rolled. Install commands flow from the
+  live `<InstallMatrix />` on the docs site, which is rendered from the
+  release manifest.
 
 ## Adding a new recipe
 
