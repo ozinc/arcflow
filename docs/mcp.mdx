@@ -124,6 +124,27 @@ Ask a natural language question answered from the world model with confidence fi
 graph_rag("Which entities have been observed with confidence above 0.9 in the last 5 minutes?")
 ```
 
+### Snapshot envelope
+
+`read_query` and `graph_rag` envelopes carry a `snapshot_id` field — the URI of the
+snapshot the call observed:
+
+```json
+{
+  "snapshot_id": "arcflow://snapshot/9c3b8a1f7d2e…",
+  "rows": [ ... ]
+}
+```
+
+Both tools also accept an optional `snapshot_uri` input. When provided, the call is
+pinned to that historical snapshot and the response echoes it back. This lets a chat
+agent re-run a previous answer against its original world state, or pin a sequence of
+related questions to one consistent view.
+
+The HTTP server exposes the same provenance via the `X-Arcflow-Snapshot-Id` and
+`X-Arcflow-Manifest-Pin` response headers, and accepts pinning via the `?at=` query
+string. See [Snapshot-Pinned Reads](/concepts/snapshots) for the full surface.
+
 ---
 
 ## Latency
@@ -143,4 +164,5 @@ MCP operates over stdio JSON-RPC. Each tool call has ~100ms of overhead from pro
 - [CLI](/cli) — the `arcflow` binary for shell-capable agents and developers
 - [Language Bindings](/bindings) — napi-rs (Node.js), Python, Rust, C, C++
 - [Agent-Native](/agent-native) — filesystem workspace, batch execution, watch mode
+- [Snapshot-Pinned Reads](/concepts/snapshots) — `snapshot_id` envelope and provenanced answers
 - [Skills](/skills) — teach the world model a relationship rule in plain language; compiled once, executed at graph speed forever

@@ -1,0 +1,169 @@
+---
+title: "Filesystem Projection"
+description: "Project the world model to a directory tree — the agent-grep workflow. Every snapshot becomes a deterministic, byte-identical layout of nodes, edges, and indexes that any Unix tool can read."
+section: "cli"
+order: 4
+status: "stable"
+playground:
+  seed: world
+  query: "MATCH (s:Sensor)-[:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) RETURN z.name AS zone, r.name AS robot, s.name AS sensor"
+---
+
+# Filesystem Projection
+
+`arcflow project <mountpoint>` writes the current world model snapshot to a directory
+tree in a deterministic on-disk layout. Every node and edge becomes a `.json` file in a
+predictable path. Any agent or shell tool that speaks Unix — `ls`, `cat`, `rg`, `grep`,
+`jq`, `find` — can now read the world model directly, without speaking Cypher.
+
+This is the agent-grep workflow. It is the headline customer benefit of the
+filesystem-as-API design.
+
+## The on-disk layout
+
+Two projections of the same snapshot are byte-identical. The layout is:
+
+```
+<mountpoint>/
+├── __snapshot.toml              # snapshot URI + layout version
+├── nodes/
+│   └── <Label>/
+│       └── <id>.json
+├── edges/
+│   └── <Type>/
+│       └── <id>.json
+├── indexes/
+│   ├── labels.txt               # all node labels, one per line
+│   └── types.txt                # all edge types, one per line
+└── views/                       # reserved for future named views
+```
+
+Inside `__snapshot.toml`:
+
+```toml
+snapshot_uri = "arcflow://snapshot/9c3b8a1f7d2e…"
+layout_version = 1
+```
+
+A node file (`nodes/Robot/r-01.json`):
+
+```json
+{
+  "label": "Robot",
+  "id": "r-01",
+  "properties": {
+    "name": "Atlas-01",
+    "x": 18.0,
+    "y": 8.5,
+    "battery": 92,
+    "_observation_class": "observed",
+    "_confidence": 0.97
+  }
+}
+```
+
+An edge file (`edges/DETECTED/e-1042.json`):
+
+```json
+{
+  "type": "DETECTED",
+  "id": "e-1042",
+  "from_id": "s-04",
+  "to_id": "r-01",
+  "properties": {
+    "confidence": 0.94,
+    "at_seq": 2147
+  }
+}
+```
+
+The hash inside `__snapshot.toml` is the same content-addressed URI described in
+[Snapshot-Pinned Reads](/concepts/snapshots) — the same projection bytes always carry
+the same snapshot URI.
+
+## Run it
+
+```bash
+arcflow project ./world-model
+```
+
+Output is the directory tree above. Pass `--json` for a machine-readable summary:
+
+```bash
+arcflow project ./world-model --json
+```
+```json
+{
+  "snapshot_uri": "arcflow://snapshot/9c3b8a1f7d2e…",
+  "node_count": 1248,
+  "edge_count": 5821,
+  "layout_version": 1
+}
+```
+
+The summary fields are stable contract: agents that script around `arcflow project` can
+rely on them.
+
+## The agent-grep workflow
+
+Most coding agents — Claude Code, Cursor, Codex CLI — speak Unix natively. They have
+deep training on `grep`, `rg`, `find`, `cat`, `jq`, and the broader filesystem
+vocabulary. They speak Cypher only haltingly. With `arcflow project`, the world model
+becomes a directory tree they can reason about with the tools they already mastered.
+
+```bash
+# Project the current world model
+arcflow project ./world-model
+
+# Find every observed robot with low battery — pure ripgrep
+rg -l '"_observation_class": "observed"' ./world-model/nodes/Robot/ \
+  | xargs -I {} jq 'select(.properties.battery < 30)' {}
+
+# Which sensors detect Atlas-01?
+rg -l '"to_id": "r-01"' ./world-model/edges/DETECTED/ \
+  | xargs -I {} jq -r '.from_id' {}
+
+# How many entities of each label?
+ls ./world-model/nodes/ | while read label; do
+  echo "$label: $(ls ./world-model/nodes/$label/ | wc -l)"
+done
+
+# Diff two snapshots
+arcflow project ./before
+# ... run pipeline ...
+arcflow project ./after
+diff -r ./before/nodes ./after/nodes
+```
+
+Crucially, the agent doesn't need an MCP server, doesn't need a tool definition, doesn't
+need a special integration. It uses the same shell skills it uses for every other task.
+The world model is just files.
+
+## Determinism guarantees
+
+- Two projections of the same snapshot URI are byte-identical, regardless of which
+  process or machine produced them.
+- Node and edge IDs are stable across projections.
+- Property keys are emitted in sorted order inside each JSON file.
+- `indexes/labels.txt` and `indexes/types.txt` are sorted.
+
+This determinism is what makes `diff -r` between projections meaningful — any
+difference is a real difference in graph state, never a re-encoding artifact.
+
+## Read-only
+
+`arcflow project` writes a snapshot to disk; it does not bind a writable filesystem.
+Edits inside the projected directory are not applied back to the engine. To mutate the
+world model, use the SDK, the CLI, the HTTP server, or the MCP server — and then
+re-project.
+
+A FUSE bridge (AFP-0002) is also available for environments where macFUSE is
+installed; it serves the same on-disk layout as a live mount. `arcflow project` is the
+broadly portable form — no FUSE driver needed.
+
+## See Also
+
+- [Snapshot-Pinned Reads](/concepts/snapshots) — the URI scheme that `__snapshot.toml` references
+- [CLI](/cli) — full command surface
+- [Agent-Native Database](/agent-native) — why the filesystem is the API
+- [ArcFlow for Coding Agents](/guides/agent-integration) — patterns for shell-native agents

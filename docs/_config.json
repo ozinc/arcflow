@@ -111,9 +111,14 @@
           "order": 12
         },
         {
+          "slug": "concepts/snapshots",
+          "title": "Snapshot-Pinned Reads",
+          "order": 13
+        },
+        {
           "slug": "concepts/skills",
           "title": "Skills",
-          "order": 13
+          "order": 14
         }
       ]
     },
@@ -635,39 +640,44 @@
           "order": 3
         },
         {
+          "slug": "cli/project",
+          "title": "Filesystem Projection",
+          "order": 4
+        },
+        {
           "slug": "server",
           "title": "Server Modes & PG Wire",
-          "order": 4
+          "order": 5
         },
         {
           "slug": "server/persistence",
           "title": "Persistence",
-          "order": 5
+          "order": 6
         },
         {
           "slug": "server/import-export",
           "title": "Import & Export",
-          "order": 6
+          "order": 7
         },
         {
           "slug": "deployment/docker",
           "title": "Docker",
-          "order": 7
+          "order": 8
         },
         {
           "slug": "architecture",
           "title": "Architecture",
-          "order": 8
+          "order": 9
         },
         {
           "slug": "cloud-architecture",
           "title": "Cloud Architecture",
-          "order": 9
+          "order": 10
         },
         {
           "slug": "architecture/sync",
           "title": "Sync Protocol (Deep Dive)",
-          "order": 10
+          "order": 11
         }
       ]
     },

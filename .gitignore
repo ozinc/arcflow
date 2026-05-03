@@ -2,3 +2,8 @@ node_modules/
 dist/
 *.node
 .DS_Store
+
+# Python venvs and bytecode caches inside cookbooks/
+.venv/
+__pycache__/
+*.pyc

@@ -118,6 +118,7 @@ openInMemory(): ArcflowDB               // In-memory (testing, prototyping)
 interface ArcflowDB {
   version(): string
   query(cypher: string, params?: QueryParams): QueryResult
+  queryAt(snapshotUri: string, cypher: string, params?: QueryParams): TaggedQueryResult  // Replay against pinned snapshot
   mutate(cypher: string, params?: QueryParams): MutationResult
   batchMutate(queries: string[]): number
   isHealthy(): boolean
@@ -137,6 +138,11 @@ interface QueryResult {
   rowCount: number
   computeMs: number
   gqlstatus(): string   // "00000" = data returned, "02000" = no data (ISO GQL)
+  snapshotUri: string   // arcflow://snapshot/<hex> — content-addressed snapshot URI
+}
+
+interface TaggedQueryResult extends QueryResult {
+  snapshotUri: string   // Always equals the URI passed to db.queryAt()
 }
 
 interface TypedRow {
@@ -181,6 +187,61 @@ const { rows, loading, error } = useQuery(db, "MATCH (e:Entity) WHERE e._confide
 // Live subscription — updates automatically on mutations
 const { rows } = useLiveQuery(db, "MATCH (n:Alert) WHERE n.active = true RETURN n")
 ```
+
+## Snapshot-Pinned Reads
+
+Every snapshot has a citeable, content-addressed URI: `arcflow://snapshot/<hex>`.
+Identical writes produce identical URIs across processes and machines.
+
+| Surface | Provenance field | Pin input |
+|---|---|---|
+| SDK `db.query()` | `result.snapshotUri` | `db.queryAt(uri, cypher, params?)` |
+| CLI `arcflow query` | `--json` envelope `__snapshot` | `--at-snapshot <uri>` |
+| CLI convenience | — | `arcflow rerun --snapshot <uri> --query "..."` |
+| HTTP server | headers `X-Arcflow-Snapshot-Id`, `X-Arcflow-Manifest-Pin` | `?at=<uri>` query string |
+| MCP `read_query`, `graph_rag` | response envelope `snapshot_id` | optional `snapshot_uri` input |
+
+```typescript
+// Provenanced replay — bit-for-bit identical rows
+const a = db.query("MATCH (e:Entity {id: 'unit-01'}) RETURN e._confidence")
+const b = db.queryAt(a.snapshotUri, "MATCH (e:Entity {id: 'unit-01'}) RETURN e._confidence")
+```
+
+```bash
+# CLI pin
+arcflow query "MATCH (n) RETURN count(*)" --at-snapshot arcflow://snapshot/9c3b… --json
+arcflow rerun --snapshot arcflow://snapshot/9c3b… --query "MATCH (n) RETURN count(*)"
+```
+
+Use case: every customer-facing answer carries the snapshot URI it observed. Surprising
+result? Re-run against the same URI and either reproduce the answer (data is fixed) or
+diff the URIs (data has moved).
+
+## Filesystem Projection — `arcflow project`
+
+Write the current snapshot to a directory tree any Unix tool can read. The agent-grep
+workflow: agents that speak `rg`, `grep`, `cat`, `jq` natively can now reason about the
+world model with no Cypher and no MCP.
+
+```bash
+arcflow project ./world-model --json
+# {"snapshot_uri":"arcflow://snapshot/9c3b…","node_count":1248,"edge_count":5821,"layout_version":1}
+```
+
+On-disk layout (deterministic, byte-identical across producers):
+
+```
+<mountpoint>/
+  __snapshot.toml              # snapshot_uri + layout_version
+  nodes/<Label>/<id>.json
+  edges/<Type>/<id>.json
+  indexes/labels.txt
+  indexes/types.txt
+  views/                       # reserved
+```
+
+Two projections of the same snapshot are byte-identical, so `diff -r` between
+projections is a true graph-state diff.
 
 ## GQL / WorldCypher — ArcFlow's ISO GQL dialect
 

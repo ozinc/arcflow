@@ -120,6 +120,28 @@ For one-off queries, skip the file:
 arcflow --data-dir ./graph --exec "MATCH (n:Person)-[:KNOWS]->(m) RETURN n.name, m.name" --json
 ```
 
+### Project the World Model — the agent-grep workflow
+
+For agents that speak Unix more fluently than Cypher, project the entire snapshot to a
+directory of JSON files:
+
+```bash
+arcflow project ./world-model
+```
+
+The output is a deterministic on-disk layout: `nodes/<Label>/<id>.json`,
+`edges/<Type>/<id>.json`, plus index files. The agent can now `rg`, `grep`, `cat`, and
+`jq` the world model with no protocol layer at all:
+
+```bash
+# Find low-battery observed robots — pure ripgrep
+rg -l '"_observation_class": "observed"' ./world-model/nodes/Robot/ \
+  | xargs -I {} jq 'select(.properties.battery < 30)' {}
+```
+
+Two projections of the same snapshot are byte-identical, so `diff -r` between
+projections is a true graph-state diff. See [Filesystem Projection](/cli/project).
+
 ---
 
 ## CLI-Native Tooling
@@ -289,6 +311,8 @@ Every shell-native AI agent deserves a persistent, queryable world model as its 
 - [Swarm & Multi-Agent](/guides/swarm-agents) — multi-agent coordination patterns, durable workflows, named sessions
 - [Building a World Model](/guides/world-model) — step-by-step: entities in space, temporal memory, live monitoring
 - [ArcFlow for Coding Agents](/guides/agent-integration) — CLI patterns, structured errors, batch execution, and checkpointing
+- [Filesystem Projection](/cli/project) — `arcflow project` writes the world model as a directory tree
+- [Snapshot-Pinned Reads](/concepts/snapshots) — citeable snapshot URIs for provenanced answers
 - [Live Queries](/live-queries) — `LIVE MATCH` and `CREATE LIVE VIEW` for always-current agent state
 - [Temporal Queries](/temporal) — `AS OF seq N` for replay, debugging, and session reconstruction
 - [Skills](/skills) — teach the world model a new relationship rule in plain language; compiled once, executed at graph speed forever

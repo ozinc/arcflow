@@ -45,12 +45,29 @@ Returns the engine version string.
 
 ### `db.query(cypher: string, params?: QueryParams): QueryResult`
 
-Execute a read query. Returns typed results.
+Execute a read query. Returns typed results. The result carries a `snapshotUri` field
+identifying the snapshot the query observed — see [Snapshot-Pinned Reads](/concepts/snapshots).
 
 ```typescript
 const result = db.query("MATCH (n:Person) RETURN n.name, n.age")
 const result = db.query("MATCH (n {id: $id}) RETURN n", { id: 'p1' })
+result.snapshotUri  // "arcflow://snapshot/9c3b…"
 ```
+
+### `db.queryAt(snapshotUri: string, cypher: string, params?: QueryParams): TaggedQueryResult`
+
+Replay a read query against a pinned historical snapshot. The result is bit-for-bit
+identical to the original query against the same snapshot URI — full reproducibility.
+
+```typescript
+const a = db.query("MATCH (e:Entity {id: 'unit-01'}) RETURN e._confidence")
+// ... mutations happen ...
+const b = db.queryAt(a.snapshotUri, "MATCH (e:Entity {id: 'unit-01'}) RETURN e._confidence")
+// b.rows is bit-for-bit identical to a.rows
+```
+
+Returns a `TaggedQueryResult { snapshotUri, rows, columns, ... }` — the same shape as
+`QueryResult` with `snapshotUri` guaranteed to equal the URI passed in.
 
 ### `db.mutate(cypher: string, params?: QueryParams): MutationResult`
 
@@ -165,10 +182,25 @@ interface QueryResult {
   rowCount: number        // Number of rows
   computeMs: number       // Execution time (ms)
   gqlstatus(): string     // ISO GQL status: "00000" = data, "02000" = no data
+  snapshotUri: string     // arcflow://snapshot/<hex> — the snapshot this query observed
 }
 ```
 
 `gqlstatus()` follows ISO/IEC 39075 GQL. `"00000"` means rows were returned; `"02000"` means the query succeeded but produced no rows (e.g. a `MATCH` with no matches, or a filter that eliminated everything).
+
+`snapshotUri` is content-addressed and round-trippable. Pass it to `db.queryAt()` to
+replay the same query against the same world state. See [Snapshot-Pinned Reads](/concepts/snapshots).
+
+## `TaggedQueryResult`
+
+Returned by `db.queryAt()`. Same shape as `QueryResult` — explicitly named for
+provenanced replay paths where the snapshot URI is the contract.
+
+```typescript
+interface TaggedQueryResult extends QueryResult {
+  snapshotUri: string     // Always equals the URI passed to db.queryAt()
+}
+```
 
 ## `MutationResult`
 
@@ -269,3 +301,4 @@ Parse a raw napi error into a structured ArcflowError. Used internally by the SD
 - [Sync](/sync) — `syncPending()` and cloud sync integration
 - [Concepts: Graph Model](/concepts/graph-model) — node/edge data model
 - [Concepts: Persistence](/concepts/persistence) — WAL, snapshots, data directory
+- [Snapshot-Pinned Reads](/concepts/snapshots) — `snapshotUri` and `db.queryAt()` for provenanced replay

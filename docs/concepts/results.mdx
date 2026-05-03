@@ -24,8 +24,13 @@ interface QueryResult {
   rowCount: number       // Number of rows
   computeMs: number      // Execution time in milliseconds
   gqlstatus(): string    // ISO GQL status: "00000" = data, "02000" = no data
+  snapshotUri: string    // arcflow://snapshot/<hex> — the snapshot this query observed
 }
 ```
+
+The `snapshotUri` is content-addressed and round-trippable: pass it to `db.queryAt(uri,
+cypher)` to replay the same query against the same world state and get bit-for-bit
+identical rows. See [Snapshot-Pinned Reads](/concepts/snapshots).
 
 ## Accessing values
 
@@ -130,3 +135,4 @@ console.log(`PageRank computed in ${result.computeMs.toFixed(1)}ms`)
 - [Parameters](/concepts/parameters) — always use `$params` placeholders for world model queries
 - [TypeScript API Reference](/reference/api) — full method signatures and return types
 - [Error Handling](/concepts/error-handling) — what `db.query()` throws and when
+- [Snapshot-Pinned Reads](/concepts/snapshots) — how `snapshotUri` enables provenanced re-runs

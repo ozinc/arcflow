@@ -1,0 +1,145 @@
+---
+title: "Snapshot-Pinned Reads"
+description: "Every world model query result is provenanced — the snapshot URI it observed travels with the result, and any historical snapshot can be re-queried bit-for-bit."
+section: "concepts"
+status: "stable"
+playground:
+  seed: world
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) RETURN z.name AS zone, r.name AS robot, s.name AS sensor, d.confidence AS confidence ORDER BY confidence DESC"
+---
+
+# Snapshot-Pinned Reads
+
+Every world model query observes a specific snapshot of the graph. ArcFlow makes that
+snapshot **citeable, round-trippable, and re-queryable** — every result envelope carries
+a `__snapshot` URI, and any past snapshot can be replayed against an identical query and
+return identical bytes.
+
+This is what makes a world model trustworthy under scrutiny: the customer who got an
+answer can ask *"which world state did this answer come from?"* and the engine has a
+one-line answer.
+
+## The snapshot URI
+
+Every committed snapshot has a content-addressed URI of the form:
+
+```
+arcflow://snapshot/<hex-hash>
+```
+
+The hash is computed deterministically over the write set. Identical writes produce
+identical URIs across processes and machines — two replicas that ingested the same WAL
+agree on snapshot URIs without coordination.
+
+## Every result carries a snapshot
+
+`db.query()`, the CLI, the HTTP server, and the MCP server all return the snapshot URI
+that the query observed. Provenance is automatic — there's nothing extra to opt into.
+
+```typescript
+const result = db.query("MATCH (e:Entity) RETURN e.name, e._confidence")
+result.snapshotUri    // "arcflow://snapshot/9c3b…"  — this is what the query saw
+result.rows           // the actual result rows
+```
+
+The CLI emits the same field in its JSON envelope:
+
+```bash
+arcflow query "MATCH (n) RETURN count(*)" --json
+```
+```json
+{
+  "__snapshot": "arcflow://snapshot/9c3b8a1f7d2e…",
+  "columns": ["count(*)"],
+  "rows": [{"count(*)": "10234"}]
+}
+```
+
+The HTTP server returns it as headers:
+
+```
+X-Arcflow-Snapshot-Id: arcflow://snapshot/9c3b8a1f7d2e…
+X-Arcflow-Manifest-Pin: arcflow://snapshot/9c3b8a1f7d2e…
+```
+
+The MCP `read_query` and `graph_rag` tools include `snapshot_id` in their JSON response
+envelope.
+
+## `query_at` — replay against a pinned snapshot
+
+Once you have a snapshot URI, re-run the same query against that exact world state:
+
+```typescript
+// Original query
+const a = db.query("MATCH (e:Entity {id: 'unit-01'}) RETURN e._confidence")
+const uri = a.snapshotUri
+
+// ... time passes, more mutations happen ...
+
+// Re-run the same query against the original world state
+const b = db.queryAt(uri, "MATCH (e:Entity {id: 'unit-01'}) RETURN e._confidence")
+// b.rows is bit-for-bit identical to a.rows
+```
+
+The Rust SDK returns `TaggedQueryResult { snapshot_uri, rows }`. The TypeScript and
+Python wrappers expose the same shape on the result object.
+
+## CLI: `--at-snapshot` and `arcflow rerun`
+
+Pin any CLI query to a historical snapshot:
+
+```bash
+arcflow query "MATCH (e:Entity {id: $id}) RETURN e._confidence" \
+  --param id=unit-01 \
+  --at-snapshot arcflow://snapshot/9c3b8a1f7d2e…
+```
+
+`arcflow rerun` is a thin convenience wrapper that always pins:
+
+```bash
+arcflow rerun \
+  --snapshot arcflow://snapshot/9c3b8a1f7d2e… \
+  --query "MATCH (e:Entity {id: 'unit-01'}) RETURN e._confidence"
+```
+
+Both surface the same JSON envelope with the same `__snapshot` field — and the field
+matches the URI you pinned, confirming the engine actually executed against that
+snapshot rather than silently falling forward.
+
+## HTTP: `?at=` query parameter
+
+Pin reads over the HTTP server with the `at` query string:
+
+```
+GET /query?cypher=MATCH%20(n)%20RETURN%20count(*)&at=arcflow://snapshot/9c3b…
+```
+
+The response carries the same `X-Arcflow-Snapshot-Id` and `X-Arcflow-Manifest-Pin`
+headers as un-pinned reads — easy to verify in any HTTP client.
+
+## MCP: `snapshot_uri` input
+
+The MCP `read_query` and `graph_rag` tools accept an optional `snapshot_uri` input. If
+provided, the tool runs against that snapshot and returns it back in the response
+envelope. If omitted, the engine reads the latest snapshot and returns its URI as
+before.
+
+## Why this matters — the provenanced answer
+
+The customer story is simple. An agent or a human got a surprising answer from a world
+model query. Without snapshot pinning, the only investigation path is *"run the query
+again and hope the data hasn't changed."* With snapshot pinning, the answer is
+deterministic: take the URI off the original result, paste it into `arcflow rerun`, get
+the same answer back. If the answer differs, that itself is a finding — the data has
+moved, and you have both URIs to compare.
+
+This is what makes ArcFlow safe to use behind a customer-facing answer pipeline. Every
+output is provenanced. Every claim is reproducible. There is no "works on my machine"
+for world model state.
+
+## See Also
+
+- [Persistence & WAL](/concepts/persistence) — how snapshots are produced and stored
+- [Filesystem Projection](/cli/project) — write a snapshot to disk for `grep`, `cat`, `rg`
+- [Temporal Queries](/temporal) — `AS OF seq N` for sequence-based historical reads
+- [Proof Artifacts & Gates](/concepts/proof-artifacts) — fingerprints and audit gates
