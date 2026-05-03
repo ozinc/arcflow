@@ -215,7 +215,7 @@ curl -X POST http://localhost:8080/query \
 
 ## 6. Agent Integration
 
-**Coding agents** (Claude Code, Cursor, Codex, Gemini CLI) use the CLI binary — each call exits in <10ms, composable like `grep`:
+**Coding agents** (Claude Code, Cursor, Codex, Gemini CLI) use the CLI binary — each call exits in `<10ms`, composable like `grep`:
 
 ```bash
 arcflow query 'MATCH (e:Entity) WHERE e._observation_class = "observed" RETURN e.name'

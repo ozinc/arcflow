@@ -36,6 +36,18 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "docs" / "reference" / "data"
 REFDIR = ROOT / "docs" / "reference"
 
+
+def mdx_safe(text: str) -> str:
+    """Escape `<` and `>` so MDX doesn't parse them as JSX tags.
+
+    Notes like ``LIST<INT>/LIST<FLOAT>`` or ``USE GRAPH <name> clause``
+    contain literal angle brackets that look like JSX element openers to
+    the MDX compiler. With no matching close tag the page fails to compile
+    and falls through to notFound() in the docs route. HTML entities
+    render as the literal `<` / `>` characters in the rendered page.
+    """
+    return text.replace("<", "&lt;").replace(">", "&gt;")
+
 GENERATED_HEADER = (
     "{/* GENERATED — do not hand-edit. "
     "Source: docs/reference/data/. "
@@ -185,7 +197,7 @@ def render_gql_feature(key: str, feat: dict, conformance: dict, sync: dict) -> s
     if track:
         body.append(f"**Track:** {track}")
     if note:
-        body += ["", "## Description", "", note]
+        body += ["", "## Description", "", mdx_safe(note)]
     if evidence:
         body += ["", "## Evidence", "", f"`{evidence}`"]
 
