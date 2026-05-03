@@ -1,6 +1,6 @@
 # ArcFlow
 
-> The operational world model layer — the persistence tier for actual world state. Neural world models simulate; ArcFlow records. Spatial-temporal, confidence-scored, embedded. Runs in browser (WASM), Node.js, Python, Rust, Docker. No server needed. Space and time are first-class dimensions; every fact carries an observation class (observed/inferred/predicted) and confidence score.
+> The operational world model layer — the persistence tier for actual world state. Neural world models simulate; ArcFlow records. Spatial-temporal, confidence-scored, embedded. Runs in-process: browser (WASM), Node.js, Python, Rust, native CLI. No server, no Docker — the engine is 5MB and runs inside your process. Space and time are first-class dimensions; every fact carries an observation class (observed/inferred/predicted) and confidence score.
 
 ## Try instantly (zero install)
 
@@ -15,8 +15,10 @@ Source: https://pub-a0a196dbe10340f8af22524547fdd476.r2.dev/releases/arcflow/rel
 
 During alpha:
   curl -fsSL https://oz.com/install/arcflow | sh   # native CLI
-Other bindings (Python, Node.js, Rust, Docker) are in progress —
-see the matrix above for current status.
+Other bindings (Python, Node.js, Rust) are in progress — see the matrix
+above for current status. ArcFlow does not ship a Docker image for the
+engine itself (5MB embedded library; Docker would subvert the in-process
+design). See https://oz.com/docs/deployment/docker for the rationale.
 
 ## 5 essential patterns
 

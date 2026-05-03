@@ -1,6 +1,6 @@
 ---
 title: "Language Bindings"
-description: "One world model engine, every language — native bindings for Rust, Python, TypeScript (napi-rs), C, C++, and Docker with zero serialization overhead."
+description: "One world model engine, every language — native bindings for Rust, Python, TypeScript (napi-rs), C, and C++ with zero serialization overhead."
 section: "bindings"
 order: 1
 since: "10.0.0"
@@ -17,7 +17,7 @@ engine release manifest — no hand-rolled commands here.
 
 <InstallMatrix />
 
-All bindings wrap a single C ABI shared library (`libarcflow`). Direct function calls when in-process. TCP/HTTP/MCP when you need network access. Docker when you need isolation.
+All bindings wrap a single C ABI shared library (`libarcflow`). Direct function calls when in-process. TCP/HTTP/MCP when you need network access. The engine itself isn't shipped as a Docker image — it's 5MB and runs in your process; see [Why ArcFlow doesn't ship a Docker image](/deployment/docker).
 
 ## Rust SDK
 
@@ -336,6 +336,6 @@ One engine. No protocol translation. Function calls go directly into the Rust en
 ## See Also
 
 - [Installation](/installation) — pre-built binaries for all platforms
-- [Platform](/platform) — runtime environments: browser WASM, Docker, Cloudflare Workers, mobile
+- [Platform](/platform) — runtime environments: browser WASM, Cloudflare Workers, mobile
 - [Agent-Native Database](/agent-native) — integration surfaces: napi-rs, CLI binary, MCP server
 - [MCP Server](/mcp) — cloud chat UI integration (the fourth binding surface)

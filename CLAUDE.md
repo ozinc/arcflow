@@ -1,7 +1,9 @@
 # CLAUDE.md — arcflow-docs
 
-ArcFlow is an embedded graph database. Runs in browser (WASM), Node.js, Python, Rust, Docker.
-No server needed.
+ArcFlow is an embedded graph database. Runs in-process — browser (WASM),
+Node.js, Python, Rust, native CLI. No server, no Docker (5MB embedded
+library; Docker would subvert the in-process design — see
+[docs/deployment/docker.mdx](docs/deployment/docker.mdx)).
 
 See [AGENTS.md](AGENTS.md) for the full public API and WorldCypher reference.
 See [REPO-SPLIT.md](REPO-SPLIT.md) for the governing boundary contract between this repo and the engine.

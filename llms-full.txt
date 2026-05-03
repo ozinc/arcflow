@@ -1,6 +1,6 @@
 # ArcFlow SDK — Complete Agent Reference
 
-ArcFlow is the operational world model layer — the persistence tier for actual world state. Neural world models simulate possible futures; ArcFlow records what actually happened. Spatial-temporal, confidence-scored, embedded. Space and time are first-class dimensions (not extensions). Every node carries an observation class (observed/inferred/predicted) and confidence score. Full GQL (ISO/IEC 39075) with Cypher compatibility. Runs in-process: browser (WASM), Node.js, Python, Rust, Docker. No server needed.
+ArcFlow is the operational world model layer — the persistence tier for actual world state. Neural world models simulate possible futures; ArcFlow records what actually happened. Spatial-temporal, confidence-scored, embedded. Space and time are first-class dimensions (not extensions). Every node carries an observation class (observed/inferred/predicted) and confidence score. Full GQL (ISO/IEC 39075) with Cypher compatibility. Runs in-process: browser (WASM), Node.js, Python, Rust, native CLI. No server, no Docker — the engine is 5MB and runs inside your process.
 
 This file contains the complete API surface, GQL (WorldCypher) syntax, and all patterns
 needed to integrate ArcFlow into any TypeScript/Node.js application.
@@ -19,9 +19,13 @@ During alpha (2026-Q2), only the native CLI is shipped:
 curl -fsSL https://oz.com/install/arcflow | sh
 ```
 
-The Python, Node, Rust, and Docker bindings are status: planned. Check the
-release-matrix.json for current target_quarter. Do not attempt the public
-package-manager install commands during alpha — the registries will 404.
+The Python, Node, and Rust bindings are status: planned. The Docker
+artifact is status: refused — ArcFlow is a 5MB embedded library and
+shipping the engine as a Docker image would subvert the in-process design;
+see https://oz.com/docs/deployment/docker. Check the release-matrix.json
+for current target_quarter on the planned bindings. Do not attempt the
+public package-manager install commands during alpha — the registries
+will 404.
 The install matrix at https://oz.com/docs/installation always shows the
 current shipping state.
 

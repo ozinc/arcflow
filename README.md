@@ -202,7 +202,6 @@ CALL algo.pageRank() YIELD nodeId, score
 | Binary | `curl -fsSL https://oz.com/install \| sh` |
 | Python | `pip install oz-arcflow` |
 | Rust | `cargo add arcflow` |
-| Docker | `docker run ghcr.io/ozinc/arcflow:latest` |
 | CLI (coding agents) | `arcflow query '...'` — exits in <10ms, composable like grep |
 | MCP (cloud chat UIs) | `npx arcflow-mcp` |
 
