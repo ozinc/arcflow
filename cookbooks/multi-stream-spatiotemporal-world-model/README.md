@@ -58,9 +58,15 @@ ideas the recipe is teaching.
 1. **DDD schema for live tracking.** `Session` / `Entity` / `Frame` / `Stream`
    bounded contexts. Position lives on `OBSERVED_AT` edges (per-observation),
    not on `Entity` nodes (stable identity).
-2. **60 Hz bulk load** of ~40K observations. `FlatSpatialIndex::bulk_load()`
-   STR-pack ordering for the spatial layer. Shows throughput and the
-   boundary between batch ingest and live-tick replay.
+2. **60 Hz tracking ingest** of ~40K observations via per-edge `CREATE`
+   over the public Python API. Each observation lands as an
+   `(:Entity)-[:OBSERVED_AT {x, y, z, _confidence, _observation_class}]->(:Frame)`
+   edge. Position lives on the edge so the same Entity can be observed by
+   multiple sensor streams independently. Recipe-scale (~40K edges, in-
+   memory `ArcFlow()`) completes in seconds; for production-scale
+   workloads (millions of edges per session, persistent path), bulk-load
+   primitives are still on the engine roadmap — see
+   [Performance considerations](#performance-considerations) below.
 3. **Multi-stream attach.** A 3D scene-reconstruction stream at 30 Hz
    (one frame per two tracking frames). A 200 Hz biomechanical stream on
    one entity (one observation per ~0.3 tracking frames — denser than the
@@ -68,8 +74,29 @@ ideas the recipe is teaching.
    and is reconciled to the canonical `Frame.timecode_master`.
 4. **Spatial primitives** unique to ArcFlow: KNN, radius, bbox, geofence
    triggers — all over the live R*-tree spatial index.
+
+   ```cypher
+   -- KNN: nearest entities to a point
+   CALL algo.nearestNodes(point({x: 50.0, y: 25.0}), 'Entity', 5)
+     YIELD node AS e, distance
+   RETURN e.id, distance ORDER BY distance
+
+   -- Radius: every entity within 10m of a point
+   MATCH (e:Entity)-[r:OBSERVED_AT {frame_id: 'snap-7'}]->()
+   WHERE distance(point({x: r.x, y: r.y}), point({x: 50.0, y: 25.0})) < 10.0
+   RETURN e.id, r.x, r.y
+
+   -- Bounding box: defenders inside a polygon at snap
+   MATCH (snap:Frame {name: 'ball_snap'})
+   MATCH (e:Entity {team: 'defense'})-[r:OBSERVED_AT]->(snap)
+   WHERE r.x BETWEEN 40.0 AND 60.0
+     AND r.y BETWEEN 20.0 AND 30.0
+   RETURN e.id, r.x, r.y
+   ```
 5. **Temporal primitives**: per-entity trajectory via `Frame.NEXT` chain,
-   LAG-style velocity windows, time-travel via `AS OF seq N`.
+   LAG-style velocity windows, time-travel via `AS OF seq <literal>`. Note
+   that `AS OF seq` currently accepts only literal integer seq values —
+   variable bindings and expressions are not yet supported.
 6. **LIVE views and behavior-graph triggers** at 60 Hz — sub-frame standing-
    query latency. The recipe replays ingest at the source cadence and shows
    LIVE views updating in real time.
@@ -432,6 +459,43 @@ domain-agnostic: any
 shape works. The auxiliary streams (`scenes.parquet`, `imu.parquet`,
 `events.parquet`) follow the same pattern — declare the rate, declare the
 coordinate frame, attach to canonical Frames.
+
+## Performance considerations
+
+**This recipe runs on a synthesized 30-second sample (~40K observations,
+~22 entities). At that scale, in-memory `ArcFlow()` and per-edge
+`CREATE` complete in under 10 seconds end-to-end on a single thread.**
+
+Production-scale workloads (a full session of millions of edges across
+hundreds of entities, persistent on-disk path) hit different
+characteristics. The current public Python API is per-row `execute(cypher)`,
+which means every observation goes through the parser and a
+`MATCH (n {id: $x})` lookup. That lookup is currently a linear scan over
+the `id` property on every node of the matched label — it does not yet
+use a property index. Throughput therefore degrades as the database
+grows.
+
+What this means in practice:
+
+- **Recipe scale (≤ 50K edges)**: in-memory + per-edge `CREATE` is fine.
+- **Single-game / single-session scale (~1M edges)**: per-edge `CREATE`
+  with `MATCH (n {id: $x})` will slow noticeably. Working alternatives
+  while a property-index path lands:
+  - Keep the loader's fixture stage in-memory and re-stage from Parquet
+    each session (the pattern this recipe uses with `_load.py` —
+    re-loading from disk is faster than re-running per-edge CREATEs).
+  - Co-locate every node creation with its referencing edges in the same
+    `CREATE` statement so the lookup is avoided (i.e., one `CREATE
+    (e:Entity {…})-[:OBSERVED_AT {…}]->(f:Frame {…})` per row instead of
+    `MATCH … MATCH … CREATE`).
+- **Streaming / continuous ingest**: an in-process bulk-load primitive
+  with property-indexed lookups is on the engine roadmap; the cookbook
+  will flip to it when shipped. Until then, batch + replay is the
+  recommended shape rather than per-frame live-tick ingest.
+
+Spatial KNN / radius / bbox queries resolve through the R*-tree on edge
+properties and stay sub-millisecond regardless of database size — that
+path is independent of the per-row `CREATE` characteristics above.
 
 ## Notes
 
