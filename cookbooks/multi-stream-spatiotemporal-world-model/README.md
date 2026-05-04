@@ -62,11 +62,15 @@ ideas the recipe is teaching.
    over the public Python API. Each observation lands as an
    `(:Entity)-[:OBSERVED_AT {x, y, z, _confidence, _observation_class}]->(:Frame)`
    edge. Position lives on the edge so the same Entity can be observed by
-   multiple sensor streams independently. Recipe-scale (~40K edges, in-
-   memory `ArcFlow()`) completes in seconds; for production-scale
-   workloads (millions of edges per session, persistent path), bulk-load
-   primitives are still on the engine roadmap — see
-   [Performance considerations](#performance-considerations) below.
+   multiple sensor streams independently.
+
+   **Required prerequisite for non-trivial scale**: `CREATE INDEX ON
+   :Label(prop)` for every label that's MATCH-looked-up by property in
+   the hot loop. The recipe's loader does this for `:Entity(entity_id)`,
+   `:Frame(frame_idx)`, and the auxiliary-stream join keys. Without these
+   indexes, the per-edge `MATCH (n:Label {prop: val})` lookup falls back
+   to an O(N) column scan — fine at a few hundred nodes, painful at
+   50K+. See [Performance considerations](#performance-considerations).
 3. **Multi-stream attach.** A 3D scene-reconstruction stream at 30 Hz
    (one frame per two tracking frames). A 200 Hz biomechanical stream on
    one entity (one observation per ~0.3 tracking frames — denser than the
@@ -477,25 +481,62 @@ grows.
 
 What this means in practice:
 
-- **Recipe scale (≤ 50K edges)**: in-memory + per-edge `CREATE` is fine.
-- **Single-game / single-session scale (~1M edges)**: per-edge `CREATE`
-  with `MATCH (n {id: $x})` will slow noticeably. Working alternatives
-  while a property-index path lands:
+- **Recipe scale (≤ 50K edges)**: in-memory + per-edge `CREATE` works
+  well as long as you've declared the indexes the loader sets up
+  (`CREATE INDEX ON :Entity(entity_id)`, `CREATE INDEX ON :Frame(frame_idx)`,
+  etc.). The indexes turn the per-row `MATCH (n:Label {prop: val})`
+  from O(N) into O(1).
+- **Single-game / single-session scale (~1M edges)**: still works with
+  the indexes, but the per-edge round-trip starts to dominate. Best
+  shape today:
   - Keep the loader's fixture stage in-memory and re-stage from Parquet
     each session (the pattern this recipe uses with `_load.py` —
     re-loading from disk is faster than re-running per-edge CREATEs).
   - Co-locate every node creation with its referencing edges in the same
-    `CREATE` statement so the lookup is avoided (i.e., one `CREATE
-    (e:Entity {…})-[:OBSERVED_AT {…}]->(f:Frame {…})` per row instead of
-    `MATCH … MATCH … CREATE`).
-- **Streaming / continuous ingest**: an in-process bulk-load primitive
-  with property-indexed lookups is on the engine roadmap; the cookbook
-  will flip to it when shipped. Until then, batch + replay is the
-  recommended shape rather than per-frame live-tick ingest.
+    `CREATE` statement when feasible, so the lookup is avoided entirely:
+    `CREATE (e:Entity {…})-[:OBSERVED_AT {…}]->(f:Frame {…})` instead of
+    `MATCH … MATCH … CREATE`.
+- **Streaming / continuous ingest at million-edge-per-session scale**:
+  an in-process batch-CREATE / in-Cypher `UNWIND $rows AS r CREATE …`
+  primitive that avoids the per-row Python round-trip is on the engine
+  roadmap. Until then, batch + replay is the recommended shape rather
+  than per-frame live-tick ingest at production scale.
+
+**Why this matters**: an early alpha evaluation (football-transformer NGS,
+2026-05-03) hit per-row `CREATE` decay from 395 → 100 writes/sec at
+46K-frame scale because their loader didn't `CREATE INDEX` first. The
+fix landed in engine 1.6.6+ (find_nodes now respects explicit indexes
+even when the dense-store column scan path is also available); the
+recipe's `_load.py` documents the index discipline so subsequent users
+hit the fast path on the first try.
 
 Spatial KNN / radius / bbox queries resolve through the R*-tree on edge
 properties and stay sub-millisecond regardless of database size — that
 path is independent of the per-row `CREATE` characteristics above.
+
+## Known alpha caveats
+
+The recipe pattern relies on a handful of Cypher idioms that work cleanly
+in the alpha. A few patterns to avoid until the engine fixes land:
+
+- **Compound-label projection silently drops rows.** `MATCH (p:Entity:Player)
+  RETURN p.team` may return fewer rows than the corresponding `count(p)`
+  (the `:Entity:Player` materialization path drops compound nodes when
+  the queried label isn't the primary label). Workaround: route property
+  reads through the most-specific single label, or use `WHERE p.id IS NOT
+  NULL` to force projection through the index-aware accessor.
+- **Two-clause MATCH for reads can re-bind anchor variables.** `MATCH (snap:Frame {…}) MATCH (e:Entity)-[r]->(snap) RETURN e.id` may bind `e`
+  to the Frame from the first clause. Workaround: use a single MATCH chain:
+  `MATCH (e:Entity)-[r:OBSERVED_AT]->(snap:Frame {…}) RETURN e.id, r.x`.
+- **`AS OF seq <expr>` accepts only literal integers in the alpha.**
+  `WITH f.seq AS s MATCH (e) AS OF seq s` doesn't bind. Workaround: read
+  the seq via Python and substitute as a literal.
+- **`result.get(row, col)` returns strings universally.** Coerce to int /
+  float / bool in your wrapper if you need typed values.
+
+These are tracked in the engine repo's
+`kanban/planning/2026-05-04-customer-evaluation-findings/` along with
+the customer's clean repros.
 
 ## Notes
 

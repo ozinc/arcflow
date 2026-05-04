@@ -58,6 +58,29 @@ def load(verbose: bool = False) -> ArcFlow:
 
     db = ArcFlow()  # in-memory
 
+    # 0. Indexes BEFORE bulk inserts.
+    #
+    # NOTE(invariant): every node label that gets MATCH-looked-up by a
+    #   property in the hot path needs a CREATE INDEX declaration first.
+    #   Without it, find_nodes() falls through to a per-label column scan
+    #   (O(N)) instead of the property_index hit (O(1)). At a few hundred
+    #   nodes the difference is in the noise; at 50K+ nodes per label the
+    #   curve diverges sharply (the football-transformer alpha eval hit
+    #   <100 writes/sec at the 1M-edge / 46K-frame mark without these).
+    #
+    # Index everything on the hot path: Entity by entity_id, Frame by
+    # frame_idx (the two MATCH lookups every OBSERVED_AT insert does),
+    # plus the auxiliary-stream join keys.
+    for stmt in (
+        "CREATE INDEX ON :Entity(entity_id)",
+        "CREATE INDEX ON :Frame(frame_idx)",
+        "CREATE INDEX ON :SceneReconstruction(scene_id)",
+        "CREATE INDEX ON :BiomechanicalSample(sample_id)",
+        "CREATE INDEX ON :Event(event_id)",
+        "CREATE INDEX ON :Group(group_id)",
+    ):
+        db.execute(stmt)
+
     # 1. Session singleton + Sensor singletons + Groups
     db.execute(
         f"CREATE (:Session {{"
