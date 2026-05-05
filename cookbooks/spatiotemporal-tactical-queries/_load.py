@@ -28,9 +28,11 @@ def make_db(data_dir: str | None = None):
     db = ArcFlow(data_dir) if data_dir else ArcFlow()
 
     # --- 1. Entities (alpha/beta groups, 22 total) ---
-    # Note: the engine's bulk_create_nodes today does not handle Python None
-    # in props correctly across rows. Use a sentinel "" for "missing" and
-    # filter with `.id_b = ''` in queries.
+    # FIXME(arcflow-core#12): Python None in bulk_create_nodes props
+    #   misaligns subsequent rows' property values (silent corruption).
+    #   Workaround: use sentinel "" for missing and filter with `= ''`
+    #   in queries instead of IS NULL. Remove this workaround once
+    #   arcflow-core#12 ships.
     entities = []
     for group in ("alpha", "beta"):
         for n in range(11):

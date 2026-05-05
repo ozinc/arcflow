@@ -21,6 +21,13 @@ A few engine quirks worth knowing today (1.6.7), all reflected below:
 - Arithmetic in `WITH` over property accessors (e.g., `WITH (a.x - b.x)
   AS dx`) currently errors. Compute deltas in your application after
   pulling the raw values, or stamp them onto the edge at ingest time.
+
+# FIXME(arcflow-core#10): WHERE chain spanning node + edge + frame
+#   properties returns 0 rows. Workaround: inline property predicates
+#   in MATCH. Remove the workaround once #10 ships.
+# FIXME(arcflow-core#11): Arithmetic in WITH over property accessors
+#   errors with EXPECTED_KEYWORD. Workaround: pull raw values and
+#   compute deltas in application. Remove once #11 ships.
 """
 
 from _load import make_db

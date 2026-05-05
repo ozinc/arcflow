@@ -35,7 +35,8 @@ def main():
         print(f"  {dict(r)}")
 
     # 2. Count entities by which namespaces they appear in.
-    #    (We use "" as the sentinel for "missing"; see _load.py.)
+    #    FIXME(arcflow-core#12): use "" as sentinel for missing; replace
+    #    with `IS NULL` once None handling in bulk_create_nodes is fixed.
     print("\n=== Q2: Entities present in id_a only (no id_b — source-b gap) ===")
     rows = list(db.execute(
         "MATCH (e:Entity) WHERE e.id_b = '' RETURN e.entity_key AS key, e.id_a AS id_a"

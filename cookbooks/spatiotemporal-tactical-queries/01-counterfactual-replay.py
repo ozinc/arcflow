@@ -21,6 +21,13 @@ replay path is clean. See `known-issues.mdx` for the interaction
 between bulk_create_* and AS OF that you'll want to be aware of for
 mixed workflows.
 
+# FIXME(arcflow-core#8): walSeq() returns store mutation counter, not
+#   WAL seq. Once fixed, this recipe should call walSeq() directly
+#   instead of counting execute() calls in the application.
+# FIXME(arcflow-core#9): bulk_create_* preceding execute() SETs breaks
+#   AS OF replay. Once fixed, the recipe can mix bulk fixture loading
+#   with WAL-tracked decisions and audit them together.
+
 This script:
 1. Records a decision via `execute()` → WAL seq 1.
 2. Overturns the decision via comma-separated SET (one WAL entry per
