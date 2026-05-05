@@ -6,14 +6,20 @@ blocked on. Mirrors the implementation plan at:
 
 ---
 
-## NOTE(invariant): Write docs for what exists. Never describe unimplemented APIs.
+## DONE(invariant): 2026-05-05 — alpha target-state rule supersedes the "no unimplemented APIs" gate.
 
-The following two items are BASAL Pro concerns, not ArcFlow engine concerns, and
-therefore get NO documentation in arcflow-docs:
+The original invariant said "Write docs for what exists. Never describe unimplemented APIs." That gate was relaxed during alpha — see `~/.claude/projects/-Users-gudjon-code-arcflow-docs/memory/feedback_docs_describe_target_state.md`. Public-facing docs may now describe target-state behavior of features in alpha scope; testers report doc-vs-engine deltas as feedback signal. When ArcFlow exits alpha, this gate may be reinstated.
+
+## NOTE(invariant): BASAL Pro concerns stay out of arcflow-docs.
+
+These items are BASAL Pro concerns, not ArcFlow engine concerns, and therefore get NO documentation in arcflow-docs even under the alpha target-state rule (they are out of scope, not just unshipped):
+
 - DSL Framework (LegalQuery / FinanceQuery / TaxQuery)
 - Domain SDL (runtime node/edge type registration)
 
 If these appear in an arcflow-docs PR, reject it.
+
+**Why:** Repo-boundary discipline (RULE 1) — these belong in their owner's repo. The alpha relaxation only applies to features that ARE in ArcFlow's scope; out-of-scope features stay out regardless of ship status.
 
 ---
 
@@ -31,17 +37,24 @@ If these appear in an arcflow-docs PR, reject it.
 
 ---
 
-## TODO(wave-A): Write once SDK surface ships
+## SDK Surface Wave — Per-Item Status (as of 2026-05-05)
 
-These are blocked on `arcflow/planning/26-04-09-sdk-surface` being implemented.
-Do not write these docs before the napi-rs bindings exist — the API surface
-may shift during implementation.
+| Item | Status | Notes |
+|---|---|---|
+| DOC-01 Subscription Guide | **DONE(wave-A): 2026-05-05** | `db.subscribe()` shipped; documented in `docs/reference/api.mdx:121`, `AGENTS.md` API surface, `llms.txt`, `llms-full.txt`. `DeltaEvent` / `LiveQuery` / `SubscribeOptions` types in `docs/reference/types.mdx`. |
+| DOC-02 Temporal API + Provenance Chain | TODO(wave-A) | `db.queryAt()` (snapshot-URI form) shipped and documented. `db.queryAsOf(cypher, timestamp)` and `db.provenanceChain()` typed wrappers — pending. |
+| DOC-03 Workspace Programmatic API | TODO(wave-A) | `db.workspace.*` napi-rs binding not yet shipped. |
+| DOC-04 Skill Registration API | TODO(wave-A) | `db.registerSkill()` napi-rs binding not yet shipped. |
+| DOC-05 Live Proof Registration API | TODO(wave-A) | `db.registerLiveProof()` not yet shipped. |
+| DOC-06 Algorithm Configuration API | TODO(wave-A) | `db.runAlgorithm(AlgorithmConfig)` typed dispatch not yet shipped. CALL-procedure form is the current path. |
+
+For TODO items below: the bindings haven't shipped yet, so the original "do not write these docs before the napi-rs bindings exist — the API surface may shift" still applies. The alpha target-state relaxation in the rewritten invariant above does **not** override this — wave-A is explicitly held until SDK shape stabilises.
 
 ---
 
-### DOC-01: Programmatic Subscription Guide
+### DOC-01: Programmatic Subscription Guide ✅ DONE(wave-A): 2026-05-05
 
-**Blocked on:** SDK-01 (`subscribe() / unsubscribe()` napi-rs re-export)
+**Blocked on:** SDK-01 (`subscribe() / unsubscribe()` napi-rs re-export) — **shipped.**
 
 **Where:** New section in `docs/reactive.mdx` — after the existing "Legacy Live Queries" section.
 Or a new `docs/guides/subscription-api.mdx` if the content warrants a full page.
