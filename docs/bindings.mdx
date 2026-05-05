@@ -16,7 +16,7 @@ engine release manifest — no hand-rolled commands here.
 
 <InstallMatrix />
 
-All bindings wrap a single C ABI shared library (`libarcflow`). Direct function calls when in-process. TCP/HTTP/MCP when you need network access. The engine itself isn't shipped as a Docker image — it's 5MB and runs in your process; see [Why ArcFlow doesn't ship a Docker image](/deployment/docker).
+All bindings wrap a single C ABI shared library (`libarcflow`). Direct function calls when in-process. TCP / HTTP / MCP when you need network access.
 
 ## Rust SDK
 
@@ -392,26 +392,6 @@ g++ -std=c++17 \
     -L /path/to/arcflow/lib -larcflow \
     -o myapp
 ```
-
-## Docker
-
-ArcFlow is **not packaged as a Docker image** for the engine itself. The
-binary is a 5MB statically-linked library, and Docker would add ~20MB of
-container overhead while subverting the in-process embedded design.
-
-For embedded use, install the language binding from the
-[Installation page](/installation) — the engine runs in your process, no
-container needed. For one-shot scripting, the native CLI binary suffices.
-For zero-install demos, the [WASM playground](/engine) runs the same
-engine in your browser.
-
-The decision is recorded as `status: refused` in the engine release manifest
-(the published [`release-matrix.json`](https://pub-a0a196dbe10340f8af22524547fdd476.r2.dev/releases/arcflow/release-matrix.json) on R2).
-If a future use case (long-running `arcflow-mcp` service, shared multi-tenant
-deployment) needs a containerized shape, that will land as a separate
-artifact kind, not generic engine Docker. See
-[Why ArcFlow doesn't ship a Docker image](/deployment/docker) for the full
-rationale.
 
 ## MCP Server
 
