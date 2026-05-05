@@ -71,6 +71,61 @@ above shows you the install command for whichever path is currently shipped.
 - No native build tools required — pre-built binaries are bundled in the
   installable artifacts.
 
+## Dev-track install (preview / unreleased builds)
+
+Working against an unreleased ArcFlow change — testing a fix the engine
+team just merged, or building against `main` ahead of a release —
+shouldn't require carrying wheels around in your project. Two supported
+paths:
+
+### Staging registry (recommended)
+
+The engine repo publishes pre-release artifacts to a staging registry on
+every commit to `main`. Pin to a specific version from there:
+
+```bash
+# Python
+pip install --extra-index-url https://staging.arcflow.dev/pypi/simple oz-arcflow==1.6.7
+
+# npm
+npm install @ozinc/arcflow@1.7.0-pre --registry https://staging.arcflow.dev/npm
+```
+
+The same `release-matrix.json` (linked above) carries staging URLs for
+each binding. `--extra-index-url` keeps PyPI as the primary source and
+falls back to staging only when the version isn't on PyPI yet, so your
+pin doesn't break when the version eventually ships to the public
+registry.
+
+### Local build
+
+If you need to test an in-progress engine change before it's published
+even to staging, build the wheel locally and install it from a path:
+
+```bash
+git clone https://github.com/ozinc/arcflow
+cd arcflow
+cargo build --release -p arcflow-ffi
+pip install -e python/  # editable install, picks up the local libarcflow
+```
+
+```python
+import os
+# Point at the locally built shared library:
+os.environ["ARCFLOW_NATIVE_DIR"] = "/abs/path/to/arcflow/target/release"
+from arcflow import ArcFlow
+```
+
+### Anti-pattern: vendored wheel directory
+
+Avoid the `wheels/` + `--find-links ./wheels` pattern for shared
+projects. It encodes a snapshot of the world that decays the moment
+ArcFlow lands a new API or bugfix; the next teammate who clones the
+repo is using a stale binary that doesn't match the docs they're
+reading. Use the staging registry for "I want a recent build" and the
+local-build path for "I want my exact in-progress change" — neither
+requires committing binaries.
+
 ---
 
 ## See Also
