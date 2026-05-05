@@ -81,14 +81,14 @@ paths:
 ### Staging registry (recommended)
 
 The engine repo publishes pre-release artifacts to a staging registry on
-every commit to `main`. Pin to a specific version from there:
+every commit to `main`:
 
 ```bash
 # Python
-pip install --extra-index-url https://staging.arcflow.dev/pypi/simple oz-arcflow==1.6.7
+pip install --extra-index-url https://staging.arcflow.dev/pypi/simple oz-arcflow
 
 # npm
-npm install @ozinc/arcflow@1.7.0-pre --registry https://staging.arcflow.dev/npm
+npm install @ozinc/arcflow --registry https://staging.arcflow.dev/npm
 ```
 
 The same `release-matrix.json` (linked above) carries staging URLs for

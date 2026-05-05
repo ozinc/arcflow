@@ -11,8 +11,6 @@ reconstruct exactly what was visible at decision time.
 
 **Runtime:** under 1 minute total.
 
-**ArcFlow version:** 1.6.7.
-
 ## Why this pattern matters
 
 Most data systems answer "what does it look like now?" Auditors,
@@ -62,12 +60,6 @@ for the bulk-load pattern alongside.
 - `execute()` mutations are WAL-tracked (and thus replayable). A
   comma-separated `SET d.a = 1, d.b = 2` produces **two** WAL entries,
   not one — fine-grained per-property audit.
-- `walSeq()` in Cypher today returns the store's mutation counter, not
-  the WAL's actual seq — see
-  [arcflow-core#8](https://github.com/ozinc/arcflow-core/issues/8). Until
-  it's fixed, count `execute()` calls in your application; that's the
-  WAL seq space exactly. Each recipe annotates this with
-  `FIXME(arcflow-core#8)`.
 
 ## See Also
 

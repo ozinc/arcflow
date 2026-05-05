@@ -128,17 +128,16 @@ def render_table(recipes: list[dict]) -> str:
         return "_No recipes available yet._\n"
 
     lines = [
-        "| Recipe | Audience | Runtime | Engine | GPU |",
-        "|---|---|---|---|---|",
+        "| Recipe | Audience | Runtime | GPU |",
+        "|---|---|---|---|",
     ]
     for r in recipes:
         slug = r["slug"]
         link = f"[{r['title']}](https://github.com/ozinc/arcflow/tree/main/cookbooks/{slug})"
         audience = ", ".join(r["audience"]) if r["audience"] else "—"
         runtime = f"≤ {r['runtime_minutes']} min" if r["runtime_minutes"] else "—"
-        engine = f"`{r['manifest_pin']}`"
         gpu = "yes" if r["gpu_required"] else "no"
-        lines.append(f"| {link} | {audience} | {runtime} | {engine} | {gpu} |")
+        lines.append(f"| {link} | {audience} | {runtime} | {gpu} |")
     return "\n".join(lines) + "\n"
 
 

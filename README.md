@@ -15,7 +15,7 @@ pip install --index-url https://staging.oz.com/pypi/simple/ oz-arcflow
 open https://staging.oz.com/engine
 ```
 
-Engine version 1.6.6 (alpha). [Live install matrix](https://staging.oz.com/docs/installation).
+Alpha. [Live install matrix](https://staging.oz.com/docs/installation).
 
 ---
 

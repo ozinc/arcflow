@@ -4,11 +4,6 @@ Pulls (src, dst) pairs from one MATCH and tallies distinct counterparts
 per account in Python. The query side is trivial; the analysis side is
 where business rules live (thresholds, time windows, account categories).
 
-Why this shape — `count(DISTINCT x)` is not yet stable in WorldCypher 1.6.6,
-so we keep the engine query simple and tally distincts client-side.
-A future engine release flips this single step to a one-line aggregate;
-the surrounding code stays as is.
-
 Run:
     uv run python 03-fan-detection.py
 """

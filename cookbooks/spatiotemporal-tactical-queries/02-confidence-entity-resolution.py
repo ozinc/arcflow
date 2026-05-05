@@ -35,14 +35,9 @@ def main():
         print(f"  {dict(r)}")
 
     # 2. Count entities by which namespaces they appear in.
-    #    arcflow-core#12 resolved 2026-05-05 (oz-arcflow >= 1.6.9). The
-    #    empty-string sentinel below remains because the load script still
-    #    seeds with `""` for backward compat with older wheels; future
-    #    cookbooks targeting >= 1.6.9 should write None and filter with
-    #    `IS NULL`.
     print("\n=== Q2: Entities present in id_a only (no id_b — source-b gap) ===")
     rows = list(db.execute(
-        "MATCH (e:Entity) WHERE e.id_b = '' RETURN e.entity_key AS key, e.id_a AS id_a"
+        "MATCH (e:Entity) WHERE e.id_b IS NULL RETURN e.entity_key AS key, e.id_a AS id_a"
     ))
     print(f"  {len(rows)} entities missing from source-b:")
     for r in rows:

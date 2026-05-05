@@ -1,23 +1,19 @@
 """Shared loader used by every step that needs the world model in memory.
 
 Each runnable step opens a fresh in-memory ArcFlow database and re-loads from
-the synthesized Parquet files. With the v1.6.7 ``bulk_create_nodes`` /
-``bulk_create_relationships`` APIs, ~46K Frames + ~20K observations + the
-auxiliary streams now load in well under a second — fast enough that
-re-loading per step is preferable to a disk round-trip and keeps every step
-independently runnable.
+the synthesized Parquet files. The bulk APIs (``bulk_create_nodes`` /
+``bulk_create_relationships``) load ~46K Frames + ~20K observations + the
+auxiliary streams in well under a second — fast enough that re-loading per
+step is preferable to a disk round-trip and keeps every step independently
+runnable.
 
 For a real session-scale workload (millions of frames, multiple hours), swap
 this for a persistent ArcFlow path and load once. The recipe shape stays
 identical.
 
-Performance note (football-transformer NFL NGS evaluation, 2026-05-03):
-
-The earlier per-row ``MATCH+CREATE`` loader bottlenecked at ~3.4K writes/sec
-and decayed under graph growth. The bulk-array path bypasses the parser
-entirely and writes at ~1M ops/sec — the right tool for any workload where
-you already have a list of rows in Python (sensor streams, batch ingest,
-parquet pipelines, etc.).
+The bulk-array path bypasses the Cypher parser entirely and writes at
+~1M ops/sec — the right tool for any workload where you already have a
+list of rows in Python (sensor streams, batch ingest, parquet pipelines).
 """
 from __future__ import annotations
 

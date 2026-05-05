@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "{{PROJECT_NAME}}"
+version = "0.1.0"
+description = "An ArcFlow-based project."
+readme = "README.md"
+requires-python = ">=3.9"
+
+# oz-arcflow ships the embedded engine. PyArrow + Polars are optional but
+# unlock the zero-copy fast paths (`result.to_arrow()`, `to_polars()`).
+dependencies = [
+    "oz-arcflow>=1.6.7",
+    "pyarrow>=18.0",
+    "polars>=1.18",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+]
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

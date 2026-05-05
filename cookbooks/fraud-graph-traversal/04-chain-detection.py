@@ -4,12 +4,6 @@ The query: find 4-hop chains A → B → C → D → E where each leg moves an
 amount in [LEG_MIN, LEG_MAX]. This is the layering pattern — same money
 walked through multiple intermediaries.
 
-Why two-stage: WorldCypher 1.6.6 plans the 4-hop traversal cleanly, but
-applying a WHERE predicate to multiple deeply-bound Transfer nodes in a
-single MATCH is not yet stable. We let the engine enumerate chains, then
-filter the rows in Python. The same recipe drops to a one-MATCH query
-once that engine wave ships.
-
 Run:
     uv run python 04-chain-detection.py
 """

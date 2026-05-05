@@ -135,8 +135,7 @@ def phase_label(since: str | None, conformance: dict) -> str | None:
 def provenance_footer(sync: dict, source_field: str) -> str:
     return (
         f"\n---\n\n"
-        f"_Source: `docs/reference/data/{source_field}` "
-        f"(engine v{sync['engine_version']}, synced {sync['synced_at']}). "
+        f"_Source: `docs/reference/data/{source_field}`. "
         f"This page is regenerated; edit the upstream data, not the MDX._\n"
     )
 
@@ -205,7 +204,7 @@ def render_gql_feature(key: str, feat: dict, conformance: dict, sync: dict) -> s
         "",
         "## Standards lineage",
         "",
-        f"- ArcFlow implementation: `{conformance['implementation']}` v{conformance['version']}",
+        f"- ArcFlow implementation: `{conformance['implementation']}`",
         f"- Standard: {conformance['standard']} ({conformance['standard_version']})",
         f"- Conformance level: {conformance['conformance_level']}",
     ]
@@ -434,8 +433,7 @@ def render_tck(state: dict, sync: dict) -> str:
         "The full per-scenario result set lives in the engine repo at "
         "`conformance/results/canonical/` (one JSON file per scenario, "
         f"{pass_rate.split('/')[1]} files). It is not vendored here — too large and "
-        "too churn-y. To reproduce, run the engine's conformance harness against "
-        f"engine version `{sync['engine_version']}`.",
+        "too churn-y. To reproduce, run the engine's conformance harness.",
     ]
     body.append(provenance_footer(sync, "conformance-state.json"))
     return "\n".join(fm) + "\n" + "\n".join(body)

@@ -106,7 +106,7 @@ with ArcFlow() as db:
     print(result.row_count)
 
 # Version check
-print(ArcFlow.version())  # "1.6.7"
+print(ArcFlow.version())
 ```
 
 ### High-throughput ingest — `bulk_create_nodes` / `bulk_create_relationships`
@@ -164,8 +164,8 @@ tbl.schema
 # field("p.age",    int64)
 
 # Column types are honoured exactly — a Player whose name is "42" stays
-# a String, not coerced to int. (Pre-1.6.7 wrappers heuristically parsed
-# every cell and got this wrong; Arrow handoff fixes that at source.)
+# a String, not coerced to int. The Arrow handoff carries the type
+# through; no row-level heuristic re-parsing.
 
 # Direct DuckDB interop:
 import duckdb

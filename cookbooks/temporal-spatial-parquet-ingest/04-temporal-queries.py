@@ -3,8 +3,7 @@
 Demonstrates:
   - Per-player trajectory ordered by frame
   - Per-frame snapshot ("everyone at frame 4 of play 2")
-  - Per-player frame counts per play (a stand-in for trajectory length
-    given the WorldCypher subset shipped in 1.6.6)
+  - Per-player frame counts per play
 
 Run:
     uv run python 04-temporal-queries.py

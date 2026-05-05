@@ -18,11 +18,6 @@ import tempfile
 
 from arcflow import ArcFlow
 
-# FIXME(arcflow-core#8): walSeq() returns the store mutation counter,
-#   not the WAL's current seq. Until that lands, count execute() calls
-#   in the application — that IS the WAL seq space exactly.
-
-
 def main():
     data_dir = tempfile.mkdtemp(prefix="arcflow-fraud-audit-")
     db = ArcFlow(data_dir)

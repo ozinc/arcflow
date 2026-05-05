@@ -12,22 +12,6 @@ This recipe shows how to:
 2. Pull predicted facts at the same horizon.
 3. Compare them — what did the model get right? What drifted?
 
-A few engine quirks worth knowing today (1.6.7), all reflected below:
-
-- Combining 3+ WHERE predicates that span node + edge + frame properties
-  can return zero rows even when each predicate alone matches. Use
-  inline property predicates in the MATCH pattern (e.g.,
-  `MATCH (e:Entity {group: 'alpha'})`) instead of a WHERE chain.
-- Arithmetic in `WITH` over property accessors (e.g., `WITH (a.x - b.x)
-  AS dx`) currently errors. Compute deltas in your application after
-  pulling the raw values, or stamp them onto the edge at ingest time.
-
-# FIXME(arcflow-core#10): WHERE chain spanning node + edge + frame
-#   properties returns 0 rows. Workaround: inline property predicates
-#   in MATCH. Remove the workaround once #10 ships.
-# FIXME(arcflow-core#11): Arithmetic in WITH over property accessors
-#   errors with EXPECTED_KEYWORD. Workaround: pull raw values and
-#   compute deltas in application. Remove once #11 ships.
 """
 
 from _load import make_db
@@ -121,8 +105,7 @@ def main():
     print("  - Observed and predicted facts coexist in one graph — no parallel store.")
     print("  - Trust-tier filter is one WHERE predicate, not a separate query path.")
     print("  - Models that emit 'predicted' facts plug into existing graph queries unchanged.")
-    print("  - For drift / calibration, pull both classes via inline-MATCH predicates and")
-    print("    compute deltas in your app today; engine arithmetic-in-WITH is on the roadmap.")
+    print("  - Drift / calibration is a paired MATCH on the shared entity_key.")
 
     db.close()
 

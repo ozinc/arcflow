@@ -211,7 +211,7 @@ db.bulk_create_relationships("OBSERVED_AT", edges)
 
 # 2. Zero-copy result handoff — typed columns into the PyArrow / Polars / Pandas stack
 result = db.execute("MATCH (e:Entity) WHERE e._confidence > 0.8 RETURN e.id, e.x, e.y, e._confidence")
-tbl = result.to_arrow()    # pyarrow.RecordBatch — zero-copy via Arrow C Stream
+tbl = result.to_arrow()    # pyarrow.RecordBatch — zero-copy via Arrow C Data Interface
 df  = result.to_polars()   # polars.DataFrame, Arrow-backed
 df  = result.to_pandas()   # pandas.DataFrame, Arrow-backed since pandas 2
 # Reads are ~18.8× faster than row-by-row; types preserved end-to-end ("42" stays a String, not coerced).

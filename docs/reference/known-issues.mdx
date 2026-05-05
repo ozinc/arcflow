@@ -1,6 +1,6 @@
 ---
 title: "Known Issues"
-description: "Known world model engine issues and workarounds — Metal GPU hangs, pnpm binary sync, AS OF seq with bound variables, spatial-index granularity, distance() arg shapes, algo.nearestNodes composition, point() in CREATE property maps, db.subscribe Python binding, and HNSW vector index persistence."
+description: "Environmental gotchas — Metal GPU initialization hang on macOS, pnpm file-protocol binary sync."
 section: "reference"
 status: "stable"
 playground:
@@ -10,6 +10,8 @@ playground:
 ---
 
 # Known Issues
+
+Environmental and host-tooling gotchas that aren't ArcFlow bugs but can trip you on first install.
 
 ## Metal GPU initialization hang
 
@@ -35,115 +37,6 @@ This disables Metal acceleration and falls back to CPU. All queries still work �
 # Manually copy the built .node binary into your node_modules
 cp <built-binary>.node node_modules/arcflow/arcflow.<platform>.node
 ```
-
-## AS OF seq with bound variables
-
-`AS OF seq` accepts a literal or a parameter today. The bound-variable form — using a value carried in from a prior `MATCH` — is not yet wired:
-
-```cypher
--- Works today: literal
-MATCH (n:Person) AS OF seq 100 RETURN n.name
-
--- Works today: parameter
-MATCH (n:Person) AS OF seq $approval_seq RETURN n.name
-
--- Not yet wired: bound variable / arithmetic on a bound variable
-MATCH (g:Goal {match_id: 'm1'})
-MATCH (b:Ball) AS OF seq g.seq - 10
-RETURN b.position
-```
-
-**Workaround until the bound-variable form lands:** issue two queries and pass the seq through as a parameter.
-
-```typescript
-const goal = db.query("MATCH (g:Goal {match_id: 'm1'}) RETURN g.seq AS seq").rows[0]
-const seq = (goal.get('seq') as number) - 10
-db.query("MATCH (b:Ball) AS OF seq $seq RETURN b.position", { seq })
-```
-
-## `distance()` second-arg restrictions
-
-**Symptom:** `MATCH (a)-[:NEAR]->(b) WHERE distance(a.position, b.position) < 5.0` parses but the cross-variable form errors at execution. The aliased form (`WITH p.position AS pos MATCH ... WHERE distance(other.position, pos) < 5`) and the parameterised form (`WHERE distance(p.position, $center) < $radius`) also fail today. Only the second-arg literal form (`distance(p.position, point({x: 50, y: 50}))`) works end-to-end.
-
-**Workaround:** for cross-variable patterns, do a two-query split — read the anchor position, pass it as a parameter into a literal-form `point({x: $x, y: $y})`. For parameterised radius queries, format the literal client-side until parameter support lands.
-
-```typescript
-const anchor = db.query("MATCH (g:Goal {id: $id}) RETURN g.position", { id }).rows[0]
-const x = anchor.get('x'), y = anchor.get('y')
-db.query(`MATCH (b:Ball) WHERE distance(b.position, point({x: ${x}, y: ${y}})) < 1.0 RETURN b`)
-```
-
-Tracked engine-side. Affects spatial primitives docs (`spatial.mdx`, `spatial-knowledge.mdx`, `temporal.mdx`) which describe the cross-var form as the natural pattern.
-
-## `algo.nearestNodes` doesn't compose with property predicates
-
-**Symptom:** `CALL algo.nearestNodes(...) YIELD node, distance WHERE node.frame_idx = $f RETURN node` errors or returns the unfiltered KNN result. The KNN procedure can't yet be composed with a property-equality predicate over the yielded nodes.
-
-**Workaround:** use `WHERE distance(...)` directly in a MATCH instead of `algo.nearestNodes`, or post-filter the YIELD result in your application:
-
-```typescript
-const knn = db.query("CALL algo.nearestNodes(point({x: 50, y: 30}), 'Player', 50) YIELD node, distance RETURN node, distance")
-const filtered = knn.rows.filter(r => r.get('frame_idx') === targetFrame)
-```
-
-Tracked engine-side.
-
-## `CREATE` with `point()` in a property map is rejected
-
-**Symptom:** `CREATE (p:Player {position: point({x: 34.2, y: 67.1})})` errors with a parser-level rejection in 1.6.7. The same point literal works in `WHERE` and `RETURN` clauses.
-
-**Workaround:** create the node, then `SET` the spatial property:
-
-```cypher
-CREATE (p:Player {name: 'Alice'})
-SET p.position = point({x: 34.2, y: 67.1})
-```
-
-Or for bulk ingest, use the Arrow path (`bulk_create_nodes_from_arrow` / `result.to_arrow`) which routes Point3d values through the typed Arrow column directly.
-
-Tracked engine-side. `spatial.mdx` and `spatial-knowledge.mdx` show the inline form as the natural pattern; the working form is the two-step CREATE+SET.
-
-## `db.subscribe()` not exposed on the Python wheel yet
-
-**Symptom:** `db.subscribe(query, handler, options?)` is a documented part of the SDK surface (TypeScript / napi-rs) but the Python wheel (`oz-arcflow`) does not export it today. `dir(db)` on a Python `ArcFlow` instance shows only `bulk_create_nodes`, `bulk_create_relationships`, `close`, `execute`, `version`.
-
-**Workaround:** poll `db.execute()` at the rate you need until the Python binding lands. For TypeScript / Node.js, the subscribe surface works as documented.
-
-```python
-# Python today — polling fallback for live geofence
-import time
-while True:
-    rows = db.execute("MATCH (e:Entity) WHERE e.alert_state = 'critical' RETURN e.id, e.severity")
-    for r in rows: handle(r)
-    time.sleep(0.05)
-```
-
-Tracked engine-side.
-
-## HNSW vector indices not persisted across snapshots
-
-**Symptom:** vector indices created via `CREATE VECTOR INDEX name FOR (n:Doc) ON (n.embedding)` work in the current process, but are not persisted into the WAL snapshot. After a process restart that replays a snapshot, the index doesn't exist and `algo.vectorSearch('name', ...)` errors with `INDEX_NOT_FOUND`.
-
-**Workaround:** re-create the vector index on startup, after `open(data_dir)`. Embeddings on the underlying nodes ARE persisted; only the HNSW structure needs rebuilding.
-
-```typescript
-const db = open('./data/graph')
-db.mutate("CREATE VECTOR INDEX IF NOT EXISTS doc_embeddings FOR (n:Doc) ON (n.embedding) OPTIONS {dimensions: 1536, similarity: 'cosine'}")
-```
-
-Tracked engine-side. Affects every cookbook recipe that uses persistent storage + vector search.
-
-## Spatial index granularity for polygons and lists
-
-**Symptom:** `MATCH (z:Zone) WHERE withinDistance(z.shape, $point, 100)` on `Polygon` or `LineString` properties is correct but slower than the equivalent query on `Point` properties at the same node count.
-
-**Cause:** The ArcFlow Spatial Index currently entries `LineString` and `Polygon` values by their **centroid** only. Radius / bbox / KNN queries return a centroid-based candidate set; exact containment and intersection are then computed at query time against the full geometry of each candidate. `Vector3d` and `Extent` are stored but not spatially indexed at all — predicates over them fall back to a full property scan.
-
-`Point` and `Point3d` are indexed exactly, so radius and KNN queries on point-valued properties run at the full ArcFlow Spatial Index speed.
-
-**Workaround until full-geometry indexing lands:** for hot-path queries over polygon / linestring properties, store an additional `Point` property (e.g. `centroid` or `representative_point`) and predicate against that. The spatial index will use it directly; you can still apply exact-geometry filters as a follow-on `WHERE` clause.
-
-Tracked engine-side as `wave-SPAT-0001`.
 
 ---
 

@@ -54,29 +54,17 @@ for r in db.execute(sql).fetchall():
 db.close()
 
 # ──────────────────────── ArcFlow / Cypher ────────────────────────
-# arcflow-core#13 (lexer) resolved 2026-05-05 (oz-arcflow >= 1.6.9): `!=`
-# is now an alias for `<>`. NOT x = y is kept here only because the
-# multi-anchor predicates below trip the still-open arcflow-core#10 +
-# arcflow-core#14 planner bugs.
-# FIXME(arcflow-core#14): inline {industry: 'biotech'} on terminal anchor
-#   is silently ignored on multi-hop patterns. The natural form should be:
-#     ...->(p:Person)-[:EMPLOYED_AT]->(o2:Org {industry: 'biotech'})
-# FIXME(arcflow-core#10): WHERE clause combining multi-anchor predicates
-#   returns 0 rows. So the natural WHERE form also fails:
-#     WHERE NOT p.name = 'Alice' AND o2.industry = 'biotech'
-# Until both ship, the working pattern is: pull all hops, filter in app.
-print("\n--- ArcFlow / Cypher (with Python post-filter) ---")
+print("\n--- ArcFlow / Cypher ---")
 cypher = """
-MATCH (alice:Person {name: 'Alice'})-[:EMPLOYED_AT]->(o1:Org)<-[:EMPLOYED_AT]-(p:Person)-[:EMPLOYED_AT]->(o2:Org)
-WHERE NOT p.name = 'Alice'
-RETURN DISTINCT p.name AS name, o2.name AS via_org, o2.industry AS industry
+MATCH (alice:Person {name: 'Alice'})-[:EMPLOYED_AT]->(o1:Org)<-[:EMPLOYED_AT]-(p:Person)-[:EMPLOYED_AT]->(o2:Org {industry: 'biotech'})
+WHERE p.name <> 'Alice'
+RETURN DISTINCT p.name AS name, o2.name AS via_org
 ORDER BY name
 """
 print(cypher.strip())
-print("\nresult (biotech-filtered in Python until #10/#14 ship):")
+print("\nresult:")
 af = make_arcflow()
-results = [r for r in af.execute(cypher) if r["industry"] == "biotech"]
-for r in results:
+for r in af.execute(cypher):
     print(f"  {r['name']!r:>10} via {r['via_org']!r}")
 af.close()
 

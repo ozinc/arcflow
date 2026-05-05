@@ -10,8 +10,6 @@ runnable in seconds.
 
 **Runtime:** under 1 minute total across all three steps.
 
-**ArcFlow version:** 1.6.7.
-
 ## What this recipe is for
 
 This is a **pattern catalog**, not an end-to-end pipeline. The
@@ -55,24 +53,6 @@ groups, 11 each), 60 frames at 60 Hz, two tracking sources with planted
 disagreement on a known subset, a multi-namespace identity profile with
 deliberate gaps and a collision, and a small set of predicted facts on
 a future frame.
-
-## Engine quirks observed during authoring (1.6.7)
-
-These are honest notes for anyone running the recipe; each is filed as
-an engine-repo issue, marked with `FIXME(arcflow-core#NNN)` annotations
-in the script that hits it, and worked around inline.
-
-| Issue | Status | Quirk | Workaround |
-|---|---|---|---|
-| [#8](https://github.com/ozinc/arcflow-core/issues/8) | open | `walSeq()` returns the store's mutation counter, which advances on bulk_create_*; the WAL itself only sees `execute()` mutations. | Count `execute()` calls in your application to pick AS OF seqs. |
-| [#9](https://github.com/ozinc/arcflow-core/issues/9) | open | Bulk_create_* operations preceding `execute()` SET mutations break AS OF replay — the SETs aren't reflected in temporal queries. | Use `execute()` throughout for the part of the workflow you want temporally queryable; bulk_create_* only for current-state-only fixture data. |
-| [#10](https://github.com/ozinc/arcflow-core/issues/10) | open | Combining 3+ WHERE predicates spanning node + edge + Frame properties returns zero rows. | Use inline property predicates in the MATCH pattern. See `03-observed-vs-predicted.py`. |
-| [#11](https://github.com/ozinc/arcflow-core/issues/11) | open | Arithmetic in `WITH` over property accessors errors with `EXPECTED_KEYWORD`. | Compute deltas in your application after pulling raw values, or stamp them onto edges at ingest time. |
-| [#12](https://github.com/ozinc/arcflow-core/issues/12) | **resolved 2026-05-05** (oz-arcflow ≥ 1.6.9) | Python `None` in `bulk_create_nodes` props misaligns subsequent rows' property values (silent corruption). | None values now round-trip correctly. The `""` sentinel in `_load.py` is kept for back-compat with 1.6.7/1.6.8 wheels; new recipes targeting ≥ 1.6.9 should use `None` and filter with `IS NULL`. |
-
-The remaining four are tracked engine-side. When they ship, grep the
-recipe for `FIXME(arcflow-core#` to find every workaround that can be
-removed.
 
 ## See Also
 

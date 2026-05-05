@@ -87,7 +87,7 @@ cat result.json
 
 - `db.bulk_create_nodes([(labels, props), ...])` → list[NodeId] in input order. ~1 M nodes/sec, bypasses the parser. CREATE semantics — use `MERGE` for find-or-create.
 - `db.bulk_create_relationships(rel_type, [(from_id, to_id, props), ...])` → list[RelId]. Same scale; `from_id` and `to_id` are NodeIds returned by `bulk_create_nodes`.
-- `result.to_arrow()` → `pyarrow.RecordBatch` (zero-copy via Arrow C Stream). Also `result.to_polars()`, `result.to_pandas()`. Types preserved end-to-end — `"42"` stays a `String`.
+- `result.to_arrow()` → `pyarrow.RecordBatch` (zero-copy via Arrow C Data Interface). Also `result.to_polars()`, `result.to_pandas()`. Types preserved end-to-end — `"42"` stays a `String`.
 - ctypes releases the GIL on every native call; `ConcurrentStore` is MVCC-safe. `concurrent.futures.ThreadPoolExecutor` works out of the box (4.75× with 8 threads on M1).
 
 ## Snapshot-pinned reads (provenanced answers)

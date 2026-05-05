@@ -9,8 +9,6 @@ direct comparison.
 
 **Runtime:** ~1 minute
 
-**ArcFlow version:** 1.6.6
-
 ## Run
 
 ```bash
@@ -52,6 +50,5 @@ Synthesized, deterministic, ~12 KB.
 
 ## Notes
 
-- Pinned to ArcFlow 1.6.6 (see `meta.toml.manifest_pin`).
 - Install command sourced from
   [`<InstallMatrix />`](https://oz.com/docs/installation) — do not hand-roll.

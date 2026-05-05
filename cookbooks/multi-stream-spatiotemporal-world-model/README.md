@@ -10,8 +10,6 @@ graph triggers maintain reactive analytics at the source cadence.
 
 **Runtime:** ~30 seconds (load) plus a couple minutes for the per-step queries.
 
-**ArcFlow version:** 1.6.7.
-
 ## What this recipe is for
 
 A real-time canonical timeline of tracked entities in space, with multiple
@@ -59,14 +57,13 @@ ideas the recipe is teaching.
    bounded contexts. Position lives on `OBSERVED_AT` edges (per-observation),
    not on `Entity` nodes (stable identity).
 2. **60 Hz tracking ingest** of ~20K observations via the typed bulk APIs
-   (`db.bulk_create_nodes` / `db.bulk_create_relationships`, v1.6.7+).
+   (`db.bulk_create_nodes` / `db.bulk_create_relationships`).
    Each observation lands as an
    `(:Entity)-[:OBSERVED_AT {x, y, z, _confidence, _observation_class}]->(:Frame)`
    edge. Position lives on the edge so the same Entity can be observed by
    multiple sensor streams independently. The bulk path bypasses the Cypher
-   parser entirely — ~1M writes/sec vs ~3K/sec for per-row `MATCH+CREATE`.
-   Same shape works for football-transformer's NFL NGS workload (1M+ edges
-   per game, formerly hours, now seconds).
+   parser entirely — ~1M writes/sec sustained, the throughput floor for
+   sensor-stream and batch-ingest workloads.
 
    **Indexes still recommended** for downstream `MATCH (n:Label {prop: val})`
    *query-time* lookups in steps 05 onwards: `:Entity(entity_id)`,
@@ -469,9 +466,8 @@ coordinate frame, attach to canonical Frames.
 ## Performance considerations
 
 **This recipe runs on a synthesized 30-second sample (~20K observations,
-~22 entities). With the v1.6.7 bulk APIs the entire load finishes in
-~0.5 seconds on a single thread; pre-1.6.7 per-row `MATCH+CREATE` took
-~10 seconds for the same shape.**
+~22 entities). The bulk APIs land the entire load in ~0.5 seconds on a
+single thread.**
 
 Production-scale workloads (a full session of millions of edges across
 hundreds of entities) follow the same pattern — only the multipliers grow.
@@ -548,38 +544,8 @@ Spatial KNN / radius / bbox queries resolve through the R*-tree on edge
 properties and stay sub-millisecond regardless of database size — that
 path is independent of the bulk-create / Arrow paths above.
 
-## Engine fixes shipped in 1.6.7
-
-The following customer-blocking issues from the football-transformer NFL
-NGS evaluation (2026-05-03) are fixed in the engine 1.6.7 release this
-recipe pins to:
-
-- **Compound-label projection no longer silently drops rows.** `MATCH
-  (p:Entity:Player) RETURN p.team` returns the same row count as
-  `count(p)` (the vectorized fast path now bails out for compound-label
-  scenarios; row-based path goes through `effective_property` which
-  reads compound nodes correctly).
-- **Two-clause MATCH binds correctly.** `MATCH (snap:Frame {…})
-  MATCH (e:Entity)-[r]->(snap) RETURN e.id` binds `e` to the entity, not
-  the frame.
-- **`AS OF seq $param` works** with `db.execute(query, params={"s": seq})`.
-  Full variable-binding form (`WITH f.seq AS s ... AS OF seq s`) is still
-  deferred — read the seq via a separate query and pass via params.
-- **`result.column_type(col)` returns typed metadata.** Avoids the heuristic
-  coercion that mistyped string-of-digits columns as int.
-- **`db.execute(query, params={...})` takes typed parameters.** No manual
-  string escaping required; routes through the typed-params pipeline.
-- **`db.bulk_create_nodes` / `db.bulk_create_relationships`** for
-  high-throughput ingest (this recipe's `_load.py` uses them).
-- **`result.to_arrow()` / `to_polars()` / `to_pandas()`** for zero-copy
-  typed result handoff.
-
-Full changelog and customer repros live in the engine repo's
-`kanban/planning/2026-05-04-customer-evaluation-findings/`.
-
 ## Notes
 
-- Pinned to ArcFlow 1.6.7 (see `meta.toml.manifest_pin`).
 - `oz-arcflow` resolves through OZ's PEP 503 simple index at
   `https://staging.oz.com/pypi/simple/`.
 - The recipe deliberately uses **only ArcFlow + pyarrow + numpy** for

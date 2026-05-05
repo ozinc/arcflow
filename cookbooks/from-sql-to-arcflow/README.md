@@ -9,8 +9,6 @@ what changes (and what doesn't) in the move.
 
 **Runtime:** under 1 minute total.
 
-**ArcFlow version:** 1.6.7. **DuckDB:** 1.0+.
-
 ## Why this recipe
 
 Most engineers evaluating a graph database have a SQL background and a
@@ -44,21 +42,6 @@ uv run python 03-multi-hop-industry.py
 
 `_common.py` is the shared fixture — 10 persons, 6 orgs, 25 employment
 edges, identical content loaded into both engines.
-
-## Engine quirks observed during authoring (1.6.7)
-
-Filed engine-side; tagged inline in the recipe code with `FIXME(arcflow-core#NNN)`.
-
-| Issue | Status | Quirk | Recipe affected |
-|---|---|---|---|
-| [#10](https://github.com/ozinc/arcflow-core/issues/10) | open | WHERE chains over multi-anchor patterns can return 0 rows. | 03 |
-| [#13](https://github.com/ozinc/arcflow-core/issues/13) | **resolved 2026-05-05** (oz-arcflow ≥ 1.6.9) | `<>` returns 0 rows silently; `!=` errors. The `NOT x = y` form below works on every wheel; `<>` and `!=` work from 1.6.9 onwards. | 01, 03 |
-| [#14](https://github.com/ozinc/arcflow-core/issues/14) | open | Inline property predicate on a multi-hop pattern's terminal anchor is silently ignored. | 03 |
-
-The recipes use the working workarounds; once the engine fixes ship,
-grep for `FIXME(arcflow-core#` to find the spots that can be cleaned up.
-On 1.6.9+ wheels the `NOT x = y` workaround in recipes 01 and 03 can
-collapse to the standard `<>` form.
 
 ## See Also
 

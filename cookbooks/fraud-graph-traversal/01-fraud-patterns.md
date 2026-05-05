@@ -52,9 +52,9 @@ moves $9,500 ± $50 at each hop.
 Each transfer is its **own node**, not an edge property. Two reasons:
 
 1. **Repeated transfers between the same accounts must remain distinct.**
-   In WorldCypher 1.6.6, a single labeled edge per `(start, end)` pair is
-   the operative semantic. Two `:TRANSFERRED` edges from `A` to `B` would
-   collapse. Modeling each transfer as a node sidesteps that.
+   Modeling each transfer as a node keeps every event independently
+   addressable, regardless of how the underlying engine deduplicates
+   edge identity.
 
 2. **Per-transfer attributes need a stable identity.** Timestamps,
    amounts, transfer ids, downstream evidence joins — all hang off the
