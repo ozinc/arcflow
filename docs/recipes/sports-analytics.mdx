@@ -1,0 +1,108 @@
+---
+title: "Sports analytics — confidence aggregates, run_per, skills"
+description: "Pre-built primitives for sports/NGS analytics: confidence-weighted aggregates, per-scope iteration, trajectory math, and a sports SKILL catalog."
+---
+
+# Sports analytics
+
+ArcFlow ships a small Python and Cypher surface for sports / Next Gen Stats
+work: confidence-weighted aggregates in Cypher, a `run_per` per-scope
+iteration helper, trajectory primitives in Rust (`shadowed_by`,
+`leverage_gain`, `release_point`, `nearest_at_frame`), and a Python
+SKILL catalog (`arcflow.skills.sports`) wrapping them for common questions.
+
+This recipe is the user-facing companion to the sports-analytics track
+shipped in `oz-arcflow==1.6.7`.
+
+## Confidence-weighted aggregates
+
+Five new aggregate built-ins respect each row's `_confidence` instead of
+treating all rows as equally true:
+
+| Aggregate | Signature | Returns |
+|---|---|---|
+| `avg_conf(value, conf)` | per-column floats | Σ(v·c) / Σc |
+| `sum_conf(value, conf)` | per-column floats | Σ(v·c) |
+| `count_conf(conf, threshold)` | conf column + literal | rows with `conf >= threshold` |
+| `min_conf(value, conf, threshold)` | value/conf cols + literal | min(value) over rows with `conf >= threshold` |
+| `max_conf(value, conf, threshold)` | value/conf cols + literal | max(value) over rows with `conf >= threshold` |
+
+```cypher
+MATCH (o:Observation)
+RETURN avg(o.speed)                         AS unweighted,
+       avg_conf(o.speed, o._confidence)     AS weighted,
+       count_conf(o._confidence, 0.8)       AS high_conf_count
+```
+
+## Per-scope iteration: `db.run_per`
+
+Sports queries often want "for each play, run X". `db.run_per(outer, body,
+var)` iterates the outer query, executes the body once per row with
+`$var` bound, and concatenates results. Each inner row is annotated with
+`__outer_<var>` for grouping.
+
+```python
+from arcflow import ArcFlow
+
+db = ArcFlow()
+rows = db.run_per(
+    outer="MATCH (p:Play) RETURN p.id AS p ORDER BY p.id",
+    body="MATCH (p:Play) WHERE p.id = $p RETURN p.id AS pid",
+    var="p",
+)
+# rows: [{"pid": 1, "__outer_p": 1}, {"pid": 2, "__outer_p": 2}, ...]
+```
+
+## Result diagnostics: `result.diagnose()`
+
+When a `MATCH` returns 0 rows, the next question is always "why?".
+`result.diagnose()` returns a dict pointing at missing labels, missing
+relationship types, or filter-suspect cases.
+
+```python
+result = db.execute("MATCH (p:NoSuchLabel) RETURN p.x")
+diag = result.diagnose()
+# {"row_count": 0, "labels": {"NoSuchLabel": 0},
+#  "rel_types": {}, "suggestions": ["No nodes with label :NoSuchLabel exist."]}
+```
+
+Returns `None` when the result has rows; cheap to call on every result.
+
+## Sports SKILL catalog
+
+`arcflow.skills.sports` exposes five opinionated wrappers over the
+trajectory primitives:
+
+| Function | Question |
+|---|---|
+| `shadowed_by(db, attacker, target, defender, angle_tol_rad)` | Frames where defender obstructs attacker→target line |
+| `beat_leverage(db, chaser, target)` | Per-frame closing/falling-behind delta |
+| `chase_down(db, chaser, target, threshold_yards)` | First frame chaser closes within threshold |
+| `release_at_throw(db, qb)` | Frame where QB forward velocity peaks |
+| `catch_radius_at_target(db, receiver, x, y)` | Closest receiver-trajectory approach to a point |
+
+```python
+from arcflow.skills import sports
+
+# When does defender 33 first close within 1 yard of receiver 12?
+frame = sports.chase_down(db, chaser_id=33, target_id=12, threshold_yards=1.0)
+```
+
+These pull `(frame, x, y)` samples from `:Frame` nodes via
+`f.player_id = $pid` and run the geometric primitive in pure Python. The
+Rust trajectory module (`crates/arcflow-runtime/src/trajectory.rs`)
+holds the canonical implementation; the Python copy mirrors it for
+portability.
+
+## Public benchmark
+
+`benchmarks/nfl_vs_duckdb.py` in the engine repo benchmarks ArcFlow against
+DuckDB on real Next Gen Stats track data. Honest readout: DuckDB is
+faster at column-aggregate queries; the ArcFlow value is graph + spatial
++ LIVE, not column-aggregate speed. See the script for the exact query
+shapes.
+
+```bash
+python benchmarks/nfl_vs_duckdb.py --limit 5    # 27K rows
+python benchmarks/nfl_vs_duckdb.py              # all 178 plays
+```
