@@ -1,0 +1,15 @@
+[project]
+name = "from-sql-to-arcflow"
+version = "0.1.0"
+description = "Side-by-side DuckDB and ArcFlow for the same question — graph traversal, temporal AS OF, confidence-tiered retrieval."
+requires-python = ">=3.11"
+dependencies = [
+  "oz-arcflow==1.6.7",
+  "duckdb>=1.0",
+]
+
+[tool.uv]
+index-url = "https://staging.oz.com/pypi/simple/"
+
+[tool.uv.sources]
+oz-arcflow = { index = "https://staging.oz.com/pypi/simple/" }

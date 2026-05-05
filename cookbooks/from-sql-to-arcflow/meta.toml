@@ -1,0 +1,14 @@
+slug = "from-sql-to-arcflow"
+title = "From SQL to ArcFlow — DuckDB-vs-ArcFlow side-by-side for graph + temporal + spatial questions"
+audience = ["python", "data-engineer", "sql-user"]
+arcflow_apis = [
+    "python.ArcFlow.execute",
+    "python.ArcFlow.close",
+]
+external_deps = [
+    "duckdb >= 1.0",
+]
+runtime_minutes = 1
+gpu_required = false
+manifest_pin = "1.6.7"
+data_provenance = "synthesized"
