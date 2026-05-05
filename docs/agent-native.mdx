@@ -3,7 +3,6 @@ title: "Agent-Native Database"
 description: "The world model as files — query it like grep, version it like git, share it like a directory. Shell-native agents don't need a protocol bridge to their own machine."
 section: "agent-native"
 order: 1
-since: "8.0.0"
 status: "stable"
 playground:
   query: "MERGE (auth:File {id: 'auth', name: 'auth.ts', filepath: 'src/auth.ts', lines: 320, layer: 'data'}) MERGE (db:File {id: 'db', name: 'db.ts', filepath: 'src/db.ts', lines: 240, layer: 'data'}) MERGE (api:File {id: 'api', name: 'routes.ts', filepath: 'src/api/routes.ts', lines: 155, layer: 'api'}) MERGE (main:File {id: 'main', name: 'main.ts', filepath: 'src/main.ts', lines: 85, layer: 'app'}) MATCH (f:File) RETURN f.name AS file, f.filepath, f.lines, f.layer ORDER BY f.lines DESC"

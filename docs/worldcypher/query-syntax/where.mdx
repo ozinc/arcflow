@@ -3,7 +3,6 @@ title: "WHERE"
 description: "Filter world model entities by predicates — confidence scores, observation class, spatial position, and property conditions"
 section: "worldcypher/query-syntax"
 order: 3
-since: "0.2.0"
 status: "stable"
 related:
   - "/worldcypher/query-syntax/match"
@@ -24,17 +23,17 @@ RETURN n.name, n.age
 
 ## Operators
 
-| Operator | Example | Since |
-|---|---|---|
-| `=` | `WHERE n.age = 30` | 0.2.0 |
-| `<>` | `WHERE n.name <> 'Bob'` | 0.6.0 |
-| `>`, `<`, `>=`, `<=` | `WHERE n.age > 25` | 0.6.0 |
-| `AND` | `WHERE n.age > 25 AND n.age <= 35` | 0.6.0 |
-| `OR` | `WHERE n.age < 20 OR n.age > 60` | 0.6.0 |
-| `NOT` | `WHERE NOT n.name = 'Carol'` | 0.6.0 |
-| `CONTAINS` | `WHERE n.name CONTAINS 'li'` | 0.6.0 |
-| `STARTS WITH` | `WHERE n.name STARTS WITH 'A'` | 0.6.0 |
-| `EXISTS()` | `WHERE EXISTS(n.email)` | 0.6.0 |
+| Operator | Example |
+|---|---|
+| `=` | `WHERE n.age = 30` |
+| `<>` | `WHERE n.name <> 'Bob'` |
+| `>`, `<`, `>=`, `<=` | `WHERE n.age > 25` |
+| `AND` | `WHERE n.age > 25 AND n.age <= 35` |
+| `OR` | `WHERE n.age < 20 OR n.age > 60` |
+| `NOT` | `WHERE NOT n.name = 'Carol'` |
+| `CONTAINS` | `WHERE n.name CONTAINS 'li'` |
+| `STARTS WITH` | `WHERE n.name STARTS WITH 'A'` |
+| `EXISTS()` | `WHERE EXISTS(n.email)` |
 
 ## Examples
 

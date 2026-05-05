@@ -3,7 +3,6 @@ title: "Skills"
 description: "Derive world model relationships from natural language rules — LLM compiles once, PROCESS NODE and REPROCESS EDGES execute at graph-native speed with no model calls."
 section: "concepts"
 order: 2
-since: "0.2.0"
 status: "stable"
 playground:
   query: "MERGE (sk:Skill {id: 'zone-watch', name: 'ZoneWatch', version: 3, min_confidence: 0.82, active: 1}) MERGE (s1:Sensor {id: 'cam-1', name: 'Cam-LabA', type: 'camera', reliability: 0.95, freq_hz: 25, config: 'high-freq'}) MERGE (s2:Sensor {id: 'lidar-1', name: 'Lidar-LabB', type: 'lidar', reliability: 0.91, freq_hz: 10, config: 'standard'}) MERGE (s3:Sensor {id: 'rfid-1', name: 'RFID-Gate', type: 'rfid', reliability: 0.99, freq_hz: 5, config: 'entry-point'}) MERGE (sk1:Skill {id: 'zone-watch'})-[:GOVERNS]->(s1a:Sensor {id: 'cam-1'}) MERGE (sk2:Skill {id: 'zone-watch'})-[:GOVERNS]->(s2a:Sensor {id: 'lidar-1'}) MERGE (sk3:Skill {id: 'zone-watch'})-[:GOVERNS]->(s3a:Sensor {id: 'rfid-1'}) MATCH (sk:Skill)-[:GOVERNS]->(s:Sensor) RETURN sk.name AS skill, sk.version AS version, sk.min_confidence AS min_confidence, s.name AS sensor, s.type AS sensor_type, s.reliability AS reliability, s.freq_hz AS poll_rate, s.config AS sensor_config ORDER BY s.reliability DESC"
