@@ -32,8 +32,11 @@ for r in db.execute(sql).fetchall():
 db.close()
 
 # ──────────────────────── ArcFlow / Cypher ────────────────────────
-# FIXME(arcflow-core#13): `WHERE x <> y` silently returns 0 rows on 1.6.7;
-#   `!=` errors. Workaround: use `NOT x = y`. Replace with `<>` once #13 ships.
+# arcflow-core#13 (lexer) resolved 2026-05-05 (oz-arcflow >= 1.6.9): `!=`
+# now lexes as Token::NotEquals (alias for `<>`). The `NOT x = y` form
+# below is kept only because the multi-anchor variant of this query also
+# trips arcflow-core#10 (open) — once that lands, the WHERE can collapse
+# to the standard `WHERE other.name <> 'Alice'`.
 print("\n--- ArcFlow / Cypher ---")
 cypher = """
 MATCH (alice:Person {name: 'Alice'})-[:EMPLOYED_AT]->(o:Org)<-[:EMPLOYED_AT]-(other:Person)

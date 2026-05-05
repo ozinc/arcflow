@@ -54,7 +54,10 @@ for r in db.execute(sql).fetchall():
 db.close()
 
 # ──────────────────────── ArcFlow / Cypher ────────────────────────
-# FIXME(arcflow-core#13): use NOT x = y instead of x <> y.
+# arcflow-core#13 (lexer) resolved 2026-05-05 (oz-arcflow >= 1.6.9): `!=`
+# is now an alias for `<>`. NOT x = y is kept here only because the
+# multi-anchor predicates below trip the still-open arcflow-core#10 +
+# arcflow-core#14 planner bugs.
 # FIXME(arcflow-core#14): inline {industry: 'biotech'} on terminal anchor
 #   is silently ignored on multi-hop patterns. The natural form should be:
 #     ...->(p:Person)-[:EMPLOYED_AT]->(o2:Org {industry: 'biotech'})
