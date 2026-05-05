@@ -56,6 +56,20 @@ MATCH (n:Person) RETURN n.name ORDER BY n.age SKIP 5 LIMIT 10
 MATCH (n:Person) RETURN DISTINCT n._labels
 ```
 
+## Column names and aliases
+
+Each item in the projection becomes one column. The column name comes from the expression itself: `n.name` becomes the column `name`. When two projections produce the same column name, the second overwrites the first — there is one column called `name`, not two.
+
+```cypher
+-- Two variables, both projecting `.name` → one column "name"
+MATCH (a:Person) MATCH (b:Org) RETURN a.name, b.name
+
+-- Distinct columns require AS aliases
+MATCH (a:Person) MATCH (b:Org) RETURN a.name AS personName, b.name AS orgName
+```
+
+This is standard Cypher behavior. Traversal queries (`MATCH (a)-[:REL]->(b) RETURN a.name, b.name`) face the same rule — alias whenever names would collide.
+
 ## See Also
 
 - [Aggregations](/worldcypher/functions/aggregations) — COUNT, SUM, AVG, COLLECT

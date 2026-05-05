@@ -16,9 +16,43 @@ playground:
 MATCH (n:Person) WHERE n.name = 'Alice' REMOVE n.temporary_flag
 ```
 
-Remove a property from a matched node or relationship. Unlike DELETE, REMOVE only drops properties -- the node stays.
+Remove properties or labels from a matched node or relationship. Unlike DELETE, REMOVE only drops properties or labels — the node itself stays.
+
+## Syntax
+
+```cypher
+MATCH (variable) WHERE predicate
+REMOVE <removal>[, <removal>]*
+```
+
+Each `<removal>` is one of:
+
+| Form | Effect |
+|---|---|
+| `n.key` | Remove a single property |
+| `n:Label` | Remove a single label |
+| `n:Label1:Label2` | Remove multiple labels |
+
+## Examples
+
+### Multiple properties in one clause
+
+```cypher
+MATCH (r:Robot {id: 'r1'})
+REMOVE r.legacy_id, r.deprecated_field
+```
+
+### Remove a label
+
+```cypher
+MATCH (n:Person {id: 'p1'}) REMOVE n:Verified
+```
+
+### Property removal as null-assignment
+
+`SET n.key = null` is equivalent to `REMOVE n.key`. Use whichever fits the surrounding clause better.
 
 ## See Also
 
-- [SET](/worldcypher/statements/set) — set properties
+- [SET](/worldcypher/statements/set) — set properties or labels
 - [DELETE](/worldcypher/statements/delete) — remove entire nodes

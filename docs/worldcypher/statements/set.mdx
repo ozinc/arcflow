@@ -16,14 +16,58 @@ playground:
 MATCH (n) WHERE n.name = 'Alice' SET n.age = 31
 ```
 
-Update properties on matched nodes or relationships. Automatically updates the `updated_at` timestamp.
+Update properties or labels on matched nodes and relationships. Automatically updates the `updated_at` timestamp.
 
 ## Syntax
 
 ```cypher
-MATCH (variable) WHERE predicate SET variable.key = value
+MATCH (variable) WHERE predicate
+SET <assignment>[, <assignment>]*
+```
+
+Each `<assignment>` is one of:
+
+| Form | Effect |
+|---|---|
+| `n.key = value` | Set a single property |
+| `n.key = null` | Remove a property (equivalent to `REMOVE n.key`) |
+| `n:Label` | Add a label |
+| `n:Label1:Label2` | Add multiple labels |
+| `n += {key: value, ...}` | Merge a property map onto `n` (existing keys not in the map are preserved) |
+| `n = {key: value, ...}` | Replace all properties on `n` with the map (existing keys not in the map are removed) |
+
+## Examples
+
+### Multiple properties in one clause
+
+```cypher
+MATCH (r:Robot {id: 'r1'})
+SET r.battery = 96, r.status = 'charging', r.task = 'standby'
+```
+
+### Add a label
+
+```cypher
+MATCH (n:Person {id: 'p1'}) SET n:Verified
+```
+
+### Merge a map
+
+```cypher
+MATCH (n:Person {id: 'p1'})
+SET n += {age: 31, lastSeen: timestamp()}
+```
+
+`+=` keeps any existing properties not mentioned in the map. Use `n = {...}` instead to replace the full property set.
+
+### Parameterized
+
+```cypher
+MATCH (n:Person {id: $id}) SET n.age = $age, n.role = $role
 ```
 
 ## See Also
 
 - [MATCH](/worldcypher/query-syntax/match) + [WHERE](/worldcypher/query-syntax/where) — select what to update
+- [REMOVE](/worldcypher/statements/remove) — remove properties or labels
+- [MERGE](/worldcypher/statements/merge) — find-or-create with `ON CREATE SET` / `ON MATCH SET`

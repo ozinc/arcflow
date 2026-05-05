@@ -1,6 +1,6 @@
 ---
 title: "Known Issues"
-description: "Known world model engine issues and workarounds — Metal GPU hangs, pnpm binary sync, multi-MATCH naming collisions, and parameter coercion."
+description: "Known world model engine issues and workarounds — Metal GPU hangs, pnpm binary sync, AS OF seq with bound variables, and spatial-index granularity for polygons."
 section: "reference"
 status: "stable"
 playground:
@@ -36,48 +36,42 @@ This disables Metal acceleration and falls back to CPU. All queries still work �
 cp <built-binary>.node node_modules/arcflow/arcflow.<platform>.node
 ```
 
-## SET multiple properties in one clause
+## AS OF seq with bound variables
 
-**Workaround:** Use separate SET clauses instead of comma-separated:
-
-```cypher
--- Instead of: SET n.a = 1, n.b = 2
--- Use:
-MATCH (n:Person {id: 'p1'}) SET n.a = 1
-MATCH (n:Person {id: 'p1'}) SET n.b = 2
-```
-
-Or use `batchMutate` for multiple property updates.
-
-## UNWIND limited to literal lists
-
-`UNWIND` currently supports literal arrays only:
+`AS OF seq` accepts a literal or a parameter today. The bound-variable form — using a value carried in from a prior `MATCH` — is not yet wired:
 
 ```cypher
--- Works:
-UNWIND [1, 2, 3] AS x RETURN x
+-- Works today: literal
+MATCH (n:Person) AS OF seq 100 RETURN n.name
 
--- Does not work yet:
-UNWIND n.aliases AS alias RETURN alias
+-- Works today: parameter
+MATCH (n:Person) AS OF seq $approval_seq RETURN n.name
+
+-- Not yet wired: bound variable / arithmetic on a bound variable
+MATCH (g:Goal {match_id: 'm1'})
+MATCH (b:Ball) AS OF seq g.seq - 10
+RETURN b.position
 ```
 
-## Multi-MATCH column name collisions
+**Workaround until the bound-variable form lands:** issue two queries and pass the seq through as a parameter.
 
-When returning the same property name from multiple MATCH variables, columns are deduplicated:
-
-```cypher
--- Both resolve to column "name" — second overwrites first:
-MATCH (a:Person) MATCH (b:Org) RETURN a.name, b.name
-
--- Fix: use AS aliases
-MATCH (a:Person) MATCH (b:Org) RETURN a.name AS personName, b.name AS orgName
+```typescript
+const goal = db.query("MATCH (g:Goal {match_id: 'm1'}) RETURN g.seq AS seq").rows[0]
+const seq = (goal.get('seq') as number) - 10
+db.query("MATCH (b:Ball) AS OF seq $seq RETURN b.position", { seq })
 ```
 
-This only affects multi-MATCH with same-named properties. Traversal queries (`MATCH (a)-[:REL]->(b) RETURN a.name, b.name`) work correctly since the engine resolves through the relationship.
+## Spatial index granularity for polygons and lists
 
-## Parameter values are string-coerced
+**Symptom:** `MATCH (z:Zone) WHERE withinDistance(z.shape, $point, 100)` on `Polygon` or `LineString` properties is correct but slower than the equivalent query on `Point` properties at the same node count.
 
-All query parameters are internally converted to strings before substitution. This works transparently for most cases, but be aware when comparing types in WHERE clauses.
+**Cause:** The ArcFlow Spatial Index currently entries `LineString` and `Polygon` values by their **centroid** only. Radius / bbox / KNN queries return a centroid-based candidate set; exact containment and intersection are then computed at query time against the full geometry of each candidate. `Vector3d` and `Extent` are stored but not spatially indexed at all — predicates over them fall back to a full property scan.
+
+`Point` and `Point3d` are indexed exactly, so radius and KNN queries on point-valued properties run at the full ArcFlow Spatial Index speed.
+
+**Workaround until full-geometry indexing lands:** for hot-path queries over polygon / linestring properties, store an additional `Point` property (e.g. `centroid` or `representative_point`) and predicate against that. The spatial index will use it directly; you can still apply exact-geometry filters as a follow-on `WHERE` clause.
+
+Tracked engine-side as `wave-SPAT-0001`.
 
 ---
 
