@@ -25,6 +25,10 @@ Core type primitives used across the ArcFlow engine.
 
 ## Property value types
 
+14 types across three families: scalars, homogeneous lists, and spatial geometries. The `columnTypes` field on `QueryResult` reports the per-column tag using these same names (lowercased camelCase, e.g. `'int'`, `'intList'`, `'point3d'`).
+
+### Scalars and lists
+
 | Type | GQL literals | Notes |
 |---|---|---|
 | Null | `null` | Missing or unknown |
@@ -35,6 +39,19 @@ Core type primitives used across the ArcFlow engine.
 | IntList | `[1, 2, 3]` | Homogeneous list |
 | FloatList | `[1.0, 2.5]` | Homogeneous list |
 | StringList | `['a', 'b']` | Homogeneous list |
+
+### Spatial geometries
+
+| Type | GQL literals | Notes |
+|---|---|---|
+| Point | `point({x: 10.0, y: 5.5})` | 2D / 2.5D point |
+| Point3d | `point({x: 1.0, y: 2.0, z: 3.0})` | Explicit 3D location |
+| Vector3d | direction or velocity (no positional meaning) | Stored, not spatially indexed |
+| Extent | axis-aligned bounding box | Stored, not spatially indexed |
+| LineString | ordered chain of 2D points | Indexed by centroid; exact tests post-filter |
+| Polygon | closed ring of 2D points (with optional holes) | Indexed by centroid; exact tests post-filter |
+
+Each spatial value carries a coordinate reference system (`Cartesian`, `Wgs84`, or `LocalFlat`). Mixing frames in a single query raises a validation error. See [Data Types](/worldcypher/data-types) and [Spatial Reference](/worldcypher/spatial).
 
 ## Execution tiers and backends
 
@@ -98,7 +115,7 @@ type SubscriptionHandler = (event: DeltaEvent) => void
 
 ```typescript
 interface SubscribeOptions {
-  pollIntervalMs?: number   // How often to check for updates (default: 100ms)
+  pollIntervalMs?: number   // How often to check for updates (default: 50ms, min: 10ms)
 }
 ```
 

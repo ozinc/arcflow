@@ -11,7 +11,7 @@ playground:
 
 # API Reference
 
-Complete TypeScript SDK API.
+Complete TypeScript SDK API. For Python, see [Bindings](/bindings) — same engine, plus the Python-only fast paths (`bulk_create_*`, `result.to_arrow / to_polars / to_pandas`, GIL-released threading).
 
 ## Module exports
 
@@ -148,20 +148,22 @@ const hash = db.fingerprint()
 // "sha256:a1b2c3d4..."
 ```
 
-### `db.ingestDelta(delta: NodeEdgeDelta): void`
+### `db.ingestDelta(deltaJson: string): string`
 
-Apply a structured delta (added nodes, removed nodes, added edges, removed edges) in a single atomic batch. Preferred for ingestion pipelines that track changes as deltas rather than full state.
+Apply a structured delta (added nodes, removed nodes, added edges, removed edges) in a single atomic batch — bypasses the WorldCypher compiler entirely. Preferred for ingestion pipelines that track changes as deltas rather than full state. Sub-millisecond for typical batches.
 
-### `db.impactSubgraph(rootIds: string[], edgeKinds: string[], maxDepth: number): ImpactResult`
+Takes a JSON string with the delta payload; returns a JSON string with `DeltaStats` (`nodes_added`, `nodes_skipped_by_hash`, etc.). For typed args and results, use the [`CodeGraph`](/guides/code-intelligence) wrapper's `ingest()` method instead.
 
-Traverse the graph from root nodes following specified edge kinds up to `maxDepth` hops. Returns all affected nodes with their hop distance. Used for blast-radius analysis — "what does changing this symbol break?"
+### `db.impactSubgraph(rootIdsJson: string, edgeKindsJson: string, maxDepth: number): string`
+
+BFS blast-radius traversal — "what does changing this symbol break?" Bypasses the WorldCypher compiler. Takes JSON strings and returns a JSON string `{ nodes: [{ id, hop }] }`.
+
+For the typed form, use `CodeGraph.impactSubgraph(rootIds: string[], edgeKinds: string[], maxDepth: number): ImpactSubgraph`:
 
 ```typescript
-const impact = db.impactSubgraph(
-  ['fn_login'],
-  ['CALLS', 'TESTED_BY'],
-  4
-)
+import { CodeGraph } from '@arcflow/sdk'
+const cg = new CodeGraph(db)
+const impact = cg.impactSubgraph(['fn_login'], ['CALLS', 'TESTED_BY'], 4)
 for (const node of impact.nodes) {
   console.log(`hop ${node.hop}: ${node.id}`)
 }
@@ -178,13 +180,39 @@ type QueryParams = Record<string, string | number | boolean | null>
 ```typescript
 interface QueryResult {
   columns: string[]       // Column names
+  columnTypes: ColumnType[]  // Parallel to columns: declared type of each column
   rows: TypedRow[]        // Typed row accessors
   rowCount: number        // Number of rows
   computeMs: number       // Execution time (ms)
   gqlstatus(): string     // ISO GQL status: "00000" = data, "02000" = no data
   snapshotUri: string     // arcflow://snapshot/<hex> — the snapshot this query observed
 }
+
+type ColumnType =
+  // Scalars
+  | 'unknown'                                            // Engine cannot statically type (mixed aggregates, mutating clauses)
+  | 'null'
+  | 'bool'
+  | 'int'
+  | 'float'
+  | 'string'
+  // Entity references — wrappers should NOT coerce these to int
+  | 'nodeId'
+  | 'relId'
+  // Homogeneous lists — element type known
+  | 'intList'
+  | 'floatList'
+  | 'stringList'
+  // Spatial — six distinct tags, not a single "spatial" bucket
+  | 'point'                                              // 2D / 2.5D point
+  | 'point3d'
+  | 'vector3d'
+  | 'extent'                                             // axis-aligned bounding box
+  | 'lineString'
+  | 'polygon'
 ```
+
+`columnTypes[i]` describes the value type of `columns[i]`. `'unknown'` is reported for columns the engine cannot statically type (mixed-type aggregates, mutating clauses, or expressions whose result type depends on runtime values). Bindings for languages with native list types use the `*List` tags to decide whether to parse a cell into a typed array versus leaving it as a string. The split spatial tags (`point` vs `point3d` vs `polygon` etc.) preserve geometry kind so wrappers don't have to re-detect it from the cell value.
 
 `gqlstatus()` follows ISO/IEC 39075 GQL. `"00000"` means rows were returned; `"02000"` means the query succeeded but produced no rows (e.g. a `MATCH` with no matches, or a filter that eliminated everything).
 
@@ -276,7 +304,7 @@ type SubscriptionHandler = (event: DeltaEvent) => void
 
 ```typescript
 interface SubscribeOptions {
-  pollIntervalMs?: number   // How often to check for updates (default: 100ms)
+  pollIntervalMs?: number   // How often to check for updates (default: 50ms, min: 10ms)
 }
 ```
 
@@ -296,6 +324,7 @@ Parse a raw napi error into a structured ArcflowError. Used internally by the SD
 
 ## See Also
 
+- [Bindings](/bindings) — Python and Rust SDK surfaces, including `bulk_create_*` and Arrow C Stream zero-copy reads
 - [Code Intelligence Guide](/guides/code-intelligence) — using `ingestDelta()` and `impactSubgraph()` for codebase graphs
 - [Data Quality Guide](/guides/data-quality) — using `subscribe()`, `cursor()`, and `fingerprint()` in pipelines
 - [Sync](/sync) — `syncPending()` and cloud sync integration

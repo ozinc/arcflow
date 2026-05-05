@@ -1,6 +1,6 @@
 ---
 title: "Data Types"
-description: "Property value types for world model nodes and relationships — string, integer, float, boolean, list, and null, with implicit coercion rules."
+description: "Property value types for world model nodes and relationships — scalars, lists, and 6 spatial geometry types, with no implicit coercion."
 section: "worldcypher/data-types"
 order: 1
 since: "0.1.0"
@@ -11,7 +11,7 @@ playground:
 
 # Data Types
 
-9 types: **Null**, **Bool**, **Int** (i64), **Float** (f64), **String**, **IntList**, **FloatList**, **StringList**, **Point**. No implicit coercion.
+14 property value types across three families: 5 scalars (**Null**, **Bool**, **Int** i64, **Float** f64, **String**), 3 homogeneous lists (**IntList**, **FloatList**, **StringList**), and 6 spatial geometries (**Point**, **Point3d**, **Vector3d**, **Extent**, **LineString**, **Polygon**). No implicit coercion.
 
 ## Scalar Types
 
@@ -31,11 +31,29 @@ playground:
 | FloatList | List of floats |
 | StringList | List of strings |
 
+## Spatial Types
+
+| Type | Description | Example |
+|---|---|---|
+| Point | 2D / 2.5D location | `point({x: 10.0, y: 5.5})` |
+| Point3d | Explicit 3D location | `point({x: 1.0, y: 2.0, z: 3.0})` |
+| Vector3d | 3D direction or velocity (no positional meaning) | velocity / orientation properties |
+| Extent | Axis-aligned bounding box | bounding regions, query frustums |
+| LineString | Ordered chain of 2D points | trajectories, paths, routes |
+| Polygon | Closed ring of 2D points (with optional holes) | zones, footprints, geofences |
+
+Spatial values are first-class — they round-trip through the typed result API and are surfaced in `columnTypes` as the matching tag (`'point'`, `'point3d'`, etc.). See [Spatial Reference](/worldcypher/spatial) for query-side syntax.
+
+## Coordinate Reference Systems
+
+Spatial values carry an explicit coordinate frame: `Cartesian` (default), `Wgs84` (lat/lng), or `LocalFlat`. Mixing frames in a single query errors at validation time — there is no implicit reprojection. Set the per-graph default with `db.spatialMetadata()` configuration; override at insert time with the literal form.
+
 ## Type Coercion
 
 WorldCypher does not perform implicit type coercion. Comparing an `Int` to a `String`
-returns no match — it does not error or cast.
+returns no match — it does not error or cast. The same rule applies to spatial types: a `Point` does not compare equal to a `Point3d` even at the same `(x, y)`.
 
 ## See Also
 
+- [Spatial Reference](/worldcypher/spatial) — point/distance/withinDistance and spatial queries
 - [Types Reference](/reference/types) — full Rust type inventory

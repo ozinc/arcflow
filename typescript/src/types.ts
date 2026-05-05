@@ -1,7 +1,11 @@
 // ArcFlow SDK — Type definitions
 // Typed, ergonomic interfaces wrapping the raw napi-rs binding.
 
-/** Parameters for parameterized queries. Values are coerced to strings internally. */
+/**
+ * Parameters for parameterized queries. Values are stringified at the wire boundary;
+ * the engine re-infers Int / Float / Bool / String from the literal form so typed
+ * comparisons in WHERE behave correctly without callers having to pre-cast.
+ */
 export type QueryParams = Record<string, string | number | boolean | null>
 
 /** A single row with typed column access. */
