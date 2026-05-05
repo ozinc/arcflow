@@ -1,0 +1,119 @@
+---
+title: "Multi-source observation with confidence"
+description: "Model the same fact arriving from multiple sensors at different confidence levels and query the consensus without throwing data away."
+---
+
+# Multi-source observation with confidence
+
+Real-world telemetry rarely comes from one infallible sensor. A football
+play has tracking from three independent vendors. A network event is
+reported by two scanners that disagree on severity. A customer-record
+update arrives from CRM and from a partner feed at different times.
+
+ArcFlow's `_confidence` and `_observation_class` properties were designed
+for this case: every observation carries its own confidence weight, and
+the query layer respects those weights via the confidence-weighted
+aggregates. Nothing is thrown away; the consensus is computable from
+the data.
+
+## Modelling
+
+Each observation is a node with a `_confidence` float (0.0–1.0) and an
+`_observation_class` tag identifying the source. The fact being observed
+sits in shared properties.
+
+```cypher
+// Vendor A reports the play at high confidence:
+CREATE (:Observation {
+  play_id: 4711,
+  speed_mph: 22.4,
+  _confidence: 0.95,
+  _observation_class: 'vendor_a'
+})
+
+// Vendor B reports the same play with lower confidence:
+CREATE (:Observation {
+  play_id: 4711,
+  speed_mph: 23.1,
+  _confidence: 0.7,
+  _observation_class: 'vendor_b'
+})
+
+// A noisy ML estimate adds another low-confidence row:
+CREATE (:Observation {
+  play_id: 4711,
+  speed_mph: 19.0,
+  _confidence: 0.3,
+  _observation_class: 'ml_v3'
+})
+```
+
+## Querying the consensus
+
+`avg_conf(value, confidence)` returns the confidence-weighted mean,
+weighting each observation by its `_confidence`:
+
+```cypher
+MATCH (o:Observation)
+WHERE o.play_id = 4711
+RETURN avg(o.speed_mph)                       AS naive,
+       avg_conf(o.speed_mph, o._confidence)   AS weighted
+```
+
+For the rows above, `naive` ≈ 21.5 mph (the simple mean treats all rows
+equally), and `weighted` ≈ 22.4 mph (the high-confidence vendor pulls
+the consensus toward its value).
+
+## Filtering by confidence threshold
+
+`count_conf(confidence, threshold)` and `min_conf` / `max_conf` accept
+a threshold:
+
+```cypher
+MATCH (o:Observation)
+WHERE o.play_id = 4711
+RETURN count_conf(o._confidence, 0.5)              AS trusted_count,
+       min_conf(o.speed_mph, o._confidence, 0.5)   AS min_speed,
+       max_conf(o.speed_mph, o._confidence, 0.5)   AS max_speed
+```
+
+This counts and bounds only observations whose `_confidence` is at
+least 0.5. The 0.3-confidence ML row is excluded.
+
+## Per-source breakdown
+
+Group by `_observation_class` to see how each source compares:
+
+```cypher
+MATCH (o:Observation)
+WHERE o.play_id = 4711
+WITH o._observation_class AS source,
+     avg_conf(o.speed_mph, o._confidence) AS speed,
+     count(o)                              AS n
+RETURN source, speed, n
+ORDER BY speed DESC
+```
+
+## When to use which aggregate
+
+| If you want | Use |
+|---|---|
+| Naive mean (every row equal) | `avg(x)` |
+| Trust-weighted mean | `avg_conf(x, conf)` |
+| Trust-weighted total | `sum_conf(x, conf)` |
+| How many high-confidence rows? | `count_conf(conf, threshold)` |
+| Min / max among trusted rows | `min_conf(x, conf, t)` / `max_conf(x, conf, t)` |
+
+The naive `count(*)` and `count(distinct ...)` continue to do what they
+always do — confidence is a property like any other, so you can also
+filter manually with `WHERE o._confidence >= 0.5`. The `_conf`
+aggregates exist because they fold the threshold into a single
+operator, which keeps the engine's typed pipeline tight (no extra
+filter stage).
+
+## Anti-pattern
+
+Don't drop observations to "deduplicate" before storing them. Keep
+every source's row with its confidence, then let queries pick the
+consensus they want at read time. Going from many rows to one is
+lossy; going from one row to many is impossible.
