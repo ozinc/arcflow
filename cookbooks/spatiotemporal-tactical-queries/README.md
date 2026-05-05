@@ -62,17 +62,17 @@ These are honest notes for anyone running the recipe; each is filed as
 an engine-repo issue, marked with `FIXME(arcflow-core#NNN)` annotations
 in the script that hits it, and worked around inline.
 
-| Issue | Quirk | Workaround |
-|---|---|---|
-| [#8](https://github.com/ozinc/arcflow-core/issues/8) | `walSeq()` returns the store's mutation counter, which advances on bulk_create_*; the WAL itself only sees `execute()` mutations. | Count `execute()` calls in your application to pick AS OF seqs. |
-| [#9](https://github.com/ozinc/arcflow-core/issues/9) | Bulk_create_* operations preceding `execute()` SET mutations break AS OF replay — the SETs aren't reflected in temporal queries. | Use `execute()` throughout for the part of the workflow you want temporally queryable; bulk_create_* only for current-state-only fixture data. |
-| [#10](https://github.com/ozinc/arcflow-core/issues/10) | Combining 3+ WHERE predicates spanning node + edge + Frame properties returns zero rows. | Use inline property predicates in the MATCH pattern. See `03-observed-vs-predicted.py`. |
-| [#11](https://github.com/ozinc/arcflow-core/issues/11) | Arithmetic in `WITH` over property accessors errors with `EXPECTED_KEYWORD`. | Compute deltas in your application after pulling raw values, or stamp them onto edges at ingest time. |
-| [#12](https://github.com/ozinc/arcflow-core/issues/12) | Python `None` in `bulk_create_nodes` props misaligns subsequent rows' property values (silent corruption). | Use a sentinel `""` (or any non-None scalar) and filter with `=` instead of `IS NULL`. |
+| Issue | Status | Quirk | Workaround |
+|---|---|---|---|
+| [#8](https://github.com/ozinc/arcflow-core/issues/8) | open | `walSeq()` returns the store's mutation counter, which advances on bulk_create_*; the WAL itself only sees `execute()` mutations. | Count `execute()` calls in your application to pick AS OF seqs. |
+| [#9](https://github.com/ozinc/arcflow-core/issues/9) | open | Bulk_create_* operations preceding `execute()` SET mutations break AS OF replay — the SETs aren't reflected in temporal queries. | Use `execute()` throughout for the part of the workflow you want temporally queryable; bulk_create_* only for current-state-only fixture data. |
+| [#10](https://github.com/ozinc/arcflow-core/issues/10) | open | Combining 3+ WHERE predicates spanning node + edge + Frame properties returns zero rows. | Use inline property predicates in the MATCH pattern. See `03-observed-vs-predicted.py`. |
+| [#11](https://github.com/ozinc/arcflow-core/issues/11) | open | Arithmetic in `WITH` over property accessors errors with `EXPECTED_KEYWORD`. | Compute deltas in your application after pulling raw values, or stamp them onto edges at ingest time. |
+| [#12](https://github.com/ozinc/arcflow-core/issues/12) | **resolved 2026-05-05** (oz-arcflow ≥ 1.6.9) | Python `None` in `bulk_create_nodes` props misaligns subsequent rows' property values (silent corruption). | None values now round-trip correctly. The `""` sentinel in `_load.py` is kept for back-compat with 1.6.7/1.6.8 wheels; new recipes targeting ≥ 1.6.9 should use `None` and filter with `IS NULL`. |
 
-All five are tracked engine-side and expected to land in the next minor.
-When they ship, grep the recipe for `FIXME(arcflow-core#` to find every
-workaround that can be removed.
+The remaining four are tracked engine-side. When they ship, grep the
+recipe for `FIXME(arcflow-core#` to find every workaround that can be
+removed.
 
 ## See Also
 
