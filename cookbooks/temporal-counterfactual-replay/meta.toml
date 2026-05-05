@@ -1,0 +1,12 @@
+slug = "temporal-counterfactual-replay"
+title = "Temporal Counterfactual Replay — AS OF seq for Decision Audit"
+audience = ["python", "data-engineer", "compliance", "agent"]
+arcflow_apis = [
+    "python.ArcFlow.execute",
+    "python.ArcFlow.close",
+]
+external_deps = []
+runtime_minutes = 1
+gpu_required = false
+manifest_pin = "1.6.7"
+data_provenance = "synthesized"
