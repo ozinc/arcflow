@@ -128,18 +128,30 @@ interface ArcflowDB {
   fingerprint(): string                  // Graph hash for sync verification
   cursor(query, params?, pageSize?): QueryCursor    // Paginated iteration
   subscribe(query, handler, options?): LiveQuery    // Live delta subscription
+
+  // Code-intelligence fast paths (bypass the GQL compiler — JSON in, JSON out).
+  // Prefer the `CodeGraph` wrapper for typed args/results; these are the raw forms.
+  ingestDelta(deltaJson: string): string                              // Returns DeltaStats JSON
+  impactSubgraph(rootIdsJson: string, edgeKindsJson: string, maxDepth: number): string  // Returns { nodes: [{id, hop}] } JSON
 }
 
 type QueryParams = Record<string, string | number | boolean | null>
 
 interface QueryResult {
   columns: string[]
+  columnTypes: ColumnType[]
   rows: TypedRow[]
   rowCount: number
   computeMs: number
   gqlstatus(): string   // "00000" = data returned, "02000" = no data (ISO GQL)
   snapshotUri: string   // arcflow://snapshot/<hex> — content-addressed snapshot URI
 }
+
+type ColumnType =
+  | 'unknown' | 'null' | 'bool' | 'int' | 'float' | 'string'
+  | 'nodeId' | 'relId'                                              // Entity refs — don't coerce to int
+  | 'intList' | 'floatList' | 'stringList'                          // Homogeneous lists, element type known
+  | 'point' | 'point3d' | 'vector3d' | 'extent' | 'lineString' | 'polygon'
 
 interface TaggedQueryResult extends QueryResult {
   snapshotUri: string   // Always equals the URI passed to db.queryAt()
@@ -175,6 +187,42 @@ class ArcflowError extends Error {
   suggestion?: string    // Recovery hint for the agent
 }
 ```
+
+### Python (`arcflow` PyPI)
+
+Python uses ctypes against the same engine binary. Three fast paths to know about; the GQL `db.execute(...)` path is fine for normal queries but routinely 10–100× slower than these for bulk and read-heavy workloads.
+
+```python
+from arcflow import ArcFlow
+from concurrent.futures import ThreadPoolExecutor
+
+db = ArcFlow()  # in-memory; ArcFlow("./data") for persistent
+
+# 1. High-throughput ingest — bypass the parser entirely
+#    bulk_create_nodes takes a list of (labels, props) tuples and returns NodeIds in input order.
+entity_ids = db.bulk_create_nodes([(["Entity"], {"id": i, "x": float(i)}) for i in range(95)])
+frame_ids  = db.bulk_create_nodes([(["Frame"],  {"id": f"f_{t}", "ts": t * 16}) for t in range(46_000)])
+
+#    bulk_create_relationships takes a single rel_type and a list of (from_id, to_id, props) tuples.
+edges = [(eid, fid, {"x": float(ei), "y": float(fi)})
+         for fi, fid in enumerate(frame_ids) for ei, eid in enumerate(entity_ids)]
+db.bulk_create_relationships("OBSERVED_AT", edges)
+# ~1M edges/sec on M1; per-row CREATE is ~3–10K/sec. CREATE semantics — use Cypher MERGE for find-or-create.
+
+# 2. Zero-copy result handoff — typed columns into the PyArrow / Polars / Pandas stack
+result = db.execute("MATCH (e:Entity) WHERE e._confidence > 0.8 RETURN e.id, e.x, e.y, e._confidence")
+tbl = result.to_arrow()    # pyarrow.RecordBatch — zero-copy via Arrow C Stream
+df  = result.to_polars()   # polars.DataFrame, Arrow-backed
+df  = result.to_pandas()   # pandas.DataFrame, Arrow-backed since pandas 2
+# Reads are ~18.8× faster than row-by-row; types preserved end-to-end ("42" stays a String, not coerced).
+
+# 3. Threading concurrency — ctypes releases the GIL on every engine call
+with ThreadPoolExecutor(max_workers=8) as pool:
+    results = list(pool.map(lambda q: db.execute(q), queries))
+# 4.75× speedup with 8 threads on M1; ConcurrentStore is MVCC-safe.
+```
+
+Full Python reference: [docs/bindings.mdx](docs/bindings.mdx).
 
 ### React hooks (`@arcflow/react`)
 
@@ -334,7 +382,7 @@ CREATE LIVE VIEW stats AS MATCH (n:DailyBar) RETURN n.sector, count(*), avg(n.cl
 MATCH (row) FROM VIEW stats RETURN row
 ```
 
-### 27 algorithms (no projection setup)
+### 29 algorithms (no projection setup)
 ```cypher
 CALL algo.pageRank()
 CALL algo.louvain()

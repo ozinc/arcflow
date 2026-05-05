@@ -1,6 +1,6 @@
 ---
 title: "Built-in Functions"
-description: "83 built-in GQL functions for world model queries — aggregation, string, math, type conversion, graph metadata, date/time, and predicates."
+description: "93 built-in GQL functions for world model queries — aggregation, string, math, type conversion, graph metadata, date/time, temporal, and predicates."
 section: "Reference"
 order: 4
 since: "0.8.0"
@@ -15,9 +15,9 @@ playground:
 
 > This reference is designed for both human developers and AI coding agents. Every entry includes complete syntax that can be used directly in queries.
 
-83 built-in functions across 9 categories: Aggregation (11), String (23), Math (17), Type Conversion (5), Graph Introspection (6), Node Metadata (5), Map and List (4), Date/Time (4), Utility (4), and Predicates (4).
+93 built-in functions across 10 categories: Aggregation (14), String (24), Math (17), Type Conversion (5), Graph Introspection (6), Node Metadata (5), Map and List (5), Date/Time (7), Temporal (1), Utility (5), and Predicates (4).
 
-## Aggregation (11)
+## Aggregation (14)
 
 Aggregation functions operate across rows in a result set. Use with or without GROUP BY (via WITH).
 
@@ -34,6 +34,9 @@ Aggregation functions operate across rows in a result set. Use with or without G
 | `stdev` | `stdev(expr)` | Sample standard deviation | Float | 4.0.0 |
 | `variance` | `variance(expr)` | Sample variance | Float | 4.0.0 |
 | `median` | `median(expr)` | Median (50th percentile) | Float | 4.0.0 |
+| `covar_pop` | `covar_pop(a.x, b.y)` | Population covariance between two property columns | Float | 11.0.0 |
+| `covar_samp` | `covar_samp(a.x, b.y)` | Sample covariance between two property columns | Float | 11.0.0 |
+| `corr` | `corr(a.x, b.y)` | Pearson correlation coefficient between two property columns | Float | 11.0.0 |
 
 ```cypher
 MATCH (n:Person)
@@ -46,7 +49,7 @@ WITH n.department AS dept, collect(n.name) AS members, stdev(n.salary) AS salary
 RETURN dept, members, salaryStdev
 ```
 
-## String (23)
+## String (24)
 
 | Function | Syntax | Description | Return Type | Since |
 |---|---|---|---|---|
@@ -59,6 +62,7 @@ RETURN dept, members, salaryStdev
 | `left` | `left(s, n)` | First n characters | String | 0.17.0 |
 | `right` | `right(s, n)` | Last n characters | String | 0.17.0 |
 | `head` | `head(expr)` | First element of a list or comma-separated string | Same as element | 3.0.0 |
+| `tail` | `tail(expr)` | All elements except the first, from a list or comma-separated string | Same as input | 11.0.0 |
 | `last` | `last(expr)` | Last element of a list or comma-separated string | Same as element | 3.0.0 |
 | `replace` | `replace(s, find, rep)` | Replace all occurrences of find with rep | String | 0.17.0 |
 | `split` | `split(s, delim)` | Split string by delimiter into list | List | 0.17.0 |
@@ -172,7 +176,7 @@ WHERE confidence(n) > 0.8 AND observationClass(n) = 'observed'
 RETURN n.name, confidence(n) AS conf, authorityPlane(n) AS plane
 ```
 
-## Map and List (4)
+## Map and List (5)
 
 | Function | Syntax | Description | Return Type | Since |
 |---|---|---|---|---|
@@ -180,6 +184,7 @@ RETURN n.name, confidence(n) AS conf, authorityPlane(n) AS plane
 | `keys` | `keys(n)` | List of property key names | List\<String\> | 3.0.0 |
 | `range` | `range(start, end)` | Generate integer sequence \[start..=end\] | List\<Integer\> | 4.0.0 |
 | `mapProjection` | `n {.name, .age}` | Return only named properties as a map | Map | 4.0.0 |
+| `cardinality` | `cardinality(expr)` | Length of a list or string. Synonym of `size` — interchangeable in queries. | Integer | 11.0.0 |
 
 ```cypher
 MATCH (n:Person)
@@ -196,23 +201,51 @@ UNWIND range(1, 10) AS i
 RETURN i
 ```
 
-## Date/Time (4)
+## Date/Time (7)
 
-All date/time functions are non-deterministic (they return the current time).
+The zero-argument forms are non-deterministic (they return the current time). The string-argument forms parse an ISO 8601 input.
 
 | Function | Syntax | Description | Return Type | Since |
 |---|---|---|---|---|
 | `timestamp` | `timestamp()` | Current Unix timestamp in milliseconds | Integer | 4.0.0 |
-| `date` | `date()` | Current date as ISO string (YYYY-MM-DD) | String | 4.0.0 |
-| `time` | `time()` | Current time as ISO string (HH:MM:SS.mmm) | String | 4.0.0 |
-| `datetime` | `datetime()` | Current datetime as ISO string (YYYY-MM-DDTHH:MM:SS.mmm) | String | 4.0.0 |
+| `date` | `date()` / `date("YYYY-MM-DD")` | Current date, or parse ISO date string | String | 4.0.0 |
+| `time` | `time()` / `time("HH:MM:SS")` | Current zoned time, or parse ISO time string | String | 4.0.0 |
+| `datetime` | `datetime()` / `datetime("YYYY-MM-DDTHH:MM:SSZ")` | Current zoned datetime, or parse ISO datetime string | String | 4.0.0 |
+| `localTime` | `localTime()` / `localTime("HH:MM:SS")` | Current local time (no timezone), or parse ISO local time string | String | 11.0.0 |
+| `localDateTime` | `localDateTime()` / `localDateTime("YYYY-MM-DDTHH:MM:SS")` | Current local datetime (no timezone), or parse ISO local datetime string | String | 11.0.0 |
+| `duration` | `duration("PT1H30M")` | Parse an ISO 8601 duration string | Duration | 11.0.0 |
 
 ```cypher
 CREATE (e:Event {name: 'deploy', createdAt: timestamp(), date: date()})
 RETURN e
 ```
 
-## Utility (4)
+## Temporal (1)
+
+Read the engine's logical clock from inside a query.
+
+| Function | Syntax | Description | Return Type | Since |
+|---|---|---|---|---|
+| `walSeq` | `walSeq()` | Current mutation sequence (advances on every CREATE/SET/MERGE/DELETE) | Integer | 11.0.0 |
+
+```cypher
+-- Snapshot the current seq alongside the data being read
+MATCH (e:Event)
+RETURN e.id, e.kind, walSeq() AS observed_at_seq
+```
+
+```cypher
+-- Pair walSeq() with AS OF seq to anchor a follow-up query at the same logical point
+WITH walSeq() AS now_seq
+MATCH (a:Account {id: $id}) AS OF seq now_seq
+RETURN a.balance
+```
+
+The integer returned is the same sequence space used by [`AS OF seq N`](/temporal) — pass it back through a parameter to query historical state, write it onto an audit record, or compare against `g.seq` to compute relative offsets.
+
+The function name is case-insensitive: `walSeq()`, `wal_seq()`, `WAL_SEQ()`, and `walseq()` are all accepted by the parser. Pick whichever fits your team's naming convention — the canonical form in this reference is `walSeq()` to match the rest of the function table.
+
+## Utility (5)
 
 | Function | Syntax | Description | Return Type | Since |
 |---|---|---|---|---|
@@ -220,6 +253,7 @@ RETURN e
 | `hash` | `hash(expr)` | Deterministic FNV-1a 64-bit hash as hex string | String | 4.0.0 |
 | `toJson` | `toJson(n)` | Serialize all node properties to JSON string | String | 4.0.0 |
 | `size` | `size(expr)` | Length of string or list | Integer | 0.10.0 |
+| `sessionUser` | `sessionUser()` | Identifier of the current session actor (GQL GS09) | String | 11.0.0 |
 
 ```cypher
 CREATE (n:Record {id: randomUUID(), fingerprint: hash(n.data)})

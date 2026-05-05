@@ -216,7 +216,7 @@ CREATE LIVE VIEW trusted_contacts AS
   WHERE e._observation_class = 'observed' AND e._confidence > 0.85
   RETURN e.name, e.x, e.y, e._confidence
 
--- One of 27 built-in graph algorithms — no projection, no catalog
+-- One of 29 built-in graph algorithms — no projection, no catalog
 CALL algo.pageRank() YIELD nodeId, score
 ```
 

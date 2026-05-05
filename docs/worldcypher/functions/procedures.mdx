@@ -14,7 +14,7 @@ playground:
 
 > This reference is designed for both human developers and AI coding agents. Every entry includes complete CALL syntax and return columns that can be used directly in queries.
 
-100+ CALL procedures: Database Introspection (20), Graph Algorithms (27), Embedding (5), Knowledge Graph (6), Temporal (9), Live Queries (5), System (14), Auth (7), Health (3), Extensions (5), and Behavior Graph (3). All return tabular results.
+140+ CALL procedures: Database Introspection (25), Graph Algorithms (37), Embedding (6), Knowledge Graph (9), Temporal (9), Live Queries (5), System (21), Spatial System (3), GPU (4), Observability (2), Health (3), Auth (7), Extensions (6), and Behavior Graph (3). All return tabular results.
 
 ```cypher
 CALL db.procedures()
@@ -22,7 +22,7 @@ CALL db.procedures()
 
 Returns the full list of available procedures (column: `name`).
 
-## Database Introspection (20)
+## Database Introspection (25)
 
 Core procedures for inspecting database state, schema, and metadata.
 
@@ -34,6 +34,7 @@ Core procedures for inspecting database state, schema, and metadata.
 | `CALL db.types()` | `type` | All relationship types in use | 0.19.0 |
 | `CALL db.keys()` | `key` | All property keys in use | 0.19.0 |
 | `CALL db.version()` | `name`, `version`, `crates`, `waves` | Engine version and build info | 0.19.0 |
+| `CALL db.capabilities()` | `capability`, `value` | Engine version, GPU backend status, compute capabilities, index counts, memory footprint, and algorithm availability | 11.0.0 |
 | `CALL db.stats()` | `nodes`, `relationships`, `skills` | Database statistics summary | 0.20.0 |
 | `CALL db.stats.json()` | `json` | All metadata as single JSON object | 5.0.0 |
 | `CALL db.schema()` | `label`, `properties`, `count` | Schema overview: labels, property keys per label, counts, and relationship patterns | 4.0.0 |
@@ -43,6 +44,9 @@ Core procedures for inspecting database state, schema, and metadata.
 | `CALL db.help()` | `procedure`, `description`, `example` | Quick-reference of key procedures with examples | 5.0.0 |
 | `CALL db.tutorial()` | `step`, `title`, `query`, `description` | Interactive 6-step walkthrough for new users | 5.0.0 |
 | `CALL db.doctor()` | `check`, `status`, `detail` | Diagnostic health check: 5 checks + HEALTHY/ISSUES_FOUND summary | 4.0.0 |
+| `CALL db.embeddingStats()` | `model`, `version`, `count`, `oldest_embedded_at` | Embedding statistics by model/version including count and oldest embedding timestamp | 11.0.0 |
+| `CALL db.explainSpatialJoin(left_label, left_key, right_label, right_key)` | `strategy`, `left_count`, `right_count`, `threshold` | Spatial join planner explanation with chosen strategy and node counts per side | 11.0.0 |
+| `CALL db.idFrom(key1, key2, ...)` | `nodeId`, `keys` | Deterministic content-addressed NodeId from key values via FNV-1a hashing | 11.0.0 |
 | `CALL db.export()` | `snapshot`, `nodes`, `relationships`, `generation` | Export full graph as JSON snapshot | 3.0.0 |
 | `CALL db.import('<json>')` | `status`, `nodes_before`, `nodes_after` | Import graph from JSON snapshot (mutating) | 5.0.0 |
 | `CALL db.import.csv('<csv>', '<Label>')` | `imported` | Import CSV rows as nodes with given label (mutating) | 5.0.0 |
@@ -63,7 +67,7 @@ CALL db.doctor()
 
 Returns rows for each check (node_count, relationship_integrity, index_consistency, constraints, generation) plus a summary row with HEALTHY or ISSUES_FOUND status.
 
-## Graph Algorithms (27)
+## Graph Algorithms (37)
 
 ### Centrality (5)
 
@@ -81,7 +85,7 @@ CALL algo.pageRank()
 
 Returns one row per node, sorted by rank. Uses 20 iterations with damping factor 0.85.
 
-### Community Detection (5)
+### Community Detection (7)
 
 | Procedure | Return Columns | Description | Since |
 |---|---|---|---|
@@ -90,6 +94,8 @@ Returns one row per node, sorted by rank. Uses 20 iterations with damping factor
 | `CALL algo.louvain()` | `nodeId`, `name`, `community` | Community IDs via Louvain modularity optimization. GPU-accelerated when available. | 3.0.0 |
 | `CALL algo.leiden()` | `nodeId`, `community` | Community IDs via Leiden algorithm (20 iterations) | 5.0.0 |
 | `CALL algo.kCore()` | `nodeId`, `name`, `coreness` | K-core decomposition values | 3.0.0 |
+| `CALL algo.labelPropagation([label_property], [rel_types])` | `node_id`, `propagated_label`, `label_confidence`, `hops_from_seed` | Stochastic label propagation over optional relation types | 11.0.0 |
+| `CALL algo.cAndSLabelPropagation([label_property], [rel_types])` | `node_id`, `propagated_label`, `label_confidence`, `hops_from_seed` | Stochastic label propagation, C&S variant with seed-anchored confidence | 11.0.0 |
 
 ```cypher
 CALL algo.louvain()
@@ -97,7 +103,7 @@ CALL algo.louvain()
 
 Returns one row per node with hierarchical community assignment.
 
-### Graph Metrics (4)
+### Graph Metrics (6)
 
 | Procedure | Return Columns | Description | Since |
 |---|---|---|---|
@@ -105,6 +111,8 @@ Returns one row per node with hierarchical community assignment.
 | `CALL algo.diameter()` | `diameter` | Graph diameter (longest shortest path) | 3.0.0 |
 | `CALL algo.triangleCount()` | `triangles` | Total triangle count in the graph. GPU-accelerated when available. | 3.0.0 |
 | `CALL algo.clusteringCoefficient()` | `nodeId`, `name`, `coefficient` | Per-node clustering coefficients. GPU-accelerated when available. | 3.0.0 |
+| `CALL algo.cycleDetectionDirected()` | `hasCycle`, `cycleNodes`, `cycleNodeCount` | Directed cycle detection (Kosaraju SCC; cuGraph on GPU, fallback on CPU) | 11.0.0 |
+| `CALL algo.cycleDetectionUndirected()` | `hasCycle`, `cycleNodes`, `cycleNodeCount` | Undirected cycle detection via DFS | 11.0.0 |
 
 ```cypher
 CALL algo.triangleCount()
@@ -112,7 +120,7 @@ CALL algo.triangleCount()
 
 Returns a single row with the total number of triangles.
 
-### Path Analysis (4)
+### Path Analysis (5)
 
 | Procedure | Return Columns | Description | Since |
 |---|---|---|---|
@@ -120,6 +128,7 @@ Returns a single row with the total number of triangles.
 | `CALL algo.confidencePath(startId, endId)` | `path`, `cost`, `length` | Shortest path between two nodes weighted by confidence | 5.0.0 |
 | `CALL algo.dijkstra(startId, endId, 'weight')` | `path`, `distance` | Weighted shortest path | 10.0.0 |
 | `CALL algo.astar(startId, endId, 'weight', 'heuristic')` | `path`, `distance` | Heuristic-guided shortest path (A\*) | 10.0.0 |
+| `CALL algo.maxFlow(sourceId, sinkId, [capacityProperty])` | `maxFlow`, `source`, `sink` | Maximum flow from source to sink using a capacity edge property (default `capacity`) | 11.0.0 |
 
 ```cypher
 -- Find confidence-weighted shortest path between node 1 and node 5
@@ -128,18 +137,19 @@ CALL algo.confidencePath(1, 5)
 
 Returns the path as "id1 -> id2 -> id3", total cost, and hop count.
 
-### Similarity and Spatial (6)
+### Similarity and Spatial (7)
 
 | Procedure | Return Columns | Description | Since |
 |---|---|---|---|
 | `CALL algo.nodeSimilarity()` | `node1`, `node2`, `similarity` | Pairs of nodes with Jaccard similarity scores (top 20) | 4.0.0 |
 | `CALL algo.similarNodes()` | `nodeId`, `score` | Nodes similar to the first vector-bearing node (cosine similarity) | 5.0.0 |
+| `CALL algo.pairSimilarity(sourceIds, targetIds)` | `node1`, `node2`, `score` | Jaccard similarity for explicit node pairs (variadic — accept paired or interleaved args) | 11.0.0 |
 | `CALL algo.nearestNodes(point, label, k)` | `node`, `distance` | K nearest nodes by exact spatial distance (ArcFlow Spatial Index, ≥ 2000/s at 11K entities) | 5.0.0 |
 | `CALL algo.objectsInFrustum($frustum)` | `node`, `distance` | Entities within a camera frustum (6-plane containment, < 2ms for 50 entities) | 10.0.0 |
 | `CALL algo.nearestVisible($pos, label, k)` | `node`, `distance` | Nearest entities with direct line-of-sight from a point | 10.0.0 |
 | `CALL spatial.raycast(origin, direction, maxDist)` | `hit`, `distance` | First node along a ray within max distance | 10.0.0 |
 
-### Vector Search and RAG (5)
+### Vector Search and RAG (7)
 
 | Procedure | Return Columns | Description | Since |
 |---|---|---|---|
@@ -148,6 +158,8 @@ Returns the path as "id1 -> id2 -> id3", total cost, and hop count.
 | `CALL algo.graphRAG()` | `nodeId`, `score`, `hops`, `labels` | Graph-augmented retrieval for RAG pipelines. Accepts optional query vector argument. | 5.0.0 |
 | `CALL algo.graphRAGContext()` | `context`, `node_count`, `tokens_approx` | Formatted LLM context from graph retrieval. Accepts optional query vector and max_tokens arguments. | 5.0.0 |
 | `CALL algo.graphRAGTrusted()` | `nodeId`, `trusted_score`, `hops`, `observation` | Trusted RAG with confidence-filtered context, ranked by observation class | 5.0.0 |
+| `CALL algo.graphRAGMultiModel(label, [k], [queryVector])` | `nodeId`, `fusedScore`, `modelCount` | Multi-model RAG fusing scores across all embedding properties on a label | 11.0.0 |
+| `CALL algo.similarThenTraverse(label, embeddingProperty, queryVector, [k], [maxHops], [relType], [minEdgeConfidence])` | `seedEntityId`, `vectorSimilarity`, `reachableJson`, `backend` | k-NN vector seed + per-seed BFS traversal with optional relation-type and confidence filters | 11.0.0 |
 
 ```cypher
 -- Vector similarity search with a query vector
@@ -163,7 +175,7 @@ CALL algo.graphRAGTrusted()
 
 Returns nodes with trusted_score, observation class (observed > inferred > predicted), filtering low-trust paths.
 
-## Embedding Algorithms (5)
+## Embedding Algorithms (6)
 
 Generate node embeddings for downstream vector search, classification, and similarity tasks.
 
@@ -174,6 +186,7 @@ Generate node embeddings for downstream vector search, classification, and simil
 | `CALL algo.graphSAGE(dims)` | _(sets node.embedding)_ | Inductive neighborhood aggregation embeddings | 10.0.0 |
 | `CALL algo.staleEmbeddings()` | `nodeId`, `name` | Nodes whose embeddings are outdated (property changed after last embed) | 10.0.0 |
 | `CALL algo.classify($vec, 'indexName', {k: 10})` | `nodeId`, `label`, `confidence` | Classify by similarity to labeled examples in a vector index | 10.0.0 |
+| `CALL algo.embeddingProperties([label])` | `property`, `dimensions`, `withProvenance` | List embedding properties for a label, with dimensions and provenance count | 11.0.0 |
 
 ```cypher
 -- Embed all nodes with 128-dimensional Node2Vec vectors
@@ -183,7 +196,7 @@ CALL algo.node2vec(128, 80, 10)
 CALL algo.staleEmbeddings()
 ```
 
-## Knowledge Graph Algorithms (6)
+## Knowledge Graph Algorithms (9)
 
 Algorithms for reasoning over facts, confidence, and semantic relationships.
 
@@ -195,6 +208,9 @@ Algorithms for reasoning over facts, confidence, and semantic relationships.
 | `CALL algo.compoundingScore()` | `nodeId`, `score` | Composite confidence propagated through fact chains | 10.0.0 |
 | `CALL algo.entityFreshness()` | `nodeId`, `name`, `freshness`, `last_observed_at` | Freshness of each entity based on last observation | 10.0.0 |
 | `CALL algo.semanticDedup()` | `nodeId1`, `nodeId2`, `similarity` | Near-duplicate nodes via embedding similarity | 10.0.0 |
+| `CALL algo.confidenceCalibration(entityId, [window])` | `ece_score`, `sample_count`, `calibration_curve`, `calibration_status` | Expected Calibration Error (ECE) — predicted confidence vs observed accuracy (WorldScore methodology) | 11.0.0 |
+| `CALL algo.predictionDrift(entityId, [horizonMs])` | `entity_id`, `horizon_ms`, `predicted_x`, `observed_x`, `delta_x`, `predicted_y`, `observed_y`, `delta_y`, `delta_magnitude`, `prediction_source`, `observation_seq`, `predicted_seq` | Drift between predicted and observed entity positions within a time horizon | 11.0.0 |
+| `CALL algo.temporalDecay(nodeId, [halfLifeDays], [floor], [staleThreshold])` | `decayed_confidence`, `days_elapsed`, `is_stale`, `freshness_class` | Lazy temporal decay of confidence based on last corroboration timestamp | 11.0.0 |
 
 ## Physical AI Algorithms (2)
 
@@ -289,14 +305,19 @@ CALL db.causalChain()
 
 Finds all `:Action` nodes and traces outgoing CAUSES relationships up to depth 10, returning each hop with confidence scores.
 
-## System (14)
+## System (21)
 
-Procedures for backend management, validation, and observability.
+Procedures for backend management, validation, observability, and storage internals.
 
 | Procedure | Return Columns | Description | Since |
 |---|---|---|---|
 | `CALL db.backends()` | `id`, `available`, `message` | Available compute backends (CPU, CUDA, Metal) with status | 5.0.0 |
 | `CALL db.storageInfo()` | `format`, `nodes` | Storage backend details (format, generation, node/rel counts, mutation sequence) | 5.0.0 |
+| `CALL db.storageMode()` | `mode`, `node_count`, `csr_warm`, `csr_auto_threshold`, `dense_store_enabled`, `dense_store_nodes` | Active storage mode (HashMap, DenseStore, CSR, or hybrid) with thresholds | 11.0.0 |
+| `CALL db.csrStats()` | `status`, `vertices`, `edges` | CSR (Compressed Sparse Row) cache statistics — warm/stale status, vertex / edge counts, pending delta size | 11.0.0 |
+| `CALL db.denseStore()` | `enabled`, `nodes`, `tables`, `memory_bytes`, `coverage` | DenseStore status with node and table counts, memory footprint, coverage percentage | 11.0.0 |
+| `CALL db.warmCsr()` | `status` | Warm the CSR cache; returns `warm` or `rebuilt` | 11.0.0 |
+| `CALL db.parallelConfig()` | `morsel_size`, `rayon_threads`, `dense_store_coverage`, `csr_status` | Morsel scheduler and parallelism configuration including thread count | 11.0.0 |
 | `CALL db.validateQuery()` | `valid`, `warnings` | Parse and validate a query without executing | 5.0.0 |
 | `CALL db.vectorIndexes()` | `name`, `label`, `property`, `dimensions`, `similarity` | All vector indexes with configuration | 5.0.0 |
 | `CALL db.observationClasses()` | `class`, `count` | Observation class counts (observed, inferred, predicted) | 4.0.0 |
@@ -308,6 +329,8 @@ Procedures for backend management, validation, and observability.
 | `CALL db.proofGates()` | `gate`, `status`, `evidence` | Proof gate definitions and their validation status | 5.0.0 |
 | `CALL db.proofArtifacts()` | `artifact`, `type`, `detail` | Generated proof artifacts | 5.0.0 |
 | `CALL db.executionContext()` | `context`, `fallback_disabled`, `backends_available` | Current execution context (backend, GPU availability) | 5.0.0 |
+| `CALL db.requireExecutionContext('local_cpu' \| 'local_gpu' \| 'distributed')` | `context`, `status` | Enforces a required execution context; raises a hard error on mismatch | 11.0.0 |
+| `CALL db.syncConflicts()` | `id`, `local_op`, `remote_op`, `local_clock`, `remote_clock`, `resolution`, `timestamp` | Replication conflict log with operations, vector clocks, and resolution per conflict | 11.0.0 |
 | `CALL db.affordances()` | `from`, `to`, `confidence` | All AFFORDS relationships in the graph | 5.0.0 |
 
 ```cypher
@@ -342,6 +365,31 @@ CALL db.spatialMetadata()
 CALL arcflow.spatial.dispatch_stats()
 ```
 
+## GPU (4)
+
+GPU residency and capability inspection. The engine routes algorithms to GPU automatically when available; these procedures expose the routing decisions and stack details.
+
+| Procedure | Return Columns | Description | Since |
+|---|---|---|---|
+| `CALL db.gpuStack()` | `cuda`, `thrust`, `cugraph`, `cuvs` | GPU stack availability — CUDA driver, Thrust, cuGraph, cuVS. Optional fields: `compute_capability`, `gpu_device`, `cugraph_algorithms`, `cuvs_algorithms` | 11.0.0 |
+| `CALL db.gpuCsrStatus()` | `resident`, `size_bytes`, `mutation_sequence` | GPU CSR cache residency including size in bytes and the mutation sequence the cache reflects | 11.0.0 |
+| `CALL db.gpuVectorSearch(query, label, property, k)` | `nodeId`, `similarity`, `backend` | GPU-accelerated vector similarity search via cuVS CAGRA (falls back to CPU HNSW) | 11.0.0 |
+| `CALL algo.gpu_capabilities()` | `symbol`, `available`, `detail` | GPU algorithm capability report — cuGraph availability, compute capability, per-algorithm probes | 11.0.0 |
+
+```cypher
+-- Confirm GPU stack is fully wired before running large-graph algorithms
+CALL db.gpuStack()
+```
+
+## Observability (2)
+
+OpenTelemetry policy controls. Span recording is off by default; enable lite or full to surface execution traces in your collector.
+
+| Procedure | Return Columns | Description | Since |
+|---|---|---|---|
+| `CALL db.otelPolicy()` | `policy` | Current span recording policy (`off`, `lite`, or `full`) | 11.0.0 |
+| `CALL db.setOtelPolicy('off' \| 'lite' \| 'full')` | `policy` | Set span recording policy and return the new value | 11.0.0 |
+
 ## Health (3)
 
 | Procedure | Return Columns | Description | Since |
@@ -356,12 +404,13 @@ CALL db.replicationStatus()
 
 Returns the current replication mode (standalone/primary/replica), replica count, and whether writes are enabled.
 
-## Extension Procedures (5)
+## Extension Procedures (6)
 
 Additional domain-specific procedures.
 
 | Procedure | Return Columns | Description | Since |
 |---|---|---|---|
+| `CALL db.extensions()` | `name`, `description`, `syntax`, `reference` | All ArcFlow-unique query language extensions — LIVE views, Evidence algebra, write-back surfaces | 11.0.0 |
 | `CALL vector.search()` | `nodeId`, `score`, `labels` | Alias for algo.vectorSearch — searches first available vector index | 5.0.0 |
 | `CALL swarm.agents()` | `id`, `type`, `status`, `position` | All registered agent definitions | 8.0.0 |
 | `CALL swarm.register('agent_id', 'agent_type')` | `id`, `type`, `status` | Register a new agent (requires agent_id argument) | 8.0.0 |
@@ -395,7 +444,7 @@ CALL behavior.nodes()
 
 ## See Also
 
-- [Built-in Functions](/worldcypher/functions/built-in) -- 83 scalar functions (17 math, 11 aggregation, 23 string, ...)
+- [Built-in Functions](/worldcypher/functions/built-in) -- 93 scalar functions (17 math, 14 aggregation, 24 string, ...)
 - [EXPLAIN](/worldcypher/functions/explain) -- query plan introspection
 - [PROFILE](/worldcypher/functions/profile) -- query execution profiling
 - [RAG Pipeline Guide](/guides/rag-pipeline) -- building RAG with ArcFlow
