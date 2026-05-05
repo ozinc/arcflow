@@ -21,22 +21,22 @@ playground:
 
 Aggregation functions operate across rows in a result set. Use with or without GROUP BY (via WITH).
 
-| Function | Syntax | Description | Return Type | Since |
-|---|---|---|---|---|
-| `count` | `count(expr)` | Number of non-null values | Integer | 0.4.0 |
-| `count(DISTINCT)` | `count(DISTINCT expr)` | Number of distinct non-null values | Integer | 0.4.0 |
-| `sum` | `sum(expr)` | Sum of numeric values | Float | 0.4.0 |
-| `avg` | `avg(expr)` | Arithmetic mean | Float | 0.4.0 |
-| `min` | `min(expr)` | Minimum value | Same as input | 0.4.0 |
-| `max` | `max(expr)` | Maximum value | Same as input | 0.4.0 |
-| `collect` | `collect(expr)` | Collect values into a list | List | 0.4.0 |
-| `percentile` | `percentile(expr, p)` | Percentile value (p between 0.0 and 1.0) | Float | 4.0.0 |
-| `stdev` | `stdev(expr)` | Sample standard deviation | Float | 4.0.0 |
-| `variance` | `variance(expr)` | Sample variance | Float | 4.0.0 |
-| `median` | `median(expr)` | Median (50th percentile) | Float | 4.0.0 |
-| `covar_pop` | `covar_pop(a.x, b.y)` | Population covariance between two property columns | Float | 11.0.0 |
-| `covar_samp` | `covar_samp(a.x, b.y)` | Sample covariance between two property columns | Float | 11.0.0 |
-| `corr` | `corr(a.x, b.y)` | Pearson correlation coefficient between two property columns | Float | 11.0.0 |
+| Function | Syntax | Description | Return Type |
+|---|---|---|---|
+| `count` | `count(expr)` | Number of non-null values | Integer |
+| `count(DISTINCT)` | `count(DISTINCT expr)` | Number of distinct non-null values | Integer |
+| `sum` | `sum(expr)` | Sum of numeric values | Float |
+| `avg` | `avg(expr)` | Arithmetic mean | Float |
+| `min` | `min(expr)` | Minimum value | Same as input |
+| `max` | `max(expr)` | Maximum value | Same as input |
+| `collect` | `collect(expr)` | Collect values into a list | List |
+| `percentile` | `percentile(expr, p)` | Percentile value (p between 0.0 and 1.0) | Float |
+| `stdev` | `stdev(expr)` | Sample standard deviation | Float |
+| `variance` | `variance(expr)` | Sample variance | Float |
+| `median` | `median(expr)` | Median (50th percentile) | Float |
+| `covar_pop` | `covar_pop(a.x, b.y)` | Population covariance between two property columns | Float |
+| `covar_samp` | `covar_samp(a.x, b.y)` | Sample covariance between two property columns | Float |
+| `corr` | `corr(a.x, b.y)` | Pearson correlation coefficient between two property columns | Float |
 
 ```cypher
 MATCH (n:Person)
@@ -51,32 +51,32 @@ RETURN dept, members, salaryStdev
 
 ## String (24)
 
-| Function | Syntax | Description | Return Type | Since |
-|---|---|---|---|---|
-| `toLower` | `toLower(s)` | Convert to lowercase | String | 0.17.0 |
-| `toUpper` | `toUpper(s)` | Convert to uppercase | String | 0.17.0 |
-| `trim` | `trim(s)` | Strip leading and trailing whitespace | String | 0.17.0 |
-| `ltrim` | `ltrim(s)` | Strip leading whitespace | String | 4.0.0 |
-| `rtrim` | `rtrim(s)` | Strip trailing whitespace | String | 4.0.0 |
-| `substring` | `substring(s, start, len)` | Extract substring from start position | String | 0.17.0 |
-| `left` | `left(s, n)` | First n characters | String | 0.17.0 |
-| `right` | `right(s, n)` | Last n characters | String | 0.17.0 |
-| `head` | `head(expr)` | First element of a list or comma-separated string | Same as element | 3.0.0 |
-| `tail` | `tail(expr)` | All elements except the first, from a list or comma-separated string | Same as input | 11.0.0 |
-| `last` | `last(expr)` | Last element of a list or comma-separated string | Same as element | 3.0.0 |
-| `replace` | `replace(s, find, rep)` | Replace all occurrences of find with rep | String | 0.17.0 |
-| `split` | `split(s, delim)` | Split string by delimiter into list | List | 0.17.0 |
-| `reverse` | `reverse(s)` | Reverse a string or comma-separated list | String | 0.17.0 |
-| `sort` | `sort(expr)` | Alphabetically sort comma-separated string values | String | 4.0.0 |
-| `repeat` | `repeat(s, n)` | Repeat string n times | String | 4.0.0 |
-| `lpad` | `lpad(s, width, char)` | Left-pad string to width with char | String | 4.0.0 |
-| `rpad` | `rpad(s, width, char)` | Right-pad string to width with char | String | 4.0.0 |
-| `contains` | `contains(s, sub)` | True if string contains substring | Boolean | 4.0.0 |
-| `startsWith` | `startsWith(s, prefix)` | True if string starts with prefix | Boolean | 4.0.0 |
-| `endsWith` | `endsWith(s, suffix)` | True if string ends with suffix | Boolean | 4.0.0 |
-| `indexOf` | `indexOf(s, sub)` | Position of substring, -1 if not found | Integer | 4.0.0 |
-| `size` | `size(s)` | Length of string or list | Integer | 0.10.0 |
-| `toString` | `toString(expr)` | Convert any value to string representation | String | 0.10.0 |
+| Function | Syntax | Description | Return Type |
+|---|---|---|---|
+| `toLower` | `toLower(s)` | Convert to lowercase | String |
+| `toUpper` | `toUpper(s)` | Convert to uppercase | String |
+| `trim` | `trim(s)` | Strip leading and trailing whitespace | String |
+| `ltrim` | `ltrim(s)` | Strip leading whitespace | String |
+| `rtrim` | `rtrim(s)` | Strip trailing whitespace | String |
+| `substring` | `substring(s, start, len)` | Extract substring from start position | String |
+| `left` | `left(s, n)` | First n characters | String |
+| `right` | `right(s, n)` | Last n characters | String |
+| `head` | `head(expr)` | First element of a list or comma-separated string | Same as element |
+| `tail` | `tail(expr)` | All elements except the first, from a list or comma-separated string | Same as input |
+| `last` | `last(expr)` | Last element of a list or comma-separated string | Same as element |
+| `replace` | `replace(s, find, rep)` | Replace all occurrences of find with rep | String |
+| `split` | `split(s, delim)` | Split string by delimiter into list | List |
+| `reverse` | `reverse(s)` | Reverse a string or comma-separated list | String |
+| `sort` | `sort(expr)` | Alphabetically sort comma-separated string values | String |
+| `repeat` | `repeat(s, n)` | Repeat string n times | String |
+| `lpad` | `lpad(s, width, char)` | Left-pad string to width with char | String |
+| `rpad` | `rpad(s, width, char)` | Right-pad string to width with char | String |
+| `contains` | `contains(s, sub)` | True if string contains substring | Boolean |
+| `startsWith` | `startsWith(s, prefix)` | True if string starts with prefix | Boolean |
+| `endsWith` | `endsWith(s, suffix)` | True if string ends with suffix | Boolean |
+| `indexOf` | `indexOf(s, sub)` | Position of substring, -1 if not found | Integer |
+| `size` | `size(s)` | Length of string or list | Integer |
+| `toString` | `toString(expr)` | Convert any value to string representation | String |
 
 ```cypher
 MATCH (n:Person)
@@ -96,25 +96,25 @@ RETURN lpad(toString(n.id), 6, '0') AS paddedId, repeat('*', n.rating) AS stars
 
 ## Math (17)
 
-| Function | Syntax | Description | Return Type | Since |
-|---|---|---|---|---|
-| `abs` | `abs(expr)` | Absolute value | Float | 4.0.0 |
-| `round` | `round(expr)` | Round to nearest integer | Float | 4.0.0 |
-| `ceil` | `ceil(expr)` | Ceiling (round up) | Float | 4.0.0 |
-| `floor` | `floor(expr)` | Floor (round down) | Float | 4.0.0 |
-| `sqrt` | `sqrt(expr)` | Square root | Float | 4.0.0 |
-| `sign` | `sign(expr)` | Signum: -1, 0, or 1 | Float | 4.0.0 |
-| `exp` | `exp(expr)` | e raised to the power of the value | Float | 4.0.0 |
-| `log` | `log(expr)` | Natural logarithm (ln) | Float | 4.0.0 |
-| `log10` | `log10(expr)` | Base-10 logarithm | Float | 10.0.0 |
-| `log2` | `log2(expr)` | Base-2 logarithm | Float | 10.0.0 |
-| `power` | `power(base, exp)` | Raise base to exponent | Float | 4.0.0 |
-| `sin` | `sin(expr)` | Sine (radians) | Float | 4.0.0 |
-| `cos` | `cos(expr)` | Cosine (radians) | Float | 4.0.0 |
-| `tan` | `tan(expr)` | Tangent (radians) | Float | 4.0.0 |
-| `atan2` | `atan2(y, x)` | Arctangent of y/x (radians) | Float | 4.0.0 |
-| `pi` | `pi()` | Pi constant (3.14159...) | Float | 4.0.0 |
-| `e` | `e()` | Euler's number (2.71828...) | Float | 4.0.0 |
+| Function | Syntax | Description | Return Type |
+|---|---|---|---|
+| `abs` | `abs(expr)` | Absolute value | Float |
+| `round` | `round(expr)` | Round to nearest integer | Float |
+| `ceil` | `ceil(expr)` | Ceiling (round up) | Float |
+| `floor` | `floor(expr)` | Floor (round down) | Float |
+| `sqrt` | `sqrt(expr)` | Square root | Float |
+| `sign` | `sign(expr)` | Signum: -1, 0, or 1 | Float |
+| `exp` | `exp(expr)` | e raised to the power of the value | Float |
+| `log` | `log(expr)` | Natural logarithm (ln) | Float |
+| `log10` | `log10(expr)` | Base-10 logarithm | Float |
+| `log2` | `log2(expr)` | Base-2 logarithm | Float |
+| `power` | `power(base, exp)` | Raise base to exponent | Float |
+| `sin` | `sin(expr)` | Sine (radians) | Float |
+| `cos` | `cos(expr)` | Cosine (radians) | Float |
+| `tan` | `tan(expr)` | Tangent (radians) | Float |
+| `atan2` | `atan2(y, x)` | Arctangent of y/x (radians) | Float |
+| `pi` | `pi()` | Pi constant (3.14159...) | Float |
+| `e` | `e()` | Euler's number (2.71828...) | Float |
 
 ```cypher
 MATCH (n:Sensor)
@@ -128,13 +128,13 @@ RETURN atan2(n.y, n.x) AS angle, sqrt(power(n.x, 2) + power(n.y, 2)) AS distance
 
 ## Type Conversion (5)
 
-| Function | Syntax | Description | Return Type | Since |
-|---|---|---|---|---|
-| `toString` | `toString(expr)` | Convert to string | String | 0.10.0 |
-| `toInteger` | `toInteger(expr)` | Convert to integer | Integer | 0.10.0 |
-| `toFloat` | `toFloat(expr)` | Convert to float | Float | 0.10.0 |
-| `toBoolean` | `toBoolean(expr)` | Convert to boolean | Boolean | 4.0.0 |
-| `coalesce` | `coalesce(a, b, ...)` | First non-null value | Same as first non-null | 0.10.0 |
+| Function | Syntax | Description | Return Type |
+|---|---|---|---|
+| `toString` | `toString(expr)` | Convert to string | String |
+| `toInteger` | `toInteger(expr)` | Convert to integer | Integer |
+| `toFloat` | `toFloat(expr)` | Convert to float | Float |
+| `toBoolean` | `toBoolean(expr)` | Convert to boolean | Boolean |
+| `coalesce` | `coalesce(a, b, ...)` | First non-null value | Same as first non-null |
 
 ```cypher
 MATCH (n:Person)
@@ -143,14 +143,14 @@ RETURN toInteger(n.ageStr) AS age, coalesce(n.nickname, n.name) AS displayName
 
 ## Graph Introspection (6)
 
-| Function | Syntax | Description | Return Type | Since |
-|---|---|---|---|---|
-| `id` | `id(n)` | Internal node or relationship ID | Integer | 0.8.0 |
-| `labels` | `labels(n)` | List of labels on a node | List\<String\> | 0.8.0 |
-| `type` | `type(r)` | Relationship type string | String | 0.8.0 |
-| `degree` | `degree(n)` | Total degree (in + out) | Integer | 3.0.0 |
-| `inDegree` | `inDegree(n)` | Incoming relationship count | Integer | 3.0.0 |
-| `outDegree` | `outDegree(n)` | Outgoing relationship count | Integer | 3.0.0 |
+| Function | Syntax | Description | Return Type |
+|---|---|---|---|
+| `id` | `id(n)` | Internal node or relationship ID | Integer |
+| `labels` | `labels(n)` | List of labels on a node | List\<String\> |
+| `type` | `type(r)` | Relationship type string | String |
+| `degree` | `degree(n)` | Total degree (in + out) | Integer |
+| `inDegree` | `inDegree(n)` | Incoming relationship count | Integer |
+| `outDegree` | `outDegree(n)` | Outgoing relationship count | Integer |
 
 ```cypher
 MATCH (n:Person)
@@ -162,13 +162,13 @@ ORDER BY degree(n) DESC
 
 ArcFlow world-model metadata functions for provenance and trust scoring.
 
-| Function | Syntax | Description | Return Type | Since |
-|---|---|---|---|---|
-| `confidence` | `confidence(n)` | World-model confidence score (0.0-1.0) | Float | 4.0.0 |
-| `observationClass` | `observationClass(n)` | Observation class: observed, inferred, or predicted | String | 4.0.0 |
-| `authorityPlane` | `authorityPlane(n)` | Authority plane: semantic or scene | String | 4.0.0 |
-| `clockDomain` | `clockDomain(n)` | Temporal clock domain name | String | 4.0.0 |
-| `observationSource` | `observationSource(n)` | Source identity (sensor, model, user) | String | 4.0.0 |
+| Function | Syntax | Description | Return Type |
+|---|---|---|---|
+| `confidence` | `confidence(n)` | World-model confidence score (0.0-1.0) | Float |
+| `observationClass` | `observationClass(n)` | Observation class: observed, inferred, or predicted | String |
+| `authorityPlane` | `authorityPlane(n)` | Authority plane: semantic or scene | String |
+| `clockDomain` | `clockDomain(n)` | Temporal clock domain name | String |
+| `observationSource` | `observationSource(n)` | Source identity (sensor, model, user) | String |
 
 ```cypher
 MATCH (n:Observation)
@@ -178,13 +178,13 @@ RETURN n.name, confidence(n) AS conf, authorityPlane(n) AS plane
 
 ## Map and List (5)
 
-| Function | Syntax | Description | Return Type | Since |
-|---|---|---|---|---|
-| `properties` | `properties(n)` | Full property map as string | String | 4.0.0 |
-| `keys` | `keys(n)` | List of property key names | List\<String\> | 3.0.0 |
-| `range` | `range(start, end)` | Generate integer sequence \[start..=end\] | List\<Integer\> | 4.0.0 |
-| `mapProjection` | `n {.name, .age}` | Return only named properties as a map | Map | 4.0.0 |
-| `cardinality` | `cardinality(expr)` | Length of a list or string. Synonym of `size` — interchangeable in queries. | Integer | 11.0.0 |
+| Function | Syntax | Description | Return Type |
+|---|---|---|---|
+| `properties` | `properties(n)` | Full property map as string | String |
+| `keys` | `keys(n)` | List of property key names | List\<String\> |
+| `range` | `range(start, end)` | Generate integer sequence \[start..=end\] | List\<Integer\> |
+| `mapProjection` | `n {.name, .age}` | Return only named properties as a map | Map |
+| `cardinality` | `cardinality(expr)` | Length of a list or string. Synonym of `size` — interchangeable in queries. | Integer |
 
 ```cypher
 MATCH (n:Person)
@@ -205,15 +205,15 @@ RETURN i
 
 The zero-argument forms are non-deterministic (they return the current time). The string-argument forms parse an ISO 8601 input.
 
-| Function | Syntax | Description | Return Type | Since |
-|---|---|---|---|---|
-| `timestamp` | `timestamp()` | Current Unix timestamp in milliseconds | Integer | 4.0.0 |
-| `date` | `date()` / `date("YYYY-MM-DD")` | Current date, or parse ISO date string | String | 4.0.0 |
-| `time` | `time()` / `time("HH:MM:SS")` | Current zoned time, or parse ISO time string | String | 4.0.0 |
-| `datetime` | `datetime()` / `datetime("YYYY-MM-DDTHH:MM:SSZ")` | Current zoned datetime, or parse ISO datetime string | String | 4.0.0 |
-| `localTime` | `localTime()` / `localTime("HH:MM:SS")` | Current local time (no timezone), or parse ISO local time string | String | 11.0.0 |
-| `localDateTime` | `localDateTime()` / `localDateTime("YYYY-MM-DDTHH:MM:SS")` | Current local datetime (no timezone), or parse ISO local datetime string | String | 11.0.0 |
-| `duration` | `duration("PT1H30M")` | Parse an ISO 8601 duration string | Duration | 11.0.0 |
+| Function | Syntax | Description | Return Type |
+|---|---|---|---|
+| `timestamp` | `timestamp()` | Current Unix timestamp in milliseconds | Integer |
+| `date` | `date()` / `date("YYYY-MM-DD")` | Current date, or parse ISO date string | String |
+| `time` | `time()` / `time("HH:MM:SS")` | Current zoned time, or parse ISO time string | String |
+| `datetime` | `datetime()` / `datetime("YYYY-MM-DDTHH:MM:SSZ")` | Current zoned datetime, or parse ISO datetime string | String |
+| `localTime` | `localTime()` / `localTime("HH:MM:SS")` | Current local time (no timezone), or parse ISO local time string | String |
+| `localDateTime` | `localDateTime()` / `localDateTime("YYYY-MM-DDTHH:MM:SS")` | Current local datetime (no timezone), or parse ISO local datetime string | String |
+| `duration` | `duration("PT1H30M")` | Parse an ISO 8601 duration string | Duration |
 
 ```cypher
 CREATE (e:Event {name: 'deploy', createdAt: timestamp(), date: date()})
@@ -224,9 +224,9 @@ RETURN e
 
 Read the engine's logical clock from inside a query.
 
-| Function | Syntax | Description | Return Type | Since |
-|---|---|---|---|---|
-| `walSeq` | `walSeq()` | Current mutation sequence (advances on every CREATE/SET/MERGE/DELETE) | Integer | 11.0.0 |
+| Function | Syntax | Description | Return Type |
+|---|---|---|---|
+| `walSeq` | `walSeq()` | Current mutation sequence (advances on every CREATE/SET/MERGE/DELETE) | Integer |
 
 ```cypher
 -- Snapshot the current seq alongside the data being read
@@ -247,13 +247,13 @@ The function name is case-insensitive: `walSeq()`, `wal_seq()`, `WAL_SEQ()`, and
 
 ## Utility (5)
 
-| Function | Syntax | Description | Return Type | Since |
-|---|---|---|---|---|
-| `randomUUID` | `randomUUID()` | Generate a UUID v4 string | String | 4.0.0 |
-| `hash` | `hash(expr)` | Deterministic FNV-1a 64-bit hash as hex string | String | 4.0.0 |
-| `toJson` | `toJson(n)` | Serialize all node properties to JSON string | String | 4.0.0 |
-| `size` | `size(expr)` | Length of string or list | Integer | 0.10.0 |
-| `sessionUser` | `sessionUser()` | Identifier of the current session actor (GQL GS09) | String | 11.0.0 |
+| Function | Syntax | Description | Return Type |
+|---|---|---|---|
+| `randomUUID` | `randomUUID()` | Generate a UUID v4 string | String |
+| `hash` | `hash(expr)` | Deterministic FNV-1a 64-bit hash as hex string | String |
+| `toJson` | `toJson(n)` | Serialize all node properties to JSON string | String |
+| `size` | `size(expr)` | Length of string or list | Integer |
+| `sessionUser` | `sessionUser()` | Identifier of the current session actor (GQL GS09) | String |
 
 ```cypher
 CREATE (n:Record {id: randomUUID(), fingerprint: hash(n.data)})
@@ -269,12 +269,12 @@ RETURN toJson(n) AS json
 
 Predicate expressions used in WHERE clauses and RETURN.
 
-| Predicate | Syntax | Description | Return Type | Since |
-|---|---|---|---|---|
-| `exists` | `exists(n.prop)` | True if property exists | Boolean | 0.6.0 |
-| `IS NULL` | `n.prop IS NULL` | True if property is null or missing | Boolean | 0.15.0 |
-| `IS NOT NULL` | `n.prop IS NOT NULL` | True if property exists and is not null | Boolean | 0.15.0 |
-| `IN` | `expr IN [list]` | True if value is in the list | Boolean | 0.20.0 |
+| Predicate | Syntax | Description | Return Type |
+|---|---|---|---|
+| `exists` | `exists(n.prop)` | True if property exists | Boolean |
+| `IS NULL` | `n.prop IS NULL` | True if property is null or missing | Boolean |
+| `IS NOT NULL` | `n.prop IS NOT NULL` | True if property exists and is not null | Boolean |
+| `IN` | `expr IN [list]` | True if value is in the list | Boolean |
 
 ```cypher
 MATCH (n:Person)

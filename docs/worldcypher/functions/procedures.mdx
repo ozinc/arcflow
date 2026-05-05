@@ -26,32 +26,32 @@ Returns the full list of available procedures (column: `name`).
 
 Core procedures for inspecting database state, schema, and metadata.
 
-| Procedure | Return Columns | Description | Since |
-|---|---|---|---|
-| `CALL db.nodeCount()` | `count` | Total node count | 0.19.0 |
-| `CALL db.relCount()` | `count` | Total relationship count | 0.19.0 |
-| `CALL db.labels()` | `label` | All node labels in use | 0.19.0 |
-| `CALL db.types()` | `type` | All relationship types in use | 0.19.0 |
-| `CALL db.keys()` | `key` | All property keys in use | 0.19.0 |
-| `CALL db.version()` | `name`, `version`, `crates`, `waves` | Engine version and build info | 0.19.0 |
-| `CALL db.capabilities()` | `capability`, `value` | Engine version, GPU backend status, compute capabilities, index counts, memory footprint, and algorithm availability | 11.0.0 |
-| `CALL db.stats()` | `nodes`, `relationships`, `skills` | Database statistics summary | 0.20.0 |
-| `CALL db.stats.json()` | `json` | All metadata as single JSON object | 5.0.0 |
-| `CALL db.schema()` | `label`, `properties`, `count` | Schema overview: labels, property keys per label, counts, and relationship patterns | 4.0.0 |
-| `CALL db.indexes()` | `label`, `property` | All indexes with target label and property | 0.19.0 |
-| `CALL db.constraints()` | `label`, `property`, `type` | All constraints with target and type | 0.19.0 |
-| `CALL db.procedures()` | `name` | List all available procedure names | 0.20.0 |
-| `CALL db.help()` | `procedure`, `description`, `example` | Quick-reference of key procedures with examples | 5.0.0 |
-| `CALL db.tutorial()` | `step`, `title`, `query`, `description` | Interactive 6-step walkthrough for new users | 5.0.0 |
-| `CALL db.doctor()` | `check`, `status`, `detail` | Diagnostic health check: 5 checks + HEALTHY/ISSUES_FOUND summary | 4.0.0 |
-| `CALL db.embeddingStats()` | `model`, `version`, `count`, `oldest_embedded_at` | Embedding statistics by model/version including count and oldest embedding timestamp | 11.0.0 |
-| `CALL db.explainSpatialJoin(left_label, left_key, right_label, right_key)` | `strategy`, `left_count`, `right_count`, `threshold` | Spatial join planner explanation with chosen strategy and node counts per side | 11.0.0 |
-| `CALL db.idFrom(key1, key2, ...)` | `nodeId`, `keys` | Deterministic content-addressed NodeId from key values via FNV-1a hashing | 11.0.0 |
-| `CALL db.export()` | `snapshot`, `nodes`, `relationships`, `generation` | Export full graph as JSON snapshot | 3.0.0 |
-| `CALL db.import('<json>')` | `status`, `nodes_before`, `nodes_after` | Import graph from JSON snapshot (mutating) | 5.0.0 |
-| `CALL db.import.csv('<csv>', '<Label>')` | `imported` | Import CSV rows as nodes with given label (mutating) | 5.0.0 |
-| `CALL db.clear()` | `status`, `nodes_removed`, `rels_removed` | Delete all nodes, relationships, and indexes (mutating) | 5.0.0 |
-| `CALL db.demo()` | _(demo graph)_ | Load sample social network graph with example queries (mutating) | 5.0.0 |
+| Procedure | Return Columns | Description |
+|---|---|---|
+| `CALL db.nodeCount()` | `count` | Total node count |
+| `CALL db.relCount()` | `count` | Total relationship count |
+| `CALL db.labels()` | `label` | All node labels in use |
+| `CALL db.types()` | `type` | All relationship types in use |
+| `CALL db.keys()` | `key` | All property keys in use |
+| `CALL db.version()` | `name`, `version`, `crates`, `waves` | Engine version and build info |
+| `CALL db.capabilities()` | `capability`, `value` | Engine version, GPU backend status, compute capabilities, index counts, memory footprint, and algorithm availability |
+| `CALL db.stats()` | `nodes`, `relationships`, `skills` | Database statistics summary |
+| `CALL db.stats.json()` | `json` | All metadata as single JSON object |
+| `CALL db.schema()` | `label`, `properties`, `count` | Schema overview: labels, property keys per label, counts, and relationship patterns |
+| `CALL db.indexes()` | `label`, `property` | All indexes with target label and property |
+| `CALL db.constraints()` | `label`, `property`, `type` | All constraints with target and type |
+| `CALL db.procedures()` | `name` | List all available procedure names |
+| `CALL db.help()` | `procedure`, `description`, `example` | Quick-reference of key procedures with examples |
+| `CALL db.tutorial()` | `step`, `title`, `query`, `description` | Interactive 6-step walkthrough for new users |
+| `CALL db.doctor()` | `check`, `status`, `detail` | Diagnostic health check: 5 checks + HEALTHY/ISSUES_FOUND summary |
+| `CALL db.embeddingStats()` | `model`, `version`, `count`, `oldest_embedded_at` | Embedding statistics by model/version including count and oldest embedding timestamp |
+| `CALL db.explainSpatialJoin(left_label, left_key, right_label, right_key)` | `strategy`, `left_count`, `right_count`, `threshold` | Spatial join planner explanation with chosen strategy and node counts per side |
+| `CALL db.idFrom(key1, key2, ...)` | `nodeId`, `keys` | Deterministic content-addressed NodeId from key values via FNV-1a hashing |
+| `CALL db.export()` | `snapshot`, `nodes`, `relationships`, `generation` | Export full graph as JSON snapshot |
+| `CALL db.import('<json>')` | `status`, `nodes_before`, `nodes_after` | Import graph from JSON snapshot (mutating) |
+| `CALL db.import.csv('<csv>', '<Label>')` | `imported` | Import CSV rows as nodes with given label (mutating) |
+| `CALL db.clear()` | `status`, `nodes_removed`, `rels_removed` | Delete all nodes, relationships, and indexes (mutating) |
+| `CALL db.demo()` | _(demo graph)_ | Load sample social network graph with example queries (mutating) |
 
 ```cypher
 -- Get a schema overview
@@ -71,13 +71,13 @@ Returns rows for each check (node_count, relationship_integrity, index_consisten
 
 ### Centrality (5)
 
-| Procedure | Return Columns | Description | Since |
-|---|---|---|---|
-| `CALL algo.pageRank()` | `nodeId`, `name`, `rank` | PageRank (20 iterations, damping 0.85). GPU-accelerated when available. | 0.26.0 |
-| `CALL algo.confidencePageRank()` | `nodeId`, `name`, `confidence`, `rank` | PageRank weighted by node confidence scores | 5.0.0 |
-| `CALL algo.betweenness()` | `nodeId`, `name`, `betweenness` | Betweenness centrality scores | 3.0.0 |
-| `CALL algo.closeness()` | `nodeId`, `name`, `closeness` | Closeness centrality scores | 3.0.0 |
-| `CALL algo.degreeCentrality()` | `nodeId`, `name`, `centrality` | Degree centrality scores | 3.0.0 |
+| Procedure | Return Columns | Description |
+|---|---|---|
+| `CALL algo.pageRank()` | `nodeId`, `name`, `rank` | PageRank (20 iterations, damping 0.85). GPU-accelerated when available. |
+| `CALL algo.confidencePageRank()` | `nodeId`, `name`, `confidence`, `rank` | PageRank weighted by node confidence scores |
+| `CALL algo.betweenness()` | `nodeId`, `name`, `betweenness` | Betweenness centrality scores |
+| `CALL algo.closeness()` | `nodeId`, `name`, `closeness` | Closeness centrality scores |
+| `CALL algo.degreeCentrality()` | `nodeId`, `name`, `centrality` | Degree centrality scores |
 
 ```cypher
 CALL algo.pageRank()
@@ -87,15 +87,15 @@ Returns one row per node, sorted by rank. Uses 20 iterations with damping factor
 
 ### Community Detection (7)
 
-| Procedure | Return Columns | Description | Since |
-|---|---|---|---|
-| `CALL algo.connectedComponents()` | `nodeId`, `name`, `component` | Connected component IDs | 0.26.0 |
-| `CALL algo.communityDetection()` | `nodeId`, `name`, `community` | Community IDs via label propagation. GPU-accelerated when available. | 0.26.0 |
-| `CALL algo.louvain()` | `nodeId`, `name`, `community` | Community IDs via Louvain modularity optimization. GPU-accelerated when available. | 3.0.0 |
-| `CALL algo.leiden()` | `nodeId`, `community` | Community IDs via Leiden algorithm (20 iterations) | 5.0.0 |
-| `CALL algo.kCore()` | `nodeId`, `name`, `coreness` | K-core decomposition values | 3.0.0 |
-| `CALL algo.labelPropagation([label_property], [rel_types])` | `node_id`, `propagated_label`, `label_confidence`, `hops_from_seed` | Stochastic label propagation over optional relation types | 11.0.0 |
-| `CALL algo.cAndSLabelPropagation([label_property], [rel_types])` | `node_id`, `propagated_label`, `label_confidence`, `hops_from_seed` | Stochastic label propagation, C&S variant with seed-anchored confidence | 11.0.0 |
+| Procedure | Return Columns | Description |
+|---|---|---|
+| `CALL algo.connectedComponents()` | `nodeId`, `name`, `component` | Connected component IDs |
+| `CALL algo.communityDetection()` | `nodeId`, `name`, `community` | Community IDs via label propagation. GPU-accelerated when available. |
+| `CALL algo.louvain()` | `nodeId`, `name`, `community` | Community IDs via Louvain modularity optimization. GPU-accelerated when available. |
+| `CALL algo.leiden()` | `nodeId`, `community` | Community IDs via Leiden algorithm (20 iterations) |
+| `CALL algo.kCore()` | `nodeId`, `name`, `coreness` | K-core decomposition values |
+| `CALL algo.labelPropagation([label_property], [rel_types])` | `node_id`, `propagated_label`, `label_confidence`, `hops_from_seed` | Stochastic label propagation over optional relation types |
+| `CALL algo.cAndSLabelPropagation([label_property], [rel_types])` | `node_id`, `propagated_label`, `label_confidence`, `hops_from_seed` | Stochastic label propagation, C&S variant with seed-anchored confidence |
 
 ```cypher
 CALL algo.louvain()
@@ -105,14 +105,14 @@ Returns one row per node with hierarchical community assignment.
 
 ### Graph Metrics (6)
 
-| Procedure | Return Columns | Description | Since |
-|---|---|---|---|
-| `CALL algo.density()` | `density` | Graph density ratio (0.0 to 1.0) | 3.0.0 |
-| `CALL algo.diameter()` | `diameter` | Graph diameter (longest shortest path) | 3.0.0 |
-| `CALL algo.triangleCount()` | `triangles` | Total triangle count in the graph. GPU-accelerated when available. | 3.0.0 |
-| `CALL algo.clusteringCoefficient()` | `nodeId`, `name`, `coefficient` | Per-node clustering coefficients. GPU-accelerated when available. | 3.0.0 |
-| `CALL algo.cycleDetectionDirected()` | `hasCycle`, `cycleNodes`, `cycleNodeCount` | Directed cycle detection (Kosaraju SCC; cuGraph on GPU, fallback on CPU) | 11.0.0 |
-| `CALL algo.cycleDetectionUndirected()` | `hasCycle`, `cycleNodes`, `cycleNodeCount` | Undirected cycle detection via DFS | 11.0.0 |
+| Procedure | Return Columns | Description |
+|---|---|---|
+| `CALL algo.density()` | `density` | Graph density ratio (0.0 to 1.0) |
+| `CALL algo.diameter()` | `diameter` | Graph diameter (longest shortest path) |
+| `CALL algo.triangleCount()` | `triangles` | Total triangle count in the graph. GPU-accelerated when available. |
+| `CALL algo.clusteringCoefficient()` | `nodeId`, `name`, `coefficient` | Per-node clustering coefficients. GPU-accelerated when available. |
+| `CALL algo.cycleDetectionDirected()` | `hasCycle`, `cycleNodes`, `cycleNodeCount` | Directed cycle detection (Kosaraju SCC; cuGraph on GPU, fallback on CPU) |
+| `CALL algo.cycleDetectionUndirected()` | `hasCycle`, `cycleNodes`, `cycleNodeCount` | Undirected cycle detection via DFS |
 
 ```cypher
 CALL algo.triangleCount()
@@ -122,13 +122,13 @@ Returns a single row with the total number of triangles.
 
 ### Path Analysis (5)
 
-| Procedure | Return Columns | Description | Since |
-|---|---|---|---|
-| `CALL algo.allPairsShortestPath()` | `source`, `target`, `distance` | Shortest path distances between all node pairs (capped at 100 rows). GPU-accelerated when available. | 3.0.0 |
-| `CALL algo.confidencePath(startId, endId)` | `path`, `cost`, `length` | Shortest path between two nodes weighted by confidence | 5.0.0 |
-| `CALL algo.dijkstra(startId, endId, 'weight')` | `path`, `distance` | Weighted shortest path | 10.0.0 |
-| `CALL algo.astar(startId, endId, 'weight', 'heuristic')` | `path`, `distance` | Heuristic-guided shortest path (A\*) | 10.0.0 |
-| `CALL algo.maxFlow(sourceId, sinkId, [capacityProperty])` | `maxFlow`, `source`, `sink` | Maximum flow from source to sink using a capacity edge property (default `capacity`) | 11.0.0 |
+| Procedure | Return Columns | Description |
+|---|---|---|
+| `CALL algo.allPairsShortestPath()` | `source`, `target`, `distance` | Shortest path distances between all node pairs (capped at 100 rows). GPU-accelerated when available. |
+| `CALL algo.confidencePath(startId, endId)` | `path`, `cost`, `length` | Shortest path between two nodes weighted by confidence |
+| `CALL algo.dijkstra(startId, endId, 'weight')` | `path`, `distance` | Weighted shortest path |
+| `CALL algo.astar(startId, endId, 'weight', 'heuristic')` | `path`, `distance` | Heuristic-guided shortest path (A\*) |
+| `CALL algo.maxFlow(sourceId, sinkId, [capacityProperty])` | `maxFlow`, `source`, `sink` | Maximum flow from source to sink using a capacity edge property (default `capacity`) |
 
 ```cypher
 -- Find confidence-weighted shortest path between node 1 and node 5
@@ -139,27 +139,27 @@ Returns the path as "id1 -> id2 -> id3", total cost, and hop count.
 
 ### Similarity and Spatial (7)
 
-| Procedure | Return Columns | Description | Since |
-|---|---|---|---|
-| `CALL algo.nodeSimilarity()` | `node1`, `node2`, `similarity` | Pairs of nodes with Jaccard similarity scores (top 20) | 4.0.0 |
-| `CALL algo.similarNodes()` | `nodeId`, `score` | Nodes similar to the first vector-bearing node (cosine similarity) | 5.0.0 |
-| `CALL algo.pairSimilarity(sourceIds, targetIds)` | `node1`, `node2`, `score` | Jaccard similarity for explicit node pairs (variadic — accept paired or interleaved args) | 11.0.0 |
-| `CALL algo.nearestNodes(point, label, k)` | `node`, `distance` | K nearest nodes by exact spatial distance (ArcFlow Spatial Index, ≥ 2000/s at 11K entities) | 5.0.0 |
-| `CALL algo.objectsInFrustum($frustum)` | `node`, `distance` | Entities within a camera frustum (6-plane containment, < 2ms for 50 entities) | 10.0.0 |
-| `CALL algo.nearestVisible($pos, label, k)` | `node`, `distance` | Nearest entities with direct line-of-sight from a point | 10.0.0 |
-| `CALL spatial.raycast(origin, direction, maxDist)` | `hit`, `distance` | First node along a ray within max distance | 10.0.0 |
+| Procedure | Return Columns | Description |
+|---|---|---|
+| `CALL algo.nodeSimilarity()` | `node1`, `node2`, `similarity` | Pairs of nodes with Jaccard similarity scores (top 20) |
+| `CALL algo.similarNodes()` | `nodeId`, `score` | Nodes similar to the first vector-bearing node (cosine similarity) |
+| `CALL algo.pairSimilarity(sourceIds, targetIds)` | `node1`, `node2`, `score` | Jaccard similarity for explicit node pairs (variadic — accept paired or interleaved args) |
+| `CALL algo.nearestNodes(point, label, k)` | `node`, `distance` | K nearest nodes by exact spatial distance (ArcFlow Spatial Index, ≥ 2000/s at 11K entities) |
+| `CALL algo.objectsInFrustum($frustum)` | `node`, `distance` | Entities within a camera frustum (6-plane containment, < 2ms for 50 entities) |
+| `CALL algo.nearestVisible($pos, label, k)` | `node`, `distance` | Nearest entities with direct line-of-sight from a point |
+| `CALL spatial.raycast(origin, direction, maxDist)` | `hit`, `distance` | First node along a ray within max distance |
 
 ### Vector Search and RAG (7)
 
-| Procedure | Return Columns | Description | Since |
-|---|---|---|---|
-| `CALL algo.vectorSearch()` | `nodeId`, `score`, `labels` | Vector similarity search over vector index. Accepts optional query vector argument. GPU-accelerated when available. | 5.0.0 |
-| `CALL algo.hybridSearch()` | `nodeId`, `score`, `hops` | Combined vector + graph traversal search | 5.0.0 |
-| `CALL algo.graphRAG()` | `nodeId`, `score`, `hops`, `labels` | Graph-augmented retrieval for RAG pipelines. Accepts optional query vector argument. | 5.0.0 |
-| `CALL algo.graphRAGContext()` | `context`, `node_count`, `tokens_approx` | Formatted LLM context from graph retrieval. Accepts optional query vector and max_tokens arguments. | 5.0.0 |
-| `CALL algo.graphRAGTrusted()` | `nodeId`, `trusted_score`, `hops`, `observation` | Trusted RAG with confidence-filtered context, ranked by observation class | 5.0.0 |
-| `CALL algo.graphRAGMultiModel(label, [k], [queryVector])` | `nodeId`, `fusedScore`, `modelCount` | Multi-model RAG fusing scores across all embedding properties on a label | 11.0.0 |
-| `CALL algo.similarThenTraverse(label, embeddingProperty, queryVector, [k], [maxHops], [relType], [minEdgeConfidence])` | `seedEntityId`, `vectorSimilarity`, `reachableJson`, `backend` | k-NN vector seed + per-seed BFS traversal with optional relation-type and confidence filters | 11.0.0 |
+| Procedure | Return Columns | Description |
+|---|---|---|
+| `CALL algo.vectorSearch()` | `nodeId`, `score`, `labels` | Vector similarity search over vector index. Accepts optional query vector argument. GPU-accelerated when available. |
+| `CALL algo.hybridSearch()` | `nodeId`, `score`, `hops` | Combined vector + graph traversal search |
+| `CALL algo.graphRAG()` | `nodeId`, `score`, `hops`, `labels` | Graph-augmented retrieval for RAG pipelines. Accepts optional query vector argument. |
+| `CALL algo.graphRAGContext()` | `context`, `node_count`, `tokens_approx` | Formatted LLM context from graph retrieval. Accepts optional query vector and max_tokens arguments. |
+| `CALL algo.graphRAGTrusted()` | `nodeId`, `trusted_score`, `hops`, `observation` | Trusted RAG with confidence-filtered context, ranked by observation class |
+| `CALL algo.graphRAGMultiModel(label, [k], [queryVector])` | `nodeId`, `fusedScore`, `modelCount` | Multi-model RAG fusing scores across all embedding properties on a label |
+| `CALL algo.similarThenTraverse(label, embeddingProperty, queryVector, [k], [maxHops], [relType], [minEdgeConfidence])` | `seedEntityId`, `vectorSimilarity`, `reachableJson`, `backend` | k-NN vector seed + per-seed BFS traversal with optional relation-type and confidence filters |
 
 ```cypher
 -- Vector similarity search with a query vector
@@ -179,14 +179,14 @@ Returns nodes with trusted_score, observation class (observed > inferred > predi
 
 Generate node embeddings for downstream vector search, classification, and similarity tasks.
 
-| Procedure | Return Columns | Description | Since |
-|---|---|---|---|
-| `CALL algo.node2vec(dims, walkLen, walks)` | _(sets node.embedding)_ | Structural random walk embeddings | 10.0.0 |
-| `CALL algo.struc2vec(dims)` | _(sets node.embedding)_ | Structural equivalence embeddings | 10.0.0 |
-| `CALL algo.graphSAGE(dims)` | _(sets node.embedding)_ | Inductive neighborhood aggregation embeddings | 10.0.0 |
-| `CALL algo.staleEmbeddings()` | `nodeId`, `name` | Nodes whose embeddings are outdated (property changed after last embed) | 10.0.0 |
-| `CALL algo.classify($vec, 'indexName', {k: 10})` | `nodeId`, `label`, `confidence` | Classify by similarity to labeled examples in a vector index | 10.0.0 |
-| `CALL algo.embeddingProperties([label])` | `property`, `dimensions`, `withProvenance` | List embedding properties for a label, with dimensions and provenance count | 11.0.0 |
+| Procedure | Return Columns | Description |
+|---|---|---|
+| `CALL algo.node2vec(dims, walkLen, walks)` | _(sets node.embedding)_ | Structural random walk embeddings |
+| `CALL algo.struc2vec(dims)` | _(sets node.embedding)_ | Structural equivalence embeddings |
+| `CALL algo.graphSAGE(dims)` | _(sets node.embedding)_ | Inductive neighborhood aggregation embeddings |
+| `CALL algo.staleEmbeddings()` | `nodeId`, `name` | Nodes whose embeddings are outdated (property changed after last embed) |
+| `CALL algo.classify($vec, 'indexName', {k: 10})` | `nodeId`, `label`, `confidence` | Classify by similarity to labeled examples in a vector index |
+| `CALL algo.embeddingProperties([label])` | `property`, `dimensions`, `withProvenance` | List embedding properties for a label, with dimensions and provenance count |
 
 ```cypher
 -- Embed all nodes with 128-dimensional Node2Vec vectors
@@ -200,17 +200,17 @@ CALL algo.staleEmbeddings()
 
 Algorithms for reasoning over facts, confidence, and semantic relationships.
 
-| Procedure | Return Columns | Description | Since |
-|---|---|---|---|
-| `CALL algo.entityResolution()` | `nodeId1`, `nodeId2`, `similarity` | Find nodes referring to the same real-world entity | 10.0.0 |
-| `CALL algo.factContradiction()` | `nodeId1`, `nodeId2`, `contradiction_type`, `confidence` | Detect contradictory facts in the graph | 10.0.0 |
-| `CALL algo.relationshipStrength()` | `fromId`, `toId`, `strength` | Score relationship strength by frequency, recency, mutual links | 10.0.0 |
-| `CALL algo.compoundingScore()` | `nodeId`, `score` | Composite confidence propagated through fact chains | 10.0.0 |
-| `CALL algo.entityFreshness()` | `nodeId`, `name`, `freshness`, `last_observed_at` | Freshness of each entity based on last observation | 10.0.0 |
-| `CALL algo.semanticDedup()` | `nodeId1`, `nodeId2`, `similarity` | Near-duplicate nodes via embedding similarity | 10.0.0 |
-| `CALL algo.confidenceCalibration(entityId, [window])` | `ece_score`, `sample_count`, `calibration_curve`, `calibration_status` | Expected Calibration Error (ECE) — predicted confidence vs observed accuracy (WorldScore methodology) | 11.0.0 |
-| `CALL algo.predictionDrift(entityId, [horizonMs])` | `entity_id`, `horizon_ms`, `predicted_x`, `observed_x`, `delta_x`, `predicted_y`, `observed_y`, `delta_y`, `delta_magnitude`, `prediction_source`, `observation_seq`, `predicted_seq` | Drift between predicted and observed entity positions within a time horizon | 11.0.0 |
-| `CALL algo.temporalDecay(nodeId, [halfLifeDays], [floor], [staleThreshold])` | `decayed_confidence`, `days_elapsed`, `is_stale`, `freshness_class` | Lazy temporal decay of confidence based on last corroboration timestamp | 11.0.0 |
+| Procedure | Return Columns | Description |
+|---|---|---|
+| `CALL algo.entityResolution()` | `nodeId1`, `nodeId2`, `similarity` | Find nodes referring to the same real-world entity |
+| `CALL algo.factContradiction()` | `nodeId1`, `nodeId2`, `contradiction_type`, `confidence` | Detect contradictory facts in the graph |
+| `CALL algo.relationshipStrength()` | `fromId`, `toId`, `strength` | Score relationship strength by frequency, recency, mutual links |
+| `CALL algo.compoundingScore()` | `nodeId`, `score` | Composite confidence propagated through fact chains |
+| `CALL algo.entityFreshness()` | `nodeId`, `name`, `freshness`, `last_observed_at` | Freshness of each entity based on last observation |
+| `CALL algo.semanticDedup()` | `nodeId1`, `nodeId2`, `similarity` | Near-duplicate nodes via embedding similarity |
+| `CALL algo.confidenceCalibration(entityId, [window])` | `ece_score`, `sample_count`, `calibration_curve`, `calibration_status` | Expected Calibration Error (ECE) — predicted confidence vs observed accuracy (WorldScore methodology) |
+| `CALL algo.predictionDrift(entityId, [horizonMs])` | `entity_id`, `horizon_ms`, `predicted_x`, `observed_x`, `delta_x`, `predicted_y`, `observed_y`, `delta_y`, `delta_magnitude`, `prediction_source`, `observation_seq`, `predicted_seq` | Drift between predicted and observed entity positions within a time horizon |
+| `CALL algo.temporalDecay(nodeId, [halfLifeDays], [floor], [staleThreshold])` | `decayed_confidence`, `days_elapsed`, `is_stale`, `freshness_class` | Lazy temporal decay of confidence based on last corroboration timestamp |
 
 ## Physical AI Algorithms (2)
 
@@ -246,31 +246,31 @@ CALL algo.entityResolution()
 
 API key management and audit log procedures.
 
-| Procedure | Return Columns | Description | Since |
-|---|---|---|---|
-| `CALL db.auth.whoami()` | `identity`, `role`, `scopes` | Current authenticated identity | 9.0.0 |
-| `CALL db.auth.policies()` | `resource`, `action`, `allowed` | ACL policy definitions | 9.0.0 |
-| `CALL db.auth.check('resource', 'action')` | `allowed`, `reason` | Check if current identity has permission | 9.0.0 |
-| `CALL db.auth.createApiKey('name')` | `key`, `created_at` | Create a new API key (write) | 9.0.0 |
-| `CALL db.auth.revokeApiKey('key')` | `revoked` | Revoke an API key (write) | 9.0.0 |
-| `CALL db.auth.listApiKeys()` | `name`, `created_at`, `last_used` | List all API keys | 9.0.0 |
-| `CALL db.auth.auditLog()` | `timestamp`, `identity`, `action`, `resource` | Recent auth audit events | 9.0.0 |
+| Procedure | Return Columns | Description |
+|---|---|---|
+| `CALL db.auth.whoami()` | `identity`, `role`, `scopes` | Current authenticated identity |
+| `CALL db.auth.policies()` | `resource`, `action`, `allowed` | ACL policy definitions |
+| `CALL db.auth.check('resource', 'action')` | `allowed`, `reason` | Check if current identity has permission |
+| `CALL db.auth.createApiKey('name')` | `key`, `created_at` | Create a new API key (write) |
+| `CALL db.auth.revokeApiKey('key')` | `revoked` | Revoke an API key (write) |
+| `CALL db.auth.listApiKeys()` | `name`, `created_at`, `last_used` | List all API keys |
+| `CALL db.auth.auditLog()` | `timestamp`, `identity`, `action`, `resource` | Recent auth audit events |
 
 ## Temporal (9)
 
 Procedures for temporal queries, clock management, and change tracking.
 
-| Procedure | Return Columns | Description | Since |
-|---|---|---|---|
-| `CALL db.clock()` | `name`, `tick` | Current engine clock name and tick value | 4.0.0 |
-| `CALL db.clockDomains()` | `domain`, `count` | All registered clock domains with node counts | 4.0.0 |
-| `CALL db.temporalCompare()` | `changeCount`, `fromSequence`, `toSequence`, `operation` | Compare mutations from sequence 0 to current | 4.0.0 |
-| `CALL db.temporalGate()` | `valid`, `violationCount`, `violation` | Check temporal gate consistency; lists violations if any | 4.0.0 |
-| `CALL db.temporalReplay()` | `sequence`, `operation`, `timestamp` | Replay all WAL mutations from sequence 0 | 4.0.0 |
-| `CALL db.nodesAsOf()` | `nodeId`, `labels`, `createdAt` | Return all nodes that existed at or before current time | 4.0.0 |
-| `CALL db.changesSince()` | `sequence`, `operation` | Recent mutations (last 100 entries) | 5.0.0 |
-| `CALL db.mutations()` | `sequence`, `operation`, `timestamp` | Recent mutation log (last 50 entries) with timestamps | 5.0.0 |
-| `CALL db.fingerprint()` | `fingerprint` | Deterministic FNV hash of current graph state (hex string) | 5.0.0 |
+| Procedure | Return Columns | Description |
+|---|---|---|
+| `CALL db.clock()` | `name`, `tick` | Current engine clock name and tick value |
+| `CALL db.clockDomains()` | `domain`, `count` | All registered clock domains with node counts |
+| `CALL db.temporalCompare()` | `changeCount`, `fromSequence`, `toSequence`, `operation` | Compare mutations from sequence 0 to current |
+| `CALL db.temporalGate()` | `valid`, `violationCount`, `violation` | Check temporal gate consistency; lists violations if any |
+| `CALL db.temporalReplay()` | `sequence`, `operation`, `timestamp` | Replay all WAL mutations from sequence 0 |
+| `CALL db.nodesAsOf()` | `nodeId`, `labels`, `createdAt` | Return all nodes that existed at or before current time |
+| `CALL db.changesSince()` | `sequence`, `operation` | Recent mutations (last 100 entries) |
+| `CALL db.mutations()` | `sequence`, `operation`, `timestamp` | Recent mutation log (last 50 entries) with timestamps |
+| `CALL db.fingerprint()` | `fingerprint` | Deterministic FNV hash of current graph state (hex string) |
 
 ```cypher
 -- See recent mutations with timestamps
@@ -291,13 +291,13 @@ Note: `AS OF` is a query modifier, not a CALL procedure.
 
 Procedures for live queries: topics, subscriptions, live views, and causal chains.
 
-| Procedure | Return Columns | Description | Since |
-|---|---|---|---|
-| `CALL db.topics()` | `id`, `name`, `events` | All registered event topics with event counts | 3.0.0 |
-| `CALL db.subscriptions()` | `name`, `topic`, `query`, `active` | Active subscriptions with topic bindings | 3.0.0 |
-| `CALL db.liveQueries()` | `name`, `query` | Active live query registrations | 3.0.0 |
-| `CALL db.causalChain()` | `origin`, `depth`, `target`, `target_labels`, `confidence` | Traces CAUSES chains from all Action nodes (depth 10) | 3.0.0 |
-| `CALL db.views()` | `name`, `query` | Materialized view definitions | 4.0.0 |
+| Procedure | Return Columns | Description |
+|---|---|---|
+| `CALL db.topics()` | `id`, `name`, `events` | All registered event topics with event counts |
+| `CALL db.subscriptions()` | `name`, `topic`, `query`, `active` | Active subscriptions with topic bindings |
+| `CALL db.liveQueries()` | `name`, `query` | Active live query registrations |
+| `CALL db.causalChain()` | `origin`, `depth`, `target`, `target_labels`, `confidence` | Traces CAUSES chains from all Action nodes (depth 10) |
+| `CALL db.views()` | `name`, `query` | Materialized view definitions |
 
 ```cypher
 CALL db.causalChain()
@@ -309,29 +309,29 @@ Finds all `:Action` nodes and traces outgoing CAUSES relationships up to depth 1
 
 Procedures for backend management, validation, observability, and storage internals.
 
-| Procedure | Return Columns | Description | Since |
-|---|---|---|---|
-| `CALL db.backends()` | `id`, `available`, `message` | Available compute backends (CPU, CUDA, Metal) with status | 5.0.0 |
-| `CALL db.storageInfo()` | `format`, `nodes` | Storage backend details (format, generation, node/rel counts, mutation sequence) | 5.0.0 |
-| `CALL db.storageMode()` | `mode`, `node_count`, `csr_warm`, `csr_auto_threshold`, `dense_store_enabled`, `dense_store_nodes` | Active storage mode (HashMap, DenseStore, CSR, or hybrid) with thresholds | 11.0.0 |
-| `CALL db.csrStats()` | `status`, `vertices`, `edges` | CSR (Compressed Sparse Row) cache statistics — warm/stale status, vertex / edge counts, pending delta size | 11.0.0 |
-| `CALL db.denseStore()` | `enabled`, `nodes`, `tables`, `memory_bytes`, `coverage` | DenseStore status with node and table counts, memory footprint, coverage percentage | 11.0.0 |
-| `CALL db.warmCsr()` | `status` | Warm the CSR cache; returns `warm` or `rebuilt` | 11.0.0 |
-| `CALL db.parallelConfig()` | `morsel_size`, `rayon_threads`, `dense_store_coverage`, `csr_status` | Morsel scheduler and parallelism configuration including thread count | 11.0.0 |
-| `CALL db.validateQuery()` | `valid`, `warnings` | Parse and validate a query without executing | 5.0.0 |
-| `CALL db.vectorIndexes()` | `name`, `label`, `property`, `dimensions`, `similarity` | All vector indexes with configuration | 5.0.0 |
-| `CALL db.observationClasses()` | `class`, `count` | Observation class counts (observed, inferred, predicted) | 4.0.0 |
-| `CALL db.nodesByObservation.observed()` | `_id`, `_labels`, `_observation_class`, `_confidence` | All nodes with observation class "observed" | 5.0.0 |
-| `CALL db.nodesByObservation.inferred()` | `_id`, `_labels`, `_observation_class`, `_confidence` | All nodes with observation class "inferred" | 5.0.0 |
-| `CALL db.nodesByObservation.predicted()` | `_id`, `_labels`, `_observation_class`, `_confidence` | All nodes with observation class "predicted" | 5.0.0 |
-| `CALL db.nodesByPlane.semantic()` | `_id`, `_labels`, `_authority_plane` | Nodes in the semantic authority plane | 5.0.0 |
-| `CALL db.nodesByPlane.scene()` | `_id`, `_labels`, `_authority_plane` | Nodes in the scene authority plane | 5.0.0 |
-| `CALL db.proofGates()` | `gate`, `status`, `evidence` | Proof gate definitions and their validation status | 5.0.0 |
-| `CALL db.proofArtifacts()` | `artifact`, `type`, `detail` | Generated proof artifacts | 5.0.0 |
-| `CALL db.executionContext()` | `context`, `fallback_disabled`, `backends_available` | Current execution context (backend, GPU availability) | 5.0.0 |
-| `CALL db.requireExecutionContext('local_cpu' \| 'local_gpu' \| 'distributed')` | `context`, `status` | Enforces a required execution context; raises a hard error on mismatch | 11.0.0 |
-| `CALL db.syncConflicts()` | `id`, `local_op`, `remote_op`, `local_clock`, `remote_clock`, `resolution`, `timestamp` | Replication conflict log with operations, vector clocks, and resolution per conflict | 11.0.0 |
-| `CALL db.affordances()` | `from`, `to`, `confidence` | All AFFORDS relationships in the graph | 5.0.0 |
+| Procedure | Return Columns | Description |
+|---|---|---|
+| `CALL db.backends()` | `id`, `available`, `message` | Available compute backends (CPU, CUDA, Metal) with status |
+| `CALL db.storageInfo()` | `format`, `nodes` | Storage backend details (format, generation, node/rel counts, mutation sequence) |
+| `CALL db.storageMode()` | `mode`, `node_count`, `csr_warm`, `csr_auto_threshold`, `dense_store_enabled`, `dense_store_nodes` | Active storage mode (HashMap, DenseStore, CSR, or hybrid) with thresholds |
+| `CALL db.csrStats()` | `status`, `vertices`, `edges` | CSR (Compressed Sparse Row) cache statistics — warm/stale status, vertex / edge counts, pending delta size |
+| `CALL db.denseStore()` | `enabled`, `nodes`, `tables`, `memory_bytes`, `coverage` | DenseStore status with node and table counts, memory footprint, coverage percentage |
+| `CALL db.warmCsr()` | `status` | Warm the CSR cache; returns `warm` or `rebuilt` |
+| `CALL db.parallelConfig()` | `morsel_size`, `rayon_threads`, `dense_store_coverage`, `csr_status` | Morsel scheduler and parallelism configuration including thread count |
+| `CALL db.validateQuery()` | `valid`, `warnings` | Parse and validate a query without executing |
+| `CALL db.vectorIndexes()` | `name`, `label`, `property`, `dimensions`, `similarity` | All vector indexes with configuration |
+| `CALL db.observationClasses()` | `class`, `count` | Observation class counts (observed, inferred, predicted) |
+| `CALL db.nodesByObservation.observed()` | `_id`, `_labels`, `_observation_class`, `_confidence` | All nodes with observation class "observed" |
+| `CALL db.nodesByObservation.inferred()` | `_id`, `_labels`, `_observation_class`, `_confidence` | All nodes with observation class "inferred" |
+| `CALL db.nodesByObservation.predicted()` | `_id`, `_labels`, `_observation_class`, `_confidence` | All nodes with observation class "predicted" |
+| `CALL db.nodesByPlane.semantic()` | `_id`, `_labels`, `_authority_plane` | Nodes in the semantic authority plane |
+| `CALL db.nodesByPlane.scene()` | `_id`, `_labels`, `_authority_plane` | Nodes in the scene authority plane |
+| `CALL db.proofGates()` | `gate`, `status`, `evidence` | Proof gate definitions and their validation status |
+| `CALL db.proofArtifacts()` | `artifact`, `type`, `detail` | Generated proof artifacts |
+| `CALL db.executionContext()` | `context`, `fallback_disabled`, `backends_available` | Current execution context (backend, GPU availability) |
+| `CALL db.requireExecutionContext('local_cpu' \| 'local_gpu' \| 'distributed')` | `context`, `status` | Enforces a required execution context; raises a hard error on mismatch |
+| `CALL db.syncConflicts()` | `id`, `local_op`, `remote_op`, `local_clock`, `remote_clock`, `resolution`, `timestamp` | Replication conflict log with operations, vector clocks, and resolution per conflict |
+| `CALL db.affordances()` | `from`, `to`, `confidence` | All AFFORDS relationships in the graph |
 
 ```cypher
 -- Check available GPU backends
@@ -351,11 +351,11 @@ Returns all nodes classified as "observed" with their confidence scores.
 
 Coordinate frame management and spatial query observability.
 
-| Procedure | Return Columns | Description | Since |
-|---|---|---|---|
-| `CALL db.spatialMetadata()` | `crs`, `meters_per_unit`, `up_axis`, `handedness`, `calibration_version` | Current coordinate frame settings. Hard error raised on mismatch at ingest. | 10.0.0 |
-| `CALL arcflow.spatial.dispatch_stats()` | `lane_chosen`, `estimated_candidates`, `actual_candidates`, `prefilter_us`, `rtree_us`, `gpu_transfer_us`, `kernel_us`, `total_us` | Last spatial query execution metrics. `lane_chosen`: CpuLive, CpuBatch, GpuLocal, GpuMulti. | 10.0.0 |
-| `CALL arcflow.spatial.trigger_stats()` | `query_name`, `node_id`, `predicate_type`, `evaluation_us`, `fired` | Live geofence trigger metrics — one row per predicate evaluation since last reset. | 10.0.0 |
+| Procedure | Return Columns | Description |
+|---|---|---|
+| `CALL db.spatialMetadata()` | `crs`, `meters_per_unit`, `up_axis`, `handedness`, `calibration_version` | Current coordinate frame settings. Hard error raised on mismatch at ingest. |
+| `CALL arcflow.spatial.dispatch_stats()` | `lane_chosen`, `estimated_candidates`, `actual_candidates`, `prefilter_us`, `rtree_us`, `gpu_transfer_us`, `kernel_us`, `total_us` | Last spatial query execution metrics. `lane_chosen`: CpuLive, CpuBatch, GpuLocal, GpuMulti. |
+| `CALL arcflow.spatial.trigger_stats()` | `query_name`, `node_id`, `predicate_type`, `evaluation_us`, `fired` | Live geofence trigger metrics — one row per predicate evaluation since last reset. |
 
 ```cypher
 -- Inspect current coordinate frame
@@ -369,12 +369,12 @@ CALL arcflow.spatial.dispatch_stats()
 
 GPU residency and capability inspection. The engine routes algorithms to GPU automatically when available; these procedures expose the routing decisions and stack details.
 
-| Procedure | Return Columns | Description | Since |
-|---|---|---|---|
-| `CALL db.gpuStack()` | `cuda`, `thrust`, `cugraph`, `cuvs` | GPU stack availability — CUDA driver, Thrust, cuGraph, cuVS. Optional fields: `compute_capability`, `gpu_device`, `cugraph_algorithms`, `cuvs_algorithms` | 11.0.0 |
-| `CALL db.gpuCsrStatus()` | `resident`, `size_bytes`, `mutation_sequence` | GPU CSR cache residency including size in bytes and the mutation sequence the cache reflects | 11.0.0 |
-| `CALL db.gpuVectorSearch(query, label, property, k)` | `nodeId`, `similarity`, `backend` | GPU-accelerated vector similarity search via cuVS CAGRA (falls back to CPU HNSW) | 11.0.0 |
-| `CALL algo.gpu_capabilities()` | `symbol`, `available`, `detail` | GPU algorithm capability report — cuGraph availability, compute capability, per-algorithm probes | 11.0.0 |
+| Procedure | Return Columns | Description |
+|---|---|---|
+| `CALL db.gpuStack()` | `cuda`, `thrust`, `cugraph`, `cuvs` | GPU stack availability — CUDA driver, Thrust, cuGraph, cuVS. Optional fields: `compute_capability`, `gpu_device`, `cugraph_algorithms`, `cuvs_algorithms` |
+| `CALL db.gpuCsrStatus()` | `resident`, `size_bytes`, `mutation_sequence` | GPU CSR cache residency including size in bytes and the mutation sequence the cache reflects |
+| `CALL db.gpuVectorSearch(query, label, property, k)` | `nodeId`, `similarity`, `backend` | GPU-accelerated vector similarity search via cuVS CAGRA (falls back to CPU HNSW) |
+| `CALL algo.gpu_capabilities()` | `symbol`, `available`, `detail` | GPU algorithm capability report — cuGraph availability, compute capability, per-algorithm probes |
 
 ```cypher
 -- Confirm GPU stack is fully wired before running large-graph algorithms
@@ -385,18 +385,18 @@ CALL db.gpuStack()
 
 OpenTelemetry policy controls. Span recording is off by default; enable lite or full to surface execution traces in your collector.
 
-| Procedure | Return Columns | Description | Since |
-|---|---|---|---|
-| `CALL db.otelPolicy()` | `policy` | Current span recording policy (`off`, `lite`, or `full`) | 11.0.0 |
-| `CALL db.setOtelPolicy('off' \| 'lite' \| 'full')` | `policy` | Set span recording policy and return the new value | 11.0.0 |
+| Procedure | Return Columns | Description |
+|---|---|---|
+| `CALL db.otelPolicy()` | `policy` | Current span recording policy (`off`, `lite`, or `full`) |
+| `CALL db.setOtelPolicy('off' \| 'lite' \| 'full')` | `policy` | Set span recording policy and return the new value |
 
 ## Health (3)
 
-| Procedure | Return Columns | Description | Since |
-|---|---|---|---|
-| `CALL db.replicationStatus()` | `mode`, `replica_count`, `writes_enabled` | Replication mode, replica count, and write status | 5.0.0 |
-| `CALL db.checkpointMeta()` | `generation`, `nodes` | Last checkpoint generation, node/rel counts, mutation sequence | 5.0.0 |
-| `CALL db.schemaRegistry()` | `label`, `property`, `type` | Registered schema versions with property types | 5.0.0 |
+| Procedure | Return Columns | Description |
+|---|---|---|
+| `CALL db.replicationStatus()` | `mode`, `replica_count`, `writes_enabled` | Replication mode, replica count, and write status |
+| `CALL db.checkpointMeta()` | `generation`, `nodes` | Last checkpoint generation, node/rel counts, mutation sequence |
+| `CALL db.schemaRegistry()` | `label`, `property`, `type` | Registered schema versions with property types |
 
 ```cypher
 CALL db.replicationStatus()
@@ -408,14 +408,14 @@ Returns the current replication mode (standalone/primary/replica), replica count
 
 Additional domain-specific procedures.
 
-| Procedure | Return Columns | Description | Since |
-|---|---|---|---|
-| `CALL db.extensions()` | `name`, `description`, `syntax`, `reference` | All ArcFlow-unique query language extensions — LIVE views, Evidence algebra, write-back surfaces | 11.0.0 |
-| `CALL vector.search()` | `nodeId`, `score`, `labels` | Alias for algo.vectorSearch — searches first available vector index | 5.0.0 |
-| `CALL swarm.agents()` | `id`, `type`, `status`, `position` | All registered agent definitions | 8.0.0 |
-| `CALL swarm.register('agent_id', 'agent_type')` | `id`, `type`, `status` | Register a new agent (requires agent_id argument) | 8.0.0 |
-| `CALL swarm.agentCount()` | `active`, `total` | Number of active and total registered agents | 8.0.0 |
-| `CALL geo.cells()` | `cell_id`, `name`, `status`, `entities`, `agents` | Spatial grid cells with entity/agent counts | 9.0.0 |
+| Procedure | Return Columns | Description |
+|---|---|---|
+| `CALL db.extensions()` | `name`, `description`, `syntax`, `reference` | All ArcFlow-unique query language extensions — LIVE views, Evidence algebra, write-back surfaces |
+| `CALL vector.search()` | `nodeId`, `score`, `labels` | Alias for algo.vectorSearch — searches first available vector index |
+| `CALL swarm.agents()` | `id`, `type`, `status`, `position` | All registered agent definitions |
+| `CALL swarm.register('agent_id', 'agent_type')` | `id`, `type`, `status` | Register a new agent (requires agent_id argument) |
+| `CALL swarm.agentCount()` | `active`, `total` | Number of active and total registered agents |
+| `CALL geo.cells()` | `cell_id`, `name`, `status`, `entities`, `agents` | Spatial grid cells with entity/agent counts |
 
 ```cypher
 -- Register a drone agent
@@ -426,11 +426,11 @@ CALL swarm.register('drone_01', 'drone')
 
 Behavior tree procedures backed by the world model. Nodes labeled `:BehaviorNode` form the tree; `CHILD` relationships define structure.
 
-| Procedure | Return Columns | Description | Since |
-|---|---|---|---|
-| `CALL behavior.tick('treeName')` | `tree`, `status`, `running`, `success`, `failure` | Tick a behavior tree: evaluate from root, propagate SUCCESS/FAILURE/RUNNING | 9.0.0 |
-| `CALL behavior.status('treeName')` | `nodeId`, `name`, `type`, `status`, `lastTick` | Current status of all nodes in a behavior tree | 9.0.0 |
-| `CALL behavior.nodes()` | `nodeId`, `name`, `type`, `children` | List all behavior tree nodes with child counts | 9.0.0 |
+| Procedure | Return Columns | Description |
+|---|---|---|
+| `CALL behavior.tick('treeName')` | `tree`, `status`, `running`, `success`, `failure` | Tick a behavior tree: evaluate from root, propagate SUCCESS/FAILURE/RUNNING |
+| `CALL behavior.status('treeName')` | `nodeId`, `name`, `type`, `status`, `lastTick` | Current status of all nodes in a behavior tree |
+| `CALL behavior.nodes()` | `nodeId`, `name`, `type`, `children` | List all behavior tree nodes with child counts |
 
 ```cypher
 -- Tick a behavior tree named "patrol"
