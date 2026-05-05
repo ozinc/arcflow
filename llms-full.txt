@@ -119,6 +119,52 @@ const { rows, loading, error } = useQuery(db, "MATCH (n:Person) RETURN n.name", 
 const { rows } = useLiveQuery(db, "MATCH (n:Alert) WHERE n.active = true RETURN n")
 ```
 
+## Python — fast paths beyond `db.execute`
+
+Python uses ctypes against the same engine binary. Three fast paths to know about; `db.execute(...)` works fine for normal queries but is 10–100× slower than these for bulk ingest and read-heavy workloads.
+
+```python
+from arcflow import ArcFlow
+from concurrent.futures import ThreadPoolExecutor
+
+db = ArcFlow()                  # in-memory; ArcFlow("./data") for persistent
+
+# ── 1. Bulk ingest ──
+# bulk_create_nodes takes a list of (labels, props) tuples and returns NodeIds in input order.
+entity_ids = db.bulk_create_nodes([(["Entity"], {"id": i, "x": float(i)}) for i in range(95)])
+frame_ids  = db.bulk_create_nodes([(["Frame"],  {"id": f"f_{t}"})        for t in range(46_000)])
+
+# bulk_create_relationships takes a single rel_type and a list of (from_id, to_id, props) tuples.
+edges = [(eid, fid, {"x": float(ei), "y": float(fi)})
+         for fi, fid in enumerate(frame_ids) for ei, eid in enumerate(entity_ids)]
+db.bulk_create_relationships("OBSERVED_AT", edges)
+# ~1M edges/sec on M1; per-row CREATE is ~3–10K/sec.
+# CREATE semantics — every call allocates a new edge. Use Cypher MERGE for find-or-create.
+
+# ── 2. Zero-copy result handoff ──
+result = db.execute("MATCH (e:Entity) WHERE e._confidence > 0.8 RETURN e.id, e.x, e.y, e._confidence")
+tbl = result.to_arrow()         # pyarrow.RecordBatch — zero-copy via Arrow C Stream
+df  = result.to_polars()        # polars.DataFrame, Arrow-backed
+df  = result.to_pandas()        # pandas.DataFrame, Arrow-backed since pandas 2
+# Reads ~18.8× faster than row-by-row iteration; types preserved end-to-end.
+# A Player named "42" stays a String — pre-1.6.7 wrappers heuristically parsed cells and got this wrong.
+# DuckDB interop: con.register("t", tbl); con.execute("SELECT ... FROM t")
+
+# Per-column type mapping:
+#   Int → Int64, Float → Float64, String → Utf8, Bool → Boolean
+#   [Int…] → List<Int64>, [Float…] → List<Float64>, [String…] → List<Utf8>
+#   NodeId / RelId → UInt64
+#   Point / Polygon → Utf8 (struct form planned in v1.7)
+
+# ── 3. Threading concurrency ──
+# ctypes releases the GIL on every native call; ConcurrentStore is MVCC-safe for parallel readers.
+with ThreadPoolExecutor(max_workers=8) as pool:
+    results = list(pool.map(lambda q: db.execute(q), queries))
+# 4.75× speedup with 8 threads on M1.
+```
+
+Full Python reference: `docs/bindings.mdx`.
+
 ## GQL / WorldCypher — Complete Syntax Reference
 
 ### CREATE
