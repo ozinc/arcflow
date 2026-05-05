@@ -185,7 +185,7 @@ Per-column type mapping:
 | `[Float…]`           | `List<Float64>`   |
 | `[String…]`          | `List<Utf8>`      |
 | Node ID / Rel ID     | `UInt64`          |
-| Point / Polygon      | `Utf8` (v1.7 → `Struct<…>`) |
+| Point / Polygon      | `Utf8` (geometry as WKT) |
 
 ### Threading concurrency — `concurrent.futures` works
 
@@ -272,11 +272,8 @@ the npm row in the matrix above.
 
 ## React
 
-React hooks for live graph data in components.
-
-The `@arcflow/react` package is published alongside `arcflow` once the npm
-row in the install matrix flips to shipped — install both per the
-[Installation page](/installation).
+React hooks for live graph data in components. `@arcflow/react` ships
+alongside `arcflow`; install both per the [Installation page](/installation).
 
 ```tsx
 import { openInMemory } from 'arcflow'
