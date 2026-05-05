@@ -88,6 +88,12 @@ result = db.execute("MATCH (n:Person) RETURN n.name, n.age")
 for row in result:
     print(row)  # {'name': 'Alice', 'age': '30'}
 
+# Parameterized queries (typed) — no manual string escaping
+result = db.execute(
+    "MATCH (p:Person) WHERE p.name = $name RETURN p.age",
+    params={"name": "Alice"},
+)
+
 # Algorithms work the same way
 result = db.execute("CALL algo.pageRank()")
 for row in result:
@@ -100,8 +106,110 @@ with ArcFlow() as db:
     print(result.row_count)
 
 # Version check
-print(ArcFlow.version())  # "1.5.0"
+print(ArcFlow.version())  # "1.6.7"
 ```
+
+### High-throughput ingest — `bulk_create_nodes` / `bulk_create_relationships`
+
+Per-row `CREATE` round-trips through the parser at ~3–10 K writes/sec.
+For sensor streams, batch ingests, or any workload where you already have
+a list of rows in Python, the bulk APIs bypass the parser and write at
+~1 M ops/sec.
+
+```python
+from arcflow import ArcFlow
+
+db = ArcFlow()
+
+# 1) Bulk-create nodes — returns NodeIds in input order.
+entity_ids = db.bulk_create_nodes([
+    (["Entity"], {"id": i, "x": float(i), "y": 0.0})
+    for i in range(95)
+])
+frame_ids = db.bulk_create_nodes([
+    (["Frame"], {"id": f"frame_{t}", "ts_ms": t * 16})
+    for t in range(46_000)  # one game's tracking frames
+])
+
+# 2) Bulk-create relationships — parallel arrays, one rel_type per call.
+edges = []
+for fi, fid in enumerate(frame_ids):
+    for ei, eid in enumerate(entity_ids):
+        edges.append((eid, fid, {"x": float(ei), "y": float(fi)}))
+
+rel_ids = db.bulk_create_relationships("OBSERVED_AT", edges)
+# 4.37M edges in ~4s on M1 — 1M+ writes/sec sustained.
+```
+
+Behaviour: `CREATE` semantics — every call allocates a new edge, even between
+the same pair of nodes. Use Cypher `MERGE` if you need find-or-create.
+
+### Zero-copy result handoff — `result.to_arrow()`
+
+Materializing a 1M-row result as `list[dict]` is slow (per-row Python object
+allocation) and lossy (every cell becomes a string). `result.to_arrow()`
+hands typed Arrow buffers to PyArrow / Polars / Pandas / DuckDB zero-copy.
+
+```python
+result = db.execute("MATCH (p:Player) RETURN p.jersey, p.name, p.age")
+
+# Three flavours of typed handoff — pick whichever fits your stack.
+tbl = result.to_arrow()      # pyarrow.RecordBatch
+df  = result.to_polars()     # polars.DataFrame  (Arrow-backed, zero-copy)
+df  = result.to_pandas()     # pandas.DataFrame   (Arrow-backed since pandas 2)
+
+tbl.schema
+# field("p.jersey", int64)
+# field("p.name",   utf8)
+# field("p.age",    int64)
+
+# Column types are honoured exactly — a Player whose name is "42" stays
+# a String, not coerced to int. (Pre-1.6.7 wrappers heuristically parsed
+# every cell and got this wrong; Arrow handoff fixes that at source.)
+
+# Direct DuckDB interop:
+import duckdb
+con = duckdb.connect()
+con.register("players", tbl)
+con.execute("SELECT count(*) FROM players WHERE jersey > 50").fetchone()
+```
+
+Per-column type mapping:
+
+| Cypher / Engine type | Arrow DataType |
+|---|---|
+| Int                  | `Int64`           |
+| Float                | `Float64`         |
+| String               | `Utf8`            |
+| Bool                 | `Boolean`         |
+| `[Int…]`             | `List<Int64>`     |
+| `[Float…]`           | `List<Float64>`   |
+| `[String…]`          | `List<Utf8>`      |
+| Node ID / Rel ID     | `UInt64`          |
+| Point / Polygon      | `Utf8` (v1.7 → `Struct<…>`) |
+
+### Threading concurrency — `concurrent.futures` works
+
+ctypes releases the Python GIL for every native call; ArcFlow's
+`ConcurrentStore` is MVCC-safe for parallel readers. Multiple Python threads
+on one `ArcFlow` instance run in real parallel rather than serialized:
+
+```python
+from concurrent.futures import ThreadPoolExecutor
+
+db = ArcFlow()
+queries = [
+    "MATCH (p:Person) WHERE p.age > 30 RETURN count(*)",
+    "MATCH (p:Player) RETURN avg(p.jersey)",
+    # ...
+]
+
+with ThreadPoolExecutor(max_workers=8) as pool:
+    results = [r for r in pool.map(db.execute, queries)]
+```
+
+Reads parallelize cleanly. Writes serialize through MVCC commit but do not
+deadlock or torn-read.
 
 ## TypeScript / Node.js
 

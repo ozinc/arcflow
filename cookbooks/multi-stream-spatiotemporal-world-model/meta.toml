@@ -13,5 +13,5 @@ external_deps = [
 ]
 runtime_minutes = 8
 gpu_required = false
-manifest_pin = "1.6.6"
+manifest_pin = "1.6.7"
 data_provenance = "synthesized"

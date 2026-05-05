@@ -8,9 +8,9 @@ graph triggers maintain reactive analytics at the source cadence.
 
 **Audience:** python, data-engineer, ml, agent.
 
-**Runtime:** ~8 minutes.
+**Runtime:** ~30 seconds (load) plus a couple minutes for the per-step queries.
 
-**ArcFlow version:** 1.6.6.
+**ArcFlow version:** 1.6.7.
 
 ## What this recipe is for
 
@@ -58,19 +58,21 @@ ideas the recipe is teaching.
 1. **DDD schema for live tracking.** `Session` / `Entity` / `Frame` / `Stream`
    bounded contexts. Position lives on `OBSERVED_AT` edges (per-observation),
    not on `Entity` nodes (stable identity).
-2. **60 Hz tracking ingest** of ~40K observations via per-edge `CREATE`
-   over the public Python API. Each observation lands as an
+2. **60 Hz tracking ingest** of ~20K observations via the typed bulk APIs
+   (`db.bulk_create_nodes` / `db.bulk_create_relationships`, v1.6.7+).
+   Each observation lands as an
    `(:Entity)-[:OBSERVED_AT {x, y, z, _confidence, _observation_class}]->(:Frame)`
    edge. Position lives on the edge so the same Entity can be observed by
-   multiple sensor streams independently.
+   multiple sensor streams independently. The bulk path bypasses the Cypher
+   parser entirely — ~1M writes/sec vs ~3K/sec for per-row `MATCH+CREATE`.
+   Same shape works for football-transformer's NFL NGS workload (1M+ edges
+   per game, formerly hours, now seconds).
 
-   **Required prerequisite for non-trivial scale**: `CREATE INDEX ON
-   :Label(prop)` for every label that's MATCH-looked-up by property in
-   the hot loop. The recipe's loader does this for `:Entity(entity_id)`,
-   `:Frame(frame_idx)`, and the auxiliary-stream join keys. Without these
-   indexes, the per-edge `MATCH (n:Label {prop: val})` lookup falls back
-   to an O(N) column scan — fine at a few hundred nodes, painful at
-   50K+. See [Performance considerations](#performance-considerations).
+   **Indexes still recommended** for downstream `MATCH (n:Label {prop: val})`
+   *query-time* lookups in steps 05 onwards: `:Entity(entity_id)`,
+   `:Frame(frame_idx)`, and the auxiliary-stream join keys. The bulk-create
+   path itself doesn't need them (it takes NodeIds directly), but query-time
+   property lookups still benefit. See [Performance considerations](#performance-considerations).
 3. **Multi-stream attach.** A 3D scene-reconstruction stream at 30 Hz
    (one frame per two tracking frames). A 200 Hz biomechanical stream on
    one entity (one observation per ~0.3 tracking frames — denser than the
@@ -466,81 +468,118 @@ coordinate frame, attach to canonical Frames.
 
 ## Performance considerations
 
-**This recipe runs on a synthesized 30-second sample (~40K observations,
-~22 entities). At that scale, in-memory `ArcFlow()` and per-edge
-`CREATE` complete in under 10 seconds end-to-end on a single thread.**
+**This recipe runs on a synthesized 30-second sample (~20K observations,
+~22 entities). With the v1.6.7 bulk APIs the entire load finishes in
+~0.5 seconds on a single thread; pre-1.6.7 per-row `MATCH+CREATE` took
+~10 seconds for the same shape.**
 
 Production-scale workloads (a full session of millions of edges across
-hundreds of entities, persistent on-disk path) hit different
-characteristics. The current public Python API is per-row `execute(cypher)`,
-which means every observation goes through the parser and a
-`MATCH (n {id: $x})` lookup. That lookup is currently a linear scan over
-the `id` property on every node of the matched label — it does not yet
-use a property index. Throughput therefore degrades as the database
-grows.
+hundreds of entities) follow the same pattern — only the multipliers grow.
+Three perf primitives carry the weight:
 
-What this means in practice:
+### 1. `bulk_create_nodes` / `bulk_create_relationships` — for ingest
 
-- **Recipe scale (≤ 50K edges)**: in-memory + per-edge `CREATE` works
-  well as long as you've declared the indexes the loader sets up
-  (`CREATE INDEX ON :Entity(entity_id)`, `CREATE INDEX ON :Frame(frame_idx)`,
-  etc.). The indexes turn the per-row `MATCH (n:Label {prop: val})`
-  from O(N) into O(1).
-- **Single-game / single-session scale (~1M edges)**: still works with
-  the indexes, but the per-edge round-trip starts to dominate. Best
-  shape today:
-  - Keep the loader's fixture stage in-memory and re-stage from Parquet
-    each session (the pattern this recipe uses with `_load.py` —
-    re-loading from disk is faster than re-running per-edge CREATEs).
-  - Co-locate every node creation with its referencing edges in the same
-    `CREATE` statement when feasible, so the lookup is avoided entirely:
-    `CREATE (e:Entity {…})-[:OBSERVED_AT {…}]->(f:Frame {…})` instead of
-    `MATCH … MATCH … CREATE`.
-- **Streaming / continuous ingest at million-edge-per-session scale**:
-  an in-process batch-CREATE / in-Cypher `UNWIND $rows AS r CREATE …`
-  primitive that avoids the per-row Python round-trip is on the engine
-  roadmap. Until then, batch + replay is the recommended shape rather
-  than per-frame live-tick ingest at production scale.
+Per-row `MATCH+CREATE` round-trips the parser at ~3–10K writes/sec and
+decays under graph growth. The bulk-array path bypasses the parser
+entirely and writes at ~1M ops/sec. Football-transformer NFL NGS evaluation
+(2026-05-03): a single game's ~1M `OBSERVED_AT` edges loads in seconds
+instead of hours.
 
-**Why this matters**: an early alpha evaluation (football-transformer NGS,
-2026-05-03) hit per-row `CREATE` decay from 395 → 100 writes/sec at
-46K-frame scale because their loader didn't `CREATE INDEX` first. The
-fix landed in engine 1.6.6+ (find_nodes now respects explicit indexes
-even when the dense-store column scan path is also available); the
-recipe's `_load.py` documents the index discipline so subsequent users
-hit the fast path on the first try.
+```python
+# Old shape (per-row, parser-bound):
+for r in rows:
+    db.execute(f"MATCH (e:Entity {{id: {r['eid']}}}), (f:Frame {{id: {r['fid']}}}) "
+               f"CREATE (e)-[:OBSERVED_AT {{seq: {r['seq']}}}]->(f)")
+
+# New shape (bulk, parser-free):
+ents = db.bulk_create_nodes([(["Entity"], {"id": e}) for e in entities])
+fids = db.bulk_create_nodes([(["Frame"], {"id": f}) for f in frames])
+db.bulk_create_relationships(
+    "OBSERVED_AT",
+    [(ents[r["eid"]], fids[r["fid"]], {"seq": r["seq"]}) for r in rows],
+)
+```
+
+CREATE semantics — every call allocates a new edge. Use Cypher `MERGE` if
+you need find-or-create.
+
+### 2. `result.to_arrow()` — for reads
+
+Materializing a 1M-row `MATCH ... RETURN` as `list[dict]` pays per-row
+Python object cost AND loses types (every cell becomes a string).
+`result.to_arrow()` hands typed Arrow buffers zero-copy:
+
+```python
+tbl = db.execute("MATCH (e)-[r:OBSERVED_AT]->(f) "
+                 "RETURN e.entity_id, r.x, r.y, r.speed").to_arrow()
+# pyarrow.RecordBatch — typed columns, ready for pandas/polars/duckdb.
+
+import polars as pl
+df = pl.from_arrow(tbl)
+
+# Or directly into DuckDB for fast SQL analytics:
+import duckdb
+duckdb.connect().register("obs", tbl).execute(
+    "SELECT entity_id, AVG(speed) FROM obs GROUP BY entity_id"
+).fetchall()
+```
+
+Per-column types are honored (Int → int64, Float → float64, String → utf8,
+Bool → bool, list-typed properties → typed Arrow lists). 18.8× faster than
+`list(result)` on 50K-row reads in benchmarks.
+
+### 3. Threading concurrency — `concurrent.futures` works
+
+ctypes releases the GIL for every native call; `ConcurrentStore` is
+MVCC-safe for parallel readers. Multiple Python threads on one ArcFlow
+instance run in real parallel:
+
+```python
+from concurrent.futures import ThreadPoolExecutor
+with ThreadPoolExecutor(max_workers=8) as pool:
+    results = list(pool.map(db.execute, queries))
+# 4.75× speedup with 8 threads on M1 (8-core).
+```
+
+Reads parallelize cleanly; writes serialize through MVCC commit (no
+deadlock, no torn rows).
 
 Spatial KNN / radius / bbox queries resolve through the R*-tree on edge
 properties and stay sub-millisecond regardless of database size — that
-path is independent of the per-row `CREATE` characteristics above.
+path is independent of the bulk-create / Arrow paths above.
 
-## Known alpha caveats
+## Engine fixes shipped in 1.6.7
 
-The recipe pattern relies on a handful of Cypher idioms that work cleanly
-in the alpha. A few patterns to avoid until the engine fixes land:
+The following customer-blocking issues from the football-transformer NFL
+NGS evaluation (2026-05-03) are fixed in the engine 1.6.7 release this
+recipe pins to:
 
-- **Compound-label projection silently drops rows.** `MATCH (p:Entity:Player)
-  RETURN p.team` may return fewer rows than the corresponding `count(p)`
-  (the `:Entity:Player` materialization path drops compound nodes when
-  the queried label isn't the primary label). Workaround: route property
-  reads through the most-specific single label, or use `WHERE p.id IS NOT
-  NULL` to force projection through the index-aware accessor.
-- **Two-clause MATCH for reads can re-bind anchor variables.** `MATCH (snap:Frame {…}) MATCH (e:Entity)-[r]->(snap) RETURN e.id` may bind `e`
-  to the Frame from the first clause. Workaround: use a single MATCH chain:
-  `MATCH (e:Entity)-[r:OBSERVED_AT]->(snap:Frame {…}) RETURN e.id, r.x`.
-- **`AS OF seq <expr>` accepts only literal integers in the alpha.**
-  `WITH f.seq AS s MATCH (e) AS OF seq s` doesn't bind. Workaround: read
-  the seq via Python and substitute as a literal.
-- **`result.get(row, col)` returns strings universally.** Coerce to int /
-  float / bool in your wrapper if you need typed values.
+- **Compound-label projection no longer silently drops rows.** `MATCH
+  (p:Entity:Player) RETURN p.team` returns the same row count as
+  `count(p)` (the vectorized fast path now bails out for compound-label
+  scenarios; row-based path goes through `effective_property` which
+  reads compound nodes correctly).
+- **Two-clause MATCH binds correctly.** `MATCH (snap:Frame {…})
+  MATCH (e:Entity)-[r]->(snap) RETURN e.id` binds `e` to the entity, not
+  the frame.
+- **`AS OF seq $param` works** with `db.execute(query, params={"s": seq})`.
+  Full variable-binding form (`WITH f.seq AS s ... AS OF seq s`) is still
+  deferred — read the seq via a separate query and pass via params.
+- **`result.column_type(col)` returns typed metadata.** Avoids the heuristic
+  coercion that mistyped string-of-digits columns as int.
+- **`db.execute(query, params={...})` takes typed parameters.** No manual
+  string escaping required; routes through the typed-params pipeline.
+- **`db.bulk_create_nodes` / `db.bulk_create_relationships`** for
+  high-throughput ingest (this recipe's `_load.py` uses them).
+- **`result.to_arrow()` / `to_polars()` / `to_pandas()`** for zero-copy
+  typed result handoff.
 
-These are tracked in the engine repo's
-`kanban/planning/2026-05-04-customer-evaluation-findings/` along with
-the customer's clean repros.
+Full changelog and customer repros live in the engine repo's
+`kanban/planning/2026-05-04-customer-evaluation-findings/`.
 
 ## Notes
 
-- Pinned to ArcFlow 1.6.6 (see `meta.toml.manifest_pin`).
+- Pinned to ArcFlow 1.6.7 (see `meta.toml.manifest_pin`).
 - `oz-arcflow` resolves through OZ's PEP 503 simple index at
   `https://staging.oz.com/pypi/simple/`.
 - The recipe deliberately uses **only ArcFlow + pyarrow + numpy** for

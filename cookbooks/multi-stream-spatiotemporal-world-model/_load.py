@@ -1,13 +1,23 @@
 """Shared loader used by every step that needs the world model in memory.
 
 Each runnable step opens a fresh in-memory ArcFlow database and re-loads from
-the synthesized Parquet files. Loading ~46K observations + auxiliary streams
-takes ~10 seconds; for the recipe scale, re-loading per step is faster than
-the disk round-trip would be and keeps every step independently runnable.
+the synthesized Parquet files. With the v1.6.7 ``bulk_create_nodes`` /
+``bulk_create_relationships`` APIs, ~46K Frames + ~20K observations + the
+auxiliary streams now load in well under a second — fast enough that
+re-loading per step is preferable to a disk round-trip and keeps every step
+independently runnable.
 
 For a real session-scale workload (millions of frames, multiple hours), swap
 this for a persistent ArcFlow path and load once. The recipe shape stays
 identical.
+
+Performance note (football-transformer NFL NGS evaluation, 2026-05-03):
+
+The earlier per-row ``MATCH+CREATE`` loader bottlenecked at ~3.4K writes/sec
+and decayed under graph growth. The bulk-array path bypasses the parser
+entirely and writes at ~1M ops/sec — the right tool for any workload where
+you already have a list of rows in Python (sensor streams, batch ingest,
+parquet pipelines, etc.).
 """
 from __future__ import annotations
 
@@ -34,11 +44,6 @@ def ground_truth() -> dict:
     return json.loads((DATA / "ground_truth.json").read_text())
 
 
-def _esc(s: str) -> str:
-    """Cypher single-quoted-string escape — for the recipe's known-safe inputs."""
-    return s.replace("'", "\\'")
-
-
 def load(verbose: bool = False) -> ArcFlow:
     """Load all four streams into a fresh in-memory ArcFlow.
 
@@ -47,11 +52,15 @@ def load(verbose: bool = False) -> ArcFlow:
     Order:
         1. Singletons: Session + Sensor + Group nodes
         2. Entity nodes (with stable IDs and group membership)
-        3. Frame nodes (60 Hz) + Frame.NEXT chain
+        3. Frame nodes (60 Hz)
         4. OBSERVED_AT edges (Entity -> Frame, with kinematics + confidence)
         5. SceneReconstruction nodes + HAS_SCENE edges
         6. BiomechanicalSample nodes + SAMPLED_AT edges
         7. Event nodes + ANCHORED_AT edges
+
+    All node/edge creates use the typed bulk APIs (`bulk_create_nodes` /
+    `bulk_create_relationships`) — single MVCC transaction per call, no
+    per-row parser cost.
     """
     require_sample_data()
     truth = ground_truth()
@@ -60,17 +69,10 @@ def load(verbose: bool = False) -> ArcFlow:
 
     # 0. Indexes BEFORE bulk inserts.
     #
-    # NOTE(invariant): every node label that gets MATCH-looked-up by a
-    #   property in the hot path needs a CREATE INDEX declaration first.
-    #   Without it, find_nodes() falls through to a per-label column scan
-    #   (O(N)) instead of the property_index hit (O(1)). At a few hundred
-    #   nodes the difference is in the noise; at 50K+ nodes per label the
-    #   curve diverges sharply (the football-transformer alpha eval hit
-    #   <100 writes/sec at the 1M-edge / 46K-frame mark without these).
-    #
-    # Index everything on the hot path: Entity by entity_id, Frame by
-    # frame_idx (the two MATCH lookups every OBSERVED_AT insert does),
-    # plus the auxiliary-stream join keys.
+    # Bulk-create-edges takes NodeIds directly (no MATCH lookup), so the
+    # explicit indexes below are not strictly required for the bulk path.
+    # We keep them because *query-time* MATCH-by-property lookups in the
+    # downstream cookbook steps still benefit (and stay O(1)).
     for stmt in (
         "CREATE INDEX ON :Entity(entity_id)",
         "CREATE INDEX ON :Frame(frame_idx)",
@@ -82,160 +84,168 @@ def load(verbose: bool = False) -> ArcFlow:
         db.execute(stmt)
 
     # 1. Session singleton + Sensor singletons + Groups
-    db.execute(
-        f"CREATE (:Session {{"
-        f"  session_id: '{_esc(truth['session_id'])}',"
-        f"  duration_s: {truth['duration_s']},"
-        f"  track_hz: {truth['track_hz']},"
-        f"  scene_hz: {truth['scene_hz']},"
-        f"  imu_hz: {truth['imu_hz']}"
-        f"}})"
+    db.bulk_create_nodes([
+        (["Session"], {
+            "session_id": truth["session_id"],
+            "duration_s": truth["duration_s"],
+            "track_hz": truth["track_hz"],
+            "scene_hz": truth["scene_hz"],
+            "imu_hz": truth["imu_hz"],
+        }),
+    ])
+    db.bulk_create_nodes([
+        (["Sensor"], {
+            "sensor_id": s,
+            "coordinate_frame": "session-local",
+            "_observation_class": "observed",
+        })
+        for s in ("primary_tracker", "scene_reconstructor", "imu_unit")
+    ])
+    group_ids = db.bulk_create_nodes([
+        (["Group"], {"group_id": g, "session_id": truth["session_id"]})
+        for g in ("alpha", "beta")
+    ])
+    group_id_by_name = {"alpha": group_ids[0], "beta": group_ids[1]}
+
+    # 2. Entity nodes — bulk-create, then bulk-create the MEMBER_OF edges
+    # in one parallel-array call.
+    entity_specs = [
+        (group, n)
+        for group in ("alpha", "beta")
+        for n in range(11)
+    ]
+    entity_ids = db.bulk_create_nodes([
+        (["Entity"], {
+            "entity_id": f"{group}-{n:02d}",
+            "group_id": group,
+        })
+        for group, n in entity_specs
+    ])
+    entity_id_by_name = {
+        f"{group}-{n:02d}": eid
+        for (group, n), eid in zip(entity_specs, entity_ids)
+    }
+    db.bulk_create_relationships(
+        "MEMBER_OF",
+        [
+            (entity_ids[i], group_id_by_name[group], {
+                "_observation_class": "observed",
+                "_confidence": 1.0,
+            })
+            for i, (group, _n) in enumerate(entity_specs)
+        ],
     )
-    for sensor in ("primary_tracker", "scene_reconstructor", "imu_unit"):
-        db.execute(
-            f"CREATE (:Sensor {{"
-            f"  sensor_id: '{sensor}',"
-            f"  coordinate_frame: 'session-local',"
-            f"  _observation_class: 'observed'"
-            f"}})"
-        )
-    for group in ("alpha", "beta"):
-        db.execute(
-            f"CREATE (:Group {{group_id: '{group}', session_id: '{_esc(truth['session_id'])}'}})"
-        )
 
-    # 2. Entity nodes
-    for group in ("alpha", "beta"):
-        for n in range(11):
-            entity_id = f"{group}-{n:02d}"
-            db.execute(
-                f"CREATE (:Entity {{"
-                f"  entity_id: '{entity_id}', group_id: '{group}'"
-                f"}})"
-            )
-            # MEMBER_OF edge with observation class
-            db.execute(
-                f"MATCH (e:Entity {{entity_id: '{entity_id}'}}),"
-                f"      (g:Group {{group_id: '{group}'}})"
-                f" CREATE (e)-[:MEMBER_OF {{"
-                f"  _observation_class: 'observed', _confidence: 1.0"
-                f"}}]->(g)"
-            )
-
-    # 3. Frame nodes at 60 Hz.
-    # NOTE: The schema (see README.md "Schema design") describes Frame.NEXT
-    # as an explicit linked list. At recipe scale (~hundreds of frames per second
-    # of session) the per-edge MATCH+CREATE round-trip dominates load time
-    # and trajectory queries can ORDER BY frame_idx for the same result.
-    # NEXT is left for a future production-shape variant where bulk-load
-    # primitives (FlatSpatialIndex::bulk_load, batched CREATE) avoid the
-    # round-trip cost.
+    # 3. Frame nodes at 60 Hz — one bulk call.
     n_frames = truth["n_frames"]
     if verbose:
         print(f"  creating {n_frames} Frame nodes...")
-    for f in range(n_frames):
-        t_ns = f * (10**9 // truth["track_hz"])
-        db.execute(
-            f"CREATE (:Frame {{"
-            f"  session_id: '{_esc(truth['session_id'])}',"
-            f"  frame_idx: {f},"
-            f"  time_master_ns: {t_ns}"
-            f"}})"
-        )
+    frame_ids = db.bulk_create_nodes([
+        (["Frame"], {
+            "session_id": truth["session_id"],
+            "frame_idx": f,
+            "time_master_ns": f * (10**9 // truth["track_hz"]),
+        })
+        for f in range(n_frames)
+    ])
+    # frame_idx == position in list, so frame_ids[idx] gives the NodeId.
 
-    # 4. OBSERVED_AT edges — the heavy lift
+    # 4. OBSERVED_AT edges — the heavy lift. ~20K edges in well under 100ms
+    # via parallel-array bulk-create.
     if verbose:
         print(f"  loading tracking observations ({truth['n_observations']:,})...")
     rows = pq.read_table(DATA / "tracking.parquet").to_pylist()
-    for r in rows:
-        db.execute(
-            "MATCH (e:Entity {entity_id: '" + r["entity_id"] + "'}),"
-            f"      (f:Frame {{frame_idx: {r['frame_idx']}}})"
-            f" CREATE (e)-[:OBSERVED_AT {{"
-            f"  x: {r['x']}, y: {r['y']},"
-            f"  speed: {r['speed']}, accel: {r['accel']},"
-            f"  heading_deg: {r['heading_deg']}, orient_deg: {r['orient_deg']},"
-            f"  _confidence: {r['dqi']},"
-            f"  _observation_class: 'observed',"
-            f"  _source: 'primary_tracker'"
-            f"}}]->(f)"
+    obs_edges = [
+        (
+            entity_id_by_name[r["entity_id"]],
+            frame_ids[r["frame_idx"]],
+            {
+                "x": r["x"], "y": r["y"],
+                "speed": r["speed"], "accel": r["accel"],
+                "heading_deg": r["heading_deg"], "orient_deg": r["orient_deg"],
+                "_confidence": r["dqi"],
+                "_observation_class": "observed",
+                "_source": "primary_tracker",
+            },
         )
+        for r in rows
+    ]
+    db.bulk_create_relationships("OBSERVED_AT", obs_edges)
 
     # 5. SceneReconstruction nodes + HAS_SCENE edges.
-    # NOTE: split into two execute() calls per scene — single-statement
-    # MATCH+CREATE node+CREATE edge doesn't reliably persist the edge in
-    # the alpha query path. Two-step (CREATE node, then MATCH-both+CREATE
-    # edge) is the durable shape the rest of the recipe relies on.
     if verbose:
         print(f"  loading {truth['n_scenes']} scene reconstructions...")
-    for r in pq.read_table(DATA / "scenes.parquet").to_pylist():
-        scene_id = f"scene-{int(r['frame_master']):06d}"
-        db.execute(
-            f"CREATE (:SceneReconstruction {{"
-            f"  scene_id: '{scene_id}',"
-            f"  frame_master: {r['frame_master']},"
-            f"  session_id: '{_esc(r['session_id'])}',"
-            f"  scene_uri: '{_esc(r['scene_uri'])}',"
-            f"  scene_size_bytes: {r['scene_size_bytes']},"
-            f"  splat_count: {r['splat_count']},"
-            f"  _confidence: {r['sqi']},"
-            f"  _observation_class: 'observed',"
-            f"  _source: 'scene_reconstructor'"
-            f"}})"
-        )
-        db.execute(
-            f"MATCH (f:Frame {{frame_idx: {r['frame_master']}}}),"
-            f"      (s:SceneReconstruction {{scene_id: '{scene_id}'}})"
-            f" CREATE (f)-[:HAS_SCENE]->(s)"
-        )
+    scene_rows = pq.read_table(DATA / "scenes.parquet").to_pylist()
+    scene_ids = db.bulk_create_nodes([
+        (["SceneReconstruction"], {
+            "scene_id": f"scene-{int(r['frame_master']):06d}",
+            "frame_master": r["frame_master"],
+            "session_id": r["session_id"],
+            "scene_uri": r["scene_uri"],
+            "scene_size_bytes": r["scene_size_bytes"],
+            "splat_count": r["splat_count"],
+            "_confidence": r["sqi"],
+            "_observation_class": "observed",
+            "_source": "scene_reconstructor",
+        })
+        for r in scene_rows
+    ])
+    db.bulk_create_relationships(
+        "HAS_SCENE",
+        [
+            (frame_ids[int(r["frame_master"])], scene_ids[i], {})
+            for i, r in enumerate(scene_rows)
+        ],
+    )
 
     # 6. BiomechanicalSample nodes + SAMPLED_AT edges (only on alpha-00).
-    # Same two-step pattern as scenes.
     if verbose:
         print(f"  loading {truth['n_imu']} biomechanical samples...")
-    for r in pq.read_table(DATA / "imu.parquet").to_pylist():
-        sample_id = f"imu-{r['time_master_ns']}"
-        db.execute(
-            f"CREATE (:BiomechanicalSample {{"
-            f"  sample_id: '{sample_id}',"
-            f"  t_unix_ns: {r['t_unix_ns']},"
-            f"  time_master_ns: {r['time_master_ns']},"
-            f"  pred_frame: {r['pred_frame']},"
-            f"  next_frame: {r['next_frame']},"
-            f"  gyro_x: {r['gyro_x']}, gyro_y: {r['gyro_y']}, gyro_z: {r['gyro_z']},"
-            f"  accel_x: {r['accel_x']}, accel_y: {r['accel_y']}, accel_z: {r['accel_z']},"
-            f"  _observation_class: 'observed',"
-            f"  _confidence: 0.95,"
-            f"  _source: 'imu_unit',"
-            f"  _coordinate_frame: 'sensor-local'"
-            f"}})"
-        )
-        db.execute(
-            "MATCH (e:Entity {entity_id: 'alpha-00'}),"
-            f"      (b:BiomechanicalSample {{sample_id: '{sample_id}'}})"
-            f" CREATE (e)-[:SAMPLED_AT]->(b)"
-        )
+    imu_rows = pq.read_table(DATA / "imu.parquet").to_pylist()
+    imu_ids = db.bulk_create_nodes([
+        (["BiomechanicalSample"], {
+            "sample_id": f"imu-{r['time_master_ns']}",
+            "t_unix_ns": r["t_unix_ns"],
+            "time_master_ns": r["time_master_ns"],
+            "pred_frame": r["pred_frame"],
+            "next_frame": r["next_frame"],
+            "gyro_x": r["gyro_x"], "gyro_y": r["gyro_y"], "gyro_z": r["gyro_z"],
+            "accel_x": r["accel_x"], "accel_y": r["accel_y"], "accel_z": r["accel_z"],
+            "_observation_class": "observed",
+            "_confidence": 0.95,
+            "_source": "imu_unit",
+            "_coordinate_frame": "sensor-local",
+        })
+        for r in imu_rows
+    ])
+    alpha00_id = entity_id_by_name["alpha-00"]
+    db.bulk_create_relationships(
+        "SAMPLED_AT",
+        [(alpha00_id, sid, {}) for sid in imu_ids],
+    )
 
-    # 7. Event nodes + ANCHORED_AT edges (two-step pattern).
+    # 7. Event nodes + ANCHORED_AT edges.
     if verbose:
         print(f"  loading {truth['n_events']} events...")
-    for ev_idx, r in enumerate(pq.read_table(DATA / "events.parquet").to_pylist()):
-        event_id = f"event-{ev_idx:06d}"
-        db.execute(
-            f"CREATE (:Event {{"
-            f"  event_id: '{event_id}',"
-            f"  kind: '{_esc(r['kind'])}',"
-            f"  frame_master: {r['frame_master']},"
-            f"  time_master_ns: {r['time_master_ns']},"
-            f"  payload: '{_esc(r['payload_json'])}',"
-            f"  _observation_class: 'observed'"
-            f"}})"
-        )
-        db.execute(
-            f"MATCH (ev:Event {{event_id: '{event_id}'}}),"
-            f"      (f:Frame {{frame_idx: {r['frame_master']}}})"
-            f" CREATE (ev)-[:ANCHORED_AT]->(f)"
-        )
+    event_rows = pq.read_table(DATA / "events.parquet").to_pylist()
+    event_ids = db.bulk_create_nodes([
+        (["Event"], {
+            "event_id": f"event-{i:06d}",
+            "kind": r["kind"],
+            "frame_master": r["frame_master"],
+            "time_master_ns": r["time_master_ns"],
+            "payload": r["payload_json"],
+            "_observation_class": "observed",
+        })
+        for i, r in enumerate(event_rows)
+    ])
+    db.bulk_create_relationships(
+        "ANCHORED_AT",
+        [
+            (eid, frame_ids[int(r["frame_master"])], {})
+            for eid, r in zip(event_ids, event_rows)
+        ],
+    )
 
     if verbose:
         print(f"  loaded session={truth['session_id']}: "
