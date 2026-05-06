@@ -1,8 +1,8 @@
 """Synthesize the sample Parquet file used by subsequent steps.
 
-Shape mirrors NFL Next Gen Stats: per-frame (x, y) for each player,
-per play, per game. Deterministic — same input seed produces byte-equal
-Parquet output, so CI snapshots stay stable.
+Shape: per-frame (x, y) for each player, per play, per game — the
+canonical multi-entity tracking layout. Deterministic — same input
+seed produces byte-equal Parquet output, so CI snapshots stay stable.
 
 Output:
     data/sample.parquet  (~50 KB)

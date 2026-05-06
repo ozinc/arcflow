@@ -1,18 +1,16 @@
 ---
 title: "Sports analytics — confidence aggregates, run_per, skills"
-description: "Pre-built primitives for sports/NGS analytics: confidence-weighted aggregates, per-scope iteration, trajectory math, and a sports SKILL catalog."
+description: "Primitives for multi-entity tracking analytics: confidence-weighted aggregates, per-scope iteration, trajectory math, and a sports SKILL catalog."
 ---
 
 # Sports analytics
 
-ArcFlow ships a small Python and Cypher surface for sports / Next Gen Stats
-work: confidence-weighted aggregates in Cypher, a `run_per` per-scope
-iteration helper, trajectory primitives in Rust (`shadowed_by`,
-`leverage_gain`, `release_point`, `nearest_at_frame`), and a Python
-SKILL catalog (`arcflow.skills.sports`) wrapping them for common questions.
-
-This recipe is the user-facing companion to ArcFlow's sports-analytics
-track.
+ArcFlow exposes a small Python and Cypher surface for multi-entity
+tracking analytics: confidence-weighted aggregates in Cypher, a
+`run_per` per-scope iteration helper, trajectory primitives
+(`shadowed_by`, `leverage_gain`, `release_point`, `nearest_at_frame`),
+and a Python SKILL catalog (`arcflow.skills.sports`) wrapping them for
+common questions.
 
 ## Confidence-weighted aggregates
 
@@ -96,13 +94,13 @@ portability.
 
 ## Public benchmark
 
-`benchmarks/nfl_vs_duckdb.py` in the engine repo benchmarks ArcFlow against
-DuckDB on real Next Gen Stats track data. Honest readout: DuckDB is
-faster at column-aggregate queries; the ArcFlow value is graph + spatial
-+ LIVE, not column-aggregate speed. See the script for the exact query
+The engine repo includes a side-by-side benchmark against DuckDB on
+multi-entity tracking data. The point of the comparison is shape: a
+typical analytics question on tracking data isn't a single column
+aggregate — it's a graph traversal anchored on a spatial predicate
+across a temporal window with a confidence filter. ArcFlow runs the
+whole question in one loop; the SQL counterpart needs joins for the
+graph shape, an extension for the spatial predicate, a windowed CTE for
+the temporal axis, and the result still doesn't carry confidence.
+See the engine repo's `benchmarks/` directory for the exact query
 shapes.
-
-```bash
-python benchmarks/nfl_vs_duckdb.py --limit 5    # 27K rows
-python benchmarks/nfl_vs_duckdb.py              # all 178 plays
-```

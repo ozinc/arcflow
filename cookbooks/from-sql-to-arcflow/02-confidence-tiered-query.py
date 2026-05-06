@@ -52,7 +52,7 @@ for r in af.execute(cypher):
 af.close()
 
 print("\n--- Observation ---")
-print("Same shape — both are simple filtered projections. The difference is")
-print("downstream: ArcFlow algorithms (algo.confidencePageRank,")
-print("algo.confidencePath) consume `_confidence` natively. SQL has no native")
-print("graph-algorithmic primitive that knows about confidence.")
+print("A flat filtered projection. The lift comes the moment confidence-")
+print("aware algorithms (algo.confidencePageRank, algo.confidencePath) and")
+print("graph traversal land on the same column — one ArcFlow query covers")
+print("what SQL would need a UDF + a separate graph layer to do.")

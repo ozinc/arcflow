@@ -74,97 +74,105 @@ Native bindings over the C ABI. No compile step needed — loads the shared libr
 ```python
 from arcflow import ArcFlow
 
-# In-memory database
-db = ArcFlow()
+# In-memory or persistent
+db = ArcFlow()                  # in-memory
+db = ArcFlow("/tmp/mydb")       # persistent (WAL-journaled)
 
-# Or persistent
-db = ArcFlow("/tmp/mydb")
-
-# Execute queries
+# Execute queries — typed parameters, no manual string escaping
 db.execute("CREATE (n:Person {name: 'Alice', age: 30})")
-result = db.execute("MATCH (n:Person) RETURN n.name, n.age")
-
-for row in result:
-    print(row)  # {'name': 'Alice', 'age': '30'}
-
-# Parameterized queries (typed) — no manual string escaping
 result = db.execute(
     "MATCH (p:Person) WHERE p.name = $name RETURN p.age",
     params={"name": "Alice"},
 )
+for row in result:
+    print(row)
 
 # Algorithms work the same way
-result = db.execute("CALL algo.pageRank()")
-for row in result:
-    print(f"{row['name']}: {row['score']}")
+db.execute("CALL algo.pageRank()")
 
-# Context manager for automatic cleanup
+# Context-manager for deterministic cleanup
 with ArcFlow() as db:
     db.execute("CALL db.demo()")
-    result = db.execute("MATCH (n) RETURN n.name")
-    print(result.row_count)
 
-# Version check
+# Version
 print(ArcFlow.version())
 ```
 
-### High-throughput ingest — `bulk_create_nodes` / `bulk_create_relationships`
+### Bulk ingest — three throughput tiers
 
-Per-row `CREATE` round-trips through the parser at ~3–10 K writes/sec.
-For sensor streams, batch ingests, or any workload where you already have
-a list of rows in Python, the bulk APIs bypass the parser and write at
-~1 M ops/sec.
+For ingest, pick the highest-throughput path that matches your input
+shape. Each successive tier removes one layer of Python overhead.
+
+| Path | Input | Throughput | Use when |
+|---|---|---:|---|
+| `db.execute("CREATE …")` | parser-bound Cypher | 3–10 K wps | one-off writes, exploratory |
+| `bulk_create_nodes` / `_relationships` | list of `(labels, props)` / `(from, to, props)` tuples | ~360 K wps | rows already in Python |
+| `bulk_create_nodes_from_arrow` / `_relationships_from_arrow` | `pyarrow.Table` / `RecordBatch` | ~1 M+ wps | Parquet / Arrow / Polars pipelines |
+| `load_parquet` / `load_csv` | path on disk | parquet ≈ Arrow path | bulk import from a file |
 
 ```python
-from arcflow import ArcFlow
+import pyarrow as pa
 
-db = ArcFlow()
-
-# 1) Bulk-create nodes — returns NodeIds in input order.
+# Tier 1 — Python tuples (most common shape)
 entity_ids = db.bulk_create_nodes([
     (["Entity"], {"id": i, "x": float(i), "y": 0.0})
     for i in range(95)
 ])
 frame_ids = db.bulk_create_nodes([
     (["Frame"], {"id": f"frame_{t}", "ts_ms": t * 16})
-    for t in range(46_000)  # one game's tracking frames
+    for t in range(46_000)
 ])
+edges = [(eid, fid, {"x": float(ei), "y": float(fi)})
+         for fi, fid in enumerate(frame_ids)
+         for ei, eid in enumerate(entity_ids)]
+db.bulk_create_relationships("OBSERVED_AT", edges)
 
-# 2) Bulk-create relationships — parallel arrays, one rel_type per call.
-edges = []
-for fi, fid in enumerate(frame_ids):
-    for ei, eid in enumerate(entity_ids):
-        edges.append((eid, fid, {"x": float(ei), "y": float(fi)}))
+# Tier 2 — Arrow-direct (no JSON marshal, saturates the engine)
+tbl = pa.table({
+    "id": pa.array(range(95), type=pa.int64()),
+    "x":  pa.array([float(i) for i in range(95)], type=pa.float64()),
+})
+db.bulk_create_nodes_from_arrow("Entity", tbl)
+# Spatial Struct columns ({x: f64, y: f64[, z]}) round-trip as native Point/Point3d.
 
-rel_ids = db.bulk_create_relationships("OBSERVED_AT", edges)
-# 4.37M edges in ~4s on M1 — 1M+ writes/sec sustained.
+# Tier 3 — File-direct (no Python in the loop at all)
+n_loaded = db.load_parquet("data/tracking.parquet", "TrackingObs")
+db.load_csv("data/players.csv", "Player", chunk_size=100_000)
 ```
 
-Behaviour: `CREATE` semantics — every call allocates a new edge, even between
-the same pair of nodes. Use Cypher `MERGE` if you need find-or-create.
+`bulk_create_*` and `load_*` have `CREATE` semantics — every call allocates
+a new node or edge, even between the same pair. Use Cypher `MERGE` if you
+need find-or-create.
 
-### Zero-copy result handoff — `result.to_arrow()`
+### Prepared statements — `db.prepare(query)`
 
-Materializing a 1M-row result as `list[dict]` is slow (per-row Python object
-allocation) and lossy (every cell becomes a string). `result.to_arrow()`
-hands typed Arrow buffers to PyArrow / Polars / Pandas / DuckDB zero-copy.
+Compile a Cypher query once for repeated execution. Each `.execute(params)`
+call skips the parser and goes straight to the executor. For analytics
+workloads that issue the same query thousands of times with different
+parameters (dashboards, real-time scoring, ML feature pipelines), this is
+5–50× faster than `db.execute(q, params=…)` per call.
+
+```python
+stmt = db.prepare("MATCH (e:Entity {id: $eid}) RETURN e.x, e.y, e.speed")
+for eid in entity_ids:
+    row = next(iter(stmt.execute({"eid": eid})))
+stmt.close()
+```
+
+The statement borrows from this database — close it before closing the
+database, or use it as a context manager.
+
+### Zero-copy result handoff — `result.to_arrow() / to_polars() / to_pandas()`
+
+Materializing a 1M-row result as `list[dict]` is slow and lossy. The Arrow
+handoff hands typed Arrow buffers to PyArrow / Polars / Pandas / DuckDB
+zero-copy:
 
 ```python
 result = db.execute("MATCH (p:Player) RETURN p.jersey, p.name, p.age")
-
-# Three flavours of typed handoff — pick whichever fits your stack.
 tbl = result.to_arrow()      # pyarrow.RecordBatch
 df  = result.to_polars()     # polars.DataFrame  (Arrow-backed, zero-copy)
 df  = result.to_pandas()     # pandas.DataFrame   (Arrow-backed since pandas 2)
-
-tbl.schema
-# field("p.jersey", int64)
-# field("p.name",   utf8)
-# field("p.age",    int64)
-
-# Column types are honoured exactly — a Player whose name is "42" stays
-# a String, not coerced to int. The Arrow handoff carries the type
-# through; no row-level heuristic re-parsing.
 
 # Direct DuckDB interop:
 import duckdb
@@ -172,6 +180,9 @@ con = duckdb.connect()
 con.register("players", tbl)
 con.execute("SELECT count(*) FROM players WHERE jersey > 50").fetchone()
 ```
+
+Column types are honoured exactly — a Player whose `name` is `"42"` stays a
+String, not coerced to int.
 
 Per-column type mapping:
 
@@ -187,6 +198,72 @@ Per-column type mapping:
 | Node ID / Rel ID     | `UInt64`          |
 | Point / Polygon      | `Utf8` (geometry as WKT) |
 
+### Snapshot-pinned reads — `db.query_at(query, seq)`
+
+Run a query against a specific past WAL sequence. Bit-for-bit deterministic
+replay of the world model at any point in its history.
+
+```python
+# Capture the seq before running a decision loop
+anchor_seq = db.execute("RETURN walSeq() AS s").one()["s"]
+
+# … mutations happen …
+
+# Replay the world as it looked when the decision was made
+result = db.query_at(
+    "MATCH (a:Account {id: 'ACC-789'}) RETURN a.balance, a.risk_score",
+    seq=anchor_seq,
+)
+```
+
+Equivalent to inlining `AS OF seq <seq>` in the Cypher, with the AS-OF
+mechanics kept out of caller code.
+
+### Live subscriptions — `db.subscribe(view_name)`
+
+Push-based subscription to a `CREATE LIVE VIEW`. The engine runs the
+standing query incrementally and pushes `{added, removed, seq}` events
+to the subscriber.
+
+```python
+db.execute("""
+    CREATE LIVE VIEW high_conf AS
+    MATCH (n:Detection) WHERE n.confidence > 0.9
+    RETURN n.id AS id, n.confidence AS conf
+""")
+
+with db.subscribe("high_conf") as sub:
+    for event in sub:                  # blocks until next frontier advance
+        for row in event["added"]:
+            handle_new_detection(row)
+        for row in event["removed"]:
+            retract(row)
+```
+
+Each subscription owns a background poll thread; closing the subscription
+(or exiting the context manager) shuts it down deterministically.
+
+### CDC stream — `db.changes_since(seq, limit=…)`
+
+Return mutations recorded after a given WAL sequence. Use it to drive a
+pull-based change-data-capture loop without taking on a separate CDC
+service.
+
+```python
+last_seq = 0
+while True:
+    changes = db.changes_since(last_seq, limit=1_000)
+    if not changes:
+        time.sleep(0.5)
+        continue
+    publish(changes)
+    last_seq = max(int(c["sequence"]) for c in changes)
+```
+
+Pair with `db.fingerprint()` (content hash) and `db.snapshot_uri()`
+(content-addressed snapshot URI) when downstream consumers need to verify
+the mutations they applied match the source state exactly.
+
 ### Threading concurrency — `concurrent.futures` works
 
 ctypes releases the Python GIL for every native call; ArcFlow's
@@ -196,15 +273,13 @@ on one `ArcFlow` instance run in real parallel rather than serialized:
 ```python
 from concurrent.futures import ThreadPoolExecutor
 
-db = ArcFlow()
 queries = [
     "MATCH (p:Person) WHERE p.age > 30 RETURN count(*)",
     "MATCH (p:Player) RETURN avg(p.jersey)",
     # ...
 ]
-
 with ThreadPoolExecutor(max_workers=8) as pool:
-    results = [r for r in pool.map(db.execute, queries)]
+    results = list(pool.map(db.execute, queries))
 ```
 
 Reads parallelize cleanly. Writes serialize through MVCC commit but do not

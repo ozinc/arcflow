@@ -10,7 +10,7 @@ Each Parquet row:
 game_id, play_id, frame_id, timestamp, player_id, team, x, y, speed
 ```
 
-For 1100 rows that is ~50 KB. For one full NFL game (~150 plays × 100 frames ×
+For 1100 rows that is ~50 KB. For one full game (~150 plays × 100 frames ×
 22 players ≈ 330 K rows), it is ~15 MB. For a season, scale linearly.
 
 ## Two schema options

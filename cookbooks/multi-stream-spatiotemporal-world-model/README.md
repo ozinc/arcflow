@@ -477,9 +477,8 @@ Three perf primitives carry the weight:
 
 Per-row `MATCH+CREATE` round-trips the parser at ~3–10K writes/sec and
 decays under graph growth. The bulk-array path bypasses the parser
-entirely and writes at ~1M ops/sec. Football-transformer NFL NGS evaluation
-(2026-05-03): a single game's ~1M `OBSERVED_AT` edges loads in seconds
-instead of hours.
+entirely and writes at ~1M ops/sec — a single tracking session of ~1M
+`OBSERVED_AT` edges loads in seconds.
 
 ```python
 # Old shape (per-row, parser-bound):

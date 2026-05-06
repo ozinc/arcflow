@@ -21,15 +21,15 @@ gradient on that scale:
 
 | Recipe | Question | Verdict |
 |---|---|---|
-| `01-shared-coworkers.py` | "Who has worked at the same company as Alice?" | Cypher walks one edge; SQL needs four self-joins. Same answer, much shorter Cypher. |
-| `02-confidence-tiered-query.py` | "Show employment relationships with confidence > 0.85" | Identical shape — both are simple filtered projections. Cypher's win is downstream (algorithms consume `_confidence` natively). |
+| `01-shared-coworkers.py` | "Who has worked at the same company as Alice?" | Cypher walks one edge; SQL needs four self-joins. |
+| `02-confidence-tiered-query.py` | "Show employment relationships with confidence > 0.85" | A flat filtered projection. ArcFlow's lift compounds the moment confidence-aware algorithms (`algo.confidencePageRank`, `algo.confidencePath`) consume the same `_confidence` column natively. |
 | `03-multi-hop-industry.py` | "People within 2 hops of Alice who've worked in biotech" | SQL: 5 CTEs and a hardcoded path depth. Cypher: one MATCH chain. Each extra hop is one extra anchor in Cypher; one more CTE in SQL. |
 
-The takeaway isn't "Cypher is always better" — for a flat filtered
-projection (recipe 02), they're identical. The takeaway is: **the
-shapes that hurt SQL most are the shapes graphs handle natively.**
-Walking edges, multi-hop traversal, paths-as-data, and confidence-aware
-algorithms are where you stop fighting the model.
+The takeaway: **the shape of a real question rarely stays in one
+column.** Walking edges, multi-hop traversal, paths-as-data, and
+confidence-aware algorithms are where ArcFlow's integrated loop
+delivers what an SQL engine plus three external services would
+deliver, in one query.
 
 ## Run
 

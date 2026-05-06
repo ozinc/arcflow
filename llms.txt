@@ -83,12 +83,27 @@ cat result.json
 - `ArcflowError` → { code, category, suggestion }
 - `@arcflow/react` → useQuery(db, q, params), useLiveQuery(db, q)
 
-## Python fast paths (10–100× over `db.execute`)
+## Python surface (full)
 
-- `db.bulk_create_nodes([(labels, props), ...])` → list[NodeId] in input order. ~1 M nodes/sec, bypasses the parser. CREATE semantics — use `MERGE` for find-or-create.
-- `db.bulk_create_relationships(rel_type, [(from_id, to_id, props), ...])` → list[RelId]. Same scale; `from_id` and `to_id` are NodeIds returned by `bulk_create_nodes`.
+Bulk ingest:
+- `db.bulk_create_nodes([(labels, props), ...])` → list[NodeId]. CREATE semantics — use `MERGE` for find-or-create.
+- `db.bulk_create_relationships(rel_type, [(from_id, to_id, props), ...])` → list[RelId].
+- `db.bulk_create_nodes_from_arrow(label, pa.Table)` / `bulk_create_relationships_from_arrow(rel_type, pa.Table)` — Arrow-direct, no JSON marshal.
+- `db.load_parquet(path, label, chunk_size=100_000)` / `db.load_csv(path, label)` — file-direct.
+
+Read:
+- `db.execute(query, params=None)` → QueryResult.
+- `db.prepare(query)` → PreparedStatement (parser cached; `.execute(params)` for replays).
+- `db.query_at(query, seq)` → snapshot-pinned read.
+- `db.subscribe(view_name)` → push-based live-view subscription.
+- `db.changes_since(seq, limit)` → CDC pull stream.
+- `db.fingerprint()` → graph content hash. `db.snapshot_uri()` → `arcflow://snapshot/<hex>`.
+
+Result handoff:
 - `result.to_arrow()` → `pyarrow.RecordBatch` (zero-copy via Arrow C Data Interface). Also `result.to_polars()`, `result.to_pandas()`. Types preserved end-to-end — `"42"` stays a `String`.
-- ctypes releases the GIL on every native call; `ConcurrentStore` is MVCC-safe. `concurrent.futures.ThreadPoolExecutor` works out of the box (4.75× with 8 threads on M1).
+
+Concurrency:
+- ctypes releases the GIL on every native call; `ConcurrentStore` is MVCC-safe. `concurrent.futures.ThreadPoolExecutor` works out of the box.
 
 ## Snapshot-pinned reads (provenanced answers)
 

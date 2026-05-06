@@ -5,10 +5,11 @@ description: "Model the same fact arriving from multiple sensors at different co
 
 # Multi-source observation with confidence
 
-Real-world telemetry rarely comes from one infallible sensor. A football
-play has tracking from three independent vendors. A network event is
-reported by two scanners that disagree on severity. A customer-record
-update arrives from CRM and from a partner feed at different times.
+Real-world telemetry rarely comes from one infallible sensor. A
+multi-camera tracking system has three independent vendors observing
+the same play. A network event is reported by two scanners that
+disagree on severity. A customer-record update arrives from CRM and
+from a partner feed at different times.
 
 ArcFlow's `_confidence` and `_observation_class` properties were designed
 for this case: every observation carries its own confidence weight, and

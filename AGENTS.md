@@ -190,36 +190,54 @@ class ArcflowError extends Error {
 
 ### Python (`arcflow` PyPI)
 
-Python uses ctypes against the same engine binary. Three fast paths to know about; the GQL `db.execute(...)` path is fine for normal queries but routinely 10–100× slower than these for bulk and read-heavy workloads.
+Python uses ctypes against the same engine binary. Surface to know about — every method here goes straight to the engine, no JSON marshalling, no subprocess hop.
 
 ```python
 from arcflow import ArcFlow
 from concurrent.futures import ThreadPoolExecutor
+import pyarrow as pa
 
-db = ArcFlow()  # in-memory; ArcFlow("./data") for persistent
+db = ArcFlow()                          # in-memory; ArcFlow("./data") for persistent
 
-# 1. High-throughput ingest — bypass the parser entirely
-#    bulk_create_nodes takes a list of (labels, props) tuples and returns NodeIds in input order.
-entity_ids = db.bulk_create_nodes([(["Entity"], {"id": i, "x": float(i)}) for i in range(95)])
-frame_ids  = db.bulk_create_nodes([(["Frame"],  {"id": f"f_{t}", "ts": t * 16}) for t in range(46_000)])
+# Execute (typed params)
+db.execute("MATCH (e:Entity {id: $id}) RETURN e.x, e.y", params={"id": 7})
 
-#    bulk_create_relationships takes a single rel_type and a list of (from_id, to_id, props) tuples.
-edges = [(eid, fid, {"x": float(ei), "y": float(fi)})
-         for fi, fid in enumerate(frame_ids) for ei, eid in enumerate(entity_ids)]
-db.bulk_create_relationships("OBSERVED_AT", edges)
-# ~1M edges/sec on M1; per-row CREATE is ~3–10K/sec. CREATE semantics — use Cypher MERGE for find-or-create.
+# Bulk ingest — three throughput tiers
+db.bulk_create_nodes([(["Entity"], {"id": i, "x": float(i)}) for i in range(95)])
+db.bulk_create_relationships("OBSERVED_AT", [(eid, fid, {"x": 1.0}) for ...])
+db.bulk_create_nodes_from_arrow("Entity", pa.table({"id": [...], "x": [...]}))   # Arrow-direct
+db.bulk_create_relationships_from_arrow("OBSERVED_AT", pa.table({"_from": [...], "_to": [...]}))
+db.load_parquet("data/tracking.parquet", "TrackingObs")                          # File-direct
+db.load_csv("data/players.csv", "Player", chunk_size=100_000)
 
-# 2. Zero-copy result handoff — typed columns into the PyArrow / Polars / Pandas stack
-result = db.execute("MATCH (e:Entity) WHERE e._confidence > 0.8 RETURN e.id, e.x, e.y, e._confidence")
-tbl = result.to_arrow()    # pyarrow.RecordBatch — zero-copy via Arrow C Data Interface
-df  = result.to_polars()   # polars.DataFrame, Arrow-backed
-df  = result.to_pandas()   # pandas.DataFrame, Arrow-backed since pandas 2
-# Reads are ~18.8× faster than row-by-row; types preserved end-to-end ("42" stays a String, not coerced).
+# Prepared statements (parser cached, replay with params)
+stmt = db.prepare("MATCH (e:Entity {id: $eid}) RETURN e.x, e.y")
+for eid in ids: row = next(iter(stmt.execute({"eid": eid})))
 
-# 3. Threading concurrency — ctypes releases the GIL on every engine call
+# Zero-copy typed result handoff
+result = db.execute("MATCH (e:Entity) RETURN e.id, e.x, e.y")
+tbl = result.to_arrow()                 # pyarrow.RecordBatch
+df  = result.to_polars()                # polars.DataFrame  (Arrow-backed)
+df  = result.to_pandas()                # pandas.DataFrame  (Arrow-backed since pandas 2)
+
+# Snapshot replay
+db.query_at("MATCH (a:Account {id: 'X'}) RETURN a.balance", seq=anchor_seq)
+
+# Live subscriptions
+db.execute("CREATE LIVE VIEW high_conf AS MATCH (n) WHERE n.confidence > 0.9 RETURN n")
+with db.subscribe("high_conf") as sub:
+    for event in sub: handle(event["added"], event["removed"])
+
+# CDC pull stream
+changes = db.changes_since(last_seq, limit=1_000)
+
+# Provenance
+db.fingerprint()                        # graph content hash
+db.snapshot_uri()                       # arcflow://snapshot/<hex>
+
+# Threading — ctypes releases the GIL; ConcurrentStore is MVCC-safe for parallel readers.
 with ThreadPoolExecutor(max_workers=8) as pool:
-    results = list(pool.map(lambda q: db.execute(q), queries))
-# 4.75× speedup with 8 threads on M1; ConcurrentStore is MVCC-safe.
+    results = list(pool.map(db.execute, queries))
 ```
 
 Full Python reference: [docs/bindings.mdx](docs/bindings.mdx).

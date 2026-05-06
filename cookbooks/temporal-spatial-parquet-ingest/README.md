@@ -49,10 +49,11 @@ that walk through the design choices.
 
 ## Data
 
-`data/sample.parquet` — synthesized at runtime by `00-make-sample.py`. Shape
-mirrors NFL Next Gen Stats (per-frame x/y of 22 players over 5 plays × 10
-frames = 1100 rows). Synthesized, not real player data. ≤ 50 KB in-tree
-after first run; the synthesizer is deterministic so output is reproducible.
+`data/sample.parquet` — synthesized at runtime by `00-make-sample.py`. Shape:
+per-frame (x, y) for 22 players over 5 plays × 10 frames = 1100 rows —
+the canonical multi-entity tracking layout. Synthesized, not real player
+data. ≤ 50 KB in-tree after first run; the synthesizer is deterministic
+so output is reproducible.
 
 ## Adapting to your own data
 
