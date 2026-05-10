@@ -1,17 +1,21 @@
 # ArcFlow
 
-The operational world model layer — the persistence tier where actual world state lives. Neural world models simulate possible futures; ArcFlow records what actually happened. Spatial-temporal, confidence-scored, embedded. Space and time are first-class dimensions. Every node has an observation class (observed/inferred/predicted) and confidence score [0.0, 1.0]. Full GQL (ISO/IEC 39075, Cypher-compatible). Runs in-process everywhere — browser (WASM), Node.js, Python, Rust, native CLI. No server, no Docker — the engine is 5MB and runs inside your process (see [docs/deployment/docker.mdx](docs/deployment/docker.mdx) for the rationale).
+The operational world model layer — the persistence tier where actual world state lives. Neural world models simulate possible futures; ArcFlow records what actually happened. Spatial-temporal, confidence-scored, embedded **and** server-able. Space and time are first-class dimensions. Every node has an observation class (observed/inferred/predicted) and confidence score [0.0, 1.0]. Full GQL (ISO/IEC 39075, Cypher-compatible). Runs in-process anywhere — browser (WASM), Node.js, Python, Rust, native CLI — **or** as a long-lived local daemon over a Unix Domain Socket when multiple processes on the same machine need to share one graph + pub/sub bus.
 
-## Integration model — three surfaces, no overlap
+## Integration model — pick the one that matches your execution context
 
 | Consumer | Integration | Why |
 |---|---|---|
-| Application daemons, broker processes | **napi-rs in-process** | Microseconds, same memory, no process boundary |
+| **Multi-process same-machine** (TS shell + Python workers + Rust capture all sharing one graph + pub/sub) | **`arcflow-daemon` over UDS** ★ recommended for IPC | Cross-process publish/subscribe + WAL durability, ~1.3 M events/sec on `topic.publish_batch`, no port allocation. See [Daemon mode](docs/deployment/daemon.mdx). |
+| **Single-process embedded** (one binary owns the graph end-to-end) | **napi-rs / WASM / C ABI in-process** | No IPC overhead at all — every operation is a function call. Browser apps, single-process daemons, embedded SDK use. |
 | Claude Code, Codex, Gemini CLI | **`arcflow` CLI binary** | Shell-native, composable, <10ms, no config |
 | Cloud chat UIs (Claude.ai, browser agents) | **MCP server** | No local execution context, chat latency budget |
+| Browser web apps that want server-pushed events | **HTTP/SSE bridge on the daemon** | Standard `EventSource` API; no extra protocol the browser doesn't already speak |
 | Python / shell pipelines | **`arcflow` CLI binary** | Same as CLI agents |
 
-**napi-rs** is the in-process interface. **CLI** is the local-to-local interface. **MCP** is the cloud-to-local bridge for chat UIs with no shell access. These surfaces don't overlap — pick the one that matches your execution context.
+**ArcFlow is optimised for true IPC-based setups** where the engine acts as a local database within a codebase on the same machine. **For any same-machine, multi-process deployment we recommend the daemon over UDS** as the default — it gives you cross-language pub/sub, WAL durability, Prometheus metrics, and SSE for browser clients out of one binary, with sub-millisecond IPC latency.
+
+**Single-process apps still get the in-process surfaces** (WASM in the browser, napi-rs in Node, the C ABI everywhere else) when there's no second process that needs to read the graph.
 
 **If you have a shell, use the CLI.** LLMs are trained on billions of file and shell examples. The CLI makes the world model work like the filesystem: write a `.cypher` query file, execute it, read the `.json` result. No protocol overhead, no token cost, no round-trip. The filesystem is the API.
 

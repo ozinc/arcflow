@@ -660,9 +660,14 @@
           "order": 7
         },
         {
+          "slug": "deployment/daemon",
+          "title": "Daemon mode (UDS)",
+          "order": 8
+        },
+        {
           "slug": "deployment/docker",
           "title": "Docker",
-          "order": 8
+          "order": 9
         },
         {
           "slug": "architecture",

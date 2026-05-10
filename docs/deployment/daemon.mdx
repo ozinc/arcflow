@@ -1,0 +1,317 @@
+---
+title: "Daemon mode — local IPC over Unix Domain Socket"
+description: "How to run ArcFlow as a long-lived local process so multiple processes (TS shell, Python workers, Rust capture, browser) share one graph + pub/sub bus over UDS. The recommended deployment for any same-machine, multi-process setup."
+section: "deployment"
+status: "stable"
+---
+
+# Daemon mode — local IPC over Unix Domain Socket
+
+ArcFlow ships two surfaces. They are **not** alternatives to each
+other; they're for different problems.
+
+| Surface | Use it when |
+|---|---|
+| **In-process** (`libarcflow.dylib` / WASM / napi-rs) | One process owns the graph and never shares it. Browser apps, single-process daemons, embedded SDK use. |
+| **Daemon mode** (`arcflow-daemon` over UDS) | Multiple processes on the same machine need to share one graph + pub/sub bus. TS shell + Python workers + Rust capture all talking to the same engine. |
+
+If you have more than one process that needs to read or write the same
+ArcFlow state, **use the daemon over UDS**. That's the recommended
+default for IPC-based deployments.
+
+## Why UDS
+
+Unix Domain Sockets are the right transport for same-machine IPC:
+
+- **No TCP overhead.** Loopback TCP carries network-stack cost per
+  packet; UDS skips it.
+- **No port allocation, no firewall surface.** Socket lives at a
+  filesystem path that the OS treats like any other file. POSIX
+  permissions gate who can connect.
+- **Sub-millisecond latency.** Round-trip is a memcpy plus a context
+  switch, ~3-5 µs on modern hardware.
+- **Same-machine guarantee.** A process that connects to your socket
+  is on your host, full stop. No need to authenticate "is this the
+  same machine" — the kernel already enforced it.
+
+ArcFlow's daemon binds one UDS by default at `/tmp/arcflow.sock`.
+Override with `--socket <path>`. Lock down access with standard Unix
+file permissions on the path.
+
+## Quick start
+
+```bash
+# Start the daemon (in-memory, no durability — fine for development)
+arcflow-daemon --socket /tmp/arcflow.sock
+
+# In another terminal: ping
+echo '{"id":1,"method":"ping","params":{}}' | nc -U /tmp/arcflow.sock
+# → {"id":1,"result":{"pong":true}}
+
+# Create a topic + publish
+echo '{"id":2,"method":"topic.create","params":{"name":"frames"}}' \
+  | nc -U /tmp/arcflow.sock
+echo '{"id":3,"method":"topic.publish","params":{"topic":"frames","data":{"frame_no":1}}}' \
+  | nc -U /tmp/arcflow.sock
+# → {"id":3,"result":{"sequence":1}}
+```
+
+## Wire protocol — newline-delimited JSON-RPC
+
+Every request is one JSON object on its own line. Response is one
+JSON object on its own line. Pipelining works: send N requests,
+receive N responses in the same order.
+
+```jsonc
+// Request
+{"id": 42, "method": "topic.publish", "params": {"topic": "t", "data": {"k": "v"}}}
+
+// Success response
+{"id": 42, "result": {"sequence": 17}}
+
+// Typed error response
+{"id": 42, "error": {"code": "TOPIC_NOT_FOUND", "message": "Topic 't' does not exist"}}
+```
+
+The full method catalog lives in the daemon's source — `dispatch` in
+[`crates/arcflow-daemon/src/lib.rs`](https://github.com/ozinc/arcflow-core/blob/main/crates/arcflow-daemon/src/lib.rs)
+— but the surface is small: pub/sub (`topic.*`), pull-style consumers
+(`consumer.*`), queue groups (`group.*`), plus a `ping`.
+
+## Throughput — pick the right publish pattern
+
+The daemon's per-request cost is dominated by JSON parse + UDS round-
+trip. **Pattern matters a lot** for throughput. Numbers below are
+single-thread on an M-series Mac, 30-topic round-robin workload:
+
+| Pattern | Throughput | Use when |
+|---|---|---|
+| **`topic.publish_batch`** (recommended for bursts) | **1.33 M ev/s** | Producer has N events ready and doesn't need a per-event ack. **4.8× NATS Core** on the same workload. |
+| `topic.publish` pipelined (concurrent reader thread) | 409 k ev/s | Producer can fire-and-forget but needs each event journaled separately (e.g. per-event WAL replay semantics). |
+| `topic.publish` round-trip-per-request | 140 k ev/s | Producer needs a per-event ack before sending the next (rare; usually a footgun). |
+
+If you're seeing low throughput, you're almost certainly on the
+round-trip-per-request path. **Switch to `publish_batch`** with a
+batch size of 100-1000 and you'll see >10× throughput.
+
+```jsonc
+// Batch publish — one RPC, many events
+{
+  "id": 1,
+  "method": "topic.publish_batch",
+  "params": {
+    "topic": "frames",
+    "events": [
+      {"data": {"frame_no": 1}},
+      {"data": {"frame_no": 2}, "headers": {"trace_id": "abc"}},
+      {"data": {"frame_no": 3}}
+    ]
+  }
+}
+
+// Response — sequences in input order
+{"id": 1, "result": {"sequences": [1, 2, 3], "count": 3}}
+```
+
+First-failure-stops semantics matching Kafka producer batches:
+if event K fails (e.g. invalid payload), events `0..K-1` are
+published, response carries the partial `sequences` plus the typed
+error and `partial: true`. Caller resumes from `sequences.len()`.
+
+## Durability — `--data-dir`
+
+Without `--data-dir` the daemon runs **purely in-memory**. A crash
+loses all events. That's fine for development, integration tests, or
+workloads that can replay from the source.
+
+For production, pass `--data-dir <path>`:
+
+```bash
+arcflow-daemon --socket /tmp/arcflow.sock --data-dir /var/lib/arcflow
+```
+
+On startup, the daemon:
+
+1. Opens (or creates) `<data_dir>/wal.bin`.
+2. Replays every existing entry to rebuild graph state — topics,
+   events, consumers, queue groups, all restored at the offsets they
+   were at when the daemon last shut down.
+3. Attaches the **async WAL lane**: every subsequent pub/sub
+   mutation is fire-and-forget journaled to disk via a background
+   thread that batches + fsyncs. Publisher returns at memory speed
+   (~50 ns mpsc send), durability is async.
+
+After a daemon crash + restart, **consumer offsets are preserved**.
+Workers resume from `last_acked_seq + 1` instead of from the
+beginning. Same for queue-group offsets.
+
+The startup line on stderr tells you what was replayed:
+
+```
+arcflow-daemon: replaying 12834 WAL entries from /var/lib/arcflow/wal.bin
+arcflow-daemon: WAL durability enabled at /var/lib/arcflow/wal.bin (replayed 12834 entries)
+arcflow-daemon: UDS listening on /tmp/arcflow.sock (Ctrl+C to stop)
+```
+
+## Streaming subscribers — long-lived push delivery
+
+For subscribers that want events pushed to them as they arrive
+(rather than polling `consumer.pending`), open one connection and
+send `consumer.subscribe`. The daemon takes over that connection and
+streams `{"event": …}` lines as events fire, until the client
+disconnects.
+
+```bash
+echo '{"id":1,"method":"consumer.subscribe","params":{"name":"vision","topic":"frames","poll_ms":30}}' \
+  | nc -U /tmp/arcflow.sock
+
+# Initial ack
+{"id":1,"result":{"streaming":true,"mode":"consumer"}}
+
+# Then one line per event as they arrive
+{"event":{"sequence":1,"data":{...},"headers":{...}}}
+{"event":{"sequence":2,"data":{...}}}
+…
+```
+
+Default poll interval is 30 ms (sub-frame for 60 fps). Override per
+subscription with `poll_ms`. Auto-ack on send — events are acked as
+they're delivered, so this is **at-most-once** semantics. Use
+`consumer.pending` + `consumer.ack` for **at-least-once**.
+
+The same shape works for queue-group members via `group.subscribe`.
+
+## Browser / agent clients — HTTP/SSE bridge
+
+For web clients (browser EventSource, agent runtimes that don't link
+the C ABI), pass `--http <addr:port>` to bind an HTTP listener
+alongside the UDS:
+
+```bash
+arcflow-daemon \
+  --socket /tmp/arcflow.sock \
+  --http 127.0.0.1:7771 \
+  --data-dir /var/lib/arcflow
+```
+
+Routes:
+
+| Route | Purpose |
+|---|---|
+| `GET /healthz` | Liveness probe — 200 OK + `ok\n` |
+| `GET /metrics` | Prometheus exposition (counters + gauges) |
+| `GET /v1/sse/events?consumer=…&topic=…&poll_ms=…` | SSE stream of pub/sub events for a consumer |
+| `GET /v1/sse/group?group=…&member=…&topic=…&poll_ms=…` | SSE stream for a queue-group member |
+
+Browser usage:
+
+```javascript
+const stream = new EventSource(
+  'http://localhost:7771/v1/sse/events?consumer=vision&topic=frames'
+);
+stream.addEventListener('arcflow.event', (e) => {
+  const ev = JSON.parse(e.data);
+  // ev.sequence, ev.data, ev.headers, ev.published_at_ms
+});
+```
+
+The SSE response sends a `: keep-alive` comment every 15 s of idle
+so reverse proxies (nginx, ELB, …) don't close the socket.
+
+## Observability — Prometheus `/metrics`
+
+When `--http` is enabled, `/metrics` exposes Prometheus text
+format. No per-topic / per-consumer cardinality (those would explode
+under a busy session); aggregate counters + gauges are read off the
+store under one lock per scrape.
+
+Counters:
+
+- `arcflow_rpc_publish_total`
+- `arcflow_rpc_publish_batch_total`
+- `arcflow_rpc_publish_batch_events_total` (sum of events committed
+  across batches — `rate(events) / rate(batches)` reports average
+  batch size)
+- `arcflow_rpc_ack_total` / `arcflow_rpc_nack_total`
+- `arcflow_rpc_register_consumer_total` /
+  `arcflow_rpc_register_group_member_total` /
+  `arcflow_rpc_drop_consumer_total`
+- `arcflow_rpc_unknown_method_total` /
+  `arcflow_rpc_invalid_json_total` /
+  `arcflow_rpc_malformed_params_total`
+- `arcflow_rpc_typed_errors_total`
+
+Gauges (snapshot at scrape time):
+
+- `arcflow_topics`
+- `arcflow_consumers`
+- `arcflow_consumer_groups`
+- `arcflow_dlq_nodes` — failed events parked for re-drive
+- `arcflow_sliding_windows`
+
+Sample Prometheus scrape config:
+
+```yaml
+scrape_configs:
+  - job_name: arcflow-daemon
+    static_configs:
+      - targets: ['127.0.0.1:7771']
+```
+
+Useful PromQL once it's wired:
+
+```promql
+# Events per second flowing through the daemon
+rate(arcflow_rpc_publish_total[1m])
+  + rate(arcflow_rpc_publish_batch_events_total[1m])
+
+# Average events per batch — is the producer batching effectively?
+rate(arcflow_rpc_publish_batch_events_total[1m])
+  / rate(arcflow_rpc_publish_batch_total[1m])
+
+# Failed-event backlog — operator alarm if non-zero for more than N minutes
+arcflow_dlq_nodes
+```
+
+## When NOT to use the daemon
+
+Use **in-process** instead when:
+
+- A single process owns the entire graph end-to-end and nothing else
+  needs to read it. The C ABI / napi-rs / WASM path skips JSON-RPC
+  and IPC entirely — every operation is a function call into the
+  same address space.
+- You're shipping a self-contained binary that bundles ArcFlow as a
+  library. Adding a daemon process complicates deployment.
+- Cross-machine. The daemon's UDS transport is same-machine only by
+  design. For network-distributed setups, use the WAL-stream
+  replication mode (one writer, many readers via WAL tailing) — see
+  the [Sync architecture page](/architecture/sync).
+
+## Operational notes
+
+- **Liveness:** `GET /healthz` returns 200 OK + `ok\n`. Use it as a
+  Kubernetes / systemd readiness probe.
+- **Shutdown:** the daemon traps SIGINT and SIGTERM, drains
+  in-flight UDS connections briefly, unlinks the socket file, and
+  exits cleanly. The async WAL lane flushes its buffered batch before
+  the process exits.
+- **Socket permissions:** the daemon creates the UDS with default
+  umask. Restrict access by setting umask before exec, or running
+  the daemon as a dedicated user whose primary group is the only one
+  allowed to read/write the socket.
+- **WAL retention:** for long-running deployments, the WAL file
+  grows monotonically. Periodic snapshot + truncate is on the
+  roadmap; until then, restart the daemon weekly with a fresh
+  `--data-dir` if you need to bound disk usage.
+- **One daemon per `--data-dir`:** the daemon takes an exclusive
+  hold on the data directory. A second daemon pointed at the same
+  directory will fail to start. This is the SWMR (single-writer,
+  multi-reader) invariant — see the engine's `replication.rs`.
+
+## Reference
+
+- Source: [`crates/arcflow-daemon/`](https://github.com/ozinc/arcflow-core/tree/main/crates/arcflow-daemon)
+- Method catalog: `dispatch` function in `lib.rs`
+- HTTP routes: `handle_http_connection` in `http.rs`
+- WAL replay: `init_store_with_wal` in `main.rs`
