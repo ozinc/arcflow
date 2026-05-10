@@ -292,11 +292,13 @@ Procedures for live queries: topics, subscriptions, live views, and causal chain
 
 | Procedure | Return Columns | Description |
 |---|---|---|
-| `CALL db.topics()` | `id`, `name`, `events` | All registered event topics with event counts |
+| `CALL db.topics()` | `id`, `name`, `events` | All registered event topics with event counts. Topic creation, publishes, and retention changes are WAL-journaled and survive restart |
 | `CALL db.subscriptions()` | `name`, `topic`, `query`, `active` | Active subscriptions with topic bindings |
 | `CALL db.liveQueries()` | `name`, `query` | Active live query registrations |
 | `CALL db.causalChain()` | `origin`, `depth`, `target`, `target_labels`, `confidence` | Traces CAUSES chains from all Action nodes (depth 10) |
 | `CALL db.views()` | `name`, `query` | Materialized view definitions |
+
+Topic event sequences are strictly monotonic per topic — retention pruning never re-uses a sequence number. See [Live Queries → Topics](/live-queries#topics) for the retention policy and subscription cursor replay surfaces.
 
 ```cypher
 CALL db.causalChain()

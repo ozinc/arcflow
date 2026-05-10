@@ -178,12 +178,70 @@ SUBSCRIBE TO sensor_readings AS heat_alert
 
 Events are property maps — the same key-value structure used for node properties. They are recorded in the mutation log and trigger any matching standing queries.
 
+Topic semantics rest on three properties:
+
+- **Durable** — topic creation, publishes, and retention changes are journaled to the WAL. After a crash or restart, replay reconstructs the topic set and its retained events. No message broker. No second store.
+- **Monotonic** — every publish is assigned a strictly increasing sequence number per topic. Retention pruning never re-uses a sequence; subscribers can rely on `seq` as a stable cursor.
+- **Bounded** — each topic carries a retention policy. The default is unbounded, but most pipelines should set `max_events`, `max_age_ms`, or both, so a quiet consumer cannot drive memory growth.
+
 List active topics and subscriptions:
 
 ```cypher
 CALL db.topics()
 CALL db.subscriptions()
 ```
+
+### Retention policy
+
+A retention policy bounds the in-memory event log per topic. Both axes are independent — you can set either or both:
+
+```rust
+use arcflow::types::RetentionPolicy;
+
+// Cap the queue at 10 000 events; let age vary.
+store.create_topic_with_retention(
+    "sensor_readings".into(),
+    RetentionPolicy::with_max_events(10_000),
+);
+
+// Or cap by age (24 hours).
+store.set_topic_retention(
+    "sensor_readings",
+    RetentionPolicy::with_max_age_ms(24 * 60 * 60 * 1000),
+)?;
+
+// Or both together.
+store.set_topic_retention(
+    "sensor_readings",
+    RetentionPolicy {
+        max_events: Some(10_000),
+        max_age_ms: Some(24 * 60 * 60 * 1000),
+    },
+)?;
+```
+
+When `max_age_ms` is set, every publish first evicts events older than the cutoff. When `max_events` is set, the oldest events drain off the front of the queue once the cap is exceeded. `set_topic_retention` applies the new policy immediately — a tightened policy prunes in place.
+
+### Subscription cursor replay
+
+Subscribers identify themselves by sequence cursor, not by connection. After a disconnect, reconnect, or window restart, request only the events the consumer has not yet observed:
+
+```rust
+// First connection: start from "everything from now on".
+let cursor = store.topic_next_seq("sensor_readings").unwrap_or(1) - 1;
+
+loop {
+    // Drain any events newer than the cursor.
+    for event in store.events_after("sensor_readings", cursor) {
+        process(event);
+        // Advance the cursor as you ack.
+        cursor = event.sequence;
+    }
+    // ... wait for the next standing-query notification or poll tick ...
+}
+```
+
+Sequence numbers are stable across the topic's lifetime — they are reconstructed from the WAL on restart. If retention has dropped events the consumer was about to read, the gap is observable: the smallest returned `sequence` is greater than `cursor + 1`. Tighten retention accordingly, or persist the cursor frequently enough that the consumer never falls outside the window.
 
 ### Change Data Capture
 
