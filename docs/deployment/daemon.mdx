@@ -216,6 +216,33 @@ Both flags must be `> 0`: a `0` count would disable the
 count-driven flush path; a `0` timeout would spin the disk-lane
 thread. The daemon rejects either with an explicit error at startup.
 
+### Bounding request size — `--max-line-bytes`
+
+By default the daemon caps a single newline-delimited UDS request
+at **16 MiB** (`16 777 216` bytes). Override with
+`--max-line-bytes <N>`. Floor: `1024` (1 KiB) — anything below
+will reject normal JSON-RPC envelopes and is rejected at startup.
+
+Why this exists: the UDS reader was previously unbounded, so a
+buggy client streaming bytes without a terminating `\n` could
+OOM the daemon. The bounded path closes the connection with a
+typed error after the first oversized line:
+
+```jsonc
+{"id": null, "result": null,
+ "error": {
+   "code": "LINE_TOO_LARGE",
+   "message": "request exceeds --max-line-bytes (16777216); closing connection. …"
+ }}
+```
+
+The frame is desynced once we abort mid-line, so the daemon must
+close the socket — clients should reconnect. Pick a tighter cap
+(e.g. `--max-line-bytes 65536`) when running in adversarial /
+shared environments, or a looser cap (e.g. `--max-line-bytes
+67108864` for 64 MiB) when your `topic.publish_batch` legitimately
+ships very large frames.
+
 ## Streaming subscribers — long-lived push delivery
 
 For subscribers that want events pushed to them as they arrive
