@@ -198,7 +198,9 @@ Routes:
 
 | Route | Purpose |
 |---|---|
-| `GET /healthz` | Liveness probe — 200 OK + `ok\n` |
+| `GET /livez` | Liveness probe — 200 OK + `ok\n`; 503 only mid-shutdown |
+| `GET /readyz` | Readiness probe — 200 OK + per-check report; 503 if any check fails |
+| `GET /healthz` | Backward-compat alias for `/livez` |
 | `GET /metrics` | Prometheus exposition (counters + gauges) |
 | `GET /v1/sse/events?consumer=…&topic=…&poll_ms=…` | SSE stream of pub/sub events for a consumer |
 | `GET /v1/sse/group?group=…&member=…&topic=…&poll_ms=…` | SSE stream for a queue-group member |
@@ -317,8 +319,15 @@ Use **in-process** instead when:
 
 ## Operational notes
 
-- **Liveness:** `GET /healthz` returns 200 OK + `ok\n`. Use it as a
-  Kubernetes / systemd readiness probe.
+- **Liveness vs readiness:** wire `GET /livez` to your liveness probe
+  and `GET /readyz` to your readiness probe.
+  - `/livez` returns 200 + `ok\n` whenever the process is alive (503
+    only mid-shutdown). Failure here means restart the pod.
+  - `/readyz` returns 200 + per-check report (`store_lock: ok`,
+    `wal_pending: ok (N)`, `wal_last_flush_us: ok (N)`) when every
+    subsystem check passes; 503 + the same report listing failed
+    checks otherwise. Failure here means *drain traffic*, not restart.
+  - `/healthz` is kept as a backward-compat alias for `/livez`.
 - **Shutdown:** the daemon traps SIGINT and SIGTERM, drains
   in-flight UDS connections briefly, unlinks the socket file, and
   exits cleanly. The async WAL lane flushes its buffered batch before
