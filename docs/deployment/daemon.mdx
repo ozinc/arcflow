@@ -149,9 +149,40 @@ The startup line on stderr tells you what was replayed:
 
 ```
 arcflow-daemon: replaying 12834 WAL entries from /var/lib/arcflow/wal.bin
-arcflow-daemon: WAL durability enabled at /var/lib/arcflow/wal.bin (replayed 12834 entries)
+arcflow-daemon: WAL durability enabled at /var/lib/arcflow/wal.bin (replayed 12834 entries; flush_count=1000, flush_interval_ms=10)
 arcflow-daemon: UDS listening on /tmp/arcflow.sock (Ctrl+C to stop)
 ```
+
+### Tuning the disk lane
+
+The async WAL lane batches ops before each fsync. Two flags control
+the batching policy; both apply only when `--data-dir` is in use.
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--wal-flush-count <N>` | `1000` | Fsync after this many ops accumulate. |
+| `--wal-flush-interval-ms <N>` | `10` | Fsync at most this long after the first buffered op, even if the count threshold isn't hit. |
+
+The threshold that fires first wins on each batch.
+
+Pick a preset by workload:
+
+```bash
+# Strict durability (every-op fsync; expensive but bounds data loss to ≤1 op)
+arcflow-daemon --data-dir /var/lib/arcflow \
+  --wal-flush-count 1 --wal-flush-interval-ms 1
+
+# Balanced (default — good for most pub/sub workloads)
+arcflow-daemon --data-dir /var/lib/arcflow
+
+# High-throughput batch ingestion (fewer fsyncs, larger crash window)
+arcflow-daemon --data-dir /var/lib/arcflow \
+  --wal-flush-count 10000 --wal-flush-interval-ms 100
+```
+
+Both flags must be `> 0`: a `0` count would disable the
+count-driven flush path; a `0` timeout would spin the disk-lane
+thread. The daemon rejects either with an explicit error at startup.
 
 ## Streaming subscribers — long-lived push delivery
 
