@@ -118,6 +118,38 @@ if event K fails (e.g. invalid payload), events `0..K-1` are
 published, response carries the partial `sequences` plus the typed
 error and `partial: true`. Caller resumes from `sequences.len()`.
 
+### Live retention changes — `topic.set_retention`
+
+Topics created with one retention policy can have it tightened or
+loosened at runtime without a restart. Useful for handling burst
+days, bounding queue depth on a noisy topic, or relaxing a too-tight
+policy that's dropping events you wanted to keep.
+
+```jsonc
+// Tighten a topic to keep at most the last 1000 events.
+{
+  "id": 1,
+  "method": "topic.set_retention",
+  "params": {
+    "topic": "frames",
+    "max_events": 1000
+  }
+}
+
+// Both fields are independent and optional. `null` (or omitted)
+// means "unbounded on that axis". Passing the bare topic name with
+// no bounds restores fully-unbounded retention.
+{
+  "method": "topic.set_retention",
+  "params": { "topic": "frames" }
+}
+```
+
+Tightening prunes already-resident events **immediately** in the
+same lock pass. The new policy is WAL-journaled, so it survives
+daemon restart. Returns `TOPIC_NOT_FOUND` if the topic doesn't
+exist.
+
 ## Durability — `--data-dir`
 
 Without `--data-dir` the daemon runs **purely in-memory**. A crash
