@@ -390,10 +390,26 @@ Use **in-process** instead when:
     subsystem check passes; 503 + the same report listing failed
     checks otherwise. Failure here means *drain traffic*, not restart.
   - `/healthz` is kept as a backward-compat alias for `/livez`.
-- **Shutdown:** the daemon traps SIGINT and SIGTERM, drains
-  in-flight UDS connections briefly, unlinks the socket file, and
-  exits cleanly. The async WAL lane flushes its buffered batch before
-  the process exits.
+- **Shutdown:** the daemon traps SIGINT and SIGTERM. After the
+  signal:
+  1. The accept loop stops (no new connections);
+  2. The async WAL lane is **explicitly drained** — its disk-lane
+     thread is told to flush, and `main()` blocks on the join. The
+     buffered fsync batch is guaranteed durable before the process
+     exits, regardless of how many connection-handler threads are
+     still alive holding `Arc` clones. (Without this explicit drain,
+     `Drop` on the lane would never run because the shared
+     `GraphStore` never gets dropped before `main()` returns; the
+     OS would then SIGKILL the disk thread, possibly mid-fsync.)
+  3. The socket file is unlinked.
+
+  Operators see two stderr lines on a successful shutdown:
+  ```
+  arcflow-daemon: draining WAL on shutdown…
+  arcflow-daemon: WAL drained — exit clean
+  ```
+  In-memory daemons (no `--data-dir`) skip both lines — there is no
+  durability surface to drain.
 - **Socket permissions:** the daemon creates the UDS with default
   umask. Restrict access by setting umask before exec, or running
   the daemon as a dedicated user whose primary group is the only one
