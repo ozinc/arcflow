@@ -249,6 +249,20 @@ Gauges (snapshot at scrape time):
 - `arcflow_dlq_nodes` — failed events parked for re-drive
 - `arcflow_sliding_windows`
 
+WAL durability metrics (only emitted when `--data-dir` is in use):
+
+| Metric | Type | Meaning |
+|---|---|---|
+| `arcflow_wal_replay_entries` | gauge | WAL entries replayed at startup. Set once; never increments mid-process. Restart-cost indicator. |
+| `arcflow_wal_ops_buffered_total` | counter | Ops sent to the disk lane since startup. |
+| `arcflow_wal_ops_flushed_total` | counter | Ops successfully fsynced. |
+| `arcflow_wal_pending` | gauge | Buffered but not flushed. **Alarm** if persistently above the lane's `flush_count` threshold. |
+| `arcflow_wal_bytes_written_total` | counter | Bytes written to `wal.bin`. |
+| `arcflow_wal_flushes_total` | counter | Fsync cycles completed by the disk lane. |
+| `arcflow_wal_last_flush_us` | gauge | μs of the most recent fsync cycle. |
+
+Daemons started without `--data-dir` emit only `arcflow_wal_replay_entries 0` and skip the lane-derived metrics — the WAL infrastructure isn't running in that mode.
+
 Sample Prometheus scrape config:
 
 ```yaml
@@ -271,6 +285,19 @@ rate(arcflow_rpc_publish_batch_events_total[1m])
 
 # Failed-event backlog — operator alarm if non-zero for more than N minutes
 arcflow_dlq_nodes
+
+# Sustained durability throughput — should track publish rates under steady state
+rate(arcflow_wal_ops_flushed_total[1m])
+
+# Disk lane backpressure — alarm if persistently > a few thousand
+arcflow_wal_pending
+
+# Average bytes per fsync — useful for sizing flush_count / flush_interval
+arcflow_wal_bytes_written_total
+  / arcflow_wal_flushes_total
+
+# Restart cost — schedule snapshot+truncate work when this grows large
+arcflow_wal_replay_entries
 ```
 
 ## When NOT to use the daemon
