@@ -250,6 +250,11 @@ Gauges (snapshot at scrape time):
 - `arcflow_consumer_groups`
 - `arcflow_dlq_nodes` — failed events parked for re-drive
 - `arcflow_sliding_windows`
+- `arcflow_max_consumer_lag` — worst-case `head_seq - last_acked_seq`
+  across every durable consumer and consumer group on every topic.
+  Single aggregate gauge by design; per-consumer detail lives in the
+  `consumer.list` / `group.list` RPC responses (see below) so the
+  metrics surface stays low-cardinality.
 
 WAL durability metrics (only emitted when `--data-dir` is in use):
 
@@ -300,6 +305,32 @@ arcflow_wal_bytes_written_total
 
 # Restart cost — schedule snapshot+truncate work when this grows large
 arcflow_wal_replay_entries
+
+# Worst-case consumer lag — one-number indicator that some subscriber
+# is falling behind. Drill into consumer.list / group.list (lag field)
+# to see which.
+arcflow_max_consumer_lag
+```
+
+The matching `consumer.list` and `group.list` RPC responses include
+`head_seq` and `lag` per row, so an admin tool can print a per-consumer
+table without a second round trip:
+
+```jsonc
+// → consumer.list response
+{
+  "consumers": [
+    {
+      "id": 1,
+      "name": "vision",
+      "topic": "frames",
+      "last_acked_seq": 1234,
+      "head_seq": 1240,
+      "lag": 6
+    },
+    // …
+  ]
+}
 ```
 
 ## When NOT to use the daemon
