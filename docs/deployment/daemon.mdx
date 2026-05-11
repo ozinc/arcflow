@@ -328,6 +328,35 @@ double-counting under contention) and released by an RAII guard
 when the handler thread exits — so even a panicking handler
 returns the slot rather than leaking it.
 
+### Daemon identity — `daemon.info`
+
+Cheap RPC that returns the daemon's version, uptime, active flag
+values, and live counts. Useful for "is this the daemon I think I'm
+talking to" debugging and for client SDKs that want to gate features
+on a minimum daemon version.
+
+```jsonc
+{"method": "daemon.info", "params": {}}
+
+// → {
+//   "version":         "1.6.27",
+//   "uptime_seconds":  3672,
+//   "wal_durability":  true,           // mirrors `--data-dir` presence
+//   "limits": {
+//     "max_line_bytes":  16777216,
+//     "max_connections": 1024
+//   },
+//   "counts": {
+//     "topics":          42,
+//     "consumers":       18,
+//     "consumer_groups": 3
+//   }
+// }
+```
+
+The same version is exposed as the `arcflow_build_info{version="…"}`
+gauge label on `/metrics`, and uptime as `arcflow_uptime_seconds`.
+
 ### Bounded pull pagination — `limit` + `has_more`
 
 The pull-style RPCs — `topic.events_after`, `consumer.pending`,
@@ -451,6 +480,12 @@ Counters:
 
 Gauges (snapshot at scrape time):
 
+- `arcflow_build_info{version="…"}` — constant `1` with the daemon
+  crate version baked into a label. Standard Prometheus convention;
+  use `count by (version) (arcflow_build_info)` to count daemons
+  by release across a fleet.
+- `arcflow_uptime_seconds` — seconds since the daemon started serving
+  traffic. Restart detection: `delta(arcflow_uptime_seconds[5m]) < 0`.
 - `arcflow_topics`
 - `arcflow_consumers`
 - `arcflow_consumer_groups`
