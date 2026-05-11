@@ -150,6 +150,31 @@ same lock pass. The new policy is WAL-journaled, so it survives
 daemon restart. Returns `TOPIC_NOT_FOUND` if the topic doesn't
 exist.
 
+### Dropping a topic entirely — `topic.delete`
+
+Removes a topic + all events + all consumers bound to it + all
+groups bound to it. A subsequent `topic.create` with the same
+name creates a *fresh* topic with a new internal id; previous
+consumer registrations are gone (correct — they were bound to
+the old id).
+
+```jsonc
+{"method": "topic.delete",
+ "params": {"topic": "frames"}}
+
+// → {"topic":             "frames",
+//    "events_evicted":    4,
+//    "consumers_dropped": 1,
+//    "groups_dropped":    1}
+```
+
+After delete + recreate, the first publish on the new topic gets
+sequence `1` (not the prior topic's high-water mark). This is
+the deliberate split with `topic.purge` — see below.
+
+WAL-journaled so the deletion survives restart. Returns
+`TOPIC_NOT_FOUND` if the topic doesn't exist.
+
 ### Clearing a topic's events — `topic.purge`
 
 Drop all resident events from a topic without dropping the topic
