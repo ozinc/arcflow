@@ -328,6 +328,37 @@ double-counting under contention) and released by an RAII guard
 when the handler thread exits — so even a panicking handler
 returns the slot rather than leaking it.
 
+### Bounded pull pagination — `limit` + `has_more`
+
+The pull-style RPCs — `topic.events_after`, `consumer.pending`,
+`group.pending` — accept an optional `limit` parameter and return
+a `has_more: bool` field alongside `events`. Without the limit, a
+fresh consumer catching up after a long disconnect could request
+millions of events in one RPC, materializing the whole pending set
+in memory and serializing it into one giant JSON array.
+
+```jsonc
+// Page 1
+{"id": 1, "method": "topic.events_after",
+ "params": {"topic": "frames", "after_seq": 0, "limit": 1000}}
+
+// → {"events": [...1000 events...], "has_more": true}
+
+// Page 2 — cursor at the last sequence returned
+{"id": 2, "method": "topic.events_after",
+ "params": {"topic": "frames", "after_seq": 1000, "limit": 1000}}
+
+// → {"events": [...next page...], "has_more": false}
+```
+
+| Field | Default | Notes |
+|---|---|---|
+| `limit` | `1000` | Per-RPC override. Clamped to `[1, 100000]`. Larger values are silently capped (no error — `has_more` tells the client to keep paging). |
+| `has_more` | response-only | `true` means at least one more event exists past the returned set; client should issue the next RPC. |
+
+For hot-loop catch-up the streaming `consumer.subscribe` path is
+the right answer — pagination is for episodic / dashboard pulls.
+
 ## Streaming subscribers — long-lived push delivery
 
 For subscribers that want events pushed to them as they arrive
