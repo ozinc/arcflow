@@ -328,6 +328,56 @@ double-counting under contention) and released by an RAII guard
 when the handler thread exits — so even a panicking handler
 returns the slot rather than leaking it.
 
+### Snapshot for backup — `topic.checkpoint`
+
+Materialize the daemon's current pub/sub state as a compacted
+sequence of WAL ops and atomically write to a snapshot file.
+Useful for:
+- Backups before upgrades / config changes
+- Cold-restore from offsite storage
+- Forensics (load snapshot.bin into a separate daemon to inspect
+  the state at checkpoint time)
+
+```jsonc
+// Default: snapshot.bin under --data-dir
+{"method": "topic.checkpoint", "params": {}}
+
+// Override: write to a custom path (e.g. NFS-mounted backup volume)
+{"method": "topic.checkpoint",
+ "params": {"path": "/mnt/backup/arcflow-2026-05-11.bin"}}
+
+// → {"snapshot_path": "/var/lib/arcflow/snapshot.bin",
+//    "ops":           1834,         // # of WAL ops in the snapshot
+//    "bytes":         287512}       // serialized size
+```
+
+The snapshot file uses the same `BinaryWal` format as `wal.bin`,
+so it's loadable with the same `BinaryWal::open(...).replay()`
+path. The snapshot is a *compaction* of the historical WAL —
+redundant ops (multiple `AckEvents` for the same consumer, dropped
+consumers, retention-pruned events) are folded out, so it's
+strictly smaller than the WAL it summarizes.
+
+The write goes through the same atomic .tmp + fsync + rename
+dance the disk lane uses for its own checkpoint command. Either
+the new snapshot is fully durable or the old one is untouched —
+no half-written file.
+
+**Current limitation:** the daemon does not yet *load* snapshot.bin
+on startup, nor does it truncate `wal.bin` after a successful
+snapshot. Operators who want to bound restart cost can:
+- Take a `topic.checkpoint`,
+- Stop the daemon,
+- Replace `wal.bin` with `snapshot.bin` (`mv`),
+- Start the daemon (replays the compacted form).
+
+Snapshot-on-startup load + WAL truncation as a single atomic
+operation is queued as the next durability iteration.
+
+`WAL_NOT_ENABLED` typed error if `--data-dir` is not set AND no
+explicit `path` is provided (a stateless daemon has no canonical
+location for snapshots).
+
 ### Daemon identity — `daemon.info`
 
 Cheap RPC that returns the daemon's version, uptime, active flag
