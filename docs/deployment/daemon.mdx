@@ -150,6 +150,34 @@ same lock pass. The new policy is WAL-journaled, so it survives
 daemon restart. Returns `TOPIC_NOT_FOUND` if the topic doesn't
 exist.
 
+### Clearing a topic's events — `topic.purge`
+
+Drop all resident events from a topic without dropping the topic
+itself. Retention, consumers, and groups survive; the topic's
+`next_seq` is preserved so consumer offsets stay meaningful (the
+next publish gets `last_seq + 1`, not `1`). Useful for testing,
+debug, and "drain and start fresh" workflows.
+
+```jsonc
+{"method": "topic.purge",
+ "params": {"topic": "frames"}}
+
+// → {"topic": "frames", "evicted": 7}
+```
+
+After the purge:
+- `topic.events_after` returns nothing
+- `topic.list` still shows the topic with its retention intact
+- `consumer.list` still shows registered consumers with their
+  `last_acked_seq` unchanged
+- The next `topic.publish` gets a sequence past the prior
+  high-water mark (e.g. if the last event was seq 7, the new
+  one gets seq 8) — so a consumer with `last_acked_seq=3` will
+  see the new event as pending, not all of "everything's pending"
+
+The purge is WAL-journaled so the cleared state survives daemon
+restart. Returns `TOPIC_NOT_FOUND` if the topic doesn't exist.
+
 ### Rewinding a consumer — `consumer.reset`
 
 Consumer offsets are monotonic by design — both `consumer.register`
