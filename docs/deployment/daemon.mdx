@@ -714,6 +714,22 @@ Use **in-process** instead when:
 
 ## Operational notes
 
+- **Stderr log format:** every operationally-meaningful event the
+  daemon writes to stderr now carries an ISO-8601 UTC timestamp
+  and a level prefix. Three levels: `INFO ` (lifecycle),
+  `WARN ` (recoverable degradation), `ERROR` (fatal-to-process).
+  ```
+  2026-05-11T13:45:23Z INFO  arcflow-daemon: WAL durability enabled at /var/lib/arcflow/wal.bin (replayed 12834 entries; flush_count=1000, flush_interval_ms=10)
+  2026-05-11T13:45:23Z INFO  arcflow-daemon: UDS listening on /tmp/arcflow.sock (Ctrl+C to stop)
+  2026-05-11T13:45:24Z WARN  arcflow-daemon: HTTP accept failed — Connection reset by peer (os error 104)
+  ```
+  No new dependencies — the format is hand-rolled to keep the
+  static binary small for low-overhead deploys. Operators on
+  systemd / k8s already get journald-side timestamps; this lights
+  up plain stdout-to-file deploys, ad-hoc `nc` testing, and
+  log-scrapers that filter by level prefix. The usage banner
+  printed by `--help` is intentionally NOT prefixed (it's not a log
+  event).
 - **Liveness vs readiness:** wire `GET /livez` to your liveness probe
   and `GET /readyz` to your readiness probe.
   - `/livez` returns 200 + `ok\n` whenever the process is alive (503
