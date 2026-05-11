@@ -150,6 +150,45 @@ same lock pass. The new policy is WAL-journaled, so it survives
 daemon restart. Returns `TOPIC_NOT_FOUND` if the topic doesn't
 exist.
 
+### Rewinding a consumer — `consumer.reset`
+
+Consumer offsets are monotonic by design — both `consumer.register`
+(idempotent) and `consumer.ack` (no-op on stale seq) refuse to
+rewind. When operators need a consumer to re-read a window
+(re-processing after a downstream bug, replaying a debug session),
+use `consumer.reset`:
+
+```jsonc
+{
+  "id": 1,
+  "method": "consumer.reset",
+  "params": {
+    "name":   "vision",
+    "topic":  "frames",
+    "to_seq": 1000
+  }
+}
+
+// Response
+{"id": 1,
+ "result": {"id": 17,
+            "name": "vision",
+            "topic": "frames",
+            "last_acked_seq": 1000}}
+```
+
+After this, `consumer.pending` returns events with `sequence > 1000`.
+Internally the daemon does drop + re-register under one lock pass,
+producing two WAL ops (`DropConsumer` + `RegisterConsumer`) that
+replay correctly. The consumer's `id` may change (drop assigns a
+fresh id on the new register).
+
+**Strict semantics:** `consumer.reset` requires the consumer to
+already exist. Returns `CONSUMER_NOT_FOUND` if not — to **create**
+a consumer at a specific seq, use `consumer.register` with
+`start: <seq>`. This split prevents a typo in the consumer name
+from silently spawning a new one.
+
 ## Durability — `--data-dir`
 
 Without `--data-dir` the daemon runs **purely in-memory**. A crash
