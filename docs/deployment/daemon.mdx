@@ -413,6 +413,33 @@ Typed errors:
   the lane couldn't be reopened. Restart the daemon to restore
   durability (the on-disk state is correct).
 
+#### Periodic auto-checkpoint — `--auto-checkpoint-secs`
+
+For unattended production deployments, pass
+`--auto-checkpoint-secs <N>` to the daemon. A background thread
+fires `topic.checkpoint{truncate_wal: true}` every `N` seconds so
+`wal.bin` stays bounded without operator intervention:
+
+```bash
+# Compact wal.bin every 5 minutes
+arcflow-daemon \
+  --data-dir /var/lib/arcflow \
+  --auto-checkpoint-secs 300
+```
+
+| Property | Behavior |
+|---|---|
+| Default | `0` (disabled) — operators must opt in. |
+| Floor | `10` seconds when enabled. Sub-10s cadence burns more on lane shutdown/reopen than it saves in restart cost; rejected at startup. |
+| Realistic values | `60` (per minute), `300` (5 min), `3600` (hourly). |
+| Without `--data-dir` | Silently ignored (no WAL to compact). |
+| Shutdown latency | Sleeps in 1-second slices, so SIGTERM during a long period (e.g. `--auto-checkpoint-secs 3600`) doesn't make the daemon wait an hour to exit. |
+| Failure | Logs to stderr, doesn't retry until the next tick. Alarm pattern: `rate(arcflow_wal_checkpoints_total[1h]) == 0` while the flag is set means the compactor stalled. |
+
+Both manual and automatic checkpoints increment the same counter
+(`arcflow_wal_checkpoints_total`), so a fleet-wide checkpoint-rate
+dashboard works regardless of which path triggered the compaction.
+
 ### Daemon identity — `daemon.info`
 
 Cheap RPC that returns the daemon's version, uptime, active flag
@@ -589,6 +616,9 @@ Counters (cont'd):
 - `arcflow_rejected_connections_total` — connections refused because
   `--max-connections` was full. Any non-zero rate indicates clients
   silently failing to connect; alarm worthy.
+- `arcflow_wal_checkpoints_total` — successful `topic.checkpoint`
+  calls (manual + automatic). Alarm: `rate(...[1h]) == 0` while
+  `--auto-checkpoint-secs` is set means the compactor stalled.
 
 WAL durability metrics (only emitted when `--data-dir` is in use):
 
