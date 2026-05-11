@@ -363,20 +363,55 @@ dance the disk lane uses for its own checkpoint command. Either
 the new snapshot is fully durable or the old one is untouched —
 no half-written file.
 
-**Current limitation:** the daemon does not yet *load* snapshot.bin
-on startup, nor does it truncate `wal.bin` after a successful
-snapshot. Operators who want to bound restart cost can:
-- Take a `topic.checkpoint`,
-- Stop the daemon,
-- Replace `wal.bin` with `snapshot.bin` (`mv`),
-- Start the daemon (replays the compacted form).
+For automatic restart-cost reduction, pass `truncate_wal: true`:
 
-Snapshot-on-startup load + WAL truncation as a single atomic
-operation is queued as the next durability iteration.
+```jsonc
+// Atomic compact: replace wal.bin with the snapshot in one
+// lock pass + reopen the disk lane. No restart needed.
+{"method": "topic.checkpoint",
+ "params": {"truncate_wal": true}}
 
-`WAL_NOT_ENABLED` typed error if `--data-dir` is not set AND no
-explicit `path` is provided (a stateless daemon has no canonical
-location for snapshots).
+// → {"snapshot_path": null,           // no separate file written
+//    "wal_truncated": true,
+//    "ops":           1834,
+//    "bytes":         287512}
+
+// Or both: snapshot to backup AND compact wal.bin in one call.
+{"method": "topic.checkpoint",
+ "params": {"path":          "/mnt/backup/arcflow-2026-05-11.bin",
+            "truncate_wal":  true}}
+```
+
+When `truncate_wal: true`, the daemon:
+
+1. Materializes pub/sub state under the store lock,
+2. Drains the disk lane (`shutdown` — flush + thread join),
+3. Writes `wal.bin.tmp` (compacted form) + fsync,
+4. Atomically renames `wal.bin.tmp` → `wal.bin`,
+5. Reopens a fresh `AsyncWalLane` on the new `wal.bin`,
+6. Releases the lock — publishers resume.
+
+Crash points are all recoverable:
+- Before rename: old `wal.bin` intact, replay restores
+  pre-checkpoint state. `.tmp` file is garbage, gets reused on
+  next checkpoint.
+- After rename, before lane reopen: new `wal.bin` in place,
+  daemon down. Restart picks up the truncated form.
+- Mid-rename: POSIX rename is atomic. Either fully done or
+  untouched.
+
+No separate snapshot loader is needed at startup — the existing
+`init_store_with_wal` replay reads the compacted `wal.bin` directly.
+
+Typed errors:
+- `WAL_NOT_ENABLED` — `truncate_wal: true` without `--data-dir`,
+  or snapshot-only mode with no `path` and no `--data-dir`
+- `WAL_TRUNCATE_WRITE_FAILED` / `WAL_TRUNCATE_RENAME_FAILED` —
+  the daemon attempts to reopen the original lane before erroring,
+  so the daemon stays operational and the operator can retry
+- `WAL_LANE_REOPEN_FAILED` — `wal.bin` truncated successfully but
+  the lane couldn't be reopened. Restart the daemon to restore
+  durability (the on-disk state is correct).
 
 ### Daemon identity — `daemon.info`
 
