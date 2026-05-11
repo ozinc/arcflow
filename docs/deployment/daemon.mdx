@@ -296,6 +296,38 @@ Connection: close
 request exceeds --max-line-bytes (16777216); closing connection
 ```
 
+### Bounding concurrent connections — `--max-connections`
+
+By default the daemon caps active connections (across UDS + HTTP)
+at **1024**. Override with `--max-connections <N>`. Floor: `1` —
+zero is rejected at startup since it would brick the daemon for
+every client.
+
+When the cap is full, new accepts get a typed BUSY frame and an
+immediate close — the connection is *not* held open in a queue
+(that would just defer the FD pressure). Counted in
+`arcflow_rejected_connections_total`; any non-zero rate is
+operator-actionable.
+
+```jsonc
+// UDS reject — newline-delimited JSON-RPC frame, then close
+{"id": null, "result": null,
+ "error": {"code": "BUSY", "message": "daemon at --max-connections"}}
+```
+
+```
+HTTP/1.1 503 Service Unavailable
+Content-Type: text/plain; charset=utf-8
+Connection: close
+
+daemon at --max-connections
+```
+
+The slot is acquired in the accept loop (CAS retry, no
+double-counting under contention) and released by an RAII guard
+when the handler thread exits — so even a panicking handler
+returns the slot rather than leaking it.
+
 ## Streaming subscribers — long-lived push delivery
 
 For subscribers that want events pushed to them as they arrive
@@ -398,6 +430,14 @@ Gauges (snapshot at scrape time):
   Single aggregate gauge by design; per-consumer detail lives in the
   `consumer.list` / `group.list` RPC responses (see below) so the
   metrics surface stays low-cardinality.
+- `arcflow_active_connections` — active client connections across
+  UDS + HTTP. Bounded by `--max-connections`.
+
+Counters (cont'd):
+
+- `arcflow_rejected_connections_total` — connections refused because
+  `--max-connections` was full. Any non-zero rate indicates clients
+  silently failing to connect; alarm worthy.
 
 WAL durability metrics (only emitted when `--data-dir` is in use):
 
