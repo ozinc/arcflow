@@ -243,6 +243,20 @@ shared environments, or a looser cap (e.g. `--max-line-bytes
 67108864` for 64 MiB) when your `topic.publish_batch` legitimately
 ships very large frames.
 
+The same cap covers the HTTP/SSE bridge — `parse_request` enforces
+it as the **cumulative** budget across the request line plus every
+header, so an attacker can't bypass the per-line limit by sending
+many small headers. Oversized HTTP requests get a `413 Payload
+Too Large` response and a closed socket:
+
+```
+HTTP/1.1 413 Payload Too Large
+Content-Type: text/plain; charset=utf-8
+Connection: close
+
+request exceeds --max-line-bytes (16777216); closing connection
+```
+
 ## Streaming subscribers — long-lived push delivery
 
 For subscribers that want events pushed to them as they arrive
