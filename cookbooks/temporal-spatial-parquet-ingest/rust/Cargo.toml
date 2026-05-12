@@ -1,0 +1,28 @@
+[package]
+name = "temporal-spatial-parquet-ingest"
+version = "0.1.0"
+edition = "2021"
+description = "ArcFlow Rust SDK example mirroring the temporal-spatial-parquet-ingest Python recipe — Parquet → ArcFlow via the bulk-create path, plus cross-validation against DuckDB on the same input."
+
+[dependencies]
+arcflow-sdk = { git = "https://github.com/ozinc/arcflow-core", branch = "main" }
+arrow = "53"
+parquet = "53"
+duckdb = { version = "1", features = ["bundled"] }
+anyhow = "1"
+
+[lib]
+name = "temporal_spatial_parquet_ingest"
+path = "src/lib.rs"
+
+[[bin]]
+name = "02-parquet-load"
+path = "src/bin/02-parquet-load.rs"
+
+[[bin]]
+name = "04-temporal-queries"
+path = "src/bin/04-temporal-queries.rs"
+
+[[bin]]
+name = "05-validate-vs-duckdb"
+path = "src/bin/05-validate-vs-duckdb.rs"
