@@ -6,6 +6,7 @@ status: "stable"
 playground:
   seed: world
   query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS zone_risk, count(r) AS robots, avg(r.battery) AS avg_energy, avg(s.reliability * d.confidence) AS observability_score RETURN zone, zone_risk, robots, avg_energy, observability_score, CASE WHEN observability_score >= 0.9 THEN 'trusted' WHEN observability_score >= 0.75 THEN 'acceptable' ELSE 'investigate' END AS observability ORDER BY observability_score DESC"
+canonical: concepts/sql-vs-gql
 ---
 
 # From SQL to GQL
