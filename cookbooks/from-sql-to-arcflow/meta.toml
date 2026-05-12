@@ -1,6 +1,7 @@
 slug = "from-sql-to-arcflow"
 title = "From SQL to ArcFlow — DuckDB-vs-ArcFlow side-by-side for graph + temporal + spatial questions"
 audience = ["python", "data-engineer", "sql-user"]
+tags = ["migration", "patterns"]
 arcflow_apis = [
     "python.ArcFlow.execute",
     "python.ArcFlow.close",

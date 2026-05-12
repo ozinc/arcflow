@@ -1,0 +1,26 @@
+[package]
+name = "from-sql-to-arcflow"
+version = "0.1.0"
+edition = "2021"
+description = "ArcFlow Rust SDK example mirroring the from-sql-to-arcflow Python recipe — same three side-by-side comparisons (shared coworkers, confidence-tiered query, multi-hop industry) running DuckDB and ArcFlow in one process for hybrid workloads."
+
+[dependencies]
+arcflow-sdk = { git = "https://github.com/ozinc/arcflow-core", branch = "main" }
+duckdb = { version = "1", features = ["bundled"] }
+anyhow = "1"
+
+[lib]
+name = "from_sql_to_arcflow"
+path = "src/lib.rs"
+
+[[bin]]
+name = "01-shared-coworkers"
+path = "src/bin/01-shared-coworkers.rs"
+
+[[bin]]
+name = "02-confidence-tiered-query"
+path = "src/bin/02-confidence-tiered-query.rs"
+
+[[bin]]
+name = "03-multi-hop-industry"
+path = "src/bin/03-multi-hop-industry.rs"
