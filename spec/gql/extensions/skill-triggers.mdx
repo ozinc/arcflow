@@ -14,7 +14,7 @@ generated: true
 CREATE SKILL auto_tag WHEN node_created ON Article
 ```
 
-**GQL compatibility:** No GQL equivalent.
+**GQL compatibility:** 🔌 No GQL equivalent.
 **Semantics:** Event-driven skill execution on CDC events. Skills fire when graph conditions match.
 
 > **Engine alignment in progress.** The engine currently accepts `CREATE REACTIVE SKILL <name>` for backwards compatibility. The unmodified `CREATE SKILL ... WHEN ... ON ...` form (shown above) is the forward direction — it lands when the engine vNext alignment ships. Both forms are equivalent until then.

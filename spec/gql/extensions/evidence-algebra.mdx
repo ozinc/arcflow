@@ -16,7 +16,7 @@ WHERE r._confidence > 0.8
 RETURN arcflow.path_confidence(r)
 ```
 
-**GQL compatibility:** No GQL equivalent. `r._confidence` uses GQL property access syntax.  
+**GQL compatibility:** 🔌 No GQL equivalent. `r._confidence` uses GQL property access syntax.  
 **Semantics:** Z-set retract+insert. Confidence as Z-set weight. Observation replaces prediction. Multi-hop product via `arcflow.path_confidence(r)`.
 
 ## Standards relationship
