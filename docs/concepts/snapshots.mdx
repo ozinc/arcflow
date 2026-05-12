@@ -4,7 +4,8 @@ description: "Every world model query result is provenanced — the snapshot URI
 status: "stable"
 playground:
   seed: world
-  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) RETURN z.name AS zone, r.name AS robot, s.name AS sensor, d.confidence AS confidence ORDER BY confidence DESC"---
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) RETURN z.name AS zone, r.name AS robot, s.name AS sensor, d.confidence AS confidence ORDER BY confidence DESC"
+---
 
 # Snapshot-Pinned Reads
 

@@ -5,7 +5,8 @@ order: 4
 status: "stable"
 playground:
   seed: world
-  query: "MATCH (s:Sensor)-[:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) RETURN z.name AS zone, r.name AS robot, s.name AS sensor"---
+  query: "MATCH (s:Sensor)-[:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) RETURN z.name AS zone, r.name AS robot, s.name AS sensor"
+---
 
 # Filesystem Projection
 
