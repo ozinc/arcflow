@@ -1,6 +1,7 @@
 slug = "agent-knowledge-base"
 title = "Agent Knowledge Base via Confidence-Scored GraphRAG"
-audience = ["python", "agent"]
+audience = ["python", "agent", "ml"]
+tags = ["graphrag", "confidence"]
 arcflow_apis = [
     "python.ArcFlow.execute",
     "python.ArcFlow.close",
@@ -11,5 +12,5 @@ arcflow_apis = [
 external_deps = []
 runtime_minutes = 5
 gpu_required = false
-manifest_pin = "1.6.6"
+manifest_pin = "1.6.7"
 data_provenance = "synthesized"
