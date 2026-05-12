@@ -1,6 +1,7 @@
 slug = "temporal-counterfactual-replay"
 title = "Temporal Counterfactual Replay — AS OF seq for Decision Audit"
 audience = ["python", "data-engineer", "compliance", "agent"]
+tags = ["temporal", "audit"]
 arcflow_apis = [
     "python.ArcFlow.execute",
     "python.ArcFlow.close",
