@@ -1,0 +1,14 @@
+[project]
+name = "algo-trading-llm-harness"
+version = "0.1.0"
+description = "Persistent memory + cascading LIVE views + confidence-weighted signal fusion — the ArcFlow harness pattern for LLM-driven algorithmic trading."
+requires-python = ">=3.11"
+dependencies = [
+  "oz-arcflow==1.6.7",
+]
+
+[tool.uv]
+index-url = "https://staging.oz.com/pypi/simple/"
+
+[tool.uv.sources]
+oz-arcflow = { index = "https://staging.oz.com/pypi/simple/" }

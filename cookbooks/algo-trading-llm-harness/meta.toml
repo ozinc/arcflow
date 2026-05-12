@@ -1,0 +1,14 @@
+slug = "algo-trading-llm-harness"
+title = "Algo-Trading LLM Harness — Persistent Memory, Orchestrated Context, Confidence-Weighted Fusion"
+audience = ["python", "ml", "agent", "data-engineer"]
+arcflow_apis = [
+    "python.ArcFlow.execute",
+    "python.ArcFlow.bulk_create_nodes",
+    "python.ArcFlow.bulk_create_relationships",
+    "python.ArcFlow.close",
+]
+external_deps = []
+runtime_minutes = 3
+gpu_required = false
+manifest_pin = "1.6.7"
+data_provenance = "synthesized"
