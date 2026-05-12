@@ -34,9 +34,11 @@ Cross-repo SSoT map: `oz-platform/apps/cloud/website/kanban/CROSS-REPO-MAP.md`.
 
 ## Sibling surfaces (NOT in `/docs/*`)
 
-- `/spec/gql/{conformance,features,extensions}` — GQL standard conformance dashboards (76 generated stubs lifted out of `/docs/reference/gql/*` + `/docs/reference/extensions/*` + `/docs/reference/{gql-conformance,tck,extensions-regressions}`)
-- `/arcflow/cookbooks` — runnable recipes (oz.com marketing surface; `/docs/cookbooks-index` is removed)
+- `/arcflow/cookbooks` — runnable recipes (oz.com marketing surface, sources from `cookbooks/<slug>/`)
 - `/engine` — interactive REPL (pinned in docs sidebar header)
+- `/install/arcflow` — install script (curl-pipe-sh; text/plain)
+
+GQL standards conformance lives at `/docs/reference/conformance/*` — three dashboards (overview · TCK · regressions). Vendor extensions are folded into the canonical capability page each one extends (e.g. ASOF JOIN lives on `/docs/temporal`, HNSW Vector Index on `/docs/vector-search`).
 
 ## Frontmatter contract
 

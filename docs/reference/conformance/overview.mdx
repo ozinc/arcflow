@@ -64,16 +64,36 @@ Conformance was achieved across these phases:
 | ✅ | `GQL-0006` | primary keys constraints merge gql v2 | COMPLETE |
 | ✅ | `GQL-0007` | conformance statement | COMPLETE |
 
-## 📖 Per-feature reference
+## ❌ Unsupported features (vendor choice)
 
-Every named feature in the conformance catalog has its own page under [`/spec/gql/features/`](/spec/gql/features/match-basic). The full list is in the sidebar.
+ISO GQL allows implementations to opt out of specific features. ArcFlow's 3 unsupported:
 
-## 🔌 Beyond GQL
+| | Feature ID | Why opted out |
+|:-:|---|---|
+| ❌ | `multiple_labels_per_node` | Schema model uses `exactly_one` label cardinality (see vendor choices above); multi-label support would change graph semantics |
+| ❌ | `gql_directories` | Multi-graph directories deferred; ArcFlow targets single-graph-per-store deployments |
+| ❌ | `gql_flagger` | GQL flagger linter not provided; ArcFlow's own parser carries equivalent diagnostics through GQLSTATUS codes |
 
-ArcFlow ships 9 documented extensions beyond the standard — live queries, Z-set incremental evaluation, evidence algebra, ASOF joins, GPU GraphBLAS, HNSW vector index, and more. Each has its own page under [`/spec/gql/extensions/`](/spec/gql/extensions/live-queries).
+The other **57 / 60** ISO features are supported at conformance level full. The full feature inventory ships in the engine repo's conformance corpus and is verified continuously by the regression suite (see TCK + Regressions below).
+
+## 🔌 ArcFlow extensions beyond GQL
+
+ArcFlow ships extensions beyond the ISO standard. Each extension is documented in the capability page it belongs to:
+
+| Extension (GQL keyword) | Canonical page |
+|---|---|
+| `CREATE LIVE VIEW` / `LIVE MATCH` | [/docs/live-queries](/live-queries) |
+| `MATCH ASOF` (temporal joins) | [/docs/temporal](/temporal) |
+| HNSW vector index (`CREATE VECTOR INDEX`) | [/docs/vector-search](/vector-search) |
+| Graph embedding algorithms (PageRank, Louvain, …) | [/docs/algorithms](/algorithms) |
+| `CREATE SKILL ... WHEN ... ON ...` (event-driven skills) | [/docs/skills](/skills) |
+| GPU GraphBLAS dispatch | [/docs/gpu](/gpu) |
+| Evidence algebra (confidence + provenance operators) | [/docs/concepts/evidence-model](/concepts/evidence-model) |
+| Z-set incremental view maintenance | [/docs/live-queries](/live-queries) (Z-set is the underlying mechanism) |
+| Reactive write-back views | [/docs/live-queries](/live-queries) |
 
 Extensions do not affect ISO conformance — they are opt-in syntax the standard explicitly leaves to implementations.
 
 ## 🧪 Test corpus
 
-The full openCypher TCK (3881/3881) plus ArcFlow's regression corpus runs on every engine release. See [TCK Results](/spec/gql/conformance/tck) and [Extension Regressions](/spec/gql/conformance/regressions).
+The full openCypher TCK (3881/3881) plus ArcFlow's regression corpus runs on every engine release. See [openCypher TCK Results](/reference/conformance/tck) and [Extension Regressions](/reference/conformance/regressions).
