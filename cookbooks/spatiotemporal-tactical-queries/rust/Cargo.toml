@@ -1,0 +1,27 @@
+[package]
+name = "spatiotemporal-tactical-queries"
+version = "0.1.0"
+edition = "2021"
+description = "ArcFlow Rust SDK example mirroring the spatiotemporal-tactical-queries Python recipe — AS OF counterfactual replay, confidence-weighted ER, observed-vs-predicted fusion, plus register_skill on ER mutations and provenance_chain walks."
+
+[dependencies]
+arcflow-sdk = { git = "https://github.com/ozinc/arcflow-core", branch = "main" }
+rand = "0.8"
+rand_chacha = "0.3"
+anyhow = "1"
+
+[lib]
+name = "spatiotemporal_tactical_queries"
+path = "src/lib.rs"
+
+[[bin]]
+name = "01-counterfactual-replay"
+path = "src/bin/01-counterfactual-replay.rs"
+
+[[bin]]
+name = "02-confidence-entity-resolution"
+path = "src/bin/02-confidence-entity-resolution.rs"
+
+[[bin]]
+name = "03-observed-vs-predicted"
+path = "src/bin/03-observed-vs-predicted.rs"

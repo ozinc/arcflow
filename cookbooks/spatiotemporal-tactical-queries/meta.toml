@@ -1,6 +1,7 @@
 slug = "spatiotemporal-tactical-queries"
 title = "Spatiotemporal Tactical Queries — AS OF Counterfactuals, Confidence-Weighted ER, Observed vs Predicted"
 audience = ["python", "data-engineer", "ml", "agent"]
+tags = ["temporal", "confidence"]
 arcflow_apis = [
     "python.ArcFlow.execute",
     "python.ArcFlow.bulk_create_nodes",
