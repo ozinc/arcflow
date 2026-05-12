@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """
-Structural lint for the /spec/ surface (DIA Phase 2 sibling to /docs/).
+Structural lint for the /spec/ surface — generated dashboards (GQL features,
+conformance, vendor extensions). Sibling to /docs/.
+
 Reads spec/_config.json and spec/**/*.mdx.
 
 Rules:
@@ -8,10 +10,10 @@ Rules:
   S2   Every registered slug has a backing .mdx file.
   S3   No two registered slugs collide.
   S4   schema_version is "v2".
-  S5   No frontmatter `section:` (deprecated, same as /docs/).
+  S5   No frontmatter `section:` (config is sole SSoT).
 
-This is a thinner lint than /docs/ — /spec/ has no kind-mapping, no
-canonicals, no facets. Pages are generated dashboards.
+Thinner than the /docs/ lint — /spec/ has no kind-mapping, no canonicals,
+no facets.
 
 Run: scripts/check-spec-structure.py
 """

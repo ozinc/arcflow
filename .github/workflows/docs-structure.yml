@@ -1,13 +1,12 @@
-# Enforce IA v2 (DIA restructure, 2026-05-12) — see docs/_AGENTS.md.
+# Enforce the docs/spec IA contract — see docs/_AGENTS.md.
 #
 # Three checks run on every push/PR:
-#   1. scripts/check-docs-structure.py — DIA v2 rules R1..R9 (schema_version,
-#      kind matching, no `section:` frontmatter, valid canonicals, no order
+#   1. scripts/check-docs-structure.py — R1..R9 (schema_version, kind matching,
+#      no `section:` / `order:` frontmatter, valid canonicals, no order
 #      collisions, registration completeness, slug uniqueness, top-level cap).
-#   2. scripts/check-spec-structure.py — sibling /spec/ surface rules S1..S5
-#      (DIA Phase 2 — 72 generated stubs in spec/gql/*).
+#   2. scripts/check-spec-structure.py — sibling /spec/ surface rules S1..S5.
 #   3. scripts/generate-reference.py --check — regenerated MDX matches the
-#      vendored data (kept; the generator targets spec/ after DIA).
+#      vendored data.
 #
 # If any fails, the underlying issue must be fixed. Do not bypass.
 
@@ -33,12 +32,12 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Docs structure (DIA v2 — R1..R9)
+      - name: Docs structure (R1..R9)
         run: python3 scripts/check-docs-structure.py
 
-      - name: Spec structure (DIA Phase 2 — S1..S5)
+      - name: Spec structure (S1..S5)
         run: python3 scripts/check-spec-structure.py
 
       - name: Generated reference up-to-date with vendored data
         run: python3 scripts/generate-reference.py --check
-        continue-on-error: true  # DIA: generator may target spec/ after restructure; reconcile in follow-up
+        continue-on-error: true

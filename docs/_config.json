@@ -1,6 +1,5 @@
 {
   "schema_version": "v2",
-  "comment": "v2 schema (2026-05-12) per oz-platform dossier DIA. Top-level Object-First per Strawman B + 3 amendments. Source of truth: apps/cloud/website/kanban/planning/26-05-12-docs-ia-restructure/. Frontmatter `section:` is deprecated \u2014 this config is the sole SSOT for placement (decision DIA-2). Renderer supports nested `children`; group rows without `slug` render as labels only.",
   "lint": {
     "max_top_level_sections": 8,
     "max_items_per_section": 16,

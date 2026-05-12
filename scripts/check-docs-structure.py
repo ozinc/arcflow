@@ -1,27 +1,23 @@
 #!/usr/bin/env python3
 """
-Structural lint for arcflow-docs after the DIA restructure (2026-05-12).
-Updated for _config.json schema v2: multi-level children, kind mapping,
-canonical declarations, pinned links, deprecated frontmatter `section:`.
+Structural lint for arcflow-docs/docs/ — enforces the IA contract.
 
-Source of truth for rules: docs/_AGENTS.md.
+SSoT for the rules: docs/_AGENTS.md.
 
 Rules:
   R1   Every .mdx in docs/ is registered in docs/_config.json OR is a
-       facet (file has frontmatter `canonical:`). Facets are reachable
-       URLs but not sidebar items.
+       facet (file has frontmatter `canonical:`).
   R2   Every registered slug has a backing .mdx file.
   R3   No two registered slugs collide.
   R4   `_config.json` top-level sections ≤ max_top_level_sections.
-  R5   Every page declares `kind:` frontmatter; kind matches section's
+  R5   Every non-facet page declares `kind:` matching its section's
        declared kind (per section_kind_map in _config.json).
-  R6   No frontmatter `section:` field anywhere (deprecated in DIA;
-       _config.json is sole SSOT).
+  R6   No frontmatter `section:` or `order:` field — _config.json is
+       the sole SSoT for placement and ordering.
   R7   Every page that declares `canonical: <slug>` must reference a
-       slug that exists in either _config.json registration OR another
-       page on disk (= valid canonical target). Cycles not allowed.
+       slug that exists in config or on disk. No self-cycles.
   R8   No sibling order: collisions within the same parent group.
-  R9   schema_version is "v2" (or absent for legacy; warns).
+  R9   `_config.json` carries schema_version "v2".
 
 Exit codes:
   0 — clean

@@ -1,6 +1,5 @@
 {
   "schema_version": "v2",
-  "comment": "Sidebar config for /spec/ surface \u2014 sibling to /docs/. Generated dashboards (conformance, features, extensions catalog) live here so the docs sidebar stays focused on docs-shaped content. DIA Phase 2.",
   "lint": {
     "max_top_level_sections": 4,
     "frontmatter_section_field": "deprecated"

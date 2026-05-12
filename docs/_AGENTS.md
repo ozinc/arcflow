@@ -1,19 +1,25 @@
 # arcflow-docs/docs/ — IA contract
 
-> Restructured 2026-05-12 per the [DIA dossier](https://github.com/ozinc/oz-platform/tree/dev/apps/cloud/website/kanban/planning/26-05-12-docs-ia-restructure).
-> Object-First IA (Strawman B + 3 amendments). 6 top-level sections. Multi-level nav. Lint-enforced.
+The IA shape is Object-First: top-level sections answer *"what kind of thing
+is this page?"* — concept, clause, capability, operation, reference, use-case,
+walkthrough, first-use. Multi-level nav supported via nested `children`.
+Lint-enforced (R1..R9).
 
-## Rules (R1..R7)
+Cross-repo SSoT map: `oz-platform/apps/cloud/website/kanban/CROSS-REPO-MAP.md`.
+
+## Rules
 
 | ID | Rule | Lint check |
 |----|------|------------|
-| R1 | A reader should reach the right page in ≤3 clicks + ≤5 s scanning | Manual blind test on releases |
+| R1 | A reader reaches the right page in ≤3 clicks + ≤5 s scanning | Manual blind test on releases |
 | R2 | Top-level sections answer one question: *what kind of thing is this?* | `section_kind_map` in `_config.json` |
-| R3 | Top level capped at 8 (today: 6); `_config.json` validator rejects PRs that push past | `max_top_level_sections` |
-| R4 | Lint runs on every PR; `kind` frontmatter matches section's allowed kind | CI pre-commit |
-| R5 | Each documentable concept has exactly one canonical page; others declare `canonical: <slug>`. Registered (non-facet) pages **must** declare `kind:` matching the section's declared kind. | CI: presence + match check |
-| R6 | `/llms.txt` canonical-page count after restructure ≥ count before — agent vocab does not shrink | CI: diff llms.txt enumeration |
-| R7 | Frontmatter is config-deprecated for placement/ordering — neither `section:` nor `order:` may appear. `_config.json` is the sole SSOT. | CI: fails on either field |
+| R3 | Top level capped at `lint.max_top_level_sections` (default 8) | `_config.json` validator |
+| R4 | Lint runs on every PR | CI pre-commit (`scripts/check-docs-structure.py`) |
+| R5 | Each documentable concept has exactly one canonical page; others declare `canonical: <slug>`. Registered (non-facet) pages **must** declare `kind:` matching the section's declared kind | CI: presence + match check |
+| R6 | `/llms.txt` canonical-page count ≥ pre-change baseline — agent vocab does not shrink | CI: diff llms.txt enumeration |
+| R7 | Frontmatter is config-deprecated for placement/ordering — neither `section:` nor `order:` may appear. `_config.json` is the sole SSoT | CI: fails on either field |
+| R8 | Sibling items inside a parent have unique `order:` values | CI: order collision check |
+| R9 | `_config.json` carries `schema_version: "v2"` | CI |
 
 ## Sections (kind enum)
 
