@@ -1,30 +1,35 @@
 #!/usr/bin/env python3
 """
-Structural integrity linter for the docs repo.
+Structural lint for arcflow-docs after the DIA restructure (2026-05-12).
+Updated for _config.json schema v2: multi-level children, kind mapping,
+canonical declarations, pinned links, deprecated frontmatter `section:`.
 
-Enforces the durable-vs-intake split documented in docs/CONTRIBUTING.md:
+Source of truth for rules: docs/_AGENTS.md.
 
-  R1. Every .mdx in docs/ is registered in docs/_config.json
-      (or is an index.mdx whose parent slug is registered).
-  R2. Every registered slug has a backing file.
-  R3. No two registered slugs collide.
-  R4. Pages with `generated: true` frontmatter live only under docs/reference/.
-  R5. Pages under docs/reference/{gql,extensions}/ all have `generated: true`.
-  R6. Sections marked `"managed": ...` in _config.json are owned by that
-      script — they should match what the generator produces (delegated to
-      `scripts/generate-reference.py --check`; this linter only enforces the
-      `managed` metadata field is present on the right sections).
+Rules:
+  R1   Every .mdx in docs/ is registered in docs/_config.json OR is a
+       facet (file has frontmatter `canonical:`). Facets are reachable
+       URLs but not sidebar items.
+  R2   Every registered slug has a backing .mdx file.
+  R3   No two registered slugs collide.
+  R4   `_config.json` top-level sections ≤ max_top_level_sections.
+  R5   Every page declares `kind:` frontmatter; kind matches section's
+       declared kind (per section_kind_map in _config.json).
+  R6   No frontmatter `section:` field anywhere (deprecated in DIA;
+       _config.json is sole SSOT).
+  R7   Every page that declares `canonical: <slug>` must reference a
+       slug that exists in either _config.json registration OR another
+       page on disk (= valid canonical target). Cycles not allowed.
+  R8   No sibling order: collisions within the same parent group.
+  R9   schema_version is "v2" (or absent for legacy; warns).
 
 Exit codes:
-  0  — clean
-  1  — structural drift detected
-
-Run: scripts/check-docs-structure.py
+  0 — clean
+  1 — drift detected
 """
 from __future__ import annotations
 
 import json
-import re
 import sys
 from pathlib import Path
 
@@ -32,18 +37,6 @@ ROOT = Path(__file__).resolve().parent.parent
 DOCS = ROOT / "docs"
 CONFIG = DOCS / "_config.json"
 
-MANAGED_SECTIONS = {"gql-conformance", "gql-features", "arcflow-extensions"}
-GENERATED_DIRS = {"reference/gql", "reference/extensions"}
-GENERATED_TOP_PAGES = {
-    "reference/gql-conformance",
-    "reference/tck",
-    "reference/extensions-regressions",
-}
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 
 def load_config() -> dict:
     return json.loads(CONFIG.read_text())
@@ -54,7 +47,6 @@ def all_mdx_files() -> list[Path]:
 
 
 def mdx_to_slug(path: Path) -> str:
-    """docs/foo/bar.mdx → foo/bar; docs/foo/index.mdx → foo (or foo/index)."""
     rel = path.relative_to(DOCS).with_suffix("")
     parts = rel.parts
     if parts[-1] == "index":
@@ -63,16 +55,15 @@ def mdx_to_slug(path: Path) -> str:
 
 
 def parse_frontmatter(path: Path) -> dict:
-    """Tiny YAML-subset parser — handles the flat key: value frontmatter we emit."""
     text = path.read_text()
     if not text.startswith("---\n"):
         return {}
     end = text.find("\n---\n", 4)
     if end < 0:
         return {}
-    fm = {}
+    fm: dict[str, object] = {}
     for line in text[4:end].splitlines():
-        line = line.strip()
+        line = line.rstrip()
         if not line or ":" not in line:
             continue
         k, _, v = line.partition(":")
@@ -84,13 +75,34 @@ def parse_frontmatter(path: Path) -> dict:
     return fm
 
 
+def flatten_items(items: list[dict]) -> list[dict]:
+    """Recursively flatten nested children. Returns leaf items only (with slug)."""
+    out = []
+    for it in items:
+        if it.get("slug"):
+            out.append(it)
+        if it.get("children"):
+            out.extend(flatten_items(it["children"]))
+    return out
+
+
+def all_items_with_parent(items: list[dict], parent_path: str = "") -> list[tuple[dict, str]]:
+    """Returns [(item, parent_path)] for order: collision detection. Siblings share parent_path."""
+    out = []
+    for it in items:
+        out.append((it, parent_path))
+        if it.get("children"):
+            child_parent = f"{parent_path}/{it.get('slug') or it.get('title')}"
+            out.extend(all_items_with_parent(it["children"], child_parent))
+    return out
+
+
 def collect_registered_slugs(cfg: dict) -> tuple[set[str], list[tuple[str, str]]]:
-    """Returns (set of registered slugs, list of (slug, section_id) duplicates)."""
     seen: dict[str, str] = {}
     duplicates: list[tuple[str, str]] = []
     for section in cfg["sections"]:
         sid = section["id"]
-        for item in section["items"]:
+        for item in flatten_items(section["items"]):
             slug = item["slug"]
             if slug in seen:
                 duplicates.append((slug, f"{seen[slug]} + {sid}"))
@@ -99,37 +111,32 @@ def collect_registered_slugs(cfg: dict) -> tuple[set[str], list[tuple[str, str]]
     return set(seen), duplicates
 
 
-# ---------------------------------------------------------------------------
-# Rules
-# ---------------------------------------------------------------------------
-
 def check_r1_r2_r3(cfg: dict, mdx_files: list[Path]) -> list[str]:
-    """R1 (every MDX registered), R2 (every slug has a file), R3 (no slug collision)."""
     errors: list[str] = []
     registered, duplicates = collect_registered_slugs(cfg)
 
-    # R3: collisions
     for slug, where in duplicates:
         errors.append(f"R3: slug '{slug}' is registered twice ({where})")
 
-    # R1: every MDX must be registered (with index.mdx fallback)
     mdx_slugs = {mdx_to_slug(p): p for p in mdx_files}
     for slug, path in mdx_slugs.items():
         if slug in registered:
             continue
-        # Tolerate index.mdx being registered under either form
+        # Facet escape: page declares canonical: <target> — facets are
+        # legitimately not in the sidebar but exist as URLs.
+        fm = parse_frontmatter(path)
+        if fm.get("canonical"):
+            continue
         if path.name == "index.mdx" and f"{slug}/index" in registered:
             continue
         rel = path.relative_to(ROOT)
-        errors.append(f"R1: {rel} (slug='{slug}') is not registered in _config.json")
+        errors.append(f"R1: {rel} (slug='{slug}') is not registered in _config.json and has no canonical:")
 
-    # R2: every registered slug must have a file
     available = set(mdx_slugs)
     available |= {f"{s}/index" for s in mdx_slugs}
     for slug in registered:
         if slug in available:
             continue
-        # Try parent/index form (slug 'foo' may resolve to docs/foo/index.mdx)
         if (DOCS / slug / "index.mdx").exists():
             continue
         if (DOCS / f"{slug}.mdx").exists():
@@ -139,50 +146,115 @@ def check_r1_r2_r3(cfg: dict, mdx_files: list[Path]) -> list[str]:
     return errors
 
 
-def check_r4_r5(mdx_files: list[Path]) -> list[str]:
-    """R4: generated frontmatter only under docs/reference/.
-       R5: pages under reference/gql or reference/extensions must be generated."""
+def check_r4(cfg: dict) -> list[str]:
+    lint = cfg.get("lint", {})
+    cap = lint.get("max_top_level_sections", 8)
+    n = len(cfg["sections"])
+    if n > cap:
+        return [f"R4: {n} top-level sections in _config.json — exceeds lint.max_top_level_sections={cap}"]
+    return []
+
+
+def check_r5(cfg: dict, mdx_files: list[Path]) -> list[str]:
+    """Every registered page declares kind: matching section's declared kind."""
+    errors: list[str] = []
+    kind_map = cfg.get("lint", {}).get("section_kind_map", {})
+    if not kind_map:
+        return []
+    # Build slug → section_id
+    slug_to_section: dict[str, str] = {}
+    for section in cfg["sections"]:
+        sid = section["id"]
+        for item in flatten_items(section["items"]):
+            slug_to_section[item["slug"]] = sid
+
+    mdx_slugs = {mdx_to_slug(p): p for p in mdx_files}
+    for slug, sid in slug_to_section.items():
+        path = mdx_slugs.get(slug) or (DOCS / f"{slug}/index.mdx" if (DOCS / f"{slug}/index.mdx").exists() else None)
+        if not path:
+            continue
+        fm = parse_frontmatter(path)
+        kind = fm.get("kind")
+        expected = kind_map.get(sid)
+        if expected and kind and kind != expected:
+            errors.append(f"R5: {path.relative_to(ROOT)} declares kind='{kind}' but section '{sid}' expects kind='{expected}'")
+    return errors
+
+
+def check_r6(mdx_files: list[Path]) -> list[str]:
+    """No frontmatter `section:` field — DIA-deprecated per decision 2."""
     errors: list[str] = []
     for path in mdx_files:
-        rel = path.relative_to(DOCS).as_posix()
         fm = parse_frontmatter(path)
-        is_generated = bool(fm.get("generated"))
-
-        if is_generated and not rel.startswith("reference/"):
-            errors.append(f"R4: {path.relative_to(ROOT)} has generated:true but is outside docs/reference/")
-
-        if rel.startswith(("reference/gql/", "reference/extensions/")) and not is_generated:
-            errors.append(f"R5: {path.relative_to(ROOT)} is in a generated directory but missing generated:true")
-
+        if "section" in fm:
+            errors.append(f"R6: {path.relative_to(ROOT)} has deprecated frontmatter `section:` — remove (per docs/_AGENTS.md)")
     return errors
 
 
-def check_r6(cfg: dict) -> list[str]:
-    """R6: managed sections must declare a `managed` field naming their generator."""
+def check_r7(cfg: dict, mdx_files: list[Path]) -> list[str]:
+    """Canonical declarations must point to valid slugs (registered OR present on disk)."""
+    errors: list[str] = []
+    registered, _ = collect_registered_slugs(cfg)
+    mdx_slugs = {mdx_to_slug(p) for p in mdx_files}
+    valid_targets = registered | mdx_slugs
+
+    for path in mdx_files:
+        fm = parse_frontmatter(path)
+        canonical = fm.get("canonical")
+        if not canonical:
+            continue
+        if canonical not in valid_targets:
+            errors.append(f"R7: {path.relative_to(ROOT)} declares canonical='{canonical}' but no such slug exists in config or on disk")
+        if canonical == mdx_to_slug(path):
+            errors.append(f"R7: {path.relative_to(ROOT)} declares canonical pointing to itself")
+    return errors
+
+
+def check_r8(cfg: dict) -> list[str]:
+    """No sibling order: collisions within the same parent."""
     errors: list[str] = []
     for section in cfg["sections"]:
-        sid = section.get("id")
-        if sid in MANAGED_SECTIONS and "managed" not in section:
-            errors.append(f"R6: section '{sid}' must declare a 'managed' field naming its generator")
+        items_with_parent = all_items_with_parent(section["items"], section["id"])
+        # Group by parent_path, then check orders within
+        groups: dict[str, list[dict]] = {}
+        for it, parent in items_with_parent:
+            groups.setdefault(parent, []).append(it)
+        for parent, items in groups.items():
+            orders = [it.get("order") for it in items if "order" in it]
+            seen: dict[int, str] = {}
+            for it in items:
+                o = it.get("order")
+                if o is None:
+                    continue
+                if o in seen:
+                    errors.append(f"R8: order={o} collision under '{parent}': '{seen[o]}' and '{it.get('slug') or it.get('title')}'")
+                else:
+                    seen[o] = it.get("slug") or it.get("title", "?")
     return errors
 
 
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
+def check_r9(cfg: dict) -> list[str]:
+    sv = cfg.get("schema_version")
+    if sv != "v2":
+        return [f"R9: _config.json schema_version='{sv}' — DIA migration expects 'v2'"]
+    return []
+
 
 def main() -> int:
     cfg = load_config()
     mdx_files = all_mdx_files()
 
     all_errors: list[str] = []
+    all_errors += check_r9(cfg)
+    all_errors += check_r4(cfg)
     all_errors += check_r1_r2_r3(cfg, mdx_files)
-    all_errors += check_r4_r5(mdx_files)
-    all_errors += check_r6(cfg)
+    all_errors += check_r8(cfg)
+    all_errors += check_r5(cfg, mdx_files)
+    all_errors += check_r6(mdx_files)
+    all_errors += check_r7(cfg, mdx_files)
 
     if all_errors:
-        print(f"Docs structure: {len(all_errors)} issue(s) found\n", file=sys.stderr)
-        # Group by rule for legibility
+        print(f"Docs structure (DIA v2): {len(all_errors)} issue(s) found\n", file=sys.stderr)
         by_rule: dict[str, list[str]] = {}
         for e in all_errors:
             rule = e.split(":", 1)[0]
@@ -192,11 +264,16 @@ def main() -> int:
             for e in by_rule[rule]:
                 print(f"  {e[len(rule) + 2:]}", file=sys.stderr)
         print(f"\nTotal: {len(all_errors)} issue(s)", file=sys.stderr)
-        print("See docs/CONTRIBUTING.md for the rules.", file=sys.stderr)
+        print("See docs/_AGENTS.md for the rules.", file=sys.stderr)
         return 1
 
-    print(f"Docs structure: clean ({len(mdx_files)} MDX files, "
-          f"{sum(len(s['items']) for s in cfg['sections'])} sidebar entries)")
+    # Print summary
+    n_top = len(cfg["sections"])
+    flat_count = sum(len(flatten_items(s["items"])) for s in cfg["sections"])
+    print(f"Docs structure (DIA v2): clean")
+    print(f"  {len(mdx_files)} MDX files in docs/")
+    print(f"  {n_top} top-level sections")
+    print(f"  {flat_count} registered slug entries (leaves, after nesting)")
     return 0
 
 

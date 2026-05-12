@@ -7,14 +7,6 @@
   },
   "sections": [
     {
-      "id": "overview",
-      "title": "Overview",
-      "kind": "spec",
-      "items": [
-        { "slug": "gql/conformance/overview", "title": "GQL Conformance Dashboard", "order": 1 }
-      ]
-    },
-    {
       "id": "features",
       "title": "GQL Features",
       "kind": "spec",

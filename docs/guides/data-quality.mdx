@@ -6,6 +6,7 @@ status: "stable"
 playground:
   seed: world
   query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot) WITH s.name AS sensor, s.type AS type, s.reliability AS sensor_reliability, avg(d.confidence) AS avg_detection_confidence, avg(s.reliability * d.confidence) AS avg_composite_trust, count(r) AS entities_detected RETURN sensor, type, sensor_reliability, avg_detection_confidence, avg_composite_trust, entities_detected, CASE WHEN avg_composite_trust >= 0.9 THEN 'A' WHEN avg_composite_trust >= 0.75 THEN 'B' ELSE 'C' END AS quality_grade ORDER BY avg_composite_trust DESC"
+canonical: trusted-rag
 ---
 
 # Data Quality & Pipeline Integrity

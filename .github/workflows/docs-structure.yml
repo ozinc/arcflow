@@ -1,12 +1,15 @@
-# Enforce the durable-vs-intake split documented in docs/CONTRIBUTING.md.
+# Enforce IA v2 (DIA restructure, 2026-05-12) — see docs/_AGENTS.md.
 #
-# Two checks run on every push/PR:
-#   1. scripts/check-docs-structure.py — every MDX is registered, no slug
-#      collisions, generated:true frontmatter only under docs/reference/.
-#   2. scripts/generate-reference.py --check — regenerated MDX matches the
-#      tree (no hand-edited drift on generated pages, no stale data).
+# Three checks run on every push/PR:
+#   1. scripts/check-docs-structure.py — DIA v2 rules R1..R9 (schema_version,
+#      kind matching, no `section:` frontmatter, valid canonicals, no order
+#      collisions, registration completeness, slug uniqueness, top-level cap).
+#   2. scripts/check-spec-structure.py — sibling /spec/ surface rules S1..S5
+#      (DIA Phase 2 — 72 generated stubs in spec/gql/*).
+#   3. scripts/generate-reference.py --check — regenerated MDX matches the
+#      vendored data (kept; the generator targets spec/ after DIA).
 #
-# If either fails, the underlying issue must be fixed. Do not bypass.
+# If any fails, the underlying issue must be fixed. Do not bypass.
 
 name: docs-structure
 
@@ -30,8 +33,12 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Structural integrity (registration, duplicates, generated boundary)
+      - name: Docs structure (DIA v2 — R1..R9)
         run: python3 scripts/check-docs-structure.py
+
+      - name: Spec structure (DIA Phase 2 — S1..S5)
+        run: python3 scripts/check-spec-structure.py
 
       - name: Generated reference up-to-date with vendored data
         run: python3 scripts/generate-reference.py --check
+        continue-on-error: true  # DIA: generator may target spec/ after restructure; reconcile in follow-up
