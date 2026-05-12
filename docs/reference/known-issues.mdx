@@ -39,54 +39,7 @@ cp <built-binary>.node node_modules/arcflow/arcflow.<platform>.node
 
 ---
 
-## Documentation state (post-2026-05-12 IA restructure)
-
-The docs were restructured on 2026-05-12. Most artefacts moved cleanly; the items below remain visible to readers as residual rough edges.
-
-### Slug moves and redirects in effect
-
-| Old URL | New URL | Notes |
-|---|---|---|
-| `/docs/use-cases/*` | `/markets/*` | 11 industry verticals — moved to marketing surface |
-| `/docs/reference/gql/*` (60 pages) | `/spec/gql/features/*` | ISO/IEC 39075 feature dashboards |
-| `/docs/reference/extensions/*` (9 pages) | `/spec/gql/extensions/*` | Vendor extensions to the GQL standard |
-| `/docs/reference/{gql-conformance,tck,extensions-regressions}` | `/spec/gql/conformance/*` | Standards-conformance status |
-| `/docs/cookbooks-index` | `/arcflow/cookbooks` | Marketing surface owns runnable recipes |
-| `/docs/concepts/worldcypher` | `/docs/worldcypher` | Concept primer folded into the language reference |
-| `/docs/concepts/skills` | `/docs/skills` | Same |
-| `/docs/project-setup` | `/docs/bindings` | Consolidated install matrix |
-| `/docs/deployment/docker` | `/docs/bindings` | Docker image planned for 2026-Q4 — until shipped, install via bindings |
-
-External links to old URLs 301 transparently. The deep-link contracts for
-`/docs/get-started`, `/docs/quickstart`, `/docs/installation`, `/docs/worldcypher`,
-and `/docs/cli` are pinned — they are referenced from many marketing pages and must
-not change slug without coordination.
-
-### What lives at `/spec/`
-
-`/spec/gql/*` is the sibling surface for **GQL standard conformance**, not for
-how to use ArcFlow. If you arrived on a spec page expecting docs, you probably
-want `/docs/worldcypher` instead. Bookmark `/spec/` only if you audit
-standards-compliance.
-
-### Pages with "deprecated" in body — intentional
-
-Three pages document product-level deprecation (`AS OF <unix_timestamp>` in
-favor of `AS OF seq N`). These markers are intentional spec documentation,
-not docs rot.
-
-- `worldcypher/temporal`
-- `temporal`
-- `worldcypher/statements/remove` — uses `deprecated_field` only as example data
-
-### Reference page that is mis-titled
-
-`/docs/reference/compatibility` currently renders as a GQL reference, not a
-platform compatibility matrix. A follow-up content split will produce both —
-one page for the standards reference, one for platform/version support. Until
-then the sidebar item is labelled "GQL Reference" and links to that content.
-
 ## See Also
 
 - [Error Codes](/reference/errors) — typed error model and recovery suggestions
-- [GQL Reference](/reference/compatibility) — clause + function reference
+- [Compatibility Matrix](/reference/compatibility) — feature support across platforms and versions
