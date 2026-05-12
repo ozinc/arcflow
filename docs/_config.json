@@ -746,6 +746,27 @@
           "slug": "licensing",
           "title": "Licensing",
           "order": 8
+        },
+        {
+          "title": "Conformance",
+          "order": 9,
+          "children": [
+            {
+              "slug": "reference/conformance/overview",
+              "title": "GQL Conformance",
+              "order": 1
+            },
+            {
+              "slug": "reference/conformance/tck",
+              "title": "openCypher TCK",
+              "order": 2
+            },
+            {
+              "slug": "reference/conformance/regressions",
+              "title": "Extension Regressions",
+              "order": 3
+            }
+          ]
         }
       ]
     }
