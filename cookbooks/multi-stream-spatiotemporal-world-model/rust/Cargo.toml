@@ -1,0 +1,32 @@
+[package]
+name = "multi-stream-spatiotemporal-world-model"
+version = "0.1.0"
+edition = "2021"
+description = "ArcFlow Rust SDK example mirroring the multi-stream-spatiotemporal-world-model Python recipe — high-leverage steps in Rust including the LIVE-views + register_skill surfaces Python can't reach today."
+
+[dependencies]
+arcflow-sdk = { git = "https://github.com/ozinc/arcflow-core", branch = "main" }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }
+rand = "0.8"
+rand_chacha = "0.3"
+anyhow = "1"
+
+[lib]
+name = "multi_stream_spatiotemporal_world_model"
+path = "src/lib.rs"
+
+[[bin]]
+name = "04-tracking-bulk-load"
+path = "src/bin/04-tracking-bulk-load.rs"
+
+[[bin]]
+name = "07-spatial-queries"
+path = "src/bin/07-spatial-queries.rs"
+
+[[bin]]
+name = "09-live-views-and-subscribe"
+path = "src/bin/09-live-views-and-subscribe.rs"
+
+[[bin]]
+name = "10-triggers-and-skills"
+path = "src/bin/10-triggers-and-skills.rs"

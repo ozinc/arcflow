@@ -1,14 +1,59 @@
 # Multi-Stream Spatiotemporal World Model
 
-**What you'll build:** A 60 Hz live world model from multi-entity tracking,
-with auxiliary streams (3D scene reconstruction, high-rate biomechanical
-telemetry, sparse event annotations) all reconciled to a single canonical
-timeline. Then watch ArcFlow's LIVE views, standing queries, and behavior-
-graph triggers maintain reactive analytics at the source cadence.
+> **A 60 Hz live world model from multi-entity tracking with auxiliary
+> streams (3D scene reconstruction, biomechanical telemetry, sparse
+> event annotations) all reconciled to a single canonical timeline.**
 
-**Audience:** python, data-engineer, ml, agent.
+**Audience:** python · data-engineer · ml · agent
+**Runtime:** ~30 seconds (load) plus a couple of minutes for the per-step queries
+**Pins:** `oz-arcflow==1.6.7`
 
-**Runtime:** ~30 seconds (load) plus a couple minutes for the per-step queries.
+## The four hard problems this addresses
+
+Every production stack that tracks entities in physical space across
+multiple sensor streams hits the same four engineering walls. Each one
+is solvable in isolation; together they are the integration tax that
+keeps real-time spatial AI as one-off projects rather than reusable
+infrastructure.
+
+1. **Multi-rate streams collapsing into wide rows with NULLs.** The
+   default relational shape: one wide table per session with columns
+   for every stream (`frame, x, y, scene_uri, gyro_x, gyro_y, gyro_z,
+   audio_chunk_id, …`) and NULLs everywhere a stream wasn't sampled at
+   this frame. Most cells are NULL; the schema becomes unmaintainable;
+   queries scan billions of rows to find the non-NULL ones. The graph
+   shape attaches each stream as its own node/edge type to a canonical
+   Frame — every observation is a positive fact, no NULLs.
+
+2. **Coordinate-frame coercion at ingest = lost provenance.** The naive
+   shape: convert biomechanical samples from sensor-local to
+   session-local at ingest time, write the rotated values, throw away
+   the raw axes. When the calibration question arises later — "was the
+   IMU drift compensated for at sample 4823?" — the raw axes are gone.
+   Production stacks pay this audit tax for the life of the system.
+   The graph stores raw axes plus a `_coordinate_frame` label; the
+   conversion lives at query time with the metadata as input.
+
+3. **Cross-rate sync as timestamp-range JOINs.** Three streams at 60 Hz
+   / 30 Hz / 200 Hz means cross-stream queries are `ON tracking.t_ns
+   BETWEEN biomech.t_ns - delta AND biomech.t_ns + delta` — expensive,
+   brittle (off-by-half-a-sample bugs), and don't compose past two
+   streams. The graph attaches every stream to one canonical Frame
+   timeline; cross-stream queries are graph traversals, not range
+   joins.
+
+4. **Trusted retrieval as a per-stream pipeline.** Tracking confidence
+   is a column in the tracking-specific table. Scene confidence is a
+   JSON field in the scene metadata blob. IMU confidence is in the
+   sensor calibration file nobody updated. Each stream has its own
+   "trust" column with its own name, type, and update cadence. The
+   agent that wants "facts above 0.8 confidence" writes per-stream
+   filter logic and hopes the columns mean similar things. The graph
+   carries `_confidence` + `_observation_class` + `_source` on every
+   fact regardless of stream — one `WHERE` clause covers everything.
+
+Solving all four against one persistent, queryable, replayable graph
+with a canonical Frame timeline is what this recipe builds.
 
 ## What this recipe is for
 

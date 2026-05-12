@@ -1,6 +1,7 @@
 slug = "multi-stream-spatiotemporal-world-model"
 title = "Multi-Stream Spatiotemporal World Model — 60 Hz Live Tracking + Synced Auxiliary Streams"
 audience = ["python", "data-engineer", "ml", "agent"]
+tags = ["spatial", "live"]
 arcflow_apis = [
     "python.ArcFlow.execute",
     "python.ArcFlow.close",
