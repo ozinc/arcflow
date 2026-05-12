@@ -1,12 +1,10 @@
 ---
 title: "Robotics & Perception"
 description: "ArcFlow as the operational world model layer for robotics — grounds neural world model outputs into persistent, spatially indexed, temporally versioned entity state."
-section: "use-cases"
 status: "stable"
 playground:
   seed: world
   query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS detected_robots, avg(r.battery) AS avg_battery, avg(r.speed) AS avg_speed, avg(s.reliability * d.confidence) AS perception_quality RETURN zone, hazard, detected_robots, avg_battery, avg_speed, perception_quality, CASE WHEN perception_quality >= 0.90 AND avg_speed > 0.5 THEN 'full-autonomy' WHEN perception_quality >= 0.80 THEN 'supervised' ELSE 'manual-override' END AS control_mode ORDER BY perception_quality DESC"
-
 ---
 
 # Robotics & Perception

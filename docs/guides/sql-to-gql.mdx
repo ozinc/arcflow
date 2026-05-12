@@ -1,13 +1,11 @@
 ---
 title: "From SQL to GQL"
 description: "Query the ArcFlow operational world model from any PostgreSQL client — how the PostgreSQL wire protocol bridges familiar SQL tooling into GQL (ISO/IEC 39075) and WorldCypher."
-section: "guides"
 order: 10
 status: "stable"
 playground:
   seed: world
   query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS zone_risk, count(r) AS robots, avg(r.battery) AS avg_energy, avg(s.reliability * d.confidence) AS observability_score RETURN zone, zone_risk, robots, avg_energy, observability_score, CASE WHEN observability_score >= 0.9 THEN 'trusted' WHEN observability_score >= 0.75 THEN 'acceptable' ELSE 'investigate' END AS observability ORDER BY observability_score DESC"
-
 ---
 
 # From SQL to GQL

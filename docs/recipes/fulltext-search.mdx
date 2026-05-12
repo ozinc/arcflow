@@ -1,12 +1,10 @@
 ---
 title: "Recipe: Full-Text Search"
 description: "BM25-scored full-text search over world model node properties — multi-property indexing, ranked results, and parameterized queries."
-section: "recipes"
 status: "stable"
 playground:
   seed: world
   query: "MATCH (s:Sensor)-[:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WHERE r.name CONTAINS 'Atlas' OR r.name CONTAINS 'Rover' OR r.task CONTAINS 'inspect' OR z.name STARTS WITH 'Lab' WITH s.type AS sensor_type, s.reliability AS reliability, r.name AS robot, r.task AS task, z.name AS zone, z.hazard AS hazard RETURN sensor_type, reliability, robot, task, zone, hazard ORDER BY reliability DESC, task"
-
 ---
 
 # Recipe: Full-Text Search

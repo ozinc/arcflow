@@ -1,12 +1,10 @@
 ---
 title: "CREATE"
 description: "Add entities and relationships to the world model — CREATE nodes with labels and properties, CREATE relationships with type and direction."
-section: "worldcypher/statements"
 order: 5
 status: "stable"
 playground:
-  query: "CREATE (s:Sensor {id: 'thermal-east', name: 'Thermal-East', type: 'thermal', x: 45.0, y: 0.0, reliability: 0.97, commissioned: 1}) MATCH (s:Sensor) RETURN s.name, s.type, s.x, s.y, s.reliability, s.commissioned ORDER BY s.reliability DESC"
----
+  query: "CREATE (s:Sensor {id: 'thermal-east', name: 'Thermal-East', type: 'thermal', x: 45.0, y: 0.0, reliability: 0.97, commissioned: 1}) MATCH (s:Sensor) RETURN s.name, s.type, s.x, s.y, s.reliability, s.commissioned ORDER BY s.reliability DESC"---
 
 # CREATE
 

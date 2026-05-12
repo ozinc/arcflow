@@ -1,0 +1,73 @@
+---
+title: "Evidence Model"
+description: "How ArcFlow makes every fact in the world model epistemically graded — observation class, confidence, provenance, and proof artifacts as first-class graph data"
+kind: concept
+status: "stable"
+concepts: [evidence-model, observations, confidence, provenance, proof-artifacts]
+---
+
+# Evidence Model
+
+The **ArcFlow Evidence Model** is the answer to a single question: *how do you know what you know?*
+
+In ArcFlow, every fact in the world model is **epistemically graded** — it carries the metadata
+needed to answer that question without re-running the pipeline that produced it. Three first-class
+pieces of context travel with every node and relationship:
+
+1. **Observation class** — how the fact was acquired
+2. **Confidence + provenance** — how reliable it is and which source/skill/model produced it
+3. **Proof artifacts** — the durable, query-time-pinned record of *why* the fact stands
+
+Together they let queries filter not just on *what* is known, but on *how well* it is known — the
+foundation for [Trusted RAG](/docs/trusted-rag), confidence-gated coordination, and audit trails
+that survive scrutiny.
+
+## The three sub-concepts
+
+This page is the canonical entry to the Evidence Model. The mechanics live in three sub-pages:
+
+| Sub-concept | What it answers | Sub-page |
+|-------------|------------------|----------|
+| **Observations & Evidence** | Was this fact directly observed, inferred, or predicted? | [/docs/concepts/observations](/docs/concepts/observations) |
+| **Confidence & Provenance** | How reliable is it, and which source produced it? | [/docs/concepts/confidence-and-provenance](/docs/concepts/confidence-and-provenance) |
+| **Proof Artifacts & Gates** | What evidence pinned this fact at query time, and what gate did it pass? | [/docs/concepts/proof-artifacts](/docs/concepts/proof-artifacts) |
+
+## Why this is one model and not three
+
+Each of the three sub-concepts is independently useful, but they compound. A high-confidence
+observation from a low-reliability source is weaker than a medium-confidence observation from a
+high-reliability source — the model expresses that natively. A proof artifact pinned at query time
+references the observations + confidences + provenance chain that justified the answer — so
+"why did this query return this?" has a deterministic, replayable answer.
+
+Other graph databases ask you to track this metadata yourself, in user-space properties. The
+ArcFlow Evidence Model makes it first-class: built into the graph schema, queryable with
+WorldCypher, enforced by the engine.
+
+## The minimum example
+
+```cypher
+MATCH (p:Person)-[r:LOCATED_AT]->(z:Zone)
+WHERE
+  evidence.class(r) = 'observed'           -- directly seen, not inferred
+  AND evidence.confidence(r) >= 0.85       -- high-confidence
+  AND evidence.provenance(r) CONTAINS 'camera-3'  -- source-restricted
+RETURN p, r, z, evidence.proof(r) AS proof
+```
+
+This query says: *show me people in zones, but only when the location was directly observed
+(not predicted), at ≥85% confidence, by camera 3 — and give me the proof artifact so I can
+audit the answer.*
+
+That's a graph query that returns **epistemic context as data, not metadata**.
+
+## Where to go next
+
+- For the mechanics of observation classes (observed / inferred / predicted), read
+  [Observations & Evidence](/docs/concepts/observations).
+- For how confidence scores combine across sources and how provenance chains work, read
+  [Confidence & Provenance](/docs/concepts/confidence-and-provenance).
+- For how queries pin proof at execution time and what gates exist, read
+  [Proof Artifacts & Gates](/docs/concepts/proof-artifacts).
+- For the higher-level patterns this enables, read [Trusted RAG](/docs/trusted-rag) and
+  [Behavior Graphs](/docs/behavior-graph).

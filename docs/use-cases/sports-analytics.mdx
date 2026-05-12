@@ -1,12 +1,10 @@
 ---
 title: "Use Case: Sports Analytics"
 description: "Sports analytics as a world model problem — spatial-temporal player tracking, confidence-scored events, formation algorithms, and real-time queries in one engine"
-section: "use-cases"
 status: "stable"
 playground:
   seed: world
   query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS active_agents, avg(r.speed) AS avg_speed, avg(r.battery) AS avg_energy, avg(s.reliability * d.confidence) AS tracking_quality RETURN zone, hazard, active_agents, avg_speed, avg_energy, tracking_quality, CASE WHEN tracking_quality >= 0.92 THEN 'broadcast-ready' WHEN tracking_quality >= 0.80 THEN 'analytics-grade' ELSE 'data-gap' END AS data_tier ORDER BY tracking_quality DESC"
-
 ---
 
 # Use Case: Sports Analytics

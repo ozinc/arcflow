@@ -1,11 +1,9 @@
 ---
 title: "Use Case: Behavior Graphs"
 description: "Behavior trees embedded in a world model — the tree IS the graph, with confidence-scored transitions, execution provenance, and temporal history"
-section: "use-cases"
 status: "stable"
 playground:
   query: "MERGE (dir:Agent {id: 'director', name: 'DirectorAgent', role: 'orchestrator', active: 1}) MERGE (p1:Agent {id: 'plan-a', name: 'PlannerAlpha', role: 'planning', zone: 'lab-a', active: 1}) MERGE (p2:Agent {id: 'plan-b', name: 'PlannerBeta', role: 'planning', zone: 'lab-b', active: 1}) MERGE (s1:Sensor {id: 'cam-1', name: 'Cam-LabA', type: 'camera', reliability: 0.95}) MERGE (s2:Sensor {id: 'lidar-1', name: 'Lidar-LabB', type: 'lidar', reliability: 0.91}) MERGE (d1:Agent {id: 'director'})-[:DELEGATES_TO]->(pa:Agent {id: 'plan-a'}) MERGE (d2:Agent {id: 'director'})-[:DELEGATES_TO]->(pb:Agent {id: 'plan-b'}) MERGE (pa1:Agent {id: 'plan-a'})-[:MONITORS]->(sc:Sensor {id: 'cam-1'}) MERGE (pb1:Agent {id: 'plan-b'})-[:MONITORS]->(sl:Sensor {id: 'lidar-1'}) MATCH (director:Agent)-[:DELEGATES_TO]->(planner:Agent)-[:MONITORS]->(sensor:Sensor) RETURN director.name AS director, director.role AS director_role, planner.name AS agent, planner.role AS agent_role, planner.zone AS assigned_zone, sensor.name AS monitoring_sensor, sensor.type AS sensor_type, sensor.reliability AS sensor_reliability ORDER BY sensor.reliability DESC"
-
 ---
 
 # Use Case: Behavior Graphs

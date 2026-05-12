@@ -1,13 +1,11 @@
 ---
 title: "REPROCESS EDGES"
 description: "Refresh low-confidence derived edges — delete stale relationships and re-run their compiled skill patterns for updated scores. No model calls."
-section: "skills"
 order: 4
 status: "stable"
 playground:
   seed: world
   query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS entity_count, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS edge_trust RETURN zone, hazard, entity_count, avg_battery, edge_trust, CASE WHEN edge_trust >= 0.90 THEN 'trusted' WHEN edge_trust >= 0.80 THEN 'marginal' ELSE 'stale' END AS reprocess_verdict ORDER BY edge_trust DESC"
-
 ---
 
 # REPROCESS EDGES

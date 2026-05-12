@@ -1,13 +1,11 @@
 ---
 title: "SET"
 description: "Update world model state — SET properties on nodes and relationships, add labels, apply map projections."
-section: "worldcypher/statements"
 order: 8
 status: "stable"
 playground:
   seed: world
-  query: "MATCH (r:Robot {id: 'r1'}) SET r.battery = 96, r.status = 'charging', r.task = 'standby', r.dock_seq = 201 RETURN r.name AS name, r.task AS task, r.battery AS battery, r.status AS status, r.dock_seq AS dock_seq, r.x AS x, r.y AS y"
----
+  query: "MATCH (r:Robot {id: 'r1'}) SET r.battery = 96, r.status = 'charging', r.task = 'standby', r.dock_seq = 201 RETURN r.name AS name, r.task AS task, r.battery AS battery, r.status AS status, r.dock_seq AS dock_seq, r.x AS x, r.y AS y"---
 
 # SET
 

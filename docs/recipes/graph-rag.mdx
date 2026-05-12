@@ -1,12 +1,10 @@
 ---
 title: "Recipe: GraphRAG"
 description: "Graph RAG from the world model — combine vector search, graph traversal, and confidence filtering to ground LLM context in structured evidence."
-section: "recipes"
 status: "stable"
 playground:
   seed: world
   query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WHERE s.reliability >= 0.90 WITH z.name AS zone, z.hazard AS hazard, count(r) AS grounded_entities, avg(d.confidence) AS mean_confidence, avg(s.reliability) AS mean_reliability, avg(s.reliability * d.confidence) AS composite_trust, min(s.reliability * d.confidence) AS min_trust RETURN zone, hazard, grounded_entities, mean_confidence, mean_reliability, composite_trust, min_trust, CASE WHEN composite_trust >= 0.93 THEN 'tier1_verified' WHEN composite_trust >= 0.88 THEN 'tier2_operational' ELSE 'tier3_uncertain' END AS rag_tier ORDER BY composite_trust DESC"
-
 ---
 
 # Recipe: GraphRAG

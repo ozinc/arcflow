@@ -1,11 +1,9 @@
 ---
 title: "Digital Twins"
 description: "ArcFlow as the world model layer for digital twins — a live, spatially grounded, temporally versioned graph replica of a physical system"
-section: "use-cases"
 status: "stable"
 playground:
   query: "MERGE (t1:Asset {id: 'turbine-01', name: 'Turbine-01', type: 'turbine', rpm: 1450.0, temp: 72.3, vibration: 0.02, status: 'nominal', trust: 0.97}) MERGE (t2:Asset {id: 'turbine-02', name: 'Turbine-02', type: 'turbine', rpm: 1510.0, temp: 88.7, vibration: 0.09, status: 'warning', trust: 0.91}) MERGE (s1:Sensor {id: 'temp-01', name: 'TempSensor', type: 'thermal', reliability: 0.98}) MERGE (s2:Sensor {id: 'vib-01', name: 'VibSensor', type: 'accelerometer', reliability: 0.95}) MERGE (s1:Sensor {id: 'temp-01'})-[:MONITORS]->(t1:Asset {id: 'turbine-01'}) MERGE (s2:Sensor {id: 'vib-01'})-[:MONITORS]->(t2:Asset {id: 'turbine-02'}) MATCH (sensor:Sensor)-[:MONITORS]->(asset:Asset) RETURN sensor.name AS sensor, sensor.type AS sensor_type, sensor.reliability AS sensor_reliability, asset.name AS asset, asset.type AS asset_type, asset.status AS status, asset.temp AS temperature, asset.vibration AS vibration, asset.trust AS trust_score, CASE WHEN asset.status = 'warning' AND sensor.reliability >= 0.95 THEN 'alert-confirmed' WHEN asset.status = 'warning' THEN 'alert-low-confidence' ELSE 'nominal' END AS action ORDER BY sensor.reliability DESC"
-
 ---
 
 # Digital Twins

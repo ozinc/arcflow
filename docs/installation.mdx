@@ -1,11 +1,9 @@
 ---
 title: "Installation"
 description: "Install ArcFlow — manifest-driven matrix sourced from the release manifest. One source of truth for every binding."
-section: "get-started"
 status: "stable"
 playground:
   query: "MERGE (z:Zone {id: 'entry', name: 'Entry Point', x: 0.0, y: 0.0, radius: 10.0, hazard: 0.0}) MERGE (r:Robot {id: 'pioneer', name: 'Pioneer-01', task: 'survey', x: 2.0, y: 3.0, speed: 1.1, battery: 100, status: 'commissioned'}) MERGE (s:Sensor {id: 'init-cam', name: 'InitCam', type: 'camera', reliability: 0.98, last_confidence: 0.97}) MERGE (s:Sensor {id: 'init-cam'})-[:DETECTED]->(r:Robot {id: 'pioneer'}) MERGE (r:Robot {id: 'pioneer'})-[:OCCUPIES]->(z:Zone {id: 'entry'}) MATCH (s:Sensor)-[:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) RETURN s.name AS sensor, s.type AS sensor_type, s.reliability AS reliability, s.last_confidence AS last_trust, r.name AS robot, r.task AS task, r.battery AS battery, r.status AS status, z.name AS zone, z.hazard AS zone_hazard ORDER BY s.reliability DESC"
-
 ---
 
 # Installation

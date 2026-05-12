@@ -1,12 +1,10 @@
 ---
 title: "WorldCypher: Temporal Queries"
 description: "Query world model history with AS OF seq N — temporal snapshots, velocity/decay metrics, change tracking, and live monitoring."
-section: "worldcypher"
 status: "stable"
 playground:
   seed: world
   query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS active_entities, avg(r.battery) AS avg_energy, avg(r.speed) AS avg_velocity, avg(s.reliability * d.confidence) AS observation_quality RETURN zone, hazard, active_entities, avg_energy, avg_velocity, observation_quality, CASE WHEN observation_quality >= 0.90 THEN 'current' WHEN observation_quality >= 0.75 THEN 'recent' ELSE 'stale' END AS data_freshness ORDER BY observation_quality DESC"
-
 ---
 
 # WorldCypher: Temporal Queries

@@ -1,12 +1,10 @@
 ---
 title: "Fleet Coordination"
 description: "Multi-agent world models — typed agent identity, per-observation attribution, Kalman belief fusion, and agent-scoped queries for robot fleets and autonomous deployments."
-section: "guides"
 status: "stable"
 playground:
   seed: world
-  query: "MERGE (:Agent {id: 'robot-01', role: 'scout', zone: 'sector-A', modalities: 'lidar,camera', observation_rate_hz: 10}) MERGE (:Agent {id: 'robot-02', role: 'scout', zone: 'sector-A', modalities: 'camera', observation_rate_hz: 5}) MERGE (:Entity {id: 'target-07', x: 10.5, y: 7.2, _observation_class: 'observed', _confidence: 0.91, _agent_id: 'robot-01'}) MATCH (a:Agent) RETURN a.id, a.role, a.zone, a.observation_rate_hz"
----
+  query: "MERGE (:Agent {id: 'robot-01', role: 'scout', zone: 'sector-A', modalities: 'lidar,camera', observation_rate_hz: 10}) MERGE (:Agent {id: 'robot-02', role: 'scout', zone: 'sector-A', modalities: 'camera', observation_rate_hz: 5}) MERGE (:Entity {id: 'target-07', x: 10.5, y: 7.2, _observation_class: 'observed', _confidence: 0.91, _agent_id: 'robot-01'}) MATCH (a:Agent) RETURN a.id, a.role, a.zone, a.observation_rate_hz"---
 
 # Fleet Coordination
 
