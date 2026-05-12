@@ -1,13 +1,11 @@
 ---
 title: "All Operators"
+kind: reference
 description: "WorldCypher operator reference — 72+ operators for world model queries: comparison, logical, math, string, list, and map."
-section: "reference"
-order: 3
 status: "stable"
 playground:
   seed: world
   query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WHERE s.reliability >= 0.90 AND d.confidence >= 0.85 AND NOT z.hazard > 0.20 AND (r.task = 'assembly' OR r.task = 'inspection') WITH r.name AS robot, r.task AS task, r.battery AS battery, r.speed AS speed, z.name AS zone, z.hazard AS hazard, s.reliability * d.confidence AS obs_weight, r.battery / 100.0 AS battery_ratio RETURN robot, task, battery, battery_ratio, speed, zone, hazard, obs_weight ORDER BY obs_weight DESC"
-
 ---
 
 # All Operators

@@ -1,15 +1,14 @@
 ---
-title: "GQL & WorldCypher Reference"
+title: "GQL Reference"
+kind: reference
 description: "GQL compatibility matrix for the world model engine — ISO/IEC 39075 supported syntax, ArcFlow extensions, and implementation status."
-section: "reference"
 status: "stable"
 playground:
   seed: world
   query: "MATCH (r:Robot)-[:OCCUPIES]->(z:Zone) OPTIONAL MATCH (s:Sensor)-[:DETECTED]->(r) WITH r.name AS robot, r.task AS task, r.battery AS battery, r.speed AS speed, r.x AS x, r.y AS y, z.name AS zone, z.hazard AS hazard, count(s) AS sensor_coverage, avg(s.reliability) AS coverage_quality RETURN robot, task, battery, speed, x, y, zone, hazard, sensor_coverage, coverage_quality ORDER BY battery DESC"
-
 ---
 
-# GQL & WorldCypher Reference
+# GQL Reference
 
 ArcFlow implements [ISO/IEC 39075 GQL](https://www.iso.org/standard/76120.html) as **WorldCypher** — its native query dialect. All standard GQL syntax works as specified. WorldCypher adds extensions for temporal snapshots, live queries, confidence scoring, and graph algorithms that GQL leaves to implementations.
 
@@ -301,7 +300,7 @@ Run directly — no projection lifecycle needed.
 
 ## See Also
 
-- [GQL Conformance](/reference/gql-conformance) — ISO/IEC 39075 standards compliance and TCK results
+- [GQL Conformance](/spec/gql/conformance/overview) — ISO/IEC 39075 standards compliance and TCK results
 - [Graph Algorithms](/algorithms) — full algorithm catalog
 - [Programs](/programs) — `CREATE PROGRAM` capability manifests with hardware validation and executor wiring
 - [Triggers](/worldcypher/triggers) — `CREATE TRIGGER` fire-once event bindings

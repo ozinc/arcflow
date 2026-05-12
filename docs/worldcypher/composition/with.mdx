@@ -1,13 +1,11 @@
 ---
 title: "WITH"
+kind: clause
 description: "Chain world model query stages — pipe filtered results, aggregations, and subgraph context from one clause to the next"
-section: "worldcypher/composition"
-order: 1
 status: "stable"
 playground:
   seed: world
   query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WHERE d.confidence >= 0.80 AND r.battery >= 50 WITH z.name AS zone, z.hazard AS hazard, count(r) AS entity_count, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS composite_trust RETURN zone, hazard, entity_count, avg_battery, composite_trust, CASE WHEN composite_trust >= 0.90 THEN 'optimal' WHEN composite_trust >= 0.75 THEN 'nominal' ELSE 'degraded' END AS status ORDER BY composite_trust DESC"
-
 ---
 
 # WITH

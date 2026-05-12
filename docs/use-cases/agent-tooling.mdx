@@ -1,12 +1,11 @@
 ---
 title: "Agent Tooling"
+kind: use-case
 description: "ArcFlow as ephemeral in-process world model for coding agents — spin up a spatial-temporal graph, run 29 algorithms, query results, and discard. No server, no setup."
-section: "use-cases"
 status: "stable"
 playground:
   seed: world
   query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WHERE d.confidence > 0.85 WITH z.name AS zone, z.hazard AS hazard, count(r) AS active_entities, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS observation_quality RETURN zone, hazard, active_entities, avg_battery, observation_quality, CASE WHEN observation_quality >= 0.90 AND z.hazard > 0.15 THEN 'alert' WHEN observation_quality >= 0.85 THEN 'track' ELSE 'ignore' END AS agent_action ORDER BY observation_quality DESC"
-
 ---
 
 # Agent Tooling
@@ -221,5 +220,5 @@ Available tools: `get_schema`, `read_query`, `write_query`, `graph_rag`. Latency
 
 - [Agent-Native Database](/agent-native) — filesystem workspace, CLI binary, integration surfaces
 - [Swarm & Multi-Agent](/guides/swarm-agents) — multi-agent coordination on shared world model state
-- [ArcFlow for Coding Agents](/guides/agent-integration) — CLI patterns, structured errors, batch execution
+- [ArcFlow for Coding Agents](/docs/guides/agent-quickstart) — CLI patterns, structured errors, batch execution
 - [MCP Server](/mcp) — cloud chat UI integration (Claude.ai and similar)

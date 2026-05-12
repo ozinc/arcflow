@@ -1,8 +1,7 @@
 ---
 title: "Triggers"
+kind: clause
 description: "Fire-once event bindings — ON :Label WHEN CREATED RUN SKILL x. Declare a response before an event happens. No polling, no message broker, no callback registration."
-section: "worldcypher"
-order: 18
 status: "planned"
 ---
 
@@ -169,7 +168,19 @@ RETURN *
 
 ```
 | name                   | label      | event   | skill            | created_at  |
-|------------------------|------------|---------|------------------|-------------|
+|---
+------
+------
+------
+---|---
+------
+---|---
+------|---
+------
+------
+---|---
+------
+----|
 | detect_on_frame        | ImageFrame | CREATED | detect_objects   | 1744600000  |
 | enrich_person          | Person     | CREATED | extract_rels     | 1744600100  |
 | rescore_on_update      | Detection  | MODIFIED | score_and_link  | 1744600200  |

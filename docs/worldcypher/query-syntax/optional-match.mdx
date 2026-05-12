@@ -1,13 +1,11 @@
 ---
 title: "OPTIONAL MATCH"
+kind: clause
 description: "Left-join semantics for world model queries — return pattern matches if they exist, null if they don't"
-section: "worldcypher/query-syntax"
-order: 4
 status: "stable"
 playground:
   seed: world
   query: "MATCH (s:Sensor) OPTIONAL MATCH (s)-[:DETECTED]->(r:Robot) RETURN s.name AS sensor, s.type AS type, s.reliability AS reliability, r.name AS robot_in_view, r.task AS robot_task, r.battery AS robot_battery ORDER BY s.reliability DESC"
-
 ---
 
 # OPTIONAL MATCH

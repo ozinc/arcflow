@@ -1,13 +1,11 @@
 ---
 title: "Event Sourcing"
+kind: capability
 description: "The world model remembers everything — every mutation is a temporal fact, any past state is queryable, deterministic replay without an external broker."
-section: "event-sourcing"
-order: 1
 status: "stable"
 playground:
   seed: world
   query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS tracked_entities, avg(r.battery) AS avg_battery, avg(r.speed) AS avg_velocity, avg(s.reliability * d.confidence) AS event_quality RETURN zone, hazard, tracked_entities, avg_battery, avg_velocity, event_quality, CASE WHEN event_quality >= 0.90 THEN 'high-fidelity' WHEN event_quality >= 0.75 THEN 'operational' ELSE 'replay-needed' END AS event_state ORDER BY event_quality DESC"
-
 ---
 
 # Event Sourcing Graph

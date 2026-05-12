@@ -1,0 +1,23 @@
+---
+title: "HNSW Vector Index"
+description: "ArcFlow extension beyond ISO/IEC 39075 GQL — HNSW Vector Index."
+status: "stable"
+generated: true
+---
+
+# HNSW Vector Index
+
+**Type:** ArcFlow extension beyond GQL
+
+**Syntax:**
+```gql
+CALL algo.vectorSearch(embedding)
+CALL algo.similarNodes('node_id')
+```
+
+**GQL compatibility:** CALL procedure syntax.  
+**Semantics:** Cosine-ANN search over graph node embedding properties. HNSW index auto-maintained.
+
+## Standards relationship
+
+This is an extension to ISO/IEC 39075:2024 (GQL Edition 1 + V2 accepted proposals). It does not affect the engine's full conformance to the ISO standard — the extension surface is opt-in syntax that GQL leaves to implementations.

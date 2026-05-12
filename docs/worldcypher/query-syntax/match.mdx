@@ -1,8 +1,7 @@
 ---
 title: "MATCH"
+kind: clause
 description: "Find world model entities and relationships by pattern — nodes, edges, paths, and variable-length traversals"
-section: "worldcypher/query-syntax"
-order: 2
 status: "stable"
 related:
   - "/worldcypher/query-syntax/where"
@@ -10,7 +9,6 @@ related:
 playground:
   seed: world
   query: "MATCH (s:Sensor)-[:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) RETURN s.name AS sensor, s.type AS sensor_type, s.reliability AS reliability, r.name AS robot, r.task AS task, r.battery AS battery, r.x AS world_x, r.y AS world_y, z.name AS zone, z.hazard AS hazard ORDER BY r.battery DESC"
-
 ---
 
 # MATCH

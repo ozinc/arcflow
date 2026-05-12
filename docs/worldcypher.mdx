@@ -1,15 +1,14 @@
 ---
-title: "GQL / WorldCypher"
+title: "Overview"
+kind: clause
 description: "The query language of the operational world model — ISO/IEC 39075 GQL with full Cypher compatibility and WorldCypher extensions for temporal snapshots, spatial queries, live queries, and AI workloads"
-section: "worldcypher"
-order: 1
 status: "stable"
 playground:
   seed: world
   query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS entity_count, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS composite_trust RETURN zone, hazard, entity_count, avg_battery, composite_trust, CASE WHEN composite_trust >= 0.90 THEN 'optimal' WHEN composite_trust >= 0.75 THEN 'nominal' ELSE 'degraded' END AS status ORDER BY composite_trust DESC"
 ---
 
-# GQL / WorldCypher
+# WorldCypher Overview
 
 ArcFlow's query language is **GQL** — the ISO international standard for graph query languages ([ISO/IEC 39075](https://www.iso.org/standard/76120.html)). If you know Cypher, you already know it: `MATCH`, `CREATE`, `MERGE`, `WHERE`, `RETURN` all work exactly as expected, with no migration needed.
 
@@ -97,5 +96,5 @@ EXPLAIN MATCH (n:Person) WHERE n.age > 25 RETURN n.name
 - [EXPLAIN](/worldcypher/functions/explain) — query plan introspection
 
 ### Standards & Compatibility
-- [GQL Conformance](/reference/gql-conformance) — standards lineage, TCK results, comparison with other implementations
+- [GQL Conformance](/spec/gql/conformance/overview) — standards lineage, TCK results, comparison with other implementations
 - [GQL & WorldCypher Reference](/reference/compatibility) — complete syntax and feature matrix

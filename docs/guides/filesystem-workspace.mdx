@@ -1,12 +1,10 @@
 ---
 title: "Filesystem Workspace"
 description: "The world model on disk — storage layout, WAL configuration, Claude Code setup, and how shell-native agents read and write persistent graph state."
-section: "guides"
-order: 4
 status: "stable"
 playground:
   query: "MERGE (f1:File {id: 'src/main.ts', name: 'main.ts', type: 'entrypoint', loc: 85, critical: 1}) MERGE (f2:File {id: 'src/lib/db.ts', name: 'db.ts', type: 'library', loc: 240, critical: 1}) MERGE (f3:File {id: 'src/lib/auth.ts', name: 'auth.ts', type: 'library', loc: 320, critical: 1}) MERGE (f4:File {id: 'src/api/routes.ts', name: 'routes.ts', type: 'api', loc: 155, critical: 0}) MERGE (f5:File {id: 'src/utils/logger.ts', name: 'logger.ts', type: 'utility', loc: 60, critical: 0}) MERGE (f1a:File {id: 'src/main.ts'})-[:IMPORTS]->(f2a:File {id: 'src/lib/db.ts'}) MERGE (f1b:File {id: 'src/main.ts'})-[:IMPORTS]->(f3a:File {id: 'src/lib/auth.ts'}) MERGE (f4a:File {id: 'src/api/routes.ts'})-[:IMPORTS]->(f2b:File {id: 'src/lib/db.ts'}) MERGE (f3b:File {id: 'src/lib/auth.ts'})-[:IMPORTS]->(f5a:File {id: 'src/utils/logger.ts'}) MATCH (f:File)-[:IMPORTS]->(dep:File) WITH dep.name AS dependency, dep.type AS dep_type, dep.loc AS dep_loc, dep.critical AS critical, count(f) AS dependents RETURN dependency, dep_type, dep_loc, critical, dependents ORDER BY dependents DESC"
-
+canonical: cli/project
 ---
 
 # Filesystem Workspace
@@ -40,7 +38,10 @@ ArcFlow finds `.arcflow/config.yaml` by walking up the directory tree (like `git
 ### Three persistence modes
 
 | Mode | How | When to use |
-|------|-----|-------------|
+|---
+---|-----|---
+------
+----|
 | **Auto-discover** | `arcflow workspace init` once, then just `arcflow query "..."` | Projects. Recommended. |
 | **Explicit directory** | `arcflow query "..." --data-dir ./mydata` | Scripts, CI/CD, one-off analysis |
 | **In-memory** | `arcflow query "..."` (no init, no flag) | Experimentation. Nothing persists. |
@@ -121,7 +122,12 @@ The `data_dir` setting tells ArcFlow where to persist. When you run any `arcflow
 ## Persistence Modes in Detail
 
 | Mode | Setup | Persistence | Use case |
-|------|-------|-------------|----------|
+|---
+---|---
+----|---
+------
+----|---
+-------|
 | **Workspace (recommended)** | `arcflow workspace init` once | Auto-discovers `.arcflow/` from any subdirectory | Projects, teams, agents |
 | **Explicit directory** | `--data-dir ./mydata` on every command | Saves to that directory | Scripts, CI/CD |
 | **Interactive REPL** | `arcflow` (auto-discovers) or `arcflow --data-dir ./mydata` | On exit + every 50 writes | Exploration, debugging |
@@ -130,7 +136,10 @@ The `data_dir` setting tells ArcFlow where to persist. When you run any `arcflow
 The REPL supports additional persistence commands:
 
 | Command | Description |
-|---------|-------------|
+|---
+------|---
+------
+----|
 | `:checkpoint` | Force save snapshot + clear WAL now |
 | `:snapshot path.json` | Export graph to a specific file |
 | `:restore path.json` | Import graph from a file |
@@ -220,7 +229,11 @@ curl -X POST http://localhost:8080/query \
 Endpoints:
 
 | Method | Path | Description |
-|--------|------|-------------|
+|---
+-----|---
+---|---
+------
+----|
 | `GET` | `/health` | Liveness probe |
 | `GET` | `/ready` | Readiness with node/rel counts |
 | `GET` | `/status` | Full engine status |
@@ -281,7 +294,10 @@ arcflow query "MATCH (c:Crate) RETURN count(c)" --json
 Start the REPL with `arcflow --data-dir .arcflow/data`. Available commands:
 
 | Command | Description |
-|---------|-------------|
+|---
+------|---
+------
+----|
 | `:help` | Full command reference |
 | `:status` | Engine status, query cache hit rate |
 | `:count` | Node/relationship/skill counts |
@@ -351,5 +367,5 @@ arcflow --http 8080 --data-dir .arcflow/data
 
 - [Agent-Native Database](/agent-native) — filesystem workspace architecture and multi-agent coordination
 - [CLI](/cli) — full command reference, flags, watch mode, and batch execution
-- [ArcFlow for Coding Agents](/guides/agent-integration) — structured errors, dry-run validation, and schema discovery
+- [ArcFlow for Coding Agents](/docs/guides/agent-quickstart) — structured errors, dry-run validation, and schema discovery
 - [Swarm & Multi-Agent](/guides/swarm-agents) — sharing a workspace across multiple agents

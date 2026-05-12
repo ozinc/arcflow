@@ -1,0 +1,24 @@
+---
+title: "Relationship Skills"
+description: "ArcFlow extension beyond ISO/IEC 39075 GQL — Relationship Skills."
+status: "stable"
+generated: true
+---
+
+# Relationship Skills
+
+**Type:** ArcFlow extension beyond GQL
+
+**Syntax:**
+```gql
+CREATE SKILL similar_docs FROM EMBEDDING THRESHOLD 0.8 ALLOWED ON Document
+CALL arcflow.processNode('Document')
+CALL arcflow.skills()
+```
+
+**GQL compatibility:** CALL alias `arcflow.processNode()` available. No GQL equivalent for skill definition.  
+**Semantics:** Embedding-based cosine similarity auto-linking. Creates SIMILAR edges above threshold.
+
+## Standards relationship
+
+This is an extension to ISO/IEC 39075:2024 (GQL Edition 1 + V2 accepted proposals). It does not affect the engine's full conformance to the ISO standard — the extension surface is opt-in syntax that GQL leaves to implementations.

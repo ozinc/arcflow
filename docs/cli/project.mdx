@@ -1,8 +1,7 @@
 ---
 title: "Filesystem Projection"
+kind: operation
 description: "Project the world model to a directory tree — the agent-grep workflow. Every snapshot becomes a deterministic, byte-identical layout of nodes, edges, and indexes that any Unix tool can read."
-section: "cli"
-order: 4
 status: "stable"
 playground:
   seed: world
@@ -166,4 +165,4 @@ portable form — no FUSE driver needed.
 - [Snapshot-Pinned Reads](/concepts/snapshots) — the URI scheme that `__snapshot.toml` references
 - [CLI](/cli) — full command surface
 - [Agent-Native Database](/agent-native) — why the filesystem is the API
-- [ArcFlow for Coding Agents](/guides/agent-integration) — patterns for shell-native agents
+- [ArcFlow for Coding Agents](/docs/guides/agent-quickstart) — patterns for shell-native agents

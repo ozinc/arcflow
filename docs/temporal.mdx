@@ -1,13 +1,11 @@
 ---
 title: "Temporal Queries"
+kind: capability
 description: "Time as a first-class dimension of the world model — every mutation versioned, every past state queryable with AS OF seq N"
-section: "temporal"
-order: 1
 status: "stable"
 playground:
   seed: world
   query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS active_entities, avg(r.battery) AS avg_energy, avg(r.speed) AS avg_velocity, avg(s.reliability * d.confidence) AS observation_quality RETURN zone, hazard, active_entities, avg_energy, avg_velocity, observation_quality, CASE WHEN observation_quality >= 0.90 THEN 'current' WHEN observation_quality >= 0.75 THEN 'recent' ELSE 'stale' END AS data_freshness ORDER BY observation_quality DESC"
-
 ---
 
 # Temporal Queries
@@ -103,7 +101,10 @@ CALL db.clock()
 
 ```
 | field | value      |
-|-------|------------|
+|---
+----|---
+------
+---|
 | tick  | 1700000042 |
 ```
 
@@ -137,7 +138,8 @@ MATCH (n:Person) AS OF seq 1 RETURN n.name
 
 ```
 | name  |
-|-------|
+|---
+----|
 | Alice |
 ```
 
@@ -225,7 +227,15 @@ CALL db.fingerprint()
 
 ```
 | fingerprint                                      |
-|--------------------------------------------------|
+|---
+------
+------
+------
+------
+------
+------
+------
+-----|
 | sha256:a1b2c3d4e5f6...                           |
 ```
 
@@ -250,7 +260,12 @@ CALL db.clockDomains()
 
 ```
 | domain   | current_tick | source        |
-|----------|-------------|---------------|
+|---
+-------|---
+------
+----|---
+------
+------|
 | local    | 1700000042  | engine        |
 | import_1 | 1609459200  | external      |
 | import_2 | 1672531200  | external      |

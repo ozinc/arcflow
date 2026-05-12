@@ -1,12 +1,11 @@
 ---
 title: "WorldCypher: Spatial Queries"
 description: "Query world model positions exactly — KNN, radius, frustum, and live geofencing backed by the ArcFlow Spatial Index, no approximate indexing"
-section: "worldcypher"
 status: "stable"
 playground:
   seed: world
   query: "MATCH (r:Robot)-[:OCCUPIES]->(z:Zone) RETURN r.name AS robot, r.task AS task, r.x AS world_x, r.y AS world_y, r.speed AS speed, r.battery AS battery, z.name AS zone, z.hazard AS hazard, CASE WHEN z.hazard > 0.3 THEN 'high-risk' WHEN z.hazard > 0.1 THEN 'moderate' ELSE 'safe' END AS spatial_risk ORDER BY z.hazard DESC"
-
+canonical: spatial-knowledge
 ---
 
 # WorldCypher: Spatial Queries
@@ -175,4 +174,4 @@ The index is dynamic. No rebuild required on updates.
 - [Spatial Queries](/spatial-knowledge) — spatial capability overview and use cases
 - [Algorithms Reference](/worldcypher/algorithms) — `algo.nearestNodes()` and spatial algorithm signatures
 - [GPU Acceleration](/gpu) — ArcFlow GPU Index and Adaptive Dispatch for large-scale spatial queries
-- [Use Case: Robotics & Perception](/use-cases/robotics) — spatial queries for sensor fusion and tracking
+- [Use Case: Robotics & Perception](/markets/robotics) — spatial queries for sensor fusion and tracking

@@ -1,9 +1,8 @@
 ---
 title: "Migration Guide"
 description: "Practical guide for moving graph workloads into ArcFlow. Covers WorldCypher compatibility, architecture trade-offs, and migration steps."
-section: "Guides"
-order: 10
 status: "stable"
+canonical: concepts/sql-vs-gql
 ---
 
 # Migration Guide
@@ -20,7 +19,7 @@ This guide covers what stays the same, what's different, and how to move your da
 | **Runtime** | Varies by implementation | Native binary, no runtime dependency |
 | **Memory model** | Off-heap page cache or shared memory | In-process shared memory (SoC architecture) |
 | **Serialization** | Wire protocol or RPC boundary | None (in-process) or TCP/HTTP |
-| **Query language** | Varies by graph stack | WorldCypher (ArcFlow's GQL dialect with spatial/temporal/reactive extensions) |
+| **Query language** | Varies by graph stack | WorldCypher (ArcFlow's GQL dialect with spatial/temporal/live extensions) |
 | **Indexes** | B-tree, full-text, vector (varies by vendor) | Property index, HNSW vector index |
 | **Transactions** | Full ACID (most vendors) | WAL-based journaling |
 | **Clustering** | Causal clustering, replication (varies) | Single-node (replication planned) |

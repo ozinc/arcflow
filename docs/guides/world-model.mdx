@@ -1,13 +1,11 @@
 ---
 title: "Building a World Model"
 description: "Step-by-step: build the missing layer of the AI infrastructure stack — a persistent, spatial-temporal, confidence-scored representation of reality."
-section: "Guides"
-order: 2
 status: "stable"
 playground:
   seed: world
   query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS entity_count, avg(r.battery) AS avg_battery, avg(r.speed) AS avg_velocity, min(r.battery) AS min_battery, max(r.speed) AS max_speed, avg(s.reliability * d.confidence) AS world_fidelity RETURN zone, hazard, entity_count, avg_battery, avg_velocity, min_battery, max_speed, world_fidelity, CASE WHEN world_fidelity >= 0.90 THEN 'high-fidelity' WHEN world_fidelity >= 0.75 THEN 'operational' ELSE 'degraded' END AS world_state ORDER BY world_fidelity DESC"
-
+canonical: concepts/world-model
 ---
 
 # Building a World Model
@@ -437,9 +435,9 @@ This is the infrastructure layer the AI stack has been missing. Foundation model
 
 ## Next steps
 
-- [Autonomous Systems](/use-cases/autonomous-systems) — robot fleets and UAV coordination on a shared world model
-- [Digital Twins](/use-cases/digital-twins) — live spatial replicas of physical facilities
-- [Robotics & Perception](/use-cases/robotics) — sensor fusion pipeline and ROS integration
+- [Autonomous Systems](/docs/use-cases/autonomous-systems) — robot fleets and UAV coordination on a shared world model
+- [Digital Twins](/docs/use-cases/digital-twins) — live spatial replicas of physical facilities
+- [Robotics & Perception](/markets/robotics) — sensor fusion pipeline and ROS integration
 - [Live Queries](/live-queries) — standing queries and live views in depth
 - [Temporal Queries](/worldcypher/temporal) — `AS OF seq N` and temporal comparison
 - [Spatial Queries](/spatial-knowledge) — ArcFlow Spatial Index, frustum, line-of-sight reference

@@ -1,16 +1,14 @@
 ---
-title: "shortestPath"
+title: "Shortest Path"
+kind: clause
 description: "Find the shortest path between two world model entities — inline pattern syntax, composable with MATCH and confidence filters."
-section: "worldcypher/functions"
-order: 10
 status: "stable"
 playground:
   seed: world
   query: "MATCH (s:Sensor)-[:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) RETURN s.name AS path_origin, s.type AS sensor_type, s.reliability AS origin_reliability, r.name AS via_robot, r.task AS task, r.x AS robot_x, r.y AS robot_y, z.name AS path_destination, z.hazard AS destination_hazard ORDER BY s.reliability DESC"
-
 ---
 
-# shortestPath
+# Shortest Path (shortestPath)
 
 ```cypher
 shortestPath (a:Person {name: 'Alice'}), (b:Person {name: 'Dave'})

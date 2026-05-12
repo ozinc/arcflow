@@ -1,13 +1,11 @@
 ---
 title: "Confidence & Provenance"
 description: "ArcFlow Evidence Model — every fact in the world model carries an observation class, a confidence score, and a provenance chain. Filter by trust, not just value."
-section: "concepts"
-order: 3
 status: "stable"
 playground:
   seed: world
   query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS entity_count, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS composite_trust RETURN zone, hazard, entity_count, avg_battery, composite_trust, CASE WHEN composite_trust >= 0.92 THEN 'authoritative' WHEN composite_trust >= 0.80 THEN 'confirmed' WHEN composite_trust >= 0.65 THEN 'uncertain' ELSE 'unreliable' END AS provenance_tier ORDER BY composite_trust DESC"
-
+canonical: concepts/evidence-model
 ---
 
 # Confidence & Provenance
@@ -110,7 +108,7 @@ RETURN r.name, r.x, r.y, r._confidence
 ## See Also
 
 - [Observations & Evidence](/concepts/observations) — observation classes and the ArcFlow Evidence Model
-- [Skills](/concepts/skills) — how skills produce confidence-scored edges with provenance
+- [Skills](/docs/skills) — how skills produce confidence-scored edges with provenance
 - [REPROCESS EDGES](/skills/reprocess-edges) — re-evaluating low-confidence edges
 - [Trusted RAG](/trusted-rag) — confidence-filtered retrieval from the world model
 - [Proof Artifacts & Gates](/concepts/proof-artifacts) — cryptographic state proofs built from the evidence chain

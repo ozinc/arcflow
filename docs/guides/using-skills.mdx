@@ -1,13 +1,11 @@
 ---
 title: "Using Skills"
 description: "Derive world model relationships from natural language rules — ArcFlow compiles once using your LLM, every PROCESS NODE and REPROCESS EDGES runs at graph-native speed with no model calls."
-section: "guides"
-order: 2
 status: "stable"
 playground:
   seed: world
-  query: "MERGE (skill:Skill {id: 'entity-tracker', name: 'EntityTracker', version: 3, min_confidence: 0.82, active: 1}) MERGE (s1:Sensor {id: 'cam-1', name: 'Cam-LabA', type: 'camera', reliability: 0.95, confidence_floor: 0.85, poll_hz: 25}) MERGE (s2:Sensor {id: 'lidar-1', name: 'Lidar-LabB', type: 'lidar', reliability: 0.91, confidence_floor: 0.80, poll_hz: 10}) MERGE (agent:Agent {id: 'tracker-agent', name: 'TrackerPrime', role: 'tracking', active: 1}) MERGE (sk1:Skill {id: 'entity-tracker'})-[:APPLIED_TO]->(s1:Sensor {id: 'cam-1'}) MERGE (sk2:Skill {id: 'entity-tracker'})-[:APPLIED_TO]->(s2:Sensor {id: 'lidar-1'}) MERGE (ag:Agent {id: 'tracker-agent'})-[:EXECUTES]->(sk:Skill {id: 'entity-tracker'}) MATCH (a:Agent)-[:EXECUTES]->(sk:Skill)-[:APPLIED_TO]->(s:Sensor) RETURN a.name AS agent, sk.name AS skill, sk.version AS version, s.name AS sensor, s.type AS sensor_type, s.reliability AS reliability, s.confidence_floor AS min_confidence, s.poll_hz AS poll_rate ORDER BY s.poll_hz DESC"
-
+  query: "MERGE (skill:Routine {id: 'entity-tracker', name: 'EntityTracker', version: 3, min_confidence: 0.82, active: 1}) MERGE (s1:Sensor {id: 'cam-1', name: 'Cam-LabA', type: 'camera', reliability: 0.95, confidence_floor: 0.85, poll_hz: 25}) MERGE (s2:Sensor {id: 'lidar-1', name: 'Lidar-LabB', type: 'lidar', reliability: 0.91, confidence_floor: 0.80, poll_hz: 10}) MERGE (agent:Agent {id: 'tracker-agent', name: 'TrackerPrime', role: 'tracking', active: 1}) MERGE (sk1:Routine {id: 'entity-tracker'})-[:APPLIED_TO]->(s1:Sensor {id: 'cam-1'}) MERGE (sk2:Routine {id: 'entity-tracker'})-[:APPLIED_TO]->(s2:Sensor {id: 'lidar-1'}) MERGE (ag:Agent {id: 'tracker-agent'})-[:EXECUTES]->(sk:Routine {id: 'entity-tracker'}) MATCH (a:Agent)-[:EXECUTES]->(sk:Routine)-[:APPLIED_TO]->(s:Sensor) RETURN a.name AS agent, sk.name AS skill, sk.version AS version, s.name AS sensor, s.type AS sensor_type, s.reliability AS reliability, s.confidence_floor AS min_confidence, s.poll_hz AS poll_rate ORDER BY s.poll_hz DESC"
+canonical: skills
 ---
 
 # Using Skills
@@ -174,8 +172,8 @@ PROCESS NODE (n:Robot)
 
 ## See Also
 
-- [Concepts: Skills](/concepts/skills) — what skills are and why they matter
+- [Concepts: Skills](/docs/skills) — what skills are and why they matter
 - [CREATE SKILL](/skills/create-skill) — full syntax reference
 - [REPROCESS EDGES](/skills/reprocess-edges) — re-evaluation reference
 - [Confidence & Provenance](/concepts/confidence-and-provenance) — how scores flow through derived edges
-- [Use Case: Knowledge Management](/use-cases/knowledge-management) — skills in an entity extraction pipeline
+- [Use Case: Knowledge Management](/docs/use-cases/knowledge-management) — skills in an entity extraction pipeline

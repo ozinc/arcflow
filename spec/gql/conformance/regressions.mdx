@@ -1,0 +1,84 @@
+---
+title: "Extension Regressions"
+description: "Per-release regression run for ArcFlow extensions beyond GQL — every documented extension has at least one regression scenario."
+status: "stable"
+generated: true
+---
+
+# Extension Regressions
+
+Every documented ArcFlow extension has at least one regression scenario that runs on each engine release. This page is the latest run.
+
+| | | |
+|:-:|---|---|
+| 🕒 | **Generated** | 2026-04-11 22:31:19 |
+| 📊 | **Total scenarios** | 16 |
+| ✅ | **Passed** | 16 |
+| ❌ | **Regressed** | 0 |
+
+## Results by family
+
+| | Family | Total | Passed | Regressed |
+|:-:|---|:-:|:-:|:-:|
+| ✅ | Graph Algorithms | 1 | 1 | 0 |
+| ✅ | ASOF JOIN | 1 | 1 | 0 |
+| ✅ | CALL Procedures | 2 | 2 | 0 |
+| ✅ | CTE Subqueries (WITH...AS) | 1 | 1 | 0 |
+| ✅ | Evidence Algebra | 1 | 1 | 0 |
+| ✅ | Live Queries (LIVE VIEW, LIVE MATCH) | 2 | 2 | 0 |
+| ✅ | Map Merge (SET +=) | 1 | 1 | 0 |
+| ✅ | Relationship Patterns | 2 | 2 | 0 |
+| ✅ | Skills & Constructors | 3 | 3 | 0 |
+| ✅ | Spatial Predicates | 1 | 1 | 0 |
+| ✅ | Window Analytics (LAG/LEAD/OVER) | 1 | 1 | 0 |
+
+## Detailed results
+
+### Graph Algorithms
+
+- ✅ **CALL algo.pageRank** (209ms) — 4 rows
+
+### ASOF JOIN
+
+- ✅ **ASOF JOIN temporal** (18ms) — 2 rows
+
+### CALL Procedures
+
+- ✅ **CALL db.schema** (10ms) — 1 row
+- ✅ **CALL db.stats** (5ms) — 1 row
+
+### CTE Subqueries (WITH...AS)
+
+- ✅ **WITH clause data passing** (15ms) — 2 rows
+
+### Evidence Algebra
+
+- ✅ **Node with confidence property** (11ms) — 1 row
+
+### Live Queries (LIVE VIEW, LIVE MATCH)
+
+- ✅ **CREATE LIVE VIEW basic** (1996ms) — OK
+- ✅ **MATCH after LIVE VIEW creation** (16ms) — 1 row
+
+### Map Merge (SET +=)
+
+- ✅ **SET n += map merge** (10ms) — 1 row
+
+### Relationship Patterns
+
+- ✅ **Create and traverse relationship** (13ms) — 1 row
+- ✅ **Multi-hop relationship traversal** (17ms) — 2 rows
+
+### Skills & Constructors
+
+- ✅ **CREATE SKILL registration** (8ms) — OK
+- ✅ **PROCESS NODE execution** (24ms) — OK
+- ✅ **CREATE REACTIVE SKILL** (10ms) — OK *(legacy keyword; see [Skill Triggers](/spec/gql/extensions/skill-triggers) for the forward syntax)*
+
+### Spatial Predicates
+
+- ✅ **Spatial node creation and query** (11ms) — 1 row
+
+### Window Analytics (LAG/LEAD/OVER)
+
+- ✅ **LAG window function** (21ms) — 3 rows

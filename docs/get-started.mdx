@@ -1,12 +1,11 @@
 ---
 title: "Get Started"
+kind: first-use
 description: "ArcFlow is the operational world model layer — the persistence tier for spatial-temporal, confidence-scored world state. Neural world models simulate. ArcFlow records."
-section: "get-started"
 status: "stable"
 playground:
   seed: world
   query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS robots_tracked, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS world_trust RETURN zone, hazard, robots_tracked, avg_battery, world_trust, CASE WHEN world_trust >= 0.90 THEN 'high-confidence' WHEN world_trust >= 0.75 THEN 'operational' ELSE 'needs-calibration' END AS model_quality ORDER BY world_trust DESC"
-
 ---
 
 # Get Started
@@ -69,19 +68,19 @@ For the impatient:
 
 - [Quickstart](/quickstart) — first world model query, step by step
 - [Installation](/installation) — all install methods in detail
-- [Project Setup](/project-setup) — Express, testing, monorepo
+- [Project Setup](/docs/bindings) — Express, testing, monorepo
 
 ### Guides
 
 - [Building a World Model](/guides/world-model) — entities in space, temporal memory, live monitoring
 - [Swarm & Multi-Agent](/guides/swarm-agents) — shared world model as coordination substrate for AI agent swarms
 - [Trusted RAG](/guides/rag-pipeline) — confidence-filtered retrieval, graph context, vector + graph + full-text
-- [Agent Integration](/guides/agent-integration) — CLI binary, MCP, and napi-rs — which surface fits your execution context
+- [Agent Integration](/docs/guides/agent-quickstart) — CLI binary, MCP, and napi-rs — which surface fits your execution context
 - [Data Quality](/guides/data-quality) — live DQ, batch==delta equivalence, pipeline integrity
 - [Code Intelligence](/guides/code-intelligence) — queryable codebase graph for coding agents
 
 ### Use cases
 
-- [Autonomous Systems](/use-cases/autonomous-systems) — robot fleets and UAV coordination on a shared world model
-- [Digital Twins](/use-cases/digital-twins) — live spatial replica of physical facilities
-- [Robotics & Perception](/use-cases/robotics) — sensor fusion, track lifecycle, ROS bridge
+- [Autonomous Systems](/docs/use-cases/autonomous-systems) — robot fleets and UAV coordination on a shared world model
+- [Digital Twins](/docs/use-cases/digital-twins) — live spatial replica of physical facilities
+- [Robotics & Perception](/markets/robotics) — sensor fusion, track lifecycle, ROS bridge

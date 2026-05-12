@@ -1,8 +1,7 @@
 ---
 title: "Live Queries"
+kind: capability
 description: "The world model is always current — standing queries, live views, and continuous algorithms that maintain truth as the graph mutates. No polling. No brokers. No stale state."
-section: "live-queries"
-order: 5
 status: "stable"
 playground:
   seed: world
@@ -253,7 +252,18 @@ CALL db.mutations()
 
 ```
 | tick       | operation | target | details                                      |
-|------------|-----------|--------|----------------------------------------------|
+|---
+------
+---|---
+--------|---
+-----|---
+------
+------
+------
+------
+------
+------
+-------|
 | 1700000001 | CREATE    | node   | :Entity {name: 'Unit-07', confidence: 0.95} |
 | 1700000002 | CREATE    | rel    | (:Entity)-[:TRACKS]->(:Entity)               |
 | 1700000003 | SET       | prop   | node 1: confidence = 0.87                    |
@@ -425,7 +435,7 @@ No external orchestration service. No separate state store. Workflow state lives
 
 ## LIVE vs TRIGGER
 
-ArcFlow has two reactive primitives. They are not interchangeable.
+ArcFlow has two live primitives. They are not interchangeable.
 
 | | LIVE | TRIGGER |
 |---|---|---|
@@ -434,7 +444,7 @@ ArcFlow has two reactive primitives. They are not interchangeable.
 | **State** | Z-set maintained — result set is always current | Stateless — no maintained result |
 | **Use when** | You need a result set that is always true | You need a one-time side effect per event |
 
-```gql
+```cypher
 -- LIVE: the set of high-confidence entities is always current
 CREATE LIVE VIEW trusted_entities AS
   MATCH (e:Entity) WHERE e.confidence > 0.9

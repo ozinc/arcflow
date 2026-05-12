@@ -1,12 +1,11 @@
 ---
 title: "SQL vs GQL — The Mental Model Shift"
+kind: concept
 description: "Moving from SQL to GQL isn't about syntax — it's about thinking in connections instead of tables"
-section: "concepts"
 status: "stable"
 playground:
   seed: world
   query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WHERE r.battery > 50 WITH z.name AS zone, z.hazard AS zone_risk, count(r) AS robots, avg(r.battery) AS avg_energy, avg(s.reliability * d.confidence) AS sensor_coverage RETURN zone, zone_risk, robots, avg_energy, sensor_coverage, CASE WHEN sensor_coverage >= 0.9 THEN 'full-awareness' WHEN sensor_coverage >= 0.75 THEN 'good-coverage' ELSE 'sensor-gaps' END AS awareness_state ORDER BY sensor_coverage DESC"
-
 ---
 
 # SQL vs GQL — The Mental Model Shift
@@ -181,4 +180,4 @@ LIMIT 20
 - [Graph Patterns](/concepts/graph-patterns) — how to write patterns
 - [From SQL to GQL](/guides/sql-to-gql) — connecting your existing SQL tools to ArcFlow
 - [Migration Guide](/guides/migration) — moving an existing graph workload into ArcFlow
-- [GQL Conformance](/reference/gql-conformance) — the standards story
+- [GQL Conformance](/spec/gql/conformance/overview) — the standards story

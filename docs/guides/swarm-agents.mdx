@@ -1,12 +1,11 @@
 ---
 title: "Swarm & Multi-Agent"
 description: "A shared world model as the coordination substrate for AI agent swarms — persistent shared state, live task assignment, temporal audit, and confidence-weighted knowledge."
-section: "guides"
 status: "stable"
 playground:
   seed: world
   query: "MERGE (leader:Agent {id: 'swarm-lead', name: 'Alpha-Lead', role: 'leader', active: 1, x: 0.0, y: 0.0}) MERGE (f1:Agent {id: 'swarm-f1', name: 'Follower-01', role: 'follower', active: 1, x: 18.0, y: 8.5, intent: 'patrol', priority: 1, min_trust: 0.88}) MERGE (f2:Agent {id: 'swarm-f2', name: 'Follower-02', role: 'follower', active: 1, x: -17.0, y: -9.0, intent: 'inspect', priority: 2, min_trust: 0.85}) MERGE (f3:Agent {id: 'swarm-f3', name: 'Follower-03', role: 'follower', active: 1, x: 2.0, y: 1.5, intent: 'hold', priority: 3, min_trust: 0.80}) MERGE (s1:Sensor {id: 'cam-1', name: 'Cam-LabA', type: 'camera', reliability: 0.95}) MERGE (s2:Sensor {id: 'lidar-1', name: 'Lidar-LabB', type: 'lidar', reliability: 0.91}) MERGE (la:Agent {id: 'swarm-lead'})-[:COORDINATES]->(fa:Agent {id: 'swarm-f1'}) MERGE (lb:Agent {id: 'swarm-lead'})-[:COORDINATES]->(fb:Agent {id: 'swarm-f2'}) MERGE (lc:Agent {id: 'swarm-lead'})-[:COORDINATES]->(fc:Agent {id: 'swarm-f3'}) MERGE (f1a:Agent {id: 'swarm-f1'})-[:MONITORS]->(s1a:Sensor {id: 'cam-1'}) MERGE (f2a:Agent {id: 'swarm-f2'})-[:MONITORS]->(s2a:Sensor {id: 'lidar-1'}) MATCH (leader:Agent)-[:COORDINATES]->(follower:Agent) RETURN leader.name AS swarm_leader, follower.name AS agent, follower.x AS agent_x, follower.y AS agent_y, follower.intent AS assigned_intent, follower.priority AS order, follower.min_trust AS min_trust ORDER BY follower.priority"
-
+canonical: agent-native
 ---
 
 # Swarm & Multi-Agent
@@ -298,8 +297,8 @@ A scout that crashes and restarts opens the same named session — its task queu
 
 ## See Also
 
-- [Autonomous Systems](/use-cases/autonomous-systems) — multi-robot world model coordination
-- [Robotics & Perception](/use-cases/robotics) — sensor fusion into a shared world model
+- [Autonomous Systems](/docs/use-cases/autonomous-systems) — multi-robot world model coordination
+- [Robotics & Perception](/markets/robotics) — sensor fusion into a shared world model
 - [Live Queries](/live-queries) — standing queries and live views in depth
 - [Temporal Queries](/worldcypher/temporal) — replay and audit across the swarm
 - [Building a World Model](/guides/world-model) — the foundational guide

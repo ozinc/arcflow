@@ -1,8 +1,7 @@
 ---
 title: "Agent-Native Database"
+kind: capability
 description: "The world model as files — query it like grep, version it like git, share it like a directory. Shell-native agents don't need a protocol bridge to their own machine."
-section: "agent-native"
-order: 1
 status: "stable"
 playground:
   query: "MERGE (auth:File {id: 'auth', name: 'auth.ts', filepath: 'src/auth.ts', lines: 320, layer: 'data'}) MERGE (db:File {id: 'db', name: 'db.ts', filepath: 'src/db.ts', lines: 240, layer: 'data'}) MERGE (api:File {id: 'api', name: 'routes.ts', filepath: 'src/api/routes.ts', lines: 155, layer: 'api'}) MERGE (main:File {id: 'main', name: 'main.ts', filepath: 'src/main.ts', lines: 85, layer: 'app'}) MATCH (f:File) RETURN f.name AS file, f.filepath, f.lines, f.layer ORDER BY f.lines DESC"
@@ -309,7 +308,7 @@ Every shell-native AI agent deserves a persistent, queryable world model as its 
 
 - [Swarm & Multi-Agent](/guides/swarm-agents) — multi-agent coordination patterns, durable workflows, named sessions
 - [Building a World Model](/guides/world-model) — step-by-step: entities in space, temporal memory, live monitoring
-- [ArcFlow for Coding Agents](/guides/agent-integration) — CLI patterns, structured errors, batch execution, and checkpointing
+- [ArcFlow for Coding Agents](/docs/guides/agent-quickstart) — CLI patterns, structured errors, batch execution, and checkpointing
 - [Filesystem Projection](/cli/project) — `arcflow project` writes the world model as a directory tree
 - [Snapshot-Pinned Reads](/concepts/snapshots) — citeable snapshot URIs for provenanced answers
 - [Live Queries](/live-queries) — `LIVE MATCH` and `CREATE LIVE VIEW` for always-current agent state

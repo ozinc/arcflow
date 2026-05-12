@@ -1,11 +1,10 @@
 ---
 title: "Behavior Graphs"
 description: "Behavior trees grounded in a persistent world model — trees tick against live spatial-temporal state, survive restarts, and coordinate across agents without external infrastructure."
-section: "guides"
 status: "stable"
 playground:
   query: "MERGE (coord:Agent {id: 'coord', name: 'Coordinator', role: 'orchestrator', priority: 0, active: 1}) MERGE (planner:Agent {id: 'planner', name: 'Planner', role: 'planning', priority: 1, active: 1, on_event: 'detection', threshold: 0.85}) MERGE (executor:Agent {id: 'executor', name: 'Executor', role: 'execution', priority: 2, active: 1, on_event: 'plan_ready', threshold: 0.80}) MERGE (guardian:Agent {id: 'guardian', name: 'Guardian', role: 'safety', priority: 0, active: 1, on_event: 'hazard_alert', threshold: 0.70}) MERGE (c1:Agent {id: 'coord'})-[:DELEGATES_TO]->(p:Agent {id: 'planner'}) MERGE (c2:Agent {id: 'coord'})-[:DELEGATES_TO]->(g:Agent {id: 'guardian'}) MERGE (p1:Agent {id: 'planner'})-[:DELEGATES_TO]->(e:Agent {id: 'executor'}) MATCH (a:Agent)-[:DELEGATES_TO]->(b:Agent) RETURN a.name AS from_agent, a.role AS from_role, b.name AS to_agent, b.role AS to_role, b.on_event AS trigger_event, b.threshold AS confidence_gate, b.priority AS priority ORDER BY b.priority"
-
+canonical: behavior-graph
 ---
 
 # Behavior Graphs
@@ -188,6 +187,6 @@ No message bus between agents. No shared-state synchronization layer. The world 
 ## See Also
 
 - [Building a World Model](/guides/world-model) — the spatial-temporal foundation behavior trees read from
-- [Autonomous Systems](/use-cases/autonomous-systems) — behavior trees in multi-robot coordination
+- [Autonomous Systems](/docs/use-cases/autonomous-systems) — behavior trees in multi-robot coordination
 - [Live Queries](/live-queries) — standing queries that trigger tree re-evaluation
-- [Skills](/concepts/skills) — dynamic edge materialization from behavior outcomes
+- [Skills](/docs/skills) — dynamic edge materialization from behavior outcomes
