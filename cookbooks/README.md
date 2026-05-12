@@ -16,7 +16,7 @@ stronger contract — every recipe is CI-tested against the engine. See
 | Recipe | Audience | Runtime |
 |---|---|---|
 | [agent-knowledge-base](./agent-knowledge-base/) | python, agent | ~5 min |
-| [algo-trading-llm-harness](./algo-trading-llm-harness/) | python, ml, agent, data-engineer | ~3 min |
+| [algo-trading-world-model](./algo-trading-world-model/) | python, ml, agent, quant | ~3 min |
 | [from-sql-to-arcflow](./from-sql-to-arcflow/) | python, sql-user | ~1 min |
 | [fraud-graph-traversal](./fraud-graph-traversal/) | python, data-engineer | ~5 min |
 | [multi-stream-spatiotemporal-world-model](./multi-stream-spatiotemporal-world-model/) | python, data-engineer, ml, agent | ~8 min |

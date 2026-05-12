@@ -1,6 +1,6 @@
-slug = "algo-trading-llm-harness"
-title = "Algo-Trading LLM Harness — Persistent Memory, Orchestrated Context, Confidence-Weighted Fusion"
-audience = ["python", "ml", "agent", "data-engineer"]
+slug = "algo-trading-world-model"
+title = "Algo-Trading World Model — Persistent Memory, Orchestrated Context, Evidence-Algebra Fusion"
+audience = ["python", "ml", "agent", "quant"]
 arcflow_apis = [
     "python.ArcFlow.execute",
     "python.ArcFlow.bulk_create_nodes",

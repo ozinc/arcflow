@@ -1,33 +1,44 @@
 """
-Step 2 — Orchestrated context: the graph as the agent's pre-computed
-working memory.
+Step 2 — Orchestrated context: the world model IS the agent's working memory.
 
-The pattern: an LLM agent shouldn't recompute "60-day rolling volatility for
-every symbol, sector z-scores, top-of-sector ranks" inside the prompt. It
-should READ that context, fresh, from a structure the engine maintains.
+The pattern that separates "LLM with a database" from "LLM grounded in an
+operational world model":
 
-Today's Python binding accesses ArcFlow's maintained-query infrastructure
-through *polling at the source tick* — the same pattern the
-`multi-stream-spatiotemporal-world-model` recipe uses for 60-Hz tracking.
-The TypeScript binding exposes `db.subscribe(query, callback)` directly;
-the engine fires the callback within ~20 ms of any mutation. In Python the
-equivalent is "execute the same query after each tick"; the cost is bounded
-by query latency (well under the tick budget for an algo-trading loop).
+    Every prompt turn, the agent needs current context — sector rollups,
+    cross-sectional ranks, regime beliefs, top-of-sector leaders. The
+    naive shape: pull rows, compute features in Python, build a prompt.
+    The agent burns its context window on raw bytes the engine could
+    have already maintained.
 
-The *important* part is the lesson: define each layer of agent context as
-a query, and the GRAPH is the orchestration substrate. One mutation, three
-re-queries; each layer is a single MATCH. No external scheduler, no message
-bus, no JOIN chain across silos.
+The world-model shape: define each layer of agent context AS a query.
+The graph is the orchestration substrate. One tick mutates the graph;
+the agent re-reads the same three queries; each layer arrives pre-
+computed, ready to feed the prompt. No external scheduler, no factor-
+rollup job, no JOIN chain across silos.
 
-This step builds the canonical agent-context stack:
+This step builds the canonical three-layer context stack:
 
-    sector_rollup       (avg close / sector / day — bar aggregation)
-    cross_sectional_z   (per-day percentile rank of close within sector)
-    leaders_by_sector   (top-ranked symbol per sector per day)
+    sector_rollup        — avg close / sector / day (aggregation)
+    cross_sectional_z    — percentile rank within sector (window fn)
+    leaders_by_sector    — top-ranked symbol per sector (window fn)
 
-Then inserts ONE new bar via `execute()` and re-reads all three. The deltas
-are visible by inspection — same query, different results, no recomputation
-glue in Python.
+Then inserts ONE new bar via `execute()` and re-reads all three. The
+deltas are visible by inspection — same query, different results, no
+recomputation glue in Python.
+
+A note on the binding surface:
+
+    Today's Python binding reads on tick (poll the three queries after
+    each mutation). The TypeScript binding exposes the same maintained
+    substrate via `db.subscribe(query, callback)` — engine fires the
+    callback within ~20ms of any mutation. The Rust SDK exposes
+    `CREATE LIVE VIEW name AS ...` directly, with view chaining and
+    continuous-proof asserting batch-vs-live equivalence cell-by-cell.
+
+    The query SHAPE is identical across all three modes. Z-set algebra
+    (the engine's incremental-computation substrate) guarantees the
+    equivalence — the same operator plan that runs your backtest runs
+    your live agent.
 """
 
 import shutil
@@ -67,7 +78,7 @@ ORDER BY b.sector, rn
 
 
 def snapshot(db, day):
-    """Read all three context layers at a single day. This is the agent's
+    """Read two context layers at a single day. This is the agent's
     pre-prompt query — every prompt turn would call something like this."""
     print(f"\n  --- sector_rollup on day {day} ---")
     for r in db.execute(SECTOR_ROLLUP_Q, params={"day": day}):
@@ -84,7 +95,8 @@ def main():
     db, _ = make_db(data_dir)
 
     print("Three context queries defined: sector_rollup, cross_sectional_z, leaders_by_sector")
-    print("All read straight from the graph — the maintained substrate IS the orchestration layer.")
+    print("All read straight from the operational world model —")
+    print("the graph IS the orchestration substrate.")
 
     # ---- 1. Snapshot at the end of the fixture (day 59) ----
     print("\n=== BEFORE: end-of-fixture snapshot (day 59) ===")
@@ -98,7 +110,7 @@ def main():
     # ---- 2. One new bar arrives ----
     # TECH-03 ships a blow-out close on day 60 — a "tape buster" that flips
     # the Tech sector leader. The agent inserts this via execute() (one WAL
-    # entry) so the decision-time state is reconstructable later.
+    # entry) so the decision-time state is reconstructable later via AS OF.
     print("\n=== Inserting one new bar: TECH-03, day 60, close = 999.0 ===")
     db.execute("""
         CREATE (b:DailyBar {
@@ -106,7 +118,10 @@ def main():
             sector: 'Tech',
             day_idx: 60,
             open: 920.0, high: 1005.0, low: 905.0, close: 999.0,
-            volume: 3500000
+            volume: 3500000,
+            _observation_class: 'observed',
+            _confidence: 0.99,
+            _source: 'tape_v1'
         })
     """)
 
@@ -122,14 +137,15 @@ def main():
         if str(r["sector"]) == "Tech":
             print(f"  {dict(r)}")
 
-    print("\nObservations:")
-    print("  - Three context queries; one MATCH each. The graph is the orchestration substrate.")
+    print("\n--- What this proves ---")
+    print("  - Three context queries; one MATCH each. The graph IS the orchestration substrate.")
     print("  - One new bar via execute() → re-query yields the new view immediately.")
-    print("  - Python today reads on tick (polling); TypeScript exposes the same maintained")
-    print("    state via db.subscribe(query, callback) — engine fires within ~20 ms.")
+    print("  - The same MATCH...RETURN shape works in batch (this script), in a per-tick")
+    print("    agent loop (TS db.subscribe), and as a maintained LIVE view (Rust SDK).")
+    print("    Z-set algebra guarantees the three modes are operator-plan-equivalent.")
     print("  - No external scheduler, no message bus, no factor-rollup job.")
-    print("  - The same MATCH ... RETURN shape works in batch and in the per-tick agent loop;")
-    print("    Z-set algebra (PAT-0021) guarantees the equivalence inside the engine.")
+    print("  - Your backtest, your live agent, and your audit trail all run the same")
+    print("    query against the same operational world model.")
 
     db.close()
     shutil.rmtree(data_dir, ignore_errors=True)

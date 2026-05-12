@@ -1,7 +1,7 @@
 [project]
-name = "algo-trading-llm-harness"
+name = "algo-trading-world-model"
 version = "0.1.0"
-description = "Persistent memory + cascading LIVE views + confidence-weighted signal fusion — the ArcFlow harness pattern for LLM-driven algorithmic trading."
+description = "The operational world model your LLM-driven trading agent reads, writes, and remembers from — persistent memory, orchestrated context, evidence-algebra fusion."
 requires-python = ">=3.11"
 dependencies = [
   "oz-arcflow==1.6.7",
