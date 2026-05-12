@@ -3,16 +3,59 @@
 > **The persistent, queryable, replayable operational world model your
 > trading agent reads, writes, and remembers from.**
 
-Three patterns, three steps, ~3 minutes total runtime. Builds a small
-operational world model holding observed market data, inferred derived
-signals, and predicted LLM/model emissions — each tagged with its own
-observation class and confidence — then demonstrates the three things
-this graph shape makes trivial that a four-silo stack (vector DB +
-SQL/timeseries + message bus + scheduler) makes hard.
-
 **Audience:** quant developers · ML engineers · LLM-agent builders
 **Runtime:** under 3 minutes total
 **Pins:** `oz-arcflow==1.6.7`
+
+## The four hard problems this addresses
+
+An LLM-driven trading agent has to solve four engineering problems that
+are individually doable in a weekend and collectively a nightmare to
+integrate. Most stacks bolt together five or six systems (vector DB +
+SQL/timeseries + message bus + scheduler + audit log + feature store)
+and pay the drift tax forever. The list, with the symptom each one
+ships in production when it goes wrong:
+
+1. **Reconstructing decision-time state without look-ahead bias.** Six
+   weeks after a trade, the auditor asks "what fundamentals were
+   visible at decision time?" Standard databases store current state
+   only. Reconstructing the decision-time view means correlating an
+   audit log, a version table, and denormalized snapshots — three
+   sources that drift the moment someone forgets to update one. The
+   bug surfaces as a strategy that backtested at 1.8 Sharpe and lives
+   at 0.4.
+
+2. **Backtest-vs-live equivalence.** The strategy is written in pandas
+   for backtest, then rewritten in a streaming framework for live, and
+   the team prays they produce identical results. They don't, because
+   pandas computed `lag(close, 1)` over the full table while the
+   streaming version maintained a sliding window — same semantics in
+   theory, off-by-one bugs in practice. Most of the alpha decay
+   between sim and live comes from this gap, not from market regime
+   change.
+
+3. **Confidence-weighted multi-source fusion.** Technical signals come
+   out of a deterministic pipeline at high confidence. LLM-emitted
+   sentiment scores come out at 0.4–0.7 with high variance. ML regime
+   classifiers emit forward beliefs at mid confidence. Stitching these
+   into a single decision means a JOIN chain across four schemas, each
+   with its own confidence column, each silently mistyped when someone
+   refactors. The agent ends up trusting `sentiment_score > 0.5` as if
+   it were a deterministic signal, because the trust tier was lost in
+   the JOIN.
+
+4. **Maintained context for the agent's prompt.** Each prompt turn
+   wants fresh sector rollups, cross-sectional ranks, top-of-sector
+   leaders. Recomputing in Python every turn is wasteful. Pre-computing
+   with a scheduler creates drift between the scheduler's view and the
+   live agent's view — the prompt sees a 30-second-stale percentile
+   rank while the agent's decision is sized against the live price. The
+   strategy looks confused; the bug is a freshness mismatch nobody
+   traced.
+
+Each one is solvable in isolation with enough engineering. Solving all
+four in one architecture is what an operational world model is for.
+This recipe builds one in three minutes.
 
 ## What an operational world model is
 
