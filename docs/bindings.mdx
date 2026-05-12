@@ -1,7 +1,7 @@
 ---
 title: "Language Bindings"
+kind: first-use
 description: "One world model engine, every language — native bindings for Rust, Python, TypeScript (napi-rs), C, and C++ with zero serialization overhead."
-order: 1
 status: "stable"
 playground:
   seed: world
@@ -44,7 +44,10 @@ for row in &result.rows {
 ### Key Types
 
 | Type | Description |
-|------|-------------|
+|---
+---|---
+------
+----|
 | `GraphStore` | Single-threaded graph store with full low-level API |
 | `ConcurrentStore` | Thread-safe wrapper with `execute()` — auto-detects read vs write |
 | `Engine` | Read-only query engine |
@@ -373,7 +376,10 @@ function AlertPanel() {
 ```
 
 | Hook | Returns | Notes |
-|------|---------|-------|
+|---
+---|---
+------|---
+----|
 | `useQuery(db, query, params?, deps?)` | `{ data, loading, error }` | Runs once, re-runs when deps change |
 | `useLiveQuery(db, query, deps?, pollIntervalMs?)` | `{ rows, loading, error }` | Subscribes to live view, re-renders on changes |
 
@@ -416,7 +422,10 @@ const char* err = arcflow_last_error();
 ### Functions
 
 | Function | Description |
-|----------|-------------|
+|---
+-------|---
+------
+----|
 | `arcflow_open(path)` | Open runtime. NULL = in-memory |
 | `arcflow_close(rt)` | Close runtime and free memory |
 | `arcflow_session_open(rt)` | Open lightweight session on runtime |

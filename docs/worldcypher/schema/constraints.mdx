@@ -1,7 +1,7 @@
 ---
 title: "Constraints"
+kind: clause
 description: "UNIQUE, PRIMARY KEY, and SEMANTIC UNIQUE constraints for world model integrity — enforce entity identity rules at the schema level."
-order: 3
 status: "stable"
 playground:
   query: "MERGE (r:Robot {id: 'r-proto', name: 'Proto-01', task: 'calibration', battery: 100, x: 0.0, y: 0.0}) ON CREATE SET r.created = 1, r.version = 1, r.status = 'new' MERGE (r:Robot {id: 'r-proto', name: 'Proto-01', task: 'calibration', battery: 100, x: 0.0, y: 0.0}) ON MATCH SET r.verified = 1, r.version = 2, r.status = 'commissioned' MATCH (r:Robot {id: 'r-proto'}) RETURN r.id, r.name, r.task, r.battery, r.status, r.created, r.verified, r.version"

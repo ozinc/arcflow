@@ -1,7 +1,7 @@
 ---
 title: "UNWIND"
+kind: clause
 description: "Expand a list into individual rows for per-element processing — pairs with collect() for batch world model operations."
-order: 2
 status: "stable"
 playground:
   query: "UNWIND ['Assembly', 'Quality-Control', 'Logistics', 'Quarantine'] AS area_name MERGE (z:Zone {id: area_name, name: area_name, active: 1, hazard: 0.1, radius: 15.0}) RETURN z.name AS name, z.active AS active, z.hazard AS hazard, z.radius AS radius ORDER BY z.name"

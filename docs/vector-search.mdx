@@ -1,7 +1,7 @@
 ---
 title: "Vector Search"
+kind: capability
 description: "Semantic search over node embeddings — cosine, euclidean, or dot-product similarity built into the world model, composing with graph traversal and temporal queries in one GQL statement"
-order: 1
 status: "stable"
 playground:
   query: "MERGE (wm:Document {id: 'doc-world-model', title: 'ArcFlow World Model', category: 'core', relevance: 0.98, chunks: 12}) MERGE (sq:Document {id: 'doc-spatial', title: 'Spatial Query Primitives', category: 'query', relevance: 0.91, chunks: 8}) MERGE (cs:Document {id: 'doc-confidence', title: 'Confidence Scoring in Live Graphs', category: 'ai', relevance: 0.87, chunks: 6}) MERGE (rg:Document {id: 'doc-rag', title: 'Trusted RAG Pipelines', category: 'ai', relevance: 0.83, chunks: 9}) MERGE (mg:Document {id: 'doc-migration', title: 'SQL to WorldCypher Migration', category: 'migration', relevance: 0.41, chunks: 4}) MERGE (wm:Document {id: 'doc-world-model'})-[:RELATED_TO {strength: 0.94, method: 'semantic'}]->(sq:Document {id: 'doc-spatial'}) MERGE (wm:Document {id: 'doc-world-model'})-[:RELATED_TO {strength: 0.89, method: 'semantic'}]->(cs:Document {id: 'doc-confidence'}) MERGE (cs:Document {id: 'doc-confidence'})-[:RELATED_TO {strength: 0.92, method: 'semantic'}]->(rg:Document {id: 'doc-rag'}) MATCH (doc:Document) WHERE doc.relevance > 0.80 RETURN doc.title AS document, doc.category, doc.relevance AS relevance_score, doc.chunks ORDER BY doc.relevance DESC"
@@ -28,7 +28,12 @@ CREATE VECTOR INDEX movie_embeddings
 ```
 
 | Option | Values | Default | Description |
-|--------|--------|---------|-------------|
+|---
+-----|---
+-----|---
+------|---
+------
+----|
 | dimensions | 1–4096 | required | Vector dimensionality |
 | similarity | `'cosine'`, `'euclidean'`, `'dotProduct'` | `'cosine'` | Distance function |
 
@@ -63,7 +68,11 @@ CALL algo.vectorSearch('movie_embeddings', [0.1, 0.2, 0.3, ...], 10)
 ```
 
 | Parameter | Type | Description |
-|-----------|------|-------------|
+|---
+--------|---
+---|---
+------
+----|
 | index name | string | Name of the vector index |
 | query vector | float[] | Query vector (must match index dimensions) |
 | k | integer | Number of nearest neighbors to return |
@@ -77,7 +86,12 @@ CALL algo.vectorSearch('movie_embeddings', [0.12, -0.34, 0.56, ...], 5)
 
 ```
 | nodeId | name              | score    |
-|--------|-------------------|----------|
+|---
+-----|---
+------
+------
+----|---
+-------|
 | 42     | The Matrix        | 0.952341 |
 | 17     | Blade Runner      | 0.891205 |
 | 23     | Ghost in the Shell| 0.847193 |
@@ -127,7 +141,11 @@ CALL db.indexes()
 ## Performance
 
 | Dimension | Throughput | Latency (p50) |
-|-----------|-----------|---------------|
+|---
+--------|---
+--------|---
+------
+------|
 | 128d | 25,000 queries/sec | 0.04ms |
 | 768d | 4,600 queries/sec | 0.22ms |
 

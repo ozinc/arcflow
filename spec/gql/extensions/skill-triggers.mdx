@@ -1,0 +1,26 @@
+---
+title: "Skill Triggers"
+description: "ArcFlow extension beyond ISO/IEC 39075 GQL — Skill Triggers fire skills on CDC events via the CREATE REACTIVE SKILL syntax."
+status: "stable"
+generated: true
+---
+
+# Skill Triggers
+
+**Type:** ArcFlow extension beyond GQL
+
+**Syntax:**
+```gql
+CREATE SKILL auto_tag WHEN node_created ON Article
+```
+
+**GQL compatibility:** No GQL equivalent.
+**Semantics:** Event-driven skill execution on CDC events. Skills fire when graph conditions match.
+
+> **Engine alignment in progress.** The engine currently accepts `CREATE REACTIVE SKILL <name>` for backwards compatibility. The unmodified `CREATE SKILL ... WHEN ... ON ...` form (shown above) is the forward direction — it lands when the engine vNext alignment ships. Both forms are equivalent until then.
+
+## Standards relationship
+
+This is an extension to ISO/IEC 39075:2024 (GQL Edition 1 + V2 accepted proposals). It does not affect the engine's full conformance to the ISO standard — the extension surface is opt-in syntax that GQL leaves to implementations.
+
+---

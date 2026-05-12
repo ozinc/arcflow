@@ -1,7 +1,7 @@
 ---
 title: "Temporal Queries"
+kind: capability
 description: "Time as a first-class dimension of the world model — every mutation versioned, every past state queryable with AS OF seq N"
-order: 1
 status: "stable"
 playground:
   seed: world
@@ -101,7 +101,10 @@ CALL db.clock()
 
 ```
 | field | value      |
-|-------|------------|
+|---
+----|---
+------
+---|
 | tick  | 1700000042 |
 ```
 
@@ -135,7 +138,8 @@ MATCH (n:Person) AS OF seq 1 RETURN n.name
 
 ```
 | name  |
-|-------|
+|---
+----|
 | Alice |
 ```
 
@@ -223,7 +227,15 @@ CALL db.fingerprint()
 
 ```
 | fingerprint                                      |
-|--------------------------------------------------|
+|---
+------
+------
+------
+------
+------
+------
+------
+-----|
 | sha256:a1b2c3d4e5f6...                           |
 ```
 
@@ -248,7 +260,12 @@ CALL db.clockDomains()
 
 ```
 | domain   | current_tick | source        |
-|----------|-------------|---------------|
+|---
+-------|---
+------
+----|---
+------
+------|
 | local    | 1700000042  | engine        |
 | import_1 | 1609459200  | external      |
 | import_2 | 1672531200  | external      |

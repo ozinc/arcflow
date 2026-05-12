@@ -1,7 +1,7 @@
 ---
 title: "REPL"
+kind: operation
 description: "Interactive REPL for the world model engine — live query execution, schema inspection, and meta-command reference."
-order: 2
 status: "stable"
 playground:
   query: "MERGE (r:Robot {id: 'repl-bot', name: 'REPL-Bot', task: 'explore', battery: 100, status: 'ready', x: 0.0, y: 0.0}) MERGE (s:Sensor {id: 'repl-cam', name: 'REPL-Cam', type: 'camera', reliability: 0.99, last_confidence: 0.99, x: 1.0, y: 2.0}) MERGE (s:Sensor {id: 'repl-cam'})-[:DETECTED]->(r:Robot {id: 'repl-bot'}) MATCH (s:Sensor)-[:DETECTED]->(r:Robot) RETURN s.name AS sensor, s.reliability AS reliability, s.last_confidence AS last_trust, r.name AS robot, r.task AS task, r.battery AS battery, r.status AS status"
@@ -47,19 +47,25 @@ Type any WorldCypher query at the `arcflow>` prompt. Results display as a format
 
 ```
 arcflow> CREATE (n:Person {name: 'Alice', age: 30}) RETURN n
-+----+--------+-----+
++----+---
+-----+-----+
 | n  | n.name | n.age |
-+----+--------+-----+
++----+---
+-----+-----+
 | 0  | Alice  | 30  |
-+----+--------+-----+
++----+---
+-----+-----+
 1 row
 
 arcflow> MATCH (n:Person) RETURN n.name, n.age
-+--------+-----+
++---
+-----+-----+
 | n.name | n.age |
-+--------+-----+
++---
+-----+-----+
 | Alice  | 30  |
-+--------+-----+
++---
+-----+-----+
 1 row
 ```
 

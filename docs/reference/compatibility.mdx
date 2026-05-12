@@ -1,5 +1,6 @@
 ---
-title: "GQL & WorldCypher Reference"
+title: "GQL Reference"
+kind: reference
 description: "GQL compatibility matrix for the world model engine — ISO/IEC 39075 supported syntax, ArcFlow extensions, and implementation status."
 status: "stable"
 playground:
@@ -7,7 +8,7 @@ playground:
   query: "MATCH (r:Robot)-[:OCCUPIES]->(z:Zone) OPTIONAL MATCH (s:Sensor)-[:DETECTED]->(r) WITH r.name AS robot, r.task AS task, r.battery AS battery, r.speed AS speed, r.x AS x, r.y AS y, z.name AS zone, z.hazard AS hazard, count(s) AS sensor_coverage, avg(s.reliability) AS coverage_quality RETURN robot, task, battery, speed, x, y, zone, hazard, sensor_coverage, coverage_quality ORDER BY battery DESC"
 ---
 
-# GQL & WorldCypher Reference
+# GQL Reference
 
 ArcFlow implements [ISO/IEC 39075 GQL](https://www.iso.org/standard/76120.html) as **WorldCypher** — its native query dialect. All standard GQL syntax works as specified. WorldCypher adds extensions for temporal snapshots, live queries, confidence scoring, and graph algorithms that GQL leaves to implementations.
 

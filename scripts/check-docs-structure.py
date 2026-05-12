@@ -156,12 +156,12 @@ def check_r4(cfg: dict) -> list[str]:
 
 
 def check_r5(cfg: dict, mdx_files: list[Path]) -> list[str]:
-    """Every registered page declares kind: matching section's declared kind."""
+    """Every registered (non-facet) page declares kind: matching its section's declared kind.
+    Tightened: requires presence, not just match — absent kind: on a registered page is a fail."""
     errors: list[str] = []
     kind_map = cfg.get("lint", {}).get("section_kind_map", {})
     if not kind_map:
         return []
-    # Build slug → section_id
     slug_to_section: dict[str, str] = {}
     for section in cfg["sections"]:
         sid = section["id"]
@@ -170,24 +170,43 @@ def check_r5(cfg: dict, mdx_files: list[Path]) -> list[str]:
 
     mdx_slugs = {mdx_to_slug(p): p for p in mdx_files}
     for slug, sid in slug_to_section.items():
-        path = mdx_slugs.get(slug) or (DOCS / f"{slug}/index.mdx" if (DOCS / f"{slug}/index.mdx").exists() else None)
+        path = mdx_slugs.get(slug)
+        if not path:
+            idx = DOCS / f"{slug}/index.mdx"
+            path = idx if idx.exists() else None
         if not path:
             continue
         fm = parse_frontmatter(path)
+        # Facets are exempt — they declare `canonical:` and don't need kind:
+        if fm.get("canonical"):
+            continue
         kind = fm.get("kind")
         expected = kind_map.get(sid)
-        if expected and kind and kind != expected:
+        if not expected:
+            continue
+        if not kind:
+            errors.append(f"R5: {path.relative_to(ROOT)} missing required frontmatter `kind: {expected}` (registered under section '{sid}')")
+        elif kind != expected:
             errors.append(f"R5: {path.relative_to(ROOT)} declares kind='{kind}' but section '{sid}' expects kind='{expected}'")
     return errors
 
 
+# Deprecated frontmatter fields — _config.json is the sole SSOT for placement
+# and ordering per DIA decision 2. Pages that carry these confuse readers and
+# create drift potential.
+DEPRECATED_FM_FIELDS = ("section", "order")
+
+
 def check_r6(mdx_files: list[Path]) -> list[str]:
-    """No frontmatter `section:` field — DIA-deprecated per decision 2."""
+    """No deprecated frontmatter fields — DIA-deprecated per decision 2.
+    Tightened to also catch `order:` (config-only field that was leaking into
+    page frontmatter and rotting alongside the renamed/reordered nav)."""
     errors: list[str] = []
     for path in mdx_files:
         fm = parse_frontmatter(path)
-        if "section" in fm:
-            errors.append(f"R6: {path.relative_to(ROOT)} has deprecated frontmatter `section:` — remove (per docs/_AGENTS.md)")
+        for field in DEPRECATED_FM_FIELDS:
+            if field in fm:
+                errors.append(f"R6: {path.relative_to(ROOT)} has deprecated frontmatter `{field}:` — remove (config is SSOT per docs/_AGENTS.md)")
     return errors
 
 

@@ -1,7 +1,7 @@
 ---
 title: "Behavior Graph"
+kind: capability
 description: "Behavior trees embedded in the world model — persistent, temporal, and queryable with full GQL. The tree IS the graph."
-order: 1
 status: "preview"
 playground:
   seed: world
@@ -40,7 +40,7 @@ If you've used behavior trees before, everything maps directly:
 | Selector / Fallback | Conditional step | Graph-pattern predicates, not just booleans |
 | Parallel Node | Parallel step with barriers | All/Any/N completion modes |
 | Decorator (Retry, Timeout) | Retry policy, throttle config | Rate limiting, dead letter queues |
-| Reactive Sequence | Live queries + subscriptions | GQL-based live queries |
+| Live-Trigger Sequence | Live queries + subscriptions | GQL-based live queries |
 | Subtree | Nested workflow definition | Partition-isolated scope |
 
 ---
@@ -338,8 +338,8 @@ ArcFlow's behavior graphs serve as the coordination layer for autonomous systems
 
 ## See Also
 
-- [Use Case: Behavior Graphs](/use-cases/behavior-graphs) — lightweight implementation sketch and architecture overview
-- [Use Case: Autonomous Systems](/use-cases/autonomous-systems) — multi-agent fleet coordination with behavior trees
+- [Use Case: Behavior Graphs](/markets/behavior-graphs) — lightweight implementation sketch and architecture overview
+- [Use Case: Autonomous Systems](/markets/autonomous-systems) — multi-agent fleet coordination with behavior trees
 - [Live Queries](/live-queries) — `LIVE MATCH` for condition nodes that fire on world model state changes
 - [Triggers](/worldcypher/triggers) — `CREATE TRIGGER` to invoke a skill when an entity is created or modified, wiring behavior tree inputs to sensor events
 - [Programs](/programs) — bundle perception skills and trigger bindings for a sensor pipeline into a single installable manifest

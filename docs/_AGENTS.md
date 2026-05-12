@@ -11,9 +11,9 @@
 | R2 | Top-level sections answer one question: *what kind of thing is this?* | `section_kind_map` in `_config.json` |
 | R3 | Top level capped at 8 (today: 6); `_config.json` validator rejects PRs that push past | `max_top_level_sections` |
 | R4 | Lint runs on every PR; `kind` frontmatter matches section's allowed kind | CI pre-commit |
-| R5 | Each documentable concept has exactly one canonical page; others declare `canonical: <slug>` | CI: concept-uniqueness pass |
+| R5 | Each documentable concept has exactly one canonical page; others declare `canonical: <slug>`. Registered (non-facet) pages **must** declare `kind:` matching the section's declared kind. | CI: presence + match check |
 | R6 | `/llms.txt` canonical-page count after restructure ≥ count before — agent vocab does not shrink | CI: diff llms.txt enumeration |
-| R7 | Frontmatter `section:` is **deprecated** — `_config.json` is the sole SSOT for placement | CI: warns if `section:` is present (until removed) |
+| R7 | Frontmatter is config-deprecated for placement/ordering — neither `section:` nor `order:` may appear. `_config.json` is the sole SSOT. | CI: fails on either field |
 
 ## Sections (kind enum)
 

@@ -1,14 +1,14 @@
 ---
-title: "Server & Access Layers"
+title: "Server Modes & PG Wire"
+kind: operation
 description: "Access the operational world model over PostgreSQL wire protocol, HTTP REST, TCP, or MCP — same engine, same WorldCypher queries, same world model everywhere"
-order: 1
 status: "stable"
 playground:
   seed: world
   query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(r) AS entity_count, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS composite_trust RETURN zone, hazard, entity_count, avg_battery, composite_trust, CASE WHEN composite_trust >= 0.90 THEN 'optimal' WHEN composite_trust >= 0.75 THEN 'nominal' ELSE 'degraded' END AS status ORDER BY composite_trust DESC"
 ---
 
-# Server & Access Layers
+# Server Modes & PG Wire
 
 ArcFlow adapts to how you deploy. In-process by default. Add `--pg` for PostgreSQL clients. Add `--http` for REST. Add `--serve` for TCP. The engine is the same; the access layer changes.
 
@@ -80,7 +80,9 @@ psql -h localhost -p 5432
 stadium=# MATCH (p:Player)-[:NEAR {distance: 2.0}]->(b:Ball)
           RETURN p.name, p.speed;
  name    | speed
----------+-------
+---
+------+---
+----
  Salah   | 32.1
  Haaland | 28.7
 (2 rows)
@@ -420,7 +422,16 @@ Execute a read-only WorldCypher query. Rejects CREATE, SET, DELETE, MERGE, REMOV
 **Input schema:**
 
 | Parameter | Type   | Required | Description                          |
-|-----------|--------|----------|--------------------------------------|
+|---
+--------|---
+-----|---
+-------|---
+------
+------
+------
+------
+------
+-----|
 | `cypher`  | string | yes      | WorldCypher query (read-only)        |
 
 ```json
@@ -456,7 +467,16 @@ Execute a mutating WorldCypher query. Supports CREATE, SET, DELETE, MERGE, REMOV
 **Input schema:**
 
 | Parameter | Type   | Required | Description                          |
-|-----------|--------|----------|--------------------------------------|
+|---
+--------|---
+-----|---
+-------|---
+------
+------
+------
+------
+------
+-----|
 | `cypher`  | string | yes      | WorldCypher mutation query           |
 
 ```json
@@ -472,7 +492,18 @@ Run the trusted GraphRAG pipeline — combines graph traversal, vector search, a
 **Input schema:**
 
 | Parameter | Type   | Required | Description                                      |
-|-----------|--------|----------|--------------------------------------------------|
+|---
+--------|---
+-----|---
+-------|---
+------
+------
+------
+------
+------
+------
+------
+-----|
 | `query`   | string | yes      | Natural language question for the world model |
 
 ```json
@@ -524,7 +555,19 @@ arcflow-mcp --data-dir ./production-db                # MCP
 Storage uses two files in the data directory:
 
 | File                          | Purpose                                    |
-|-------------------------------|--------------------------------------------|
+|---
+------
+------
+------
+------
+----|---
+------
+------
+------
+------
+------
+------
+-----|
 | `worldcypher.snapshot.json`   | Full graph state, written on checkpoint/exit |
 | `worldcypher.wal`             | Append-only write-ahead log for crash recovery |
 
@@ -543,7 +586,22 @@ The engine detects available resources and adapts regardless of access layer:
 Choose the access layer based on your environment:
 
 | Environment                        | Recommended access layer                              |
-|------------------------------------|-------------------------------------------------------|
+|---
+------
+------
+------
+------
+------
+---|---
+------
+------
+------
+------
+------
+------
+------
+------
+----|
 | Local filesystem access            | `arcflow query "..." --json`                     |
 | Existing PostgreSQL tooling        | `arcflow --pg 5432` + psql/pgAdmin/Grafana       |
 | Long-running session, many queries | `arcflow --http 8080` + curl                     |

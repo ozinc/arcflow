@@ -1,6 +1,6 @@
 {
   "schema_version": "v2",
-  "comment": "v2 schema (2026-05-12) per oz-platform dossier DIA. Top-level Object-First per Strawman B + 3 amendments. Source of truth: apps/cloud/website/kanban/planning/26-05-12-docs-ia-restructure/. Frontmatter `section:` is deprecated — this config is the sole SSOT for placement (decision DIA-2). Renderer supports nested `children`; group rows without `slug` render as labels only.",
+  "comment": "v2 schema (2026-05-12) per oz-platform dossier DIA. Top-level Object-First per Strawman B + 3 amendments. Source of truth: apps/cloud/website/kanban/planning/26-05-12-docs-ia-restructure/. Frontmatter `section:` is deprecated \u2014 this config is the sole SSOT for placement (decision DIA-2). Renderer supports nested `children`; group rows without `slug` render as labels only.",
   "lint": {
     "max_top_level_sections": 8,
     "max_items_per_section": 16,
@@ -19,14 +19,26 @@
       "title": "Try in Browser",
       "href": "/engine",
       "highlight": true,
-      "note": "Amendment 1 — pin REPL discoverable from every doc page (RT Finding #3)"
+      "note": "Amendment 1 \u2014 pin REPL discoverable from every doc page (RT Finding #3)"
     }
   ],
   "boundary_case_ledger": {
-    "event-sourcing": { "placement": "capabilities/event-sourcing", "rubric": "capability with concept facets (concepts/persistence, concepts/snapshots) pinned underneath" },
-    "agent-native": { "placement": "capabilities/agent-native", "rubric": "philosophy IS the capability — manifesto framing is the brand promise of this capability, not a separate kind" },
-    "sync": { "placement": "capabilities/sync", "rubric": "capability is canonical; operations/architecture/sync-protocol is a facet attached to the canonical, not a sibling" },
-    "architecture": { "placement": "operations/architecture/engine", "rubric": "architecture is an operational artefact (how to tune/run the engine); cloud-architecture and sync-protocol live alongside as siblings under Operations/Architecture" }
+    "event-sourcing": {
+      "placement": "capabilities/event-sourcing",
+      "rubric": "capability with concept facets (concepts/persistence, concepts/snapshots) pinned underneath"
+    },
+    "agent-native": {
+      "placement": "capabilities/agent-native",
+      "rubric": "philosophy IS the capability \u2014 manifesto framing is the brand promise of this capability, not a separate kind"
+    },
+    "sync": {
+      "placement": "capabilities/sync",
+      "rubric": "capability is canonical; operations/architecture/sync-protocol is a facet attached to the canonical, not a sibling"
+    },
+    "architecture": {
+      "placement": "operations/architecture/engine",
+      "rubric": "architecture is an operational artefact (how to tune/run the engine); cloud-architecture and sync-protocol live alongside as siblings under Operations/Architecture"
+    }
   },
   "sections": [
     {
@@ -34,11 +46,31 @@
       "title": "Start",
       "kind": "first-use",
       "items": [
-        { "slug": "quickstart", "title": "Quickstart", "order": 1 },
-        { "slug": "installation", "title": "Installation", "order": 2 },
-        { "slug": "bindings", "title": "Bindings", "order": 3 },
-        { "slug": "platform", "title": "Platforms", "order": 4 },
-        { "slug": "get-started", "title": "Get Started", "order": 5 }
+        {
+          "slug": "quickstart",
+          "title": "Quickstart",
+          "order": 1
+        },
+        {
+          "slug": "installation",
+          "title": "Installation",
+          "order": 2
+        },
+        {
+          "slug": "bindings",
+          "title": "Bindings",
+          "order": 3
+        },
+        {
+          "slug": "platform",
+          "title": "Platforms",
+          "order": 4
+        },
+        {
+          "slug": "get-started",
+          "title": "Get Started",
+          "order": 5
+        }
       ]
     },
     {
@@ -46,25 +78,73 @@
       "title": "Concepts",
       "kind": "concept",
       "items": [
-        { "slug": "concepts/world-model", "title": "World Model", "order": 1 },
-        { "slug": "concepts/graph-model", "title": "Graph Model", "order": 2 },
+        {
+          "slug": "concepts/world-model",
+          "title": "World Model",
+          "order": 1
+        },
+        {
+          "slug": "concepts/graph-model",
+          "title": "Graph Model",
+          "order": 2
+        },
         {
           "slug": "concepts/evidence-model",
           "title": "Evidence Model",
           "order": 3,
           "children": [
-            { "slug": "concepts/observations", "title": "Observations", "order": 1 },
-            { "slug": "concepts/confidence-and-provenance", "title": "Confidence & Provenance", "order": 2 },
-            { "slug": "concepts/proof-artifacts", "title": "Proof Artifacts & Gates", "order": 3 }
+            {
+              "slug": "concepts/observations",
+              "title": "Observations",
+              "order": 1
+            },
+            {
+              "slug": "concepts/confidence-and-provenance",
+              "title": "Confidence & Provenance",
+              "order": 2
+            },
+            {
+              "slug": "concepts/proof-artifacts",
+              "title": "Proof Artifacts & Gates",
+              "order": 3
+            }
           ]
         },
-        { "slug": "concepts/sql-vs-gql", "title": "SQL vs GQL", "order": 4 },
-        { "slug": "concepts/graph-patterns", "title": "Graph Patterns", "order": 5 },
-        { "slug": "concepts/parameters", "title": "Parameters", "order": 6 },
-        { "slug": "concepts/results", "title": "Query Results", "order": 7 },
-        { "slug": "concepts/persistence", "title": "Persistence & WAL", "order": 8 },
-        { "slug": "concepts/snapshots", "title": "Snapshot-Pinned Reads", "order": 9 },
-        { "slug": "concepts/error-handling", "title": "Error Handling", "order": 10 }
+        {
+          "slug": "concepts/sql-vs-gql",
+          "title": "SQL vs GQL",
+          "order": 4
+        },
+        {
+          "slug": "concepts/graph-patterns",
+          "title": "Graph Patterns",
+          "order": 5
+        },
+        {
+          "slug": "concepts/parameters",
+          "title": "Parameters",
+          "order": 6
+        },
+        {
+          "slug": "concepts/results",
+          "title": "Query Results",
+          "order": 7
+        },
+        {
+          "slug": "concepts/persistence",
+          "title": "Persistence & WAL",
+          "order": 8
+        },
+        {
+          "slug": "concepts/snapshots",
+          "title": "Snapshot-Pinned Reads",
+          "order": 9
+        },
+        {
+          "slug": "concepts/error-handling",
+          "title": "Error Handling",
+          "order": 10
+        }
       ]
     },
     {
@@ -72,57 +152,171 @@
       "title": "WorldCypher",
       "kind": "clause",
       "items": [
-        { "slug": "worldcypher", "title": "Overview", "order": 1 },
+        {
+          "slug": "worldcypher",
+          "title": "Overview",
+          "order": 1
+        },
         {
           "title": "Statements",
           "order": 2,
           "children": [
-            { "slug": "worldcypher/query-syntax/match", "title": "MATCH", "order": 1 },
-            { "slug": "worldcypher/query-syntax/where", "title": "WHERE", "order": 2 },
-            { "slug": "worldcypher/query-syntax/return", "title": "RETURN", "order": 3 },
-            { "slug": "worldcypher/query-syntax/optional-match", "title": "OPTIONAL MATCH", "order": 4 },
-            { "slug": "worldcypher/statements/create", "title": "CREATE", "order": 5 },
-            { "slug": "worldcypher/statements/set", "title": "SET", "order": 6 },
-            { "slug": "worldcypher/statements/merge", "title": "MERGE", "order": 7 },
-            { "slug": "worldcypher/statements/delete", "title": "DELETE", "order": 8 },
-            { "slug": "worldcypher/statements/remove", "title": "REMOVE", "order": 9 }
+            {
+              "slug": "worldcypher/query-syntax/match",
+              "title": "MATCH",
+              "order": 1
+            },
+            {
+              "slug": "worldcypher/query-syntax/where",
+              "title": "WHERE",
+              "order": 2
+            },
+            {
+              "slug": "worldcypher/query-syntax/return",
+              "title": "RETURN",
+              "order": 3
+            },
+            {
+              "slug": "worldcypher/query-syntax/optional-match",
+              "title": "OPTIONAL MATCH",
+              "order": 4
+            },
+            {
+              "slug": "worldcypher/statements/create",
+              "title": "CREATE",
+              "order": 5
+            },
+            {
+              "slug": "worldcypher/statements/set",
+              "title": "SET",
+              "order": 6
+            },
+            {
+              "slug": "worldcypher/statements/merge",
+              "title": "MERGE",
+              "order": 7
+            },
+            {
+              "slug": "worldcypher/statements/delete",
+              "title": "DELETE",
+              "order": 8
+            },
+            {
+              "slug": "worldcypher/statements/remove",
+              "title": "REMOVE",
+              "order": 9
+            }
           ]
         },
         {
           "title": "Composition",
           "order": 3,
           "children": [
-            { "slug": "worldcypher/composition/with", "title": "WITH", "order": 1 },
-            { "slug": "worldcypher/composition/union", "title": "UNION", "order": 2 },
-            { "slug": "worldcypher/composition/unwind", "title": "UNWIND", "order": 3 },
-            { "slug": "worldcypher/composition/case", "title": "CASE", "order": 4 }
+            {
+              "slug": "worldcypher/composition/with",
+              "title": "WITH",
+              "order": 1
+            },
+            {
+              "slug": "worldcypher/composition/union",
+              "title": "UNION",
+              "order": 2
+            },
+            {
+              "slug": "worldcypher/composition/unwind",
+              "title": "UNWIND",
+              "order": 3
+            },
+            {
+              "slug": "worldcypher/composition/case",
+              "title": "CASE",
+              "order": 4
+            }
           ]
         },
         {
           "title": "Schema",
           "order": 4,
           "children": [
-            { "slug": "worldcypher/schema", "title": "Schema Overview", "order": 1 },
-            { "slug": "worldcypher/schema/indexes", "title": "Indexes", "order": 2 },
-            { "slug": "worldcypher/schema/constraints", "title": "Constraints", "order": 3 }
+            {
+              "slug": "worldcypher/schema",
+              "title": "Schema Overview",
+              "order": 1
+            },
+            {
+              "slug": "worldcypher/schema/indexes",
+              "title": "Indexes",
+              "order": 2
+            },
+            {
+              "slug": "worldcypher/schema/constraints",
+              "title": "Constraints",
+              "order": 3
+            }
           ]
         },
         {
           "title": "Functions",
           "order": 5,
           "children": [
-            { "slug": "worldcypher/functions/built-in", "title": "Built-in Functions", "order": 1 },
-            { "slug": "worldcypher/functions/aggregations", "title": "Aggregations", "order": 2 },
-            { "slug": "worldcypher/functions/procedures", "title": "Procedures", "order": 3 },
-            { "slug": "worldcypher/functions/shortest-path", "title": "Shortest Path", "order": 4 },
-            { "slug": "worldcypher/functions/explain", "title": "EXPLAIN", "order": 5 },
-            { "slug": "worldcypher/functions/profile", "title": "PROFILE", "order": 6 }
+            {
+              "slug": "worldcypher/functions/built-in",
+              "title": "Built-in Functions",
+              "order": 1
+            },
+            {
+              "slug": "worldcypher/functions/aggregations",
+              "title": "Aggregations",
+              "order": 2
+            },
+            {
+              "slug": "worldcypher/functions/procedures",
+              "title": "Procedures",
+              "order": 3
+            },
+            {
+              "slug": "worldcypher/functions/shortest-path",
+              "title": "Shortest Path",
+              "order": 4
+            },
+            {
+              "slug": "worldcypher/functions/explain",
+              "title": "EXPLAIN",
+              "order": 5
+            },
+            {
+              "slug": "worldcypher/functions/profile",
+              "title": "PROFILE",
+              "order": 6
+            }
           ]
         },
-        { "slug": "worldcypher/temporal", "title": "Temporal Queries", "order": 6, "canonical": "temporal", "note": "facet — canonical lives in Capabilities/Temporal" },
-        { "slug": "worldcypher/spatial", "title": "Spatial Queries", "order": 7, "canonical": "spatial-knowledge", "note": "facet — canonical lives in Capabilities/Spatial Knowledge" },
-        { "slug": "worldcypher/algorithms", "title": "Algorithms", "order": 8, "canonical": "algorithms", "note": "facet — canonical lives in Capabilities/Graph Algorithms" },
-        { "slug": "worldcypher/triggers", "title": "Triggers", "order": 9 }
+        {
+          "slug": "worldcypher/temporal",
+          "title": "Temporal Queries",
+          "order": 6,
+          "canonical": "temporal",
+          "note": "facet \u2014 canonical lives in Capabilities/Temporal"
+        },
+        {
+          "slug": "worldcypher/spatial",
+          "title": "Spatial Queries",
+          "order": 7,
+          "canonical": "spatial-knowledge",
+          "note": "facet \u2014 canonical lives in Capabilities/Spatial Knowledge"
+        },
+        {
+          "slug": "worldcypher/algorithms",
+          "title": "Algorithms",
+          "order": 8,
+          "canonical": "algorithms",
+          "note": "facet \u2014 canonical lives in Capabilities/Graph Algorithms"
+        },
+        {
+          "slug": "worldcypher/triggers",
+          "title": "Triggers",
+          "order": 9
+        }
       ]
     },
     {
@@ -130,30 +324,98 @@
       "title": "Capabilities",
       "kind": "capability",
       "items": [
-        { "slug": "live-queries", "title": "Live Queries", "order": 1 },
-        { "slug": "vector-search", "title": "Vector Search", "order": 2 },
-        { "slug": "trusted-rag", "title": "Trusted RAG", "order": 3 },
-        { "slug": "spatial-knowledge", "title": "Spatial Knowledge", "order": 4 },
-        { "slug": "temporal", "title": "Temporal", "order": 5 },
-        { "slug": "behavior-graph", "title": "Behavior Graphs", "order": 6 },
-        { "slug": "algorithms", "title": "Graph Algorithms", "order": 7 },
+        {
+          "slug": "live-queries",
+          "title": "Live Queries",
+          "order": 1
+        },
+        {
+          "slug": "vector-search",
+          "title": "Vector Search",
+          "order": 2
+        },
+        {
+          "slug": "trusted-rag",
+          "title": "Trusted RAG",
+          "order": 3
+        },
+        {
+          "slug": "spatial-knowledge",
+          "title": "Spatial Knowledge",
+          "order": 4
+        },
+        {
+          "slug": "temporal",
+          "title": "Temporal",
+          "order": 5
+        },
+        {
+          "slug": "behavior-graph",
+          "title": "Behavior Graphs",
+          "order": 6
+        },
+        {
+          "slug": "algorithms",
+          "title": "Graph Algorithms",
+          "order": 7
+        },
         {
           "slug": "skills",
           "title": "Skills",
           "order": 8,
           "children": [
-            { "slug": "skills/create-skill", "title": "CREATE SKILL", "order": 1 },
-            { "slug": "skills/process-node", "title": "PROCESS NODE", "order": 2 },
-            { "slug": "skills/reprocess-edges", "title": "REPROCESS EDGES", "order": 3 }
+            {
+              "slug": "skills/create-skill",
+              "title": "CREATE SKILL",
+              "order": 1
+            },
+            {
+              "slug": "skills/process-node",
+              "title": "PROCESS NODE",
+              "order": 2
+            },
+            {
+              "slug": "skills/reprocess-edges",
+              "title": "REPROCESS EDGES",
+              "order": 3
+            }
           ]
         },
-        { "slug": "sync", "title": "Sync", "order": 9 },
-        { "slug": "programs", "title": "Programs", "order": 10 },
-        { "slug": "gpu", "title": "GPU Acceleration", "order": 11 },
-        { "slug": "agent-native", "title": "Agent-Native", "order": 12 },
-        { "slug": "mcp", "title": "MCP Server", "order": 13 },
-        { "slug": "event-sourcing", "title": "Event Sourcing", "order": 14 },
-        { "slug": "relay", "title": "Intent Relay", "order": 15 }
+        {
+          "slug": "sync",
+          "title": "Sync",
+          "order": 9
+        },
+        {
+          "slug": "programs",
+          "title": "Programs",
+          "order": 10
+        },
+        {
+          "slug": "gpu",
+          "title": "GPU Acceleration",
+          "order": 11
+        },
+        {
+          "slug": "agent-native",
+          "title": "Agent-Native",
+          "order": 12
+        },
+        {
+          "slug": "mcp",
+          "title": "MCP Server",
+          "order": 13
+        },
+        {
+          "slug": "event-sourcing",
+          "title": "Event Sourcing",
+          "order": 14
+        },
+        {
+          "slug": "relay",
+          "title": "Intent Relay",
+          "order": 15
+        }
       ]
     },
     {
@@ -166,29 +428,68 @@
           "title": "CLI",
           "order": 1,
           "children": [
-            { "slug": "cli/repl", "title": "REPL Commands", "order": 1 },
-            { "slug": "cli/snapshot-restore", "title": "Snapshot & Restore", "order": 2 },
-            { "slug": "cli/project", "title": "Filesystem Projection", "order": 3 }
+            {
+              "slug": "cli/repl",
+              "title": "REPL Commands",
+              "order": 1
+            },
+            {
+              "slug": "cli/snapshot-restore",
+              "title": "Snapshot & Restore",
+              "order": 2
+            },
+            {
+              "slug": "cli/project",
+              "title": "Filesystem Projection",
+              "order": 3
+            }
           ]
         },
-        { "slug": "server", "title": "Server Modes & PG Wire", "order": 2 },
-        { "slug": "server/persistence", "title": "Persistence (ops)", "order": 3 },
-        { "slug": "server/import-export", "title": "Import & Export", "order": 4 },
+        {
+          "slug": "server",
+          "title": "Server Modes & PG Wire",
+          "order": 2
+        },
+        {
+          "slug": "server/persistence",
+          "title": "Persistence (ops)",
+          "order": 3
+        },
+        {
+          "slug": "server/import-export",
+          "title": "Import & Export",
+          "order": 4
+        },
         {
           "title": "Deployment",
           "order": 5,
           "children": [
-            { "slug": "deployment/daemon", "title": "Daemon (UDS)", "order": 1 },
-            { "slug": "deployment/docker", "title": "Docker", "order": 2 }
+            {
+              "slug": "deployment/daemon",
+              "title": "Daemon (UDS)",
+              "order": 1
+            }
           ]
         },
         {
           "title": "Architecture",
           "order": 6,
           "children": [
-            { "slug": "architecture", "title": "Engine Architecture", "order": 1 },
-            { "slug": "cloud-architecture", "title": "Cloud Architecture", "order": 2 },
-            { "slug": "architecture/sync", "title": "Sync Protocol (Deep Dive)", "order": 3 }
+            {
+              "slug": "architecture",
+              "title": "Engine Architecture",
+              "order": 1
+            },
+            {
+              "slug": "cloud-architecture",
+              "title": "Cloud Architecture",
+              "order": 2
+            },
+            {
+              "slug": "architecture/sync",
+              "title": "Sync Protocol (Deep Dive)",
+              "order": 3
+            }
           ]
         }
       ]
@@ -198,14 +499,46 @@
       "title": "Reference",
       "kind": "reference",
       "items": [
-        { "slug": "reference/api", "title": "TypeScript API", "order": 1 },
-        { "slug": "reference/glossary", "title": "Glossary", "order": 2 },
-        { "slug": "reference/types", "title": "Data Types", "order": 3 },
-        { "slug": "reference/operators", "title": "Operators", "order": 4 },
-        { "slug": "reference/errors", "title": "Error Codes", "order": 5 },
-        { "slug": "reference/compatibility", "title": "Compatibility Matrix", "order": 6 },
-        { "slug": "reference/known-issues", "title": "Known Issues", "order": 7 },
-        { "slug": "licensing", "title": "Licensing", "order": 8 }
+        {
+          "slug": "reference/api",
+          "title": "TypeScript API",
+          "order": 1
+        },
+        {
+          "slug": "reference/glossary",
+          "title": "Glossary",
+          "order": 2
+        },
+        {
+          "slug": "reference/types",
+          "title": "Data Types",
+          "order": 3
+        },
+        {
+          "slug": "reference/operators",
+          "title": "Operators",
+          "order": 4
+        },
+        {
+          "slug": "reference/errors",
+          "title": "Error Codes",
+          "order": 5
+        },
+        {
+          "slug": "reference/compatibility",
+          "title": "GQL Reference",
+          "order": 6
+        },
+        {
+          "slug": "reference/known-issues",
+          "title": "Known Issues",
+          "order": 7
+        },
+        {
+          "slug": "licensing",
+          "title": "Licensing",
+          "order": 8
+        }
       ]
     }
   ]

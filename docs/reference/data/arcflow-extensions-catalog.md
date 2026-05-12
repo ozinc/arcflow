@@ -26,7 +26,7 @@ DROP LIVE VIEW friends
 
 ---
 
-## Reactive Write-Back Views (EXT-0005)
+## Triggered Write-Back Views (EXT-0005)
 
 **Syntax:**
 ```gql

@@ -1,5 +1,6 @@
 ---
-title: "API Reference"
+title: "TypeScript API"
+kind: reference
 description: "TypeScript API for the world model engine — db.query(), db.mutate(), live subscriptions, cursors, and delta ingestion."
 status: "stable"
 playground:
@@ -7,7 +8,7 @@ playground:
   query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WITH z.name AS zone, z.hazard AS hazard, count(DISTINCT r) AS active_robots, count(DISTINCT s) AS monitoring_sensors, avg(r.battery) AS avg_battery, min(r.battery) AS critical_battery, avg(r.speed) AS avg_velocity, avg(s.reliability * d.confidence) AS world_trust RETURN zone, hazard, active_robots, monitoring_sensors, avg_battery, critical_battery, avg_velocity, world_trust, CASE WHEN world_trust >= 0.92 THEN 'verified' WHEN world_trust >= 0.85 THEN 'operational' ELSE 'degraded' END AS model_confidence ORDER BY world_trust DESC"
 ---
 
-# API Reference
+# TypeScript API Reference
 
 Complete TypeScript SDK API. For Python, see [Bindings](/bindings) — same engine, plus the Python-only fast paths (`bulk_create_*`, `result.to_arrow / to_polars / to_pandas`, GIL-released threading).
 

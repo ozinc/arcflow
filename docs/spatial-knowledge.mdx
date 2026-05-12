@@ -1,14 +1,14 @@
 ---
-title: "Spatial Queries"
+title: "Spatial Knowledge"
+kind: capability
 description: "Space as a first-class dimension of the world model — R*-tree indexed KNN, radius, frustum, and geofencing composing with graph traversal in one GQL statement"
-order: 1
 status: "stable"
 playground:
   seed: world
   query: "MATCH (r:Robot)-[:OCCUPIES]->(z:Zone) RETURN r.name AS robot, r.task AS task, r.x AS world_x, r.y AS world_y, r.speed AS speed, r.battery AS battery, z.name AS zone, z.hazard AS hazard, CASE WHEN z.hazard > 0.3 THEN 'high-risk' WHEN z.hazard > 0.1 THEN 'moderate' ELSE 'safe' END AS spatial_risk ORDER BY z.hazard DESC"
 ---
 
-# Spatial Queries
+# Spatial Knowledge
 
 **Space is a first-class dimension of the world model — not a numeric column and not a join between two systems.**
 
@@ -393,7 +393,7 @@ ArcFlow complements Nav2: Nav2 handles real-time path planning with hard latency
 ## See Also
 
 - [Spatial Reference](/worldcypher/spatial) — full spatial query syntax, R*-tree, frustum, and raycast
-- [Robotics & Perception](/use-cases/robotics) — sensor fusion pipeline and ROS2 integration patterns
-- [Autonomous Systems](/use-cases/autonomous-systems) — multi-agent fleet coordination on a shared spatial world model
+- [Robotics & Perception](/markets/robotics) — sensor fusion pipeline and ROS2 integration patterns
+- [Autonomous Systems](/markets/autonomous-systems) — multi-agent fleet coordination on a shared spatial world model
 - [Temporal Queries](/temporal) — combine spatial position with `AS OF` for historical trajectory queries
-- [Digital Twins](/use-cases/digital-twins) — live spatial replica of physical environments
+- [Digital Twins](/markets/digital-twins) — live spatial replica of physical environments

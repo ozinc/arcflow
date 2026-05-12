@@ -1,7 +1,7 @@
 ---
 title: "Graph Algorithms"
+kind: capability
 description: "29 graph algorithms operating over a confidence-scored, temporally-versioned world model — from entity resolution to contradiction detection, 6 running incrementally as standing queries"
-order: 1
 status: "stable"
 playground:
   seed: world
@@ -25,7 +25,11 @@ CALL algo.pageRank()
 ```
 
 | Column | Type | Description |
-|--------|------|-------------|
+|---
+-----|---
+---|---
+------
+----|
 | nodeId | integer | Internal node ID |
 | name | string | Node label or name property |
 | score | float | PageRank score (sums to 1.0) |
@@ -41,7 +45,10 @@ CALL algo.pageRank()
 
 ```
 | nodeId | name  | score    |
-|--------|-------|----------|
+|---
+-----|---
+----|---
+-------|
 | 1      | Alice | 0.333333 |
 | 2      | Bob   | 0.333333 |
 | 3      | Carol | 0.333333 |
@@ -64,7 +71,11 @@ CALL algo.betweenness()
 ```
 
 | Column | Type | Description |
-|--------|------|-------------|
+|---
+-----|---
+---|---
+------
+----|
 | nodeId | integer | Internal node ID |
 | name | string | Node label or name property |
 | betweenness | float | Betweenness centrality score |
@@ -79,7 +90,11 @@ CALL algo.betweenness()
 
 ```
 | nodeId | name | betweenness |
-|--------|------|-------------|
+|---
+-----|---
+---|---
+------
+----|
 | 2      | Bob  | 4.000000    |
 | 1      | Alice| 0.000000    |
 | 3      | Carol| 0.000000    |
@@ -95,7 +110,11 @@ CALL algo.closeness()
 ```
 
 | Column | Type | Description |
-|--------|------|-------------|
+|---
+-----|---
+---|---
+------
+----|
 | nodeId | integer | Internal node ID |
 | name | string | Node label or name property |
 | closeness | float | Closeness centrality score |
@@ -119,7 +138,11 @@ CALL algo.louvain()
 ```
 
 | Column | Type | Description |
-|--------|------|-------------|
+|---
+-----|---
+---|---
+------
+----|
 | nodeId | integer | Internal node ID |
 | name | string | Node label or name property |
 | community | integer | Community assignment ID |
@@ -135,7 +158,10 @@ CALL algo.louvain()
 
 ```
 | nodeId | name  | community |
-|--------|-------|-----------|
+|---
+-----|---
+----|---
+--------|
 | 1      | Alice | 0         |
 | 2      | Bob   | 0         |
 | 3      | Carol | 0         |
@@ -162,7 +188,11 @@ CALL algo.connectedComponents()
 ```
 
 | Column | Type | Description |
-|--------|------|-------------|
+|---
+-----|---
+---|---
+------
+----|
 | nodeId | integer | Internal node ID |
 | name | string | Node label or name property |
 | component | integer | Component assignment ID |
@@ -186,7 +216,11 @@ CALL algo.kCore()
 ```
 
 | Column | Type | Description |
-|--------|------|-------------|
+|---
+-----|---
+---|---
+------
+----|
 | nodeId | integer | Internal node ID |
 | name | string | Node label or name property |
 | core | integer | Core number |
@@ -218,7 +252,11 @@ CALL algo.dijkstra(startNodeId, endNodeId, 'weight')
 ```
 
 | Column | Type | Description |
-|--------|------|-------------|
+|---
+-----|---
+---|---
+------
+----|
 | path | string | Ordered node IDs along the shortest path |
 | distance | float | Total weighted path cost |
 
@@ -231,7 +269,10 @@ CALL algo.astar(startNodeId, endNodeId, 'travel_time', 'estimated_distance')
 ```
 
 | Parameter | Description |
-|-----------|-------------|
+|---
+--------|---
+------
+----|
 | start | Source node ID |
 | end | Target node ID |
 | weight_key | Edge property to use as cost |
@@ -246,7 +287,11 @@ CALL algo.confidencePath(1, 2)
 ```
 
 | Column | Type | Description |
-|--------|------|-------------|
+|---
+-----|---
+---|---
+------
+----|
 | path | string | Ordered node IDs in the path |
 | confidence | float | Aggregate path confidence |
 
@@ -259,7 +304,11 @@ CALL algo.allPairsShortestPath()
 ```
 
 | Column | Type | Description |
-|--------|------|-------------|
+|---
+-----|---
+---|---
+------
+----|
 | source | integer | Source node ID |
 | target | integer | Target node ID |
 | distance | integer | Shortest path distance |
@@ -287,7 +336,11 @@ CALL algo.clusteringCoefficient()
 ```
 
 | Column | Type | Description |
-|--------|------|-------------|
+|---
+-----|---
+---|---
+------
+----|
 | nodeId | integer | Internal node ID |
 | name | string | Node label or name property |
 | coefficient | float | Local clustering coefficient (0.0 to 1.0) |
@@ -305,7 +358,11 @@ CALL algo.triangleCount()
 ```
 
 | Column | Type | Description |
-|--------|------|-------------|
+|---
+-----|---
+---|---
+------
+----|
 | triangles | integer | Total triangle count |
 
 ### Density
@@ -317,7 +374,11 @@ CALL algo.density()
 ```
 
 | Column | Type | Description |
-|--------|------|-------------|
+|---
+-----|---
+---|---
+------
+----|
 | density | float | Graph density (0.0 to 1.0) |
 
 ### Diameter
@@ -329,7 +390,11 @@ CALL algo.diameter()
 ```
 
 | Column | Type | Description |
-|--------|------|-------------|
+|---
+-----|---
+---|---
+------
+----|
 | diameter | integer | Graph diameter |
 | source_id | integer | Source node of the longest path |
 | target_id | integer | Target node of the longest path |
@@ -343,7 +408,11 @@ CALL algo.biconnectedComponents()
 ```
 
 | Column | Type | Description |
-|--------|------|-------------|
+|---
+-----|---
+---|---
+------
+----|
 | nodeId | integer | Internal node ID |
 | component_id | integer | Biconnected component assignment |
 
@@ -358,7 +427,10 @@ CALL algo.node2vec(128, 80, 10)
 ```
 
 | Parameter | Description |
-|-----------|-------------|
+|---
+--------|---
+------
+----|
 | dimensions | Embedding size (e.g., 128) |
 | walk_length | Steps per random walk (e.g., 80) |
 | num_walks | Walks per node (e.g., 10) |
@@ -520,7 +592,15 @@ Built on the [Live Delta Stack](/live-queries) and Z-set algebra. Every mutation
 Benchmarked on a MacBook Air M4 (10-core, 24GB) with 10K-node graphs, single-threaded CPU baseline. GPU speedups measured with CUDA on equivalent hardware. These are laptop numbers — server hardware with more cores and memory will scale further.
 
 | Algorithm | CPU Throughput | GPU Speedup | GPU Dispatch Threshold |
-|-----------|---------------|-------------|----------------------|
+|---
+--------|---
+------
+------|---
+------
+----|---
+------
+------
+-------|
 | PageRank | 154M nodes/sec | 2.4x | 500 nodes |
 | BFS Shortest Path | 6.3M edges/sec | 3.5x | 100 nodes |
 | Triangle Count | 943K nodes/sec | 19.8x | 100 nodes |

@@ -1,7 +1,6 @@
 ---
 title: "Persistence"
 description: "WAL-backed world model persistence — the filesystem IS the database. Agents read and write graph state as files, surviving crashes and restarts."
-order: 2
 status: "stable"
 playground:
   query: "MERGE (r:Robot {id: 'r1', name: 'Atlas-01', task: 'assembly', x: 18.0, y: 8.5, speed: 1.2, battery: 87}) SET r.battery = 94, r.status = 'charging', r.dock_seq = 310, r.updated = 1 MATCH (r:Robot {id: 'r1'}) RETURN r.name, r.task, r.battery, r.status, r.dock_seq, r.updated, r.x, r.y"

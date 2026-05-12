@@ -1,6 +1,6 @@
 {
   "schema_version": "v2",
-  "comment": "Sidebar config for /spec/ surface — sibling to /docs/. Generated dashboards (conformance, features, extensions catalog) live here so the docs sidebar stays focused on docs-shaped content. DIA Phase 2.",
+  "comment": "Sidebar config for /spec/ surface \u2014 sibling to /docs/. Generated dashboards (conformance, features, extensions catalog) live here so the docs sidebar stays focused on docs-shaped content. DIA Phase 2.",
   "lint": {
     "max_top_level_sections": 4,
     "frontmatter_section_field": "deprecated"
@@ -11,66 +11,306 @@
       "title": "GQL Features",
       "kind": "spec",
       "items": [
-        { "slug": "gql/features/match-basic", "title": "MATCH Basic", "order": 1 },
-        { "slug": "gql/features/create-nodes-edges", "title": "CREATE Nodes Edges", "order": 2 },
-        { "slug": "gql/features/set-remove-properties", "title": "SET REMOVE Properties", "order": 3 },
-        { "slug": "gql/features/delete-detach-delete", "title": "DELETE Detach DELETE", "order": 4 },
-        { "slug": "gql/features/return-with-where", "title": "RETURN WITH WHERE", "order": 5 },
-        { "slug": "gql/features/order-by-limit-skip", "title": "Order BY Limit Skip", "order": 6 },
-        { "slug": "gql/features/order-by-nulls-first-last", "title": "Order BY Nulls First Last", "order": 7 },
-        { "slug": "gql/features/unwind", "title": "UNWIND", "order": 8 },
-        { "slug": "gql/features/aggregate-functions", "title": "Aggregate Functions", "order": 9 },
-        { "slug": "gql/features/optional-match", "title": "OPTIONAL MATCH", "order": 10 },
-        { "slug": "gql/features/variable-length-paths", "title": "Variable Length Paths", "order": 11 },
-        { "slug": "gql/features/label-or-and-not-expressions", "title": "Label OR AND NOT", "order": 12 },
-        { "slug": "gql/features/label-wildcard", "title": "Label Wildcard", "order": 13 },
-        { "slug": "gql/features/quantified-path-sugar", "title": "Quantified Path Sugar", "order": 14 },
-        { "slug": "gql/features/path-modes-walk-trail-simple-acyclic", "title": "Path Modes", "order": 15 },
-        { "slug": "gql/features/shortest-path-variants", "title": "Shortest Path Variants", "order": 16 },
-        { "slug": "gql/features/is-labeled-predicate", "title": "IS Labeled Predicate", "order": 17 },
-        { "slug": "gql/features/element-id-function", "title": "Element ID Function", "order": 18 },
-        { "slug": "gql/features/is-type-predicate", "title": "IS Type Predicate", "order": 19 },
-        { "slug": "gql/features/binary-literals", "title": "Binary Literals", "order": 20 },
-        { "slug": "gql/features/line-comments-solidus", "title": "Line Comments Solidus", "order": 21 },
-        { "slug": "gql/features/line-comments-minus", "title": "Line Comments Minus", "order": 22 },
-        { "slug": "gql/features/gqlstatus-result-codes", "title": "GQLSTATUS Result Codes", "order": 23 },
-        { "slug": "gql/features/gql-error-code-mapping", "title": "GQL Error Code Mapping", "order": 24 },
-        { "slug": "gql/features/transaction-control-syntax", "title": "Transaction Control Syntax", "order": 25 },
-        { "slug": "gql/features/set-session", "title": "SET Session", "order": 26 },
-        { "slug": "gql/features/conditional-execution-when-then-else", "title": "Conditional Execution", "order": 27 },
-        { "slug": "gql/features/return-next-pipeline", "title": "RETURN NEXT Pipeline", "order": 28 },
-        { "slug": "gql/features/primary-key-constraint", "title": "Primary Key Constraint", "order": 29 },
-        { "slug": "gql/features/unique-constraint", "title": "Unique Constraint", "order": 30 },
-        { "slug": "gql/features/deterministic-merge-via-pk", "title": "Deterministic MERGE", "order": 31 },
-        { "slug": "gql/features/undirected-edge-match", "title": "Undirected Edge MATCH", "order": 32 },
-        { "slug": "gql/features/cast-type-conversion", "title": "Cast Type Conversion", "order": 33 },
-        { "slug": "gql/features/gql-directories", "title": "GQL Directories", "order": 34 },
-        { "slug": "gql/features/multiple-labels-per-node", "title": "Multiple Labels Per Node", "order": 35 },
-        { "slug": "gql/features/gql-flagger", "title": "GQL Flagger", "order": 36 },
-        { "slug": "gql/features/next-linear-composition", "title": "NEXT Linear Composition", "order": 37 },
-        { "slug": "gql/features/cardinality-function", "title": "Cardinality Function", "order": 38 },
-        { "slug": "gql/features/int64-bigint-type-names", "title": "INT64 BIGINT Type Names", "order": 39 },
-        { "slug": "gql/features/float64-double-type-names", "title": "FLOAT64 Double Type Names", "order": 40 },
-        { "slug": "gql/features/log10-log2-functions", "title": "Log10 Log2 Functions", "order": 41 },
-        { "slug": "gql/features/trim-leading-trailing-both", "title": "Trim Functions", "order": 42 },
-        { "slug": "gql/features/filter-clause", "title": "FILTER Clause", "order": 43 },
-        { "slug": "gql/features/let-statement", "title": "LET Statement", "order": 44 },
-        { "slug": "gql/features/group-by-explicit", "title": "Group BY Explicit", "order": 45 },
-        { "slug": "gql/features/except-set-operations", "title": "EXCEPT", "order": 46 },
-        { "slug": "gql/features/intersect-set-operations", "title": "INTERSECT", "order": 47 },
-        { "slug": "gql/features/all-different-predicate", "title": "ALL Different Predicate", "order": 48 },
-        { "slug": "gql/features/same-predicate", "title": "SAME Predicate", "order": 49 },
-        { "slug": "gql/features/property-exists-function", "title": "Property Exists Function", "order": 50 },
-        { "slug": "gql/features/path-variable-binding", "title": "Path Variable Binding", "order": 51 },
-        { "slug": "gql/features/use-graph-clause", "title": "USE Graph Clause", "order": 52 },
-        { "slug": "gql/features/for-in-list", "title": "FOR IN List", "order": 53 },
-        { "slug": "gql/features/typed-temporal-literals", "title": "Typed Temporal Literals", "order": 54 },
-        { "slug": "gql/features/session-set-value-params", "title": "Session SET Value Params", "order": 55 },
-        { "slug": "gql/features/typed-list-annotations", "title": "Typed List Annotations", "order": 56 },
-        { "slug": "gql/features/arcflow-cosine-function", "title": "arcflow.cosine()", "order": 57 },
-        { "slug": "gql/features/arcflow-embed-function", "title": "arcflow.embed()", "order": 58 },
-        { "slug": "gql/features/arcflow-similar-procedure", "title": "arcflow.similar()", "order": 59 },
-        { "slug": "gql/features/arcflow-graphrag-procedure", "title": "arcflow.graphrag()", "order": 60 }
+        {
+          "slug": "gql/features/match-basic",
+          "title": "MATCH Basic",
+          "order": 1
+        },
+        {
+          "slug": "gql/features/create-nodes-edges",
+          "title": "CREATE Nodes Edges",
+          "order": 2
+        },
+        {
+          "slug": "gql/features/set-remove-properties",
+          "title": "SET REMOVE Properties",
+          "order": 3
+        },
+        {
+          "slug": "gql/features/delete-detach-delete",
+          "title": "DELETE Detach DELETE",
+          "order": 4
+        },
+        {
+          "slug": "gql/features/return-with-where",
+          "title": "RETURN WITH WHERE",
+          "order": 5
+        },
+        {
+          "slug": "gql/features/order-by-limit-skip",
+          "title": "Order BY Limit Skip",
+          "order": 6
+        },
+        {
+          "slug": "gql/features/order-by-nulls-first-last",
+          "title": "Order BY Nulls First Last",
+          "order": 7
+        },
+        {
+          "slug": "gql/features/unwind",
+          "title": "UNWIND",
+          "order": 8
+        },
+        {
+          "slug": "gql/features/aggregate-functions",
+          "title": "Aggregate Functions",
+          "order": 9
+        },
+        {
+          "slug": "gql/features/optional-match",
+          "title": "OPTIONAL MATCH",
+          "order": 10
+        },
+        {
+          "slug": "gql/features/variable-length-paths",
+          "title": "Variable Length Paths",
+          "order": 11
+        },
+        {
+          "slug": "gql/features/label-or-and-not-expressions",
+          "title": "Label OR AND NOT",
+          "order": 12
+        },
+        {
+          "slug": "gql/features/label-wildcard",
+          "title": "Label Wildcard",
+          "order": 13
+        },
+        {
+          "slug": "gql/features/quantified-path-sugar",
+          "title": "Quantified Path Sugar",
+          "order": 14
+        },
+        {
+          "slug": "gql/features/path-modes-walk-trail-simple-acyclic",
+          "title": "Path Modes",
+          "order": 15
+        },
+        {
+          "slug": "gql/features/shortest-path-variants",
+          "title": "Shortest Path Variants",
+          "order": 16
+        },
+        {
+          "slug": "gql/features/is-labeled-predicate",
+          "title": "IS Labeled Predicate",
+          "order": 17
+        },
+        {
+          "slug": "gql/features/element-id-function",
+          "title": "Element ID Function",
+          "order": 18
+        },
+        {
+          "slug": "gql/features/is-type-predicate",
+          "title": "IS Type Predicate",
+          "order": 19
+        },
+        {
+          "slug": "gql/features/binary-literals",
+          "title": "Binary Literals",
+          "order": 20
+        },
+        {
+          "slug": "gql/features/line-comments-solidus",
+          "title": "Line Comments Solidus",
+          "order": 21
+        },
+        {
+          "slug": "gql/features/line-comments-minus",
+          "title": "Line Comments Minus",
+          "order": 22
+        },
+        {
+          "slug": "gql/features/gqlstatus-result-codes",
+          "title": "GQLSTATUS Result Codes",
+          "order": 23
+        },
+        {
+          "slug": "gql/features/gql-error-code-mapping",
+          "title": "GQL Error Code Mapping",
+          "order": 24
+        },
+        {
+          "slug": "gql/features/transaction-control-syntax",
+          "title": "Transaction Control Syntax",
+          "order": 25
+        },
+        {
+          "slug": "gql/features/set-session",
+          "title": "SET Session",
+          "order": 26
+        },
+        {
+          "slug": "gql/features/conditional-execution-when-then-else",
+          "title": "Conditional Execution",
+          "order": 27
+        },
+        {
+          "slug": "gql/features/return-next-pipeline",
+          "title": "RETURN NEXT Pipeline",
+          "order": 28
+        },
+        {
+          "slug": "gql/features/primary-key-constraint",
+          "title": "Primary Key Constraint",
+          "order": 29
+        },
+        {
+          "slug": "gql/features/unique-constraint",
+          "title": "Unique Constraint",
+          "order": 30
+        },
+        {
+          "slug": "gql/features/deterministic-merge-via-pk",
+          "title": "Deterministic MERGE",
+          "order": 31
+        },
+        {
+          "slug": "gql/features/undirected-edge-match",
+          "title": "Undirected Edge MATCH",
+          "order": 32
+        },
+        {
+          "slug": "gql/features/cast-type-conversion",
+          "title": "Cast Type Conversion",
+          "order": 33
+        },
+        {
+          "slug": "gql/features/gql-directories",
+          "title": "GQL Directories",
+          "order": 34
+        },
+        {
+          "slug": "gql/features/multiple-labels-per-node",
+          "title": "Multiple Labels Per Node",
+          "order": 35
+        },
+        {
+          "slug": "gql/features/gql-flagger",
+          "title": "GQL Flagger",
+          "order": 36
+        },
+        {
+          "slug": "gql/features/next-linear-composition",
+          "title": "NEXT Linear Composition",
+          "order": 37
+        },
+        {
+          "slug": "gql/features/cardinality-function",
+          "title": "Cardinality Function",
+          "order": 38
+        },
+        {
+          "slug": "gql/features/int64-bigint-type-names",
+          "title": "INT64 BIGINT Type Names",
+          "order": 39
+        },
+        {
+          "slug": "gql/features/float64-double-type-names",
+          "title": "FLOAT64 Double Type Names",
+          "order": 40
+        },
+        {
+          "slug": "gql/features/log10-log2-functions",
+          "title": "Log10 Log2 Functions",
+          "order": 41
+        },
+        {
+          "slug": "gql/features/trim-leading-trailing-both",
+          "title": "Trim Functions",
+          "order": 42
+        },
+        {
+          "slug": "gql/features/filter-clause",
+          "title": "FILTER Clause",
+          "order": 43
+        },
+        {
+          "slug": "gql/features/let-statement",
+          "title": "LET Statement",
+          "order": 44
+        },
+        {
+          "slug": "gql/features/group-by-explicit",
+          "title": "Group BY Explicit",
+          "order": 45
+        },
+        {
+          "slug": "gql/features/except-set-operations",
+          "title": "EXCEPT",
+          "order": 46
+        },
+        {
+          "slug": "gql/features/intersect-set-operations",
+          "title": "INTERSECT",
+          "order": 47
+        },
+        {
+          "slug": "gql/features/all-different-predicate",
+          "title": "ALL Different Predicate",
+          "order": 48
+        },
+        {
+          "slug": "gql/features/same-predicate",
+          "title": "SAME Predicate",
+          "order": 49
+        },
+        {
+          "slug": "gql/features/property-exists-function",
+          "title": "Property Exists Function",
+          "order": 50
+        },
+        {
+          "slug": "gql/features/path-variable-binding",
+          "title": "Path Variable Binding",
+          "order": 51
+        },
+        {
+          "slug": "gql/features/use-graph-clause",
+          "title": "USE Graph Clause",
+          "order": 52
+        },
+        {
+          "slug": "gql/features/for-in-list",
+          "title": "FOR IN List",
+          "order": 53
+        },
+        {
+          "slug": "gql/features/typed-temporal-literals",
+          "title": "Typed Temporal Literals",
+          "order": 54
+        },
+        {
+          "slug": "gql/features/session-set-value-params",
+          "title": "Session SET Value Params",
+          "order": 55
+        },
+        {
+          "slug": "gql/features/typed-list-annotations",
+          "title": "Typed List Annotations",
+          "order": 56
+        },
+        {
+          "slug": "gql/features/arcflow-cosine-function",
+          "title": "arcflow.cosine()",
+          "order": 57
+        },
+        {
+          "slug": "gql/features/arcflow-embed-function",
+          "title": "arcflow.embed()",
+          "order": 58
+        },
+        {
+          "slug": "gql/features/arcflow-similar-procedure",
+          "title": "arcflow.similar()",
+          "order": 59
+        },
+        {
+          "slug": "gql/features/arcflow-graphrag-procedure",
+          "title": "arcflow.graphrag()",
+          "order": 60
+        }
       ]
     },
     {
@@ -78,15 +318,51 @@
       "title": "ArcFlow Extensions (beyond GQL standard)",
       "kind": "spec",
       "items": [
-        { "slug": "gql/extensions/live-queries", "title": "LIVE Queries", "order": 1 },
-        { "slug": "gql/extensions/reactive-write-back-views", "title": "Reactive Write-Back Views", "order": 2 },
-        { "slug": "gql/extensions/evidence-algebra", "title": "Evidence Algebra", "order": 3 },
-        { "slug": "gql/extensions/relationship-skills", "title": "Relationship Skills", "order": 4 },
-        { "slug": "gql/extensions/graph-embedding-algorithms", "title": "Graph Embedding Algorithms", "order": 5 },
-        { "slug": "gql/extensions/asof-join", "title": "ASOF JOIN", "order": 6 },
-        { "slug": "gql/extensions/reactive-skills", "title": "Reactive Skills", "order": 7 },
-        { "slug": "gql/extensions/hnsw-vector-index", "title": "HNSW Vector Index", "order": 8 },
-        { "slug": "gql/extensions/gpu-graphblas", "title": "GPU GraphBLAS", "order": 9 }
+        {
+          "slug": "gql/extensions/live-queries",
+          "title": "LIVE Queries",
+          "order": 1
+        },
+        {
+          "slug": "gql/extensions/triggered-write-back-views",
+          "title": "Triggered Write-Back Views",
+          "order": 2
+        },
+        {
+          "slug": "gql/extensions/evidence-algebra",
+          "title": "Evidence Algebra",
+          "order": 3
+        },
+        {
+          "slug": "gql/extensions/relationship-skills",
+          "title": "Relationship Skills",
+          "order": 4
+        },
+        {
+          "slug": "gql/extensions/graph-embedding-algorithms",
+          "title": "Graph Embedding Algorithms",
+          "order": 5
+        },
+        {
+          "slug": "gql/extensions/asof-join",
+          "title": "ASOF JOIN",
+          "order": 6
+        },
+        {
+          "slug": "gql/extensions/skill-triggers",
+          "title": "Skill Triggers",
+          "order": 7
+        },
+        {
+          "slug": "gql/extensions/hnsw-vector-index",
+          "title": "HNSW Vector Index",
+          "order": 8
+        },
+        {
+          "slug": "gql/extensions/gpu-graphblas",
+          "title": "GPU GraphBLAS",
+          "order": 9
+        }
       ]
     },
     {
@@ -94,9 +370,21 @@
       "title": "Conformance",
       "kind": "spec",
       "items": [
-        { "slug": "gql/conformance/overview", "title": "Overview Dashboard", "order": 1 },
-        { "slug": "gql/conformance/tck", "title": "openCypher TCK Results", "order": 2 },
-        { "slug": "gql/conformance/regressions", "title": "Extension Regressions", "order": 3 }
+        {
+          "slug": "gql/conformance/overview",
+          "title": "Overview Dashboard",
+          "order": 1
+        },
+        {
+          "slug": "gql/conformance/tck",
+          "title": "openCypher TCK Results",
+          "order": 2
+        },
+        {
+          "slug": "gql/conformance/regressions",
+          "title": "Extension Regressions",
+          "order": 3
+        }
       ]
     }
   ]
