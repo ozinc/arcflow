@@ -1,0 +1,28 @@
+[package]
+name = "team-sports-tactical-world-model"
+version = "0.1.0"
+edition = "2021"
+description = "ArcFlow Rust SDK example mirroring the team-sports-tactical-world-model Python recipe — frame-resolution tactical pattern detection plus live-alert via register_skill for the part Python can't reach today."
+
+[dependencies]
+arcflow-sdk = { git = "https://github.com/ozinc/arcflow-core", branch = "main" }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }
+rand = "0.8"
+rand_chacha = "0.3"
+anyhow = "1"
+
+[lib]
+name = "team_sports_tactical_world_model"
+path = "src/lib.rs"
+
+[[bin]]
+name = "01-tactical-world-model"
+path = "src/bin/01-tactical-world-model.rs"
+
+[[bin]]
+name = "02-pattern-detection"
+path = "src/bin/02-pattern-detection.rs"
+
+[[bin]]
+name = "03-tactical-replay-and-fusion"
+path = "src/bin/03-tactical-replay-and-fusion.rs"

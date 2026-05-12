@@ -22,6 +22,7 @@ stronger contract — every recipe is CI-tested against the engine. See
 | [multi-stream-spatiotemporal-world-model](./multi-stream-spatiotemporal-world-model/) | python, data-engineer, ml, agent | ~8 min |
 | [sensor-fusion-livequery](./sensor-fusion-livequery/) | python, ml | ~5 min |
 | [spatiotemporal-tactical-queries](./spatiotemporal-tactical-queries/) | python, data-engineer, ml, agent | ~1 min |
+| [team-sports-tactical-world-model](./team-sports-tactical-world-model/) | python, sports-analytics, ml, agent | ~3 min |
 | [temporal-counterfactual-replay](./temporal-counterfactual-replay/) | python, compliance, agent | ~1 min |
 | [temporal-spatial-parquet-ingest](./temporal-spatial-parquet-ingest/) | python, data-engineer | ~5 min |
 
