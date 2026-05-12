@@ -1,0 +1,93 @@
+---
+title: "Use Case: Knowledge Management"
+kind: use-case
+description: "Build a persistent world model from documents, conversations, and data feeds — confidence-scored entities, provenance-tracked relationships, semantic and graph search in one engine"
+status: "stable"
+playground:
+  query: "MERGE (auth1:Author {id: 'auth-chen', name: 'Dr. Chen', org: 'OZ Labs', reputation: 0.94}) MERGE (auth2:Author {id: 'auth-park', name: 'Dr. Park', org: 'MIT', reputation: 0.91}) MERGE (d1:Document {id: 'doc-wm', title: 'World Models at Scale', category: 'research', relevance: 0.96, citations: 142}) MERGE (d2:Document {id: 'doc-sp', title: 'Spatial Graph Indexing', category: 'systems', relevance: 0.88, citations: 89}) MERGE (d3:Document {id: 'doc-cw', title: 'Confidence-Weighted Retrieval', category: 'ai', relevance: 0.83, citations: 47}) MERGE (auth1:Author {id: 'auth-chen'})-[:AUTHORED]->(d1:Document {id: 'doc-wm'}) MERGE (auth2:Author {id: 'auth-park'})-[:AUTHORED]->(d2:Document {id: 'doc-sp'}) MERGE (auth2:Author {id: 'auth-park'})-[:AUTHORED]->(d3:Document {id: 'doc-cw'}) MERGE (d1x:Document {id: 'doc-wm'})-[:CITES]->(d2x:Document {id: 'doc-sp'}) MERGE (d1y:Document {id: 'doc-wm'})-[:CITES]->(d3y:Document {id: 'doc-cw'}) MATCH (auth:Author)-[:AUTHORED]->(doc:Document)-[:CITES]->(ref:Document) RETURN auth.name AS author, auth.org AS org, auth.reputation AS reputation, doc.title AS document, doc.category AS category, doc.relevance AS relevance, doc.citations AS citations, ref.title AS cites_document, ref.citations AS cited_citations ORDER BY doc.relevance DESC"
+---
+
+# Use Case: Knowledge Management
+
+Build a persistent world model of your domain — entities extracted from documents, relationships with confidence scores and provenance, queryable with graph algorithms and semantic search. Not a knowledge graph bolted onto a vector store — a unified engine where all dimensions are first-class.
+
+## The problem
+
+Your application processes documents, conversations, or data feeds and needs to:
+- Extract entities (people, organizations, events, concepts)
+- Link entities across sources
+- Score relationship confidence
+- Search by meaning, not just keywords
+- Find hidden connections via graph traversal
+
+## Why ArcFlow
+
+The knowledge graph is the world model. When an agent extracts a fact, it writes to the same engine it queries from. When a second agent reads that fact, it gets the confidence score, the provenance edge, and the temporal history — not a chunk of text. When you run PageRank, you're running it over the same graph that answers your semantic search. No pipeline between systems. No consistency gap.
+
+- **Single engine** — graph storage, vector search, full-text search, and algorithms in one process
+- **Multi-agent ready** — agent A writes observations, agent B queries them; no broker, no sync layer
+- **Fact-based, not chunk-based** — confidence scores and provenance on every relationship, not just on retrieved text
+- **Temporal** — query the world model as it existed at any point in time; track how entity understanding evolved
+
+## Architecture
+
+```
+Data Sources → Extraction Pipeline → ArcFlow Graph → Query API → Application
+                                         ↕
+                                   Vector Index
+                                   Full-Text Index
+                                   Graph Algorithms
+```
+
+## Implementation sketch
+
+```typescript
+import { open } from 'arcflow'
+
+const db = open('./knowledge-graph')
+
+// Ingest pipeline: extract entities and facts from documents
+function ingestDocument(doc: Document, extractedEntities: Entity[], extractedFacts: Fact[]) {
+  // Create document node
+  db.mutate("MERGE (d:Document {id: $id, title: $title, embedding: $emb})", {
+    id: doc.id, title: doc.title, emb: JSON.stringify(doc.embedding)
+  })
+
+  // Create entity nodes
+  const entityMutations = extractedEntities.map(e =>
+    `MERGE (n:${e.type} {id: '${e.id}', name: '${e.name}'})`
+  )
+  db.batchMutate(entityMutations)
+
+  // Create facts with confidence
+  for (const fact of extractedFacts) {
+    db.batchMutate([
+      `MERGE (f:Fact {uuid: '${fact.id}', predicate: '${fact.predicate}', confidence: ${fact.confidence}})`,
+      `MATCH (s {id: '${fact.subjectId}'}) MATCH (f:Fact {uuid: '${fact.id}'}) MERGE (s)-[:SUBJECT_OF]->(f)`,
+      `MATCH (f:Fact {uuid: '${fact.id}'}) MATCH (o {id: '${fact.objectId}'}) MERGE (f)-[:OBJECT_IS]->(o)`,
+    ])
+  }
+}
+
+// Query: semantic search + graph expansion
+function search(queryEmbedding: number[]) {
+  const docs = db.query(
+    "CALL algo.vectorSearch('doc_embeddings', $v, 5)",
+    { v: JSON.stringify(queryEmbedding) }
+  )
+
+  const entities = db.query("CALL algo.pageRank()")
+  const communities = db.query("CALL algo.louvain()")
+
+  return { docs, entities, communities }
+}
+
+## See Also
+
+- [Trusted RAG](/trusted-rag) — confidence-filtered retrieval from the knowledge world model
+- [Vector Search](/vector-search) — vector similarity search and hybrid vector + graph retrieval
+- [Graph Algorithms](/algorithms) — `algo.entityResolution()`, `algo.factContradiction()`, `algo.semanticDedup()`
+- [Skills](/skills) — declarative extraction pipelines with `CREATE SKILL` and `PROCESS NODE`
+- [Confidence & Provenance](/concepts/confidence-and-provenance) — provenance trails from documents to facts
+```
+

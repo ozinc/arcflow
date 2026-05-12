@@ -11,7 +11,9 @@
       "worldcypher": "clause",
       "capabilities": "capability",
       "operations": "operation",
-      "reference": "reference"
+      "reference": "reference",
+      "use-cases": "use-case",
+      "walkthroughs": "walkthrough"
     }
   },
   "pinned_links": [
@@ -415,6 +417,213 @@
           "slug": "relay",
           "title": "Intent Relay",
           "order": 15
+        }
+      ]
+    },
+    {
+      "id": "use-cases",
+      "title": "Use Cases",
+      "kind": "use-case",
+      "items": [
+        {
+          "slug": "use-cases/agent-tooling",
+          "title": "Agent Tooling",
+          "order": 1
+        },
+        {
+          "slug": "use-cases/rag-pipeline",
+          "title": "Trusted RAG",
+          "order": 2
+        },
+        {
+          "slug": "use-cases/knowledge-management",
+          "title": "Knowledge Management",
+          "order": 3
+        },
+        {
+          "slug": "use-cases/behavior-graphs",
+          "title": "Behavior Graphs",
+          "order": 4
+        },
+        {
+          "slug": "use-cases/autonomous-systems",
+          "title": "Autonomous Systems",
+          "order": 5
+        },
+        {
+          "slug": "use-cases/physical-ai",
+          "title": "Physical AI",
+          "order": 6
+        },
+        {
+          "slug": "use-cases/digital-twins",
+          "title": "Digital Twins",
+          "order": 7
+        },
+        {
+          "slug": "use-cases/robotics",
+          "title": "Robotics & Perception",
+          "order": 8
+        },
+        {
+          "slug": "use-cases/sports-analytics",
+          "title": "Sports Analytics",
+          "order": 9
+        },
+        {
+          "slug": "use-cases/grounded-neural-objects",
+          "title": "Grounded Neural Objects",
+          "order": 10
+        },
+        {
+          "slug": "use-cases/fraud-detection",
+          "title": "Fraud Detection",
+          "order": 11
+        }
+      ]
+    },
+    {
+      "id": "walkthroughs",
+      "title": "Walkthroughs",
+      "kind": "walkthrough",
+      "items": [
+        {
+          "title": "Guides",
+          "order": 1,
+          "children": [
+            {
+              "slug": "guides/agent-quickstart",
+              "title": "Agent Integration",
+              "order": 1
+            },
+            {
+              "slug": "guides/world-model",
+              "title": "Building a World Model",
+              "order": 2
+            },
+            {
+              "slug": "guides/modeling-a-social-graph",
+              "title": "Modeling a Social Graph",
+              "order": 3
+            },
+            {
+              "slug": "guides/rag-pipeline",
+              "title": "Build a RAG Pipeline",
+              "order": 4
+            },
+            {
+              "slug": "guides/using-skills",
+              "title": "Using Skills",
+              "order": 5
+            },
+            {
+              "slug": "guides/behavior-graphs",
+              "title": "Behavior Graphs",
+              "order": 6
+            },
+            {
+              "slug": "guides/swarm-agents",
+              "title": "Swarm & Multi-Agent",
+              "order": 7
+            },
+            {
+              "slug": "guides/fleet-coordination",
+              "title": "Fleet Coordination",
+              "order": 8
+            },
+            {
+              "slug": "guides/migration",
+              "title": "Migrate from Cypher / Neo4j",
+              "order": 9
+            },
+            {
+              "slug": "guides/sql-to-gql",
+              "title": "From SQL to GQL",
+              "order": 10
+            },
+            {
+              "slug": "guides/filesystem-workspace",
+              "title": "Filesystem Workspace",
+              "order": 11
+            },
+            {
+              "slug": "guides/data-quality",
+              "title": "Data Quality",
+              "order": 12
+            },
+            {
+              "slug": "guides/code-intelligence",
+              "title": "Code Intelligence",
+              "order": 13
+            }
+          ]
+        },
+        {
+          "title": "Tutorials",
+          "order": 2,
+          "children": [
+            {
+              "slug": "tutorials/knowledge-graph",
+              "title": "Knowledge Graph",
+              "order": 1
+            },
+            {
+              "slug": "tutorials/entity-linking",
+              "title": "Entity Linking",
+              "order": 2
+            },
+            {
+              "slug": "tutorials/vector-search",
+              "title": "Vector Search",
+              "order": 3
+            },
+            {
+              "slug": "tutorials/graph-algorithms",
+              "title": "Graph Algorithms",
+              "order": 4
+            }
+          ]
+        },
+        {
+          "title": "Recipes",
+          "order": 3,
+          "children": [
+            {
+              "slug": "recipes/crud",
+              "title": "CRUD",
+              "order": 1
+            },
+            {
+              "slug": "recipes/multi-match",
+              "title": "Multi-MATCH",
+              "order": 2
+            },
+            {
+              "slug": "recipes/merge-upsert",
+              "title": "MERGE (Upsert)",
+              "order": 3
+            },
+            {
+              "slug": "recipes/fulltext-search",
+              "title": "Full-Text Search",
+              "order": 4
+            },
+            {
+              "slug": "recipes/batch-projection",
+              "title": "Batch Projection",
+              "order": 5
+            },
+            {
+              "slug": "recipes/multi-source-observation",
+              "title": "Multi-Source Observation",
+              "order": 6
+            },
+            {
+              "slug": "recipes/sports-analytics",
+              "title": "Sports Analytics",
+              "order": 7
+            }
+          ]
         }
       ]
     },

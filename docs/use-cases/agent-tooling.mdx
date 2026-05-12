@@ -1,0 +1,224 @@
+---
+title: "Agent Tooling"
+kind: use-case
+description: "ArcFlow as ephemeral in-process world model for coding agents — spin up a spatial-temporal graph, run 29 algorithms, query results, and discard. No server, no setup."
+status: "stable"
+playground:
+  seed: world
+  query: "MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone) WHERE d.confidence > 0.85 WITH z.name AS zone, z.hazard AS hazard, count(r) AS active_entities, avg(r.battery) AS avg_battery, avg(s.reliability * d.confidence) AS observation_quality RETURN zone, hazard, active_entities, avg_battery, observation_quality, CASE WHEN observation_quality >= 0.90 AND z.hazard > 0.15 THEN 'alert' WHEN observation_quality >= 0.85 THEN 'track' ELSE 'ignore' END AS agent_action ORDER BY observation_quality DESC"
+---
+
+# Agent Tooling
+
+ArcFlow runs in-process with zero setup. This makes it the natural operational world model for coding agents — spin up a spatial-temporal graph, process data with full graph algorithms and confidence scoring, query results, discard. No infrastructure to provision, no cleanup.
+
+## Why agents need an embedded graph
+
+When a coding agent is working on a task, it often needs to:
+- **Explore relationships** in data (who connects to whom, what depends on what)
+- **Run algorithms** (PageRank for importance, community detection for clustering)
+- **Test queries** before writing them into application code
+- **Process structured data** temporarily (parse a CSV, build a graph, extract insights)
+- **Prototype** a world model before committing to a schema
+
+With a graph database server, the agent would need to ask the user to provision and start it. With ArcFlow, the agent just does it:
+
+```typescript
+const db = openInMemory()  // instant, no permission needed
+// ... process data ...
+db.close()  // gone, no cleanup
+```
+
+## Patterns
+
+### Ad-hoc data exploration
+
+An agent analyzing a codebase can model dependencies as a graph:
+
+```typescript
+import { openInMemory } from 'arcflow'
+
+const db = openInMemory()
+
+// Model file dependencies
+db.batchMutate([
+  "CREATE (f:File {path: 'src/index.ts', lines: 150})",
+  "CREATE (f:File {path: 'src/utils.ts', lines: 80})",
+  "CREATE (f:File {path: 'src/db.ts', lines: 200})",
+  "CREATE (f:File {path: 'src/index.ts'})-[:IMPORTS]->(g:File {path: 'src/utils.ts'})",
+  "CREATE (f:File {path: 'src/index.ts'})-[:IMPORTS]->(g:File {path: 'src/db.ts'})",
+  "CREATE (f:File {path: 'src/db.ts'})-[:IMPORTS]->(g:File {path: 'src/utils.ts'})",
+])
+
+// Which files are most depended on?
+const pr = db.query("CALL algo.pageRank()")
+
+// Are there circular dependencies?
+const components = db.query("CALL algo.connectedComponents()")
+
+db.close()
+```
+
+### Temporary world model
+
+An agent building a research summary can create a world model, query it, then discard it:
+
+```typescript
+const db = openInMemory()
+
+// Ingest extracted entities
+db.batchMutate(entities.map(e =>
+  `MERGE (n:${e.type} {id: '${e.id}', name: '${e.name}'})`
+))
+
+// Ingest relationships
+db.batchMutate(relations.map(r =>
+  `MATCH (a {id: '${r.from}'}) MATCH (b {id: '${r.to}'}) MERGE (a)-[:${r.type}]->(b)`
+))
+
+// Find the most connected entities
+const important = db.query("CALL algo.pageRank()")
+
+// Find clusters
+const communities = db.query("CALL algo.louvain()")
+
+// Get the answer, discard the graph
+db.close()
+```
+
+### Test fixture builder
+
+An agent writing tests can create graph fixtures inline:
+
+```typescript
+import { openInMemory } from 'arcflow'
+
+describe('social features', () => {
+  it('finds mutual friends', () => {
+    const db = openInMemory()
+
+    db.batchMutate([
+      "CREATE (a:User {name: 'Alice'})",
+      "CREATE (b:User {name: 'Bob'})",
+      "CREATE (c:User {name: 'Carol'})",
+      "CREATE (a:User {name: 'Alice'})-[:FRIENDS]->(c:User {name: 'Carol'})",
+      "CREATE (b:User {name: 'Bob'})-[:FRIENDS]->(c:User {name: 'Carol'})",
+    ])
+
+    const mutual = db.query(`
+      MATCH (a:User {name: 'Alice'})-[:FRIENDS]->(m)<-[:FRIENDS]-(b:User {name: 'Bob'})
+      RETURN m.name
+    `)
+    expect(mutual.rows[0].get('name')).toBe('Carol')
+
+    db.close()
+  })
+})
+```
+
+### Pipeline scratch space
+
+An agent processing data through multiple stages can use ArcFlow as a scratch graph:
+
+```typescript
+const db = openInMemory()
+
+// Stage 1: Load raw data
+db.batchMutate(rawRecords.map(r =>
+  `CREATE (n:Raw {id: '${r.id}', value: '${r.value}', source: '${r.source}'})`
+))
+
+// Stage 2: Deduplicate (find similar nodes)
+const similar = db.query("CALL algo.nodeSimilarity()")
+
+// Stage 3: Merge duplicates
+// ... process similar pairs ...
+
+// Stage 4: Extract result
+const clean = db.query("MATCH (n:Raw) RETURN n.id, n.value")
+const output = clean.rows.map(r => r.toObject())
+
+db.close()
+return output
+```
+
+## Browser WASM — agent verification playground
+
+The browser runtime at [/engine](/engine) gives agents another tool: verify a query works by running it in the playground before writing it into code.
+
+An agent can:
+1. Open `oz.com/engine` (or instruct the user to)
+2. Paste test data + query
+3. Verify results
+4. Then write the confirmed-working query into the application
+
+With sync enabled, the playground becomes persistent:
+
+```
+oz.com/engine?sync=af_xxxxxxxxxxxx
+```
+
+The agent builds a graph in the browser, the user reviews it visually, then the same graph syncs to the application backend.
+
+## CLI binary — shell-native agents
+
+Shell-native agents call `arcflow` directly — the world model is a CLI tool, same invocation pattern as any other shell command. No protocol, no handshake, no session. The difference: every call returns from a confidence-scored, temporally-versioned graph, not a flat file:
+
+```bash
+# Symbol lookup — exits in <10ms
+arcflow symbol login
+
+# Impact traversal — what breaks if login() changes?
+arcflow impact fn_login --depth 4
+
+# Slice source at line range
+arcflow slice src/auth.ts 12 35
+
+# Run a GQL query directly
+arcflow query 'MATCH (n:Function) RETURN n.name, n.line_start ORDER BY n.name'
+
+# Git blame via the code graph
+arcflow git-blame src/auth.ts
+```
+
+The agent calls these commands, reads stdout, and acts on structured results. No daemon to manage, no session state to track.
+
+## MCP — cloud chat interfaces only
+
+MCP is the right integration when the agent runs in a browser or cloud sandbox with no local shell — Claude.ai and similar cloud chat UIs. These interfaces cannot run `arcflow` as a binary, so MCP is the only way to give them graph tool access:
+
+```json
+// Cloud chat UI configuration (Claude.ai, etc.) — NOT for Claude Code
+{
+  "mcpServers": {
+    "arcflow": {
+      "command": "npx",
+      "args": ["arcflow-mcp"]
+    }
+  }
+}
+```
+
+Available tools: `get_schema`, `read_query`, `write_query`, `graph_rag`. Latency is fine here — the user is already waiting for a chat response.
+
+## Why this matters for agent adoption
+
+| Capability | Effect |
+|---|---|
+| `openInMemory()` | Agent can use a graph DB without asking user to start a server |
+| Zero cleanup | Graph disappears on `close()` — no Docker containers to stop |
+| Browser WASM | Agent can verify queries in a live playground |
+| CLI binary | CLI agents query the graph directly via shell — `arcflow query`, `arcflow impact` |
+| MCP server | Cloud chat UIs that have no local shell (Claude.ai, browser-only agents) |
+| Sync | Ephemeral graph can optionally persist to cloud |
+| Typed results | Agent doesn't have to parse strings — numbers are numbers |
+| Structured errors | Agent can pattern-match on error codes and self-correct |
+
+**ArcFlow is a tool agents can use directly — not infrastructure they have to ask the user to provision.**
+
+## See Also
+
+- [Agent-Native Database](/agent-native) — filesystem workspace, CLI binary, integration surfaces
+- [Swarm & Multi-Agent](/guides/swarm-agents) — multi-agent coordination on shared world model state
+- [ArcFlow for Coding Agents](/guides/agent-integration) — CLI patterns, structured errors, batch execution
+- [MCP Server](/mcp) — cloud chat UI integration (Claude.ai and similar)
