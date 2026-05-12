@@ -20,9 +20,9 @@ binary.
 ## The three steps
 
 1. **`01-persistent-memory.py`** — `AS OF seq` replay. A mid-period earnings
-   restatement lands as WAL seqs; the agent can read the *exact* fundamentals
-   it saw at decision time. No look-ahead bias by construction. Bulk ingest
-   vs `execute()` is the auditability boundary.
+   restatement lands as WAL seqs (one per `execute()`); the agent can read
+   the *exact* fundamentals it saw at decision time. No look-ahead bias by
+   construction. Bulk ingest vs `execute()` is the auditability boundary.
 2. **`02-orchestrated-live-context.py`** — Three context queries (sector
    rollup, cross-sectional percentile rank, top-of-sector leader) re-read
    after a single new bar. The graph IS the orchestration substrate; the
@@ -49,11 +49,16 @@ uv run python 03-confidence-weighted-fusion.py
 - **`AS OF seq` counterfactual replay** — bit-for-bit reproducible memory.
 - **Two-tier ingest** — `bulk_create_*` bypasses the WAL; `execute()` enters
   it. Cold history vs auditable decisions, one API choice.
-- **Comma-`SET` granularity** — one WAL seq per assignment.
+- **Statement-grained WAL** — one monotonic seq per `execute()` call. Split
+  a multi-field restatement into multiple statements when you want auditors
+  to step through the intermediate states; keep it as one statement for
+  atomic application.
 - **Window functions over graph properties** — `lag()`, `percent_rank()`,
   `row_number()` with `OVER (PARTITION BY … ORDER BY …)`.
-- **`_observation_class` + `_confidence`** — the universal evidence-algebra
-  columns. Same query shape spans observed, predicted, and disagreement.
+- **`_observation_class` + `_confidence`** — SDK evidence-algebra
+  convention. The `PhysicalWorldModel` wrapper auto-sets these on every
+  written fact, surfaced as ordinary node properties; the same MATCH shape
+  then spans observed, predicted, and disagreement.
 
 ## See Also
 

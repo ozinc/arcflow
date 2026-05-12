@@ -12,9 +12,11 @@ ArcFlow provides this with two primitives, both shipped:
 1. The two-tier ingest API. Bulk loaders (`bulk_create_nodes` /
    `bulk_create_relationships`) bypass the WAL — perfect for cold history
    that will never be replayed seq-by-seq. `execute()` mutations are
-   WAL-journaled, one seq per mutation, one seq per comma-`SET`
-   assignment. The decision boundary between "fixture data" and "auditable
-   decision" is a single API choice.
+   WAL-journaled, one monotonic seq per `execute()` call. Splitting a
+   restatement into two `execute()` calls (eps update, then revision
+   flag) gives the auditor a staged trail; comma-`SET` within a single
+   statement is atomic and gets one seq. The decision boundary between
+   "fixture data" and "auditable decision" is a single API choice.
 
 2. `MATCH ... AS OF seq $param ... RETURN ...` — replay the graph at any
    past seq. Bit-for-bit reproducible. No interpolation, no estimation.
@@ -47,17 +49,21 @@ def main():
     """)
     print("seq 1: BUY decision recorded for ENGY-02 at day 34")
 
-    # --- WAL seq 2, 3: the fundamentals restatement on day 35 ---
-    # Comma-SET produces ONE WAL entry per assignment. AS OF seq 1 sees the
-    # original eps; AS OF seq 2 sees the new eps but the old revision flag;
-    # AS OF seq 3 sees both updated — the agent's reasoning state at each
-    # intermediate moment is recoverable.
+    # --- WAL seqs 2, 3: the fundamentals restatement on day 35 ---
+    # Each execute() call gets one monotonic seq. We split the restatement
+    # into two statements deliberately: AS OF seq 1 sees the original eps;
+    # AS OF seq 2 sees the new eps but the old revision flag (a moment the
+    # auditor cares about — the engineer applied the number before flipping
+    # the audit flag); AS OF seq 3 sees both updated.
     db.execute("""
         MATCH (s:Symbol {ticker: 'ENGY-02'})-[:HAS_FUNDAMENTAL]->(f:Fundamental)
-        SET f.eps = 2.10,
-            f.revision = 'restated-day-35'
+        SET f.eps = 2.10
     """)
     print("seq 2: ENGY-02 eps restated → 2.10")
+    db.execute("""
+        MATCH (s:Symbol {ticker: 'ENGY-02'})-[:HAS_FUNDAMENTAL]->(f:Fundamental)
+        SET f.revision = 'restated-day-35'
+    """)
     print("seq 3: ENGY-02 revision flag flipped → restated-day-35")
 
     # --- WAL seq 4: a second decision after the restatement ---
@@ -99,7 +105,8 @@ def main():
     print("  - The BUY at seq 1 was made against the ORIGINAL eps. No look-ahead.")
     print("  - The CLOSE at seq 4 was made against the RESTATED eps.")
     print("  - Replaying AS OF seq 1 is bit-for-bit what the agent saw at decision time.")
-    print("  - The comma-SET restatement landed as two seqs — auditors can step through.")
+    print("  - The restatement landed as two seqs (one per execute()) — auditors can step")
+    print("    through the eps change separately from the audit-flag flip.")
     print("  - The 480-bar cold history was bulk-loaded (no WAL entries) so the WAL is")
     print("    a clean log of *decisions and revisions only*, not fixture noise.")
 
