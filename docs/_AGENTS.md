@@ -1,0 +1,70 @@
+# arcflow-docs/docs/ — IA contract
+
+> Restructured 2026-05-12 per the [DIA dossier](https://github.com/ozinc/oz-platform/tree/dev/apps/cloud/website/kanban/planning/26-05-12-docs-ia-restructure).
+> Object-First IA (Strawman B + 3 amendments). 6 top-level sections. Multi-level nav. Lint-enforced.
+
+## Rules (R1..R7)
+
+| ID | Rule | Lint check |
+|----|------|------------|
+| R1 | A reader should reach the right page in ≤3 clicks + ≤5 s scanning | Manual blind test on releases |
+| R2 | Top-level sections answer one question: *what kind of thing is this?* | `section_kind_map` in `_config.json` |
+| R3 | Top level capped at 8 (today: 6); `_config.json` validator rejects PRs that push past | `max_top_level_sections` |
+| R4 | Lint runs on every PR; `kind` frontmatter matches section's allowed kind | CI pre-commit |
+| R5 | Each documentable concept has exactly one canonical page; others declare `canonical: <slug>` | CI: concept-uniqueness pass |
+| R6 | `/llms.txt` canonical-page count after restructure ≥ count before — agent vocab does not shrink | CI: diff llms.txt enumeration |
+| R7 | Frontmatter `section:` is **deprecated** — `_config.json` is the sole SSOT for placement | CI: warns if `section:` is present (until removed) |
+
+## Sections (kind enum)
+
+| Section | Kind | Purpose |
+|---------|------|---------|
+| Start | `first-use` | Quickstart, install, language bindings |
+| Concepts | `concept` | Mental models — world model, evidence model, sync, persistence |
+| WorldCypher | `clause` | Query-language reference — clauses, composition, functions |
+| Capabilities | `capability` | Engine features — live queries, vector, RAG, agent stack |
+| Operations | `operation` | Run-in-prod artefacts — CLI, server, deployment, architecture |
+| Reference | `reference` | Dictionary — API, types, errors, glossary, compat, licensing |
+
+## Sibling surfaces (NOT in `/docs/*`)
+
+- `/spec/gql/{conformance,features,extensions}` — GQL standard conformance dashboards (76 generated stubs lifted out of `/docs/reference/gql/*` + `/docs/reference/extensions/*` + `/docs/reference/{gql-conformance,tck,extensions-regressions}`)
+- `/arcflow/cookbooks` — runnable recipes (oz.com marketing surface; `/docs/cookbooks-index` is removed)
+- `/engine` — interactive REPL (pinned in docs sidebar header)
+
+## Frontmatter contract
+
+```yaml
+---
+title: "Page Title"
+description: "One-line meta description"
+kind: concept | clause | capability | operation | reference | first-use   # REQUIRED — must match section kind
+order: number                                                              # within parent group
+canonical: <other-slug>                                                    # OPTIONAL — declare this page is a facet
+concepts: [list, of, concept, tags]                                        # for R5 lint
+since: "1.0.0"                                                             # OPTIONAL
+status: stable | beta | deprecated                                         # OPTIONAL
+---
+```
+
+**Deprecated** (do not use; deleted at restructure time): `section:` (config is now sole SSOT).
+
+## Boundary case ledger
+
+Four pages have rubric-ambiguous placement. The ledger fixes the call so future PRs don't re-litigate:
+
+- **`event-sourcing`** → Capabilities. Rubric: capability with concept facets (concepts/persistence, concepts/snapshots) pinned underneath.
+- **`agent-native`** → Capabilities. Rubric: philosophy IS the capability — manifesto framing is the brand promise of this capability, not a separate kind.
+- **`sync`** → Capabilities. Rubric: capability is canonical; operations/architecture/sync-protocol is a facet attached to the canonical, not a sibling.
+- **`architecture`** → Operations/Architecture/Engine. Rubric: architecture is an operational artefact (how to tune/run the engine); cloud-architecture and sync-protocol live alongside as siblings under Operations/Architecture.
+
+## How to add a new doc page
+
+1. Choose the right section per *kind* (see table above).
+2. Add MDX file at the slug path implied by your section + sub-group.
+3. Add the entry to `_config.json` under the right section/group.
+4. Set `kind:` frontmatter to match section's kind.
+5. If the concept already has a canonical page elsewhere, set `canonical: <slug>` instead of adding a new sidebar entry.
+6. CI lint will catch order collisions, missing canonicals, kind mismatches.
+
+**Adding a new top-level section requires a planning dossier review** — `_config.json` validator does not allow PRs to push past `max_top_level_sections`.
