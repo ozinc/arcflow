@@ -1,0 +1,31 @@
+[package]
+name = "fraud-graph-traversal"
+version = "0.1.0"
+edition = "2021"
+description = "ArcFlow Rust SDK example mirroring the fraud-graph-traversal Python recipe — fan-out / fan-in / chain detection plus the Rust-only surface: register_skill for live alerts and LIVE CALL algo.connectedComponents for incremental mule-cluster detection."
+
+[dependencies]
+arcflow-sdk = { git = "https://github.com/ozinc/arcflow-core", branch = "main" }
+arrow = "53"
+parquet = "53"
+anyhow = "1"
+
+[lib]
+name = "fraud_graph_traversal"
+path = "src/lib.rs"
+
+[[bin]]
+name = "02-load"
+path = "src/bin/02-load.rs"
+
+[[bin]]
+name = "03-fan-detection"
+path = "src/bin/03-fan-detection.rs"
+
+[[bin]]
+name = "04-chain-detection"
+path = "src/bin/04-chain-detection.rs"
+
+[[bin]]
+name = "05-live-alerts"
+path = "src/bin/05-live-alerts.rs"

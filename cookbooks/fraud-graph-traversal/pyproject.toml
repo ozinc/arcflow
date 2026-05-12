@@ -1,12 +1,15 @@
 [project]
 name = "arcflow-cookbook-fraud-graph-traversal"
-version = "1.6.6"
-description = "ArcFlow recipe: fraud detection over a transfer graph — fan-in, fan-out, layering chains."
+version = "1.6.7"
+description = "ArcFlow recipe: fraud detection over a transfer graph — fan-in, fan-out, layering chains, all as one-line MATCH patterns instead of K-1 self-joins."
 requires-python = ">=3.10"
 dependencies = [
-    "oz-arcflow==1.6.6",
+    "oz-arcflow==1.6.7",
     "pyarrow>=16",
 ]
 
+[tool.uv]
+index-url = "https://staging.oz.com/pypi/simple/"
+
 [tool.uv.sources]
-oz-arcflow = { path = "../../../../arcflow/python/dist/oz_arcflow-1.6.6-py3-none-any.whl" }
+oz-arcflow = { index = "https://staging.oz.com/pypi/simple/" }
