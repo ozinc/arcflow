@@ -1,0 +1,28 @@
+[package]
+name = "algo-trading-world-model"
+version = "0.1.0"
+edition = "2021"
+description = "ArcFlow Rust SDK example mirroring the algo-trading-world-model Python recipe, using the shipped Rust surface (CREATE LIVE VIEW + subscribe + register_live_proof) for the parts Python can't reach today."
+
+[dependencies]
+arcflow-sdk = { git = "https://github.com/ozinc/arcflow-core", branch = "main" }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }
+rand = "0.8"
+rand_chacha = "0.3"
+anyhow = "1"
+
+[lib]
+name = "algo_trading_world_model"
+path = "src/lib.rs"
+
+[[bin]]
+name = "01-persistent-memory"
+path = "src/bin/01-persistent-memory.rs"
+
+[[bin]]
+name = "02-orchestrated-live-context"
+path = "src/bin/02-orchestrated-live-context.rs"
+
+[[bin]]
+name = "03-confidence-weighted-fusion"
+path = "src/bin/03-confidence-weighted-fusion.rs"

@@ -2,6 +2,10 @@
 
 > **Calibrated uncertainty in retrieval, expressed as a schema commitment.**
 
+**Audience:** python · agent · ML engineer
+**Runtime:** ~30 seconds
+**Pins:** `oz-arcflow==1.6.7`
+
 A confidence-scored GraphRAG knowledge base an LLM agent reads from
 with one tunable knob (`min_confidence`) trading recall for precision.
 Every retrieved fact carries provenance back to its source document.
@@ -9,9 +13,49 @@ Symbolic retrieval (entity-id match plus graph traversal) — no
 embeddings, no vector index, no re-rank model. The schema and the query
 patterns are the lesson; extraction is upstream.
 
-**Audience:** python · agent · ML engineer
-**Runtime:** ~30 seconds
-**Pins:** `oz-arcflow==1.6.7`
+## The four hard problems this addresses
+
+The default GraphRAG stack ships four integration tax bugs that the
+schema in this recipe makes structurally impossible. Each one with the
+symptom it produces in production:
+
+1. **Confidence collapsed in JOIN-based stores.** When extraction
+   confidence lives in a sidecar JSON column or a metadata table,
+   retrieval queries that JOIN documents to entities to relations drop
+   the confidence column unless every query carries it forward. The
+   agent ends up retrieving "Calmovir TREATS hypertension" without
+   knowing whether that fact was extracted at 0.96 or 0.45 — the trust
+   tier is silently lost at every JOIN.
+
+2. **Vector-index staleness vs source-of-truth.** Vector indexes are
+   typically rebuilt on a schedule. When the source corpus is updated
+   mid-day, the index lags. Queries retrieve based on stale embeddings;
+   the LLM cites a chunk that no longer exists in the current corpus,
+   or worse, retrieves a chunk whose original document has been
+   retracted. Reconciling "what does the corpus actually contain right
+   now" against "what does the vector index think it contains" is its
+   own engineering chore. A symbolic graph that *is* the source of
+   truth doesn't have this gap.
+
+3. **Extraction and retrieval entangled in one pipeline.** Most
+   GraphRAG tutorials show "ingest text → embed → top-k retrieval →
+   stuff in prompt" as one monolithic pipeline. Swapping the extractor
+   (new NER model, better LLM, domain-specific re-ranker) forces a
+   re-architecture of retrieval. Swapping retrieval (need relation-type
+   filter, multi-hop traversal, provenance-aware ranking) forces the
+   extractor to surface signals it wasn't designed for. The two should
+   be orthogonal; in practice they ship as one.
+
+4. **Provenance as a property instead of an edge.** Citing "Document
+   D03 supports this claim" stored as a JSON property on the relation
+   requires per-fact deserialization to chase the citation. Multi-hop
+   provenance ("which papers cite papers that mention drug X") becomes
+   a JOIN chain across nested JSON — the kind of query that takes 15
+   minutes to write and 5 seconds to execute, repeated for every shape
+   of provenance question.
+
+Each one is solvable in isolation with enough engineering. Solving all
+four in one schema is what this recipe is for.
 
 ## Why the schema does the work
 
