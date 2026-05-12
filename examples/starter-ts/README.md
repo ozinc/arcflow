@@ -1,5 +1,12 @@
 # ArcFlow Starter (TypeScript)
 
+> **Canonical location: [`github.com/ozinc/arcflow-starter-ts`](https://github.com/ozinc/arcflow-starter-ts).**
+> The `arcflow-docs/examples/` tree is being retired in favour of
+> [`/cookbooks/`](../../cookbooks/) (Python, CI-tested, manifest-aligned).
+> The TypeScript starter is a different artefact class (project skeleton,
+> not a recipe) and lives in its own repo so the docs site can link to
+> it without owning it.
+
 A ready-to-go starter project for [ArcFlow](https://github.com/ozinc/arcflow) — the embedded graph database.
 
 ## Quick Start
