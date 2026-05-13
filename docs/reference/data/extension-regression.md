@@ -60,7 +60,7 @@
 
 - [PASS] **CREATE SKILL registration** (8ms) — OK
 - [PASS] **PROCESS NODE execution** (24ms) — OK
-- [PASS] **CREATE REACTIVE SKILL** (10ms) — OK
+- [PASS] **CREATE TRIGGER** (10ms) — OK (legacy `CREATE REACTIVE SKILL` syntax retained for backward compatibility per PAT-0037 / PAT-0038)
 
 ### Spatial Predicates
 

@@ -1,0 +1,125 @@
+---
+title: "Naming & Domain Map"
+kind: reference
+description: "Canonical names for ArcFlow's domains, the World Model story spine, and the banned-word list. The single source of truth for what to call each layer."
+status: "stable"
+---
+
+# Naming & Domain Map
+
+ArcFlow is **a world-model engine** — one in-process Rust binary that
+holds the persistent property graph, the live query surface, the event
+bus, the behavior engine, and the algorithm library. The five layers
+each have an industry analog; the names below are the canonical labels
+for each one. Use these consistently in docs, marketing, API names,
+log messages, and commit subjects.
+
+## The World Model story (one sentence)
+
+> ArcFlow is the world-model engine: a single in-process store that
+> remembers what was observed, infers what is happening, predicts what
+> comes next, and lets agents query, subscribe, fuse, and act — all in
+> one address space.
+
+Everything below is a way of saying *what part of this story you mean*.
+
+## Domain map
+
+| Layer | Industry analogs | What it is in ArcFlow | Canonical name | Cypher / API surface |
+|---|---|---|---|---|
+| **Persistent graph + indexes** | Neo4j, Memgraph, DuckDB, DuckPGQ, KuzuDB | Property-graph store + composite/spatial/vector/FTS indexes + WAL | **World Store** (the data layer) | `MATCH`, `CREATE`, `MERGE`, indexes, constraints |
+| **Query engine** | Memgraph engine, DuckDB engine, Velox | Cypher / ISO GQL compiler + planner + executor | **Query Engine** | `EXPLAIN`, `PROFILE`, prepared statements |
+| **Live surface** | Materialize, RisingWave, Flink standing queries | Z-set-incremental standing queries + materialised views | **Live Surface** | `CREATE LIVE VIEW`, `LIVE CALL`, `LIVE MATCH`, `db.subscribe()` |
+| **Event bus** | NATS, Inngest (events), Redis Streams | Topics + durable consumers + wildcard subscriptions + sync request-reply | **Event Bus** | `CREATE TOPIC`, `PUBLISH`, `SUBSCRIBE`, `SUBSCRIBE PATTERN`, `bus.request()` |
+| **Behavior engine** | Unreal Engine 5 behavior trees, Unity ML-Agents, Temporal | Behavior-tree ticks, durable workflows, triggers, programs | **Behavior Engine** | `CREATE TRIGGER`, `CREATE PROGRAM`, `CALL behavior.tick()` |
+| **Algorithm library** | Neo4j GDS, cuGraph, NetworkX | 29+ graph + sensor-fusion + spatial algorithms | **Algorithm Library** | `CALL algo.*`, `CALL algo.fusion.*`, `CALL algo.spatial.*` |
+| **Durability lane** | WAL, RocksDB writes-ahead | Async WAL + checkpointing + hot backup | **Durability Lane** | `arcflow_flush_snapshot()`, replication |
+| **Bindings** | C ABI + per-language wrappers | Python (ctypes), Node (napi-rs), C ABI, Rust SDK | **Bindings** | `import arcflow`, `import { open } from 'arcflow'` |
+
+The umbrella label for *the whole binary* is **the world-model engine**
+or **the ArcFlow engine** — never just "the graph database" (which
+under-sells the live + event-bus + behavior + algorithm layers) and
+never just "the event broker" (which under-sells the graph + query
++ behavior layers).
+
+## How the layers compose
+
+```
+                ┌────────────────────────────────────────────┐
+                │                                            │
+                │            ArcFlow Engine                  │
+                │     (one in-process Rust binary)           │
+                │                                            │
+   Cypher /  ──►│  Query Engine ──► World Store              │
+   GQL          │       │             ▲                      │
+                │       ▼             │                      │
+   Subscribe ──►│  Live Surface ─────┘                       │
+                │       │                                    │
+                │       ▼                                    │
+   Publish   ──►│  Event Bus ──► World Store changes         │
+                │       │           emit events              │
+                │       ▼                                    │
+   Tick      ──►│  Behavior Engine ──► World Store mutations │
+                │       │                                    │
+                │       ▼                                    │
+   CALL algo.* ►│  Algorithm Library ──► reads/writes        │
+                │                                            │
+                │  Durability Lane (WAL + snapshots)         │
+                │                                            │
+                └────────────────────────────────────────────┘
+                     ▲
+                     │ Bindings (Python / TS / C / Rust)
+                     │
+                  Application
+```
+
+Every layer reads and writes the same `GraphStore`. No serialisation
+between modules. No second store to operate.
+
+## Banned words
+
+These terms are **not** used in user-facing copy, in API surfaces,
+in log messages, or in commit subjects. Internal Rust type names
+that pre-date this convention are grandfathered until they migrate.
+
+| Banned | Why | Use instead |
+|---|---|---|
+| **reactive** (as in "reactive system" / "reactive view") | Carries a negative connotation — sounds like firefighting rather than dataflow. PAT-0038 in arcflow-core. | **live** (for materialised / standing things), **event-driven** (for fire-on-event), **trigger** (for the binding itself), **event bus** (for pub/sub) |
+| **legacy** in user-facing copy | Implies neglect or shame. | **prior**, **pre-vN.M.K**, or just drop the qualifier |
+| **broker** (when talking about ArcFlow's bus) | Implies a separate process you'd run alongside. ArcFlow's bus is in-process. | **event bus**, **in-process bus**, **bus** |
+| **"reactive systems"** in the tagline | Same as **reactive**. | **live systems** or **event-driven systems** or **agent systems** |
+
+## What to call each new feature
+
+When shipping a new feature, name it from its layer:
+
+- A new aggregator that runs in standing queries → "**Live Surface** feature"
+- A new CALL procedure that does an algorithm → "**Algorithm Library** entry"
+- A new pub/sub primitive (e.g. wildcard subscriptions) → "**Event Bus** feature"
+- A new behavior-tree node → "**Behavior Engine** primitive"
+- A new index, type, or constraint → "**World Store** feature"
+
+In commit subjects this looks like:
+
+```
+feat(core/pubsub): NATS-compatible topic wildcard subscriptions
+feat(core/algo): weighted_centroid fusion CALL procedure
+feat(core/live): EMA aggregator over the Live Surface
+feat(core/store): composite index for (label, position_prop)
+```
+
+Avoid genericised commits like `feat(core): add stuff` — the layer
+prefix tells the reader where in the architecture the change lives.
+
+## Cross-references
+
+- [Event Bus capability](../event-bus) — the canonical surface for the
+  Event Bus layer.
+- [Live queries](../live-queries) — the canonical surface for the
+  Live Surface.
+- [Algorithms](../algorithms) — the canonical surface for the
+  Algorithm Library.
+- [Behavior graphs](../behavior-graph) — the canonical surface for the
+  Behavior Engine.
+- [Architecture](../architecture) — operational detail for the whole
+  binary.

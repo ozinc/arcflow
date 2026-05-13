@@ -190,7 +190,7 @@ RETURN e._observation_class, e._confidence, e._propagation_rule, e._source_agent
 
 **When to use it:** Call `beliefReconcile` when multiple agents have written `BELIEVES` edges to the same entity within a fusion window — typically triggered by a live skill that fires on new observations.
 
-**Reactive pattern — auto-fuse on every new observation:**
+**Trigger pattern — auto-fuse on every new observation:**
 
 ```cypher
 -- Register a skill that runs beliefReconcile whenever a new BELIEVES edge is created

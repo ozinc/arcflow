@@ -723,6 +723,11 @@
           "order": 2
         },
         {
+          "slug": "reference/naming",
+          "title": "Naming & Domain Map",
+          "order": 10
+        },
+        {
           "slug": "reference/types",
           "title": "Data Types",
           "order": 3

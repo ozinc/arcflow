@@ -27,7 +27,7 @@ If these appear in an arcflow-docs PR, reject it.
 
 | Feature | Current Doc | Status |
 |---------|------------|--------|
-| Z-set delta / LIVE MATCH / CREATE LIVE VIEW | `docs/reactive.mdx` | Complete |
+| Z-set delta / LIVE MATCH / CREATE LIVE VIEW | `docs/live-queries.mdx` | Complete |
 | DeltaEvent, LiveQuery, SubscribeOptions types | `docs/reference/types.mdx` | Complete |
 | AS OF temporal queries | `docs/temporal.mdx` | Complete |
 | Graph algorithms (27+) | `docs/algorithms.mdx` | Complete |
@@ -56,7 +56,7 @@ For TODO items below: the bindings haven't shipped yet, so the original "do not 
 
 **Blocked on:** SDK-01 (`subscribe() / unsubscribe()` napi-rs re-export) — **shipped.**
 
-**Where:** New section in `docs/reactive.mdx` — after the existing "Legacy Live Queries" section.
+**Where:** New section in `docs/live-queries.mdx` — after the existing "Legacy Live Queries" section.
 Or a new `docs/guides/subscription-api.mdx` if the content warrants a full page.
 
 **What to cover:**
