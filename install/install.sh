@@ -9,6 +9,11 @@
 #   arcflow-docs/install/install.sh        ← source of truth (this file)
 #   oz-platform/.../public/install/arcflow ← deployed copy (oz.com/install/arcflow)
 #
+# Release source: GitHub Releases on the public ozinc/arcflow repo
+# (CUDA-style developer surface, switched from R2 on 2026-05-13).
+# Binaries, SHA256SUMS, and release-matrix.json are all attached as
+# release assets — see release-binaries.yml in arcflow-core.
+#
 # Naming convention:
 #   arcflow-{VERSION}-{OS}-{ARCH}[-{LIBC}].tar.gz
 #   OS:   darwin | linux
@@ -17,13 +22,19 @@
 #
 # Environment overrides:
 #   ARCFLOW_VERSION      — install a specific version instead of latest
-#   ARCFLOW_INSTALL_DIR  — install to a custom directory (default: ~/.arcflow/bin)
+#                          (e.g. ARCFLOW_VERSION=1.6.27)
+#   ARCFLOW_INSTALL_DIR  — install to a custom directory
+#                          (default: ~/.arcflow/bin)
+#   ARCFLOW_REPO         — override the release-host repo
+#                          (default: ozinc/arcflow). Useful for mirrors
+#                          or forks.
 
 set -e
 
 # ── Configuration ────────────────────────────────────────────────────────────
 
-R2_BASE="https://pub-a0a196dbe10340f8af22524547fdd476.r2.dev/releases/arcflow"
+REPO="${ARCFLOW_REPO:-ozinc/arcflow}"
+GH_RELEASES="https://github.com/${REPO}/releases"
 INSTALL_DIR="${ARCFLOW_INSTALL_DIR:-$HOME/.arcflow/bin}"
 
 # ── Platform detection ───────────────────────────────────────────────────────
@@ -66,23 +77,42 @@ detect_platform() {
 
 # ── Version resolution ───────────────────────────────────────────────────────
 
+# Resolve the version to install. If ARCFLOW_VERSION is set, use that.
+# Otherwise, follow GitHub Releases' /latest redirect to discover the
+# current latest tag. The redirect target is
+#   https://github.com/ozinc/arcflow/releases/tag/v<version>
+# from which we extract <version>.
+#
+# Curl is the primary fetcher; wget falls back. Both can follow redirects
+# and emit the final URL via -L plus the relevant write-out / output
+# flags.
 resolve_version() {
   if [ -n "${ARCFLOW_VERSION:-}" ]; then
     VERSION="${ARCFLOW_VERSION#v}"
     return
   fi
 
+  REDIRECT_URL=""
   if command -v curl >/dev/null 2>&1; then
-    VERSION="$(curl -fsSL "${R2_BASE}/latest.txt" 2>/dev/null || true)"
+    REDIRECT_URL="$(curl -fsSL -o /dev/null -w '%{url_effective}' \
+      "${GH_RELEASES}/latest" 2>/dev/null || true)"
   elif command -v wget >/dev/null 2>&1; then
-    VERSION="$(wget -qO- "${R2_BASE}/latest.txt" 2>/dev/null || true)"
+    REDIRECT_URL="$(wget -q -S --max-redirect=10 -O /dev/null \
+      "${GH_RELEASES}/latest" 2>&1 \
+      | awk '/^[[:space:]]+Location:/ { url=$2 } END { print url }' || true)"
   fi
 
+  # Extract the tag from the redirect URL — last path segment.
+  TAG="${REDIRECT_URL##*/}"
+  VERSION="${TAG#v}"
   VERSION="$(printf '%s' "${VERSION}" | tr -d '[:space:]')"
 
-  if [ -z "$VERSION" ]; then
-    echo "Error: could not resolve latest version from ${R2_BASE}/latest.txt"
+  if [ -z "$VERSION" ] || [ "$VERSION" = "latest" ]; then
+    echo "Error: could not resolve latest version from ${GH_RELEASES}/latest"
     echo "Set ARCFLOW_VERSION=x.y.z to install a specific version."
+    echo ""
+    echo "Browse available releases:"
+    echo "  ${GH_RELEASES}"
     exit 1
   fi
 }
@@ -91,8 +121,11 @@ resolve_version() {
 
 download_and_install() {
   TARBALL="arcflow-${VERSION}-${PLATFORM}.tar.gz"
-  URL="${R2_BASE}/${VERSION}/${TARBALL}"
-  SHA256URL="${R2_BASE}/${VERSION}/SHA256SUMS"
+  TAG="v${VERSION}"
+  # /releases/download/<tag>/<asset> is the canonical download URL.
+  # GitHub serves it via redirect-to-CDN; curl/wget follow -L.
+  URL="${GH_RELEASES}/download/${TAG}/${TARBALL}"
+  SHA256URL="${GH_RELEASES}/download/${TAG}/SHA256SUMS"
 
   TMPDIR="$(mktemp -d)"
   # shellcheck disable=SC2064
@@ -112,29 +145,36 @@ download_and_install() {
       echo "  linux-x86_64-gnu, linux-arm64-gnu"
       echo "  linux-x86_64-musl, linux-arm64-musl"
       echo ""
+      echo "Browse: ${GH_RELEASES}/tag/${TAG}"
       echo "Build from source: cargo install arcflow-cli"
       exit 1
     fi
   else
     if ! wget -q --show-progress "$URL" -O "${TMPDIR}/${TARBALL}"; then
-      echo "Error: download failed. Check https://oz.com/install for troubleshooting."
+      echo "Error: download failed. Check ${GH_RELEASES} for available platforms."
       exit 1
     fi
   fi
 
-  # Verify SHA256
+  # Verify SHA256 against the SHA256SUMS aggregate file shipped on the
+  # same release. GitHub Releases serves both atomically; a mismatch
+  # means either the tarball or the SUMS file was tampered with on a
+  # mirror, or you hit a partial download.
   if command -v sha256sum >/dev/null 2>&1; then
     if command -v curl >/dev/null 2>&1; then
       curl -fsSL "$SHA256URL" -o "${TMPDIR}/SHA256SUMS" 2>/dev/null || true
     fi
     if [ -f "${TMPDIR}/SHA256SUMS" ]; then
-      EXPECTED="$(grep " ${TARBALL}$" "${TMPDIR}/SHA256SUMS" | awk '{print $1}')"
+      EXPECTED="$(grep "  ${TARBALL}$" "${TMPDIR}/SHA256SUMS" | awk '{print $1}')"
       if [ -n "$EXPECTED" ]; then
         ACTUAL="$(sha256sum "${TMPDIR}/${TARBALL}" | awk '{print $1}')"
         if [ "$EXPECTED" != "$ACTUAL" ]; then
           echo "Error: SHA256 mismatch for ${TARBALL}"
           echo "  Expected: $EXPECTED"
           echo "  Actual:   $ACTUAL"
+          echo ""
+          echo "For full cryptographic verification, install gh CLI and run:"
+          echo "  gh attestation verify ${TARBALL} --owner ozinc"
           exit 1
         fi
       fi
@@ -205,6 +245,9 @@ main() {
   printf 'Binaries:%s\n\n' "$INSTALLED"
   printf 'Run it now:\n'
   printf '  export PATH="%s:$PATH" && arcflow --help\n\n' "$INSTALL_DIR"
+  printf 'Verify the install (optional, requires gh CLI):\n'
+  printf '  gh attestation verify ~/.arcflow/bin/arcflow --owner ozinc\n\n'
+  printf 'Release page: %s/tag/v%s\n' "$GH_RELEASES" "$VERSION"
 }
 
 main
