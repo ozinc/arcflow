@@ -210,14 +210,15 @@ Algorithms for reasoning over facts, confidence, and semantic relationships.
 | `CALL algo.predictionDrift(entityId, [horizonMs])` | `entity_id`, `horizon_ms`, `predicted_x`, `observed_x`, `delta_x`, `predicted_y`, `observed_y`, `delta_y`, `delta_magnitude`, `prediction_source`, `observation_seq`, `predicted_seq` | Drift between predicted and observed entity positions within a time horizon |
 | `CALL algo.temporalDecay(nodeId, [halfLifeDays], [floor], [staleThreshold])` | `decayed_confidence`, `days_elapsed`, `is_stale`, `freshness_class` | Lazy temporal decay of confidence based on last corroboration timestamp |
 
-## Physical AI Algorithms (2)
+## Physical AI Algorithms (3)
 
-Procedures for multi-agent world models: sensor reliability scoring and multi-agent belief fusion.
+Procedures for multi-agent world models: sensor reliability scoring, multi-agent belief fusion, and multi-sample weighted-centroid fusion.
 
 | Procedure | Return Columns | Description | Since | Mutating |
 |---|---|---|---|---|
 | `CALL algo.sensorReliability('sensor-id')` | `accuracy`, `drift_rate`, `sample_count`, `calibration_recommended` | Compute mean confidence across all Entity nodes sourced from this sensor. Updates `reliability_7d` or `reliability_30d` on the Sensor node. Pass `'30d'` as second arg for 30-day window. | 1.6.47 | Yes |
 | `CALL algo.beliefReconcile('entity-id')` | `fused_confidence`, `source_agents`, `source_confidences`, `reconciliation_method`, `observation_seq` | Kalman precision-weighted fusion of all Agent `BELIEVES` edges pointing to the entity. Writes `_observation_class: 'inferred'`, `_propagation_rule: 'kalman-fusion'`, `_source_agents`, `_source_count` back onto the entity. Algorithm: `fused = Σ(cᵢ²) / Σ(cᵢ)`. | 1.6.51 | Yes |
+| `CALL algo.fusion.weighted_centroid('Label', 'posProp', 'weightProp')` (alias `algo.fusion.weightedCentroid`) | `x`, `y`, `z`, `var_x`, `var_y`, `var_z`, `total_weight`, `n` | Multi-sample weighted centroid + per-axis variance over every node carrying a 3D position (`Point3d` / `Vector3d`; 2D `Point` accepted as `z=0`) and a numeric weight (`Float` / `Int`, ≥ 0). Replaces the per-service `np.average(positions, weights=…)` round-trip with one in-engine call. Errors: `EMPTY_SAMPLE_SET`, `WEIGHT_NOT_NUMERIC`, `NEGATIVE_WEIGHT`, `INVALID_WEIGHT_SUM`, `NAN_IN_INPUT`. See [Sensor Fusion](/algorithms#sensor-fusion). | 1.6.27 | No |
 
 ```cypher
 -- Check sensor reliability after a calibration run

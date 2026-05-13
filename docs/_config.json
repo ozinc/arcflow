@@ -416,6 +416,11 @@
           "slug": "relay",
           "title": "Intent Relay",
           "order": 15
+        },
+        {
+          "slug": "event-bus",
+          "title": "Event Bus",
+          "order": 16
         }
       ]
     },
