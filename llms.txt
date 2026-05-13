@@ -105,6 +105,21 @@ Result handoff:
 Concurrency:
 - ctypes releases the GIL on every native call; `ConcurrentStore` is MVCC-safe. `concurrent.futures.ThreadPoolExecutor` works out of the box.
 
+Event bus (in-process pub/sub + request-reply; NATS-equivalent semantics):
+- `arcflow.bus.Bus(db)` — topics, durable consumers, NATS-style `*` / `>` wildcard subscriptions, synchronous request-reply.
+- `bus.publish(topic, data, headers=None)` / `bus.events_after(topic, after_seq=0)`.
+- `bus.register_consumer(name, topic, start=START_FROM_BEGINNING)` + `bus.pending(...)` + `bus.ack(...)`.
+- `bus.register_pattern_consumer(name, "all_tracks.*")` — wildcards; future matching topics auto-attach at LatestOnly.
+- `bus.request(topic, payload, timeout_ms=5_000)` — synchronous request-reply; raises `ArcFlowError(REQUEST_TIMEOUT)` on deadline.
+- `arcflow.bus.EventPublisher(bus)` — rate-limit + per-camera routing + severity-tagged topic prefixes.
+- See `docs/event-bus.mdx` for the full semantics.
+
+Repository ergonomics:
+- `arcflow.repository.BaseRepository(data_dir=None, *, shared_db=None, default_timeout_s=5.0)` — drop-in shape for services migrating off Memgraph Bolt. `execute / execute_rows / execute_one / execute_scalar / transaction / run_in_transaction / bulk_create_*`. Per-call `timeout_s` enforced via thread-join deadline (raises `RepositoryTimeoutError`).
+
+Streaming functions:
+- `arcflow.stream_fn.StreamFn(db, name, Kind.Lag(n) | Kind.Lead(n) | Kind.Delta)` — per-feed scalar emissions for the per-step-derivative pattern.
+
 ## Snapshot-pinned reads (provenanced answers)
 
 Every result envelope carries a snapshot URI: `arcflow://snapshot/<hex>` (content-addressed).

@@ -557,6 +557,113 @@ Confidence-filtered GraphRAG — only returns evidence above the trust threshold
 CALL algo.graphRAGTrusted('high-confidence relationships for Alice')
 ```
 
+## Sensor Fusion
+
+### Weighted Centroid
+
+Multi-sample weighted-mean position + per-axis variance + total weight,
+computed in-engine over every node carrying a 3D position property and
+a numeric weight. Replaces the per-service Python
+`np.average(positions, weights=...)` round-trip with one CALL.
+
+```cypher
+CALL algo.fusion.weighted_centroid('PlayerObs', 'pos_world', 'confidence')
+YIELD x, y, z, var_x, var_y, var_z, total_weight, n
+```
+
+Arguments:
+
+| Arg | Type | Meaning |
+|---|---|---|
+| `label` | string | Node label to scan |
+| `posProp` | string | Property carrying `Point3d` / `Vector3d` (also accepts a 2D `Point` — treated as z=0) |
+| `weightProp` | string | Property carrying `Float` or `Int` (numeric weight; must be ≥ 0) |
+
+Returned columns: `x`, `y`, `z` (centroid), `var_x`, `var_y`, `var_z`
+(per-axis variance), `total_weight` (Σwᵢ), `n` (samples summed).
+Nodes missing either property are silently skipped; NaN slots are
+treated as missing. Aliased as `algo.fusion.weightedCentroid` for
+camelCase parity with the other graph algorithms.
+
+Errors:
+
+| Code | Cause |
+|---|---|
+| `EMPTY_SAMPLE_SET` | zero usable nodes after the property gate |
+| `WEIGHT_NOT_NUMERIC` | a `weightProp` value isn't `Float` or `Int` |
+| `NEGATIVE_WEIGHT` | a weight < 0 |
+| `INVALID_WEIGHT_SUM` | Σwᵢ ≤ 0 |
+| `NAN_IN_INPUT` | NaN slipped through the property filter |
+
+Direct API for callers that prefer not to round-trip through Cypher:
+
+```python
+from arcflow import ArcFlow
+db = ArcFlow()
+row = db.execute(
+    "CALL algo.fusion.weighted_centroid('PlayerObs', 'pos_world', 'confidence')"
+).rows[0]
+```
+
+The pure-function algebra (`weighted_centroid_2d`, `weighted_centroid_3d`,
+`weighted_centroid_nd`) is also exposed on the Rust crate as
+`arcflow_core::algo_fusion`.
+
+## Streaming functions
+
+ArcFlow ships three per-stream stateful scalar functions for the
+per-step-derivative patterns common in sensor pipelines. They are
+sibling to the [sliding-window aggregators](./live-queries) — instead
+of emitting one aggregate per window completion, they emit one value
+per feed.
+
+| Function | Definition | First-output offset |
+|---|---|---|
+| `lag(value, n)` | the value from `n` feeds ago | n+1 |
+| `lead(value, n)` | retroactive output for event `F-n` when feed `F` arrives | n+1 |
+| `delta(value)` | `current - previous` (shorthand for `lag(value, 1)`) | 2 |
+
+Today these are reachable via the Rust + C ABI surface (`register_stream_fn`
++ `feed_stream_fn`). A Python wrapper is shipped under
+[`arcflow.stream_fn`](./bindings#streaming-functions--arcflowstream_fn);
+the Cypher window-expression surface (`RETURN lag(p.pan, 1) OVER
+(ORDER BY p.captured_at)`) is follow-up work.
+
+### Rust
+
+```rust
+use arcflow::stream_fn::{StreamFnKind};
+
+store.register_stream_fn("pan_delta", StreamFnKind::Delta)?;
+for (pan, ts) in samples {
+    let outputs = store.feed_stream_fn("pan_delta", pan)?;
+    if let Some(out) = outputs.first() {
+        let pan_rate = out.fn_value / dt; // dt from a sibling Delta on the timestamp
+    }
+}
+```
+
+### Python
+
+```python
+from arcflow import ArcFlow
+from arcflow.stream_fn import StreamFn, Kind
+
+db = ArcFlow()
+pan_delta = StreamFn(db, "pan_delta", Kind.Delta)
+ts_delta  = StreamFn(db, "ts_delta",  Kind.Delta)
+
+for pan, ts in samples:
+    pan_out = pan_delta.feed(pan)
+    ts_out  = ts_delta.feed(ts)
+    if pan_out and ts_out:
+        pan_rate = pan_out[0].fn_value / ts_out[0].fn_value
+```
+
+State is computational — NOT WAL-journaled. Callers re-feed pending
+events from the source (typically a topic whose events ARE journaled)
+after restart.
+
 ## Incremental Algorithms (LIVE CALL)
 
 Six algorithms can run as standing queries via `LIVE CALL`. Instead of recomputing from scratch on every mutation, they maintain state incrementally. Cost per update is O(affected neighborhood), not O(V+E).

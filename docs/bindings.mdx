@@ -266,6 +266,106 @@ Pair with `db.fingerprint()` (content hash) and `db.snapshot_uri()`
 (content-addressed snapshot URI) when downstream consumers need to verify
 the mutations they applied match the source state exactly.
 
+### Event bus — `arcflow.bus.Bus`
+
+`arcflow.bus.Bus` exposes the engine's in-process pub/sub + request-reply
+surface to Python. Topics, durable consumers, NATS-style wildcard
+subscriptions, and synchronous request-reply all reach the same engine
+that `db.execute()` writes to. See [Event bus](./event-bus) for the
+full semantics.
+
+```python
+from arcflow import ArcFlow
+from arcflow.bus import Bus, EventPublisher, START_FROM_BEGINNING
+
+db = ArcFlow()
+bus = Bus(db)
+
+bus.create_topic("orders.us")
+seq = bus.publish("orders.us", {"order_id": 42, "amount": 100.0})
+
+# Durable consumer — pull-style, per-consumer offset
+bus.register_consumer("billing", "orders.us", start=START_FROM_BEGINNING)
+for event in bus.pending("billing", "orders.us"):
+    process(event.data)
+    bus.ack("billing", "orders.us", event.seq)
+
+# Wildcard consumer — fans out across every matching topic
+tracks = bus.register_pattern_consumer("worker", "all_tracks.*")
+for topic, event in tracks.drain():
+    handle(topic, event.data)
+
+# Synchronous request-reply
+reply = bus.request("video.query.status", {"q": "n_cams"}, timeout_ms=5_000)
+print(reply.data["count"])
+```
+
+`EventPublisher` is the application-layer convenience for rate-limited,
+per-camera, severity-tagged event streams — mirrors `oz_core.events.EventPublisher`
+for services migrating from NATS-and-Memgraph stacks:
+
+```python
+pub = EventPublisher(bus, topic_prefix="framing.alert")
+pub.set_rate_limit("ball_lost", interval_ms=10_000)
+pub.emit("ball_lost", {"conf": 0.2}, camera="cam1", severity="warning")
+# -> publishes to framing.alert.warning.ball_lost.cam1 (auto-creates the topic)
+```
+
+### Repositories — `arcflow.repository.BaseRepository`
+
+A drop-in shape for services migrating off the Memgraph Bolt driver.
+Subclass and add domain methods that call `self.execute(...)` /
+`self.execute_rows(...)` / `self.execute_scalar(...)`. Constructor takes
+`data_dir=None` (in-memory) or a path (persistent) — no host / port,
+no connection pool, no `BAD_SESSION` reconnection class because the
+engine is same-process FFI.
+
+```python
+from arcflow.repository import BaseRepository, RepositoryTimeoutError
+
+class PlayerRepo(BaseRepository):
+    def get(self, player_id: int) -> dict | None:
+        return self.execute_one(
+            "MATCH (p:Player {id: $id}) RETURN p",
+            {"id": player_id},
+        )
+
+with PlayerRepo("/var/lib/arcflow") as repo:
+    alice = repo.get(42)
+```
+
+`execute(..., timeout_s=5.0)` enforces a per-call deadline via a
+worker-thread join; exceeding the deadline raises
+`RepositoryTimeoutError`. Pass `timeout_s=None` to disable per-call
+timeouts. Multiple repositories can share one open `ArcFlow` via the
+`shared_db=` constructor argument.
+
+### Streaming functions — `arcflow.stream_fn`
+
+Per-stream stateful scalar functions (`lag`, `lead`, `delta`) for
+collapsing per-step-derivative patterns. State is held in the engine,
+not in the calling service — `register_stream_fn` + `feed_stream_fn`
+return immediately with whatever output the function produces for that
+feed (zero-or-one entries per feed).
+
+```python
+from arcflow import ArcFlow
+from arcflow.stream_fn import StreamFn, Kind
+
+db = ArcFlow()
+pan_delta = StreamFn(db, "pan_delta", Kind.Delta)
+ts_delta  = StreamFn(db, "ts_delta",  Kind.Delta)
+
+for pan, ts in samples:
+    pan_out = pan_delta.feed(pan)
+    ts_out  = ts_delta.feed(ts)
+    if pan_out and ts_out:
+        pan_rate = pan_out[0].fn_value / ts_out[0].fn_value
+```
+
+See [Streaming functions](./algorithms#streaming-functions) for the
+full semantics (`Lag(n)`, `Lead(n)`, and `Delta`).
+
 ### Threading concurrency — `concurrent.futures` works
 
 ctypes releases the Python GIL for every native call; ArcFlow's
