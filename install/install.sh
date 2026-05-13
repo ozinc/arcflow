@@ -102,13 +102,24 @@ resolve_version() {
       | awk '/^[[:space:]]+Location:/ { url=$2 } END { print url }' || true)"
   fi
 
-  # Extract the tag from the redirect URL — last path segment.
-  TAG="${REDIRECT_URL##*/}"
-  VERSION="${TAG#v}"
-  VERSION="$(printf '%s' "${VERSION}" | tr -d '[:space:]')"
+  # The canonical "a release exists" redirect target is
+  # .../releases/tag/v<version>. Anything else — the bare .../releases
+  # listing when zero releases exist, an unfollowed .../releases/latest,
+  # a network-error empty string — means there is nothing to install.
+  # Require the /tag/ segment before extracting the version (pattern-
+  # positive guard; safer than excluding known-bad tail words like
+  # "latest" or "releases" one at a time).
+  VERSION=""
+  case "$REDIRECT_URL" in
+    */releases/tag/*)
+      TAG="${REDIRECT_URL##*/}"
+      VERSION="${TAG#v}"
+      VERSION="$(printf '%s' "${VERSION}" | tr -d '[:space:]')"
+      ;;
+  esac
 
-  if [ -z "$VERSION" ] || [ "$VERSION" = "latest" ]; then
-    echo "Error: could not resolve latest version from ${GH_RELEASES}/latest"
+  if [ -z "$VERSION" ]; then
+    echo "Error: no released version found at ${GH_RELEASES}/latest"
     echo "Set ARCFLOW_VERSION=x.y.z to install a specific version."
     echo ""
     echo "Browse available releases:"
