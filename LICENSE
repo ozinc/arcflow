@@ -1,4 +1,30 @@
-MIT License
+ArcFlow — license scope (updated 2026-05-14)
+
+ArcFlow is distributed as two layers with two distinct licenses:
+
+  1. THIS REPOSITORY (ozinc/arcflow) — MIT License
+     Covers the contents of this repository: cookbook recipes,
+     SDK source code, install scripts, MCP server reference, React
+     bindings, public documentation, JSON-RPC protocol specification,
+     example apps, and accompanying tooling. All files in this repo
+     are MIT-licensed unless individually marked otherwise.
+
+  2. ARCFLOW CORE BINARY RUNTIME — Proprietary Free Runtime License
+     The runtime binary (`arcflow`, `arcflow-daemon`, `arcflow-mcp`,
+     language-binding shared libraries) is a proprietary product of
+     OZ Global Inc., distributed free-to-use under the terms in
+     LICENSE-CORE.md (this repository).
+
+The headline: build with ArcFlow freely, including commercial use,
+within the Free Use Limits documented at oz.com/pricing. The MIT
+license below applies to the open-source layer in this repo only.
+
+Plain-English Q&A: see LICENSE-FAQ.md
+Engine binary license:   see LICENSE-CORE.md
+
+================================================================
+MIT License (applies to the contents of THIS REPOSITORY)
+================================================================
 
 Copyright (c) 2026 OZ Global Inc.
 

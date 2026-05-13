@@ -19,6 +19,20 @@ Alpha. [Live install matrix](https://staging.oz.com/docs/installation).
 
 ---
 
+## License at a glance
+
+**Free to build. Free to ship within generous limits. Paid when you scale, need premium capability, or require enterprise control.**
+
+| | What's covered |
+|---|---|
+| **✅ Free for everyone** | Commercial + non-commercial use of ArcFlow Core within the Free Use Limits. Develop, test, ship, run in production. Embed ArcFlow inside your app + redistribute the binary unmodified. Build with AI coding assistants (Codex, Claude Code, Cursor, Copilot). Your data, graphs, queries, and outputs are yours — OZ claims zero ownership. Zero telemetry. |
+| **🛒 Paid plans for** | Managed ArcFlow Cloud · distributed production clusters above the per-node thresholds · premium algorithm packs · enterprise SSO + audit logs + compliance reports · private support + SLA · custom deployment / re-licensing |
+| **🚫 Not allowed** | Offering ArcFlow Core itself as a competing standalone product / managed service (i.e., reselling the runtime as your hosted offering). Embedding ArcFlow inside a broader product where it is one component of substantial OTHER value is explicitly fine — that's the SQLite / Postgres embedded pattern. |
+
+Reference class: the same model as **NVIDIA CUDA · Unreal Engine · Docker Desktop · GitHub Copilot · Vercel · Firebase · Cloudflare Workers · Hugging Face**. Proprietary core, open developer surface, free baseline, paid for scale. The full legal text is in [LICENSE-CORE.md](./LICENSE-CORE.md); the plain-English FAQ is in [LICENSE-FAQ.md](./LICENSE-FAQ.md). AI agents see [ARCFLOW_FOR_AI_AGENTS.md](./ARCFLOW_FOR_AI_AGENTS.md). This repo's contents (cookbook, SDK source, install scripts, docs) are [MIT](./LICENSE).
+
+---
+
 ## 30-second example
 
 ```python
