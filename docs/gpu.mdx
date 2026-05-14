@@ -103,6 +103,23 @@ PageRank on 10K nodes — CPU: 0.6ms / GPU: 0.25ms (2.4x)
 
 If Metal is unavailable or the graph is below the dispatch threshold, routing falls back to CPU transparently.
 
+### Per-family kernel selection
+
+ArcFlow selects the optimal Metal Shading Language primitive for your Apple GPU family automatically. The integrated loop branches inside the same in-process call — no separate code path, no configuration, no cross-architecture abstraction tax:
+
+| Apple GPU family | Primitive routed |
+|---|---|
+| Apple7 (A14 / M1) and newer | Pipeline-state caching for sub-frame cold start; transient buffer-heap allocations |
+| Apple8 (A15 / M2 / M3) and newer | `simd_sum` / `simd_min` / `simd_max` cross-lane reductions for graph aggregates |
+| Apple9 (A17 / M3) and newer | Native `atomic_float` for scatter-accumulate kernels |
+| M3 family and newer | `simdgroup_matrix` tile operations for dense linear-algebra inner loops |
+
+`arcflow status --json` reports the detected GPU family and the selected primitive set. Same binary runs across every Apple device generation; the dispatch decision is per-host.
+
+### CPU-side integration
+
+Vector and dense-numeric paths route through Apple's Accelerate framework (AMX / SME on Apple Silicon, NEON elsewhere) for batched dot products and reductions. Apple Neural Engine dispatch is available for inference paths where the model shape qualifies. CPU work runs on `QOS_CLASS_USER_INITIATED` for foreground-quality scheduling alongside the GPU loop.
+
 ---
 
 ## CUDA GPU (Linux / Windows)

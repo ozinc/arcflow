@@ -425,6 +425,12 @@ GPU dispatch is automatic. Algorithms route to CUDA/Metal above a node-count thr
 Multi-GPU: load-aware device selection, auto-CSR promotion, and H2D cost gate are all automatic.
 Leiden requires CUDA compute capability 9.0+ (H100 and later).
 
+On **Apple Silicon**, ArcFlow selects the optimal Metal primitive for the detected GPU
+family: `simd_sum` cross-lane reductions on Apple8+, native `atomic_float` on Apple9+,
+`simdgroup_matrix` tiles on M3+. CPU-side dense numerics route through Apple's
+Accelerate framework (AMX/SME). Same binary across every Apple device generation;
+dispatch is per-host. See [`docs/gpu.mdx`](/docs/gpu) §"Per-family kernel selection".
+
 ### Database procedures
 ```cypher
 CALL db.stats()          -- node/rel/index counts + DenseStore/CSR stats
