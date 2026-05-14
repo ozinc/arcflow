@@ -263,20 +263,17 @@ ORDER BY s.started_at
 
 ## Named sessions — persistent agent identity
 
-Named sessions let agents resume across restarts without losing context. Each session is a first-class node in the world model.
+Named sessions let agents resume across restarts without losing context. Each session is a first-class node in the world model. Manage sessions via the `arcflow session` CLI subcommand or the `auth.session.*` FFI symbols from a language binding.
 
-```typescript
-// Open or resume a named session
-const sess = db.query(
-  "CALL arcflow.session.open('scout-agent-1') YIELD session_id, name, query_count"
-)
-const sessionId = sess.rows[0].get('session_id')
+```bash
+# Open or resume a named session (CLI)
+arcflow session open scout-agent-1
 
-// List active sessions across the swarm
-db.query("CALL arcflow.session.list() YIELD session_id, name, query_count, created_at")
+# List active sessions across the swarm
+arcflow session list
 
-// Close when done
-db.mutate("CALL arcflow.session.close($id)", { id: sessionId })
+# Close when done
+arcflow session close scout-agent-1
 ```
 
 A scout that crashes and restarts opens the same named session — its task queue, its observations, and its position in any ongoing workflow are all preserved in the world model it left behind.
@@ -301,7 +298,7 @@ A scout that crashes and restarts opens the same named session — its task queu
 - You need task assignment with zero external infrastructure: tasks as `:Task` nodes, workers claiming via `MATCH ... SET status = 'claimed'`, and coordinators monitoring via `db.subscribe()`.
 - Post-hoc audit is a requirement — you need to answer "which agent observed what, and with what confidence, at the moment a decision was made?" using the same query language as live queries (`AS OF seq N`).
 - An agent swarm has heterogeneous sensing quality: some agents observe with lidar at 0.95 confidence, others infer from secondary signals at 0.60. You need the world model to reflect that differential without application-layer bookkeeping.
-- Agent sessions must survive process restarts: named sessions (`arcflow.session.open`) let each agent resume its identity, task queue, and observation history after a crash.
+- Agent sessions must survive process restarts: named sessions (`arcflow session open <name>`) let each agent resume its identity, task queue, and observation history after a crash.
 
 ## When not to use
 
@@ -316,7 +313,7 @@ A scout that crashes and restarts opens the same named session — its task queu
 - **Task double-claim race between live query and mutate**: a worker's `db.subscribe()` fires for a pending task, but by the time the worker calls `db.mutate` to claim it, another worker already claimed it. The `MATCH (t:Task {id: $id, status: 'pending'})` in the claim mutation will match zero rows and the mutation silently no-ops. Workers must check that the `SET` actually succeeded by querying the updated status afterward.
 - **Observation overwrite without versioning**: two agents write to the same `Observation {key: 'target_pos'}` via `MERGE ... SET`. The last writer wins; earlier observations are silently overwritten. If the swarm needs the full observation history, use `CREATE` per observation with a unique key (e.g., `key: 'target_pos-' + timestamp()`), not `MERGE`.
 - **`AS OF seq` audit gap**: if a coordinator reads `AS OF seq 5000` to reconstruct swarm state at a decision point but the relevant mutation actually landed at seq 5002, the reconstruction is wrong. Sequence numbers must be recorded at decision time — there is no "nearest-seq-before-timestamp" convenience function.
-- **Session leak on agent crash**: if `arcflow.session.close($id)` is never called because the agent process crashes, the session node remains in the graph with `status: 'open'`. A liveness monitor that counts active sessions (`CALL arcflow.session.list()`) will overcount. Coordinators should call a session-cleanup routine on startup.
+- **Session leak on agent crash**: if `arcflow session close <name>` is never called because the agent process crashes, the session node remains in the graph with `status: 'open'`. A liveness monitor that counts active sessions (`arcflow session list`) will overcount. Coordinators should call a session-cleanup routine on startup.
 - **Live view stale after schema change**: a `CREATE LIVE VIEW` is defined against a pattern that includes a specific label (e.g., `:Task`). If a later migration renames the label to `:WorkItem`, the view continues to exist but returns zero rows — no error, no notification. View definitions are not schema-aware.
 
 ## See Also

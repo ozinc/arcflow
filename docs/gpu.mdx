@@ -148,20 +148,23 @@ CALL db.gpuStatus() YIELD device_id, inflight, sm_count, vram_mib, status
 
 Returns `{device_id: "N/A", status: "no CUDA devices"}` when no CUDA hardware is present.
 
-### `CALL dbms.gpuThresholds()`
+### `CALL db.capabilities()`
 
-Returns the Adaptive Dispatch registry — minimum requirements for each algorithm before GPU routing is considered.
+Returns the engine capability surface, including GPU presence, GPU
+family flags, and the spgemm/dispatch wiring status. Use this to
+check whether GPU acceleration is available before submitting large
+workloads.
 
 ```cypher
-CALL dbms.gpuThresholds()
-  YIELD algorithm, min_input_size, bytes_per_element, validated, cuda_min_cc
+CALL db.capabilities()
+  YIELD gpu_status, gpu_spgemm, gpu_family
 ```
 
 | Column | Description |
 |---|---|
-| `algorithm` | Algorithm name (e.g. `"pageRank"`, `"leiden"`) |
-| `min_input_size` | Minimum node count before GPU dispatch is considered |
-| `bytes_per_element` | Per-node memory estimate for transfer cost calculation |
+| `gpu_status` | `"available"`, `"saturated"`, or `"no CUDA devices"` |
+| `gpu_spgemm` | Whether GPU sparse-matrix dispatch is wired for this build |
+| `gpu_family` | Apple GPU family identifier when running on Metal |
 | `validated` | Whether the kernel has been validated on this hardware |
 | `cuda_min_cc` | Minimum CUDA compute capability required (e.g. `"9.0"`) or `"none"` |
 

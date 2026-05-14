@@ -718,7 +718,7 @@ backend automatically. No configuration required.
 To measure throughput on your hardware, run
 `cargo bench --bench algo` from the `ozinc/arcflow` repo.
 
-When multiple CUDA devices are present, Adaptive Dispatch selects the least-loaded device and gates dispatch on a per-algorithm cost model. Use `CALL db.gpuStatus()` to inspect per-device load and `CALL dbms.gpuThresholds()` to see the per-algorithm dispatch registry.
+When multiple CUDA devices are present, Adaptive Dispatch selects the least-loaded device and gates dispatch on a per-algorithm cost model. Use `CALL db.gpuStatus()` to inspect per-device load and `CALL db.capabilities()` for the engine's wired-capability surface.
 
 The parallel execution itself runs through the **ArcFlow Graph Kernel** — a single-pass parallel structure that maps directly to GPU thread blocks rather than walking the graph one edge at a time.
 

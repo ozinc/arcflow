@@ -487,9 +487,9 @@ CALL db.gpuStatus()
   YIELD device_id, inflight, sm_count, vram_mib, status
 -- status: "available" (inflight < 8) | "saturated"
 
--- GPU kernel dispatch registry — H2D cost gate and minimum requirements
-CALL dbms.gpuThresholds()
-  YIELD algorithm, min_input_size, bytes_per_element, validated, cuda_min_cc
+-- Engine capability surface — GPU presence, family flags, spgemm wiring
+CALL db.capabilities()
+  YIELD gpu_status, gpu_spgemm, gpu_family
 
 -- Full GPU stack info
 CALL db.gpuStack()
@@ -546,18 +546,15 @@ CALL db.replicationStatus()
 ```
 
 ### Sessions (named resumable)
-```cypher
--- Open a named session (survives reconnects within the process)
-CALL arcflow.session.open('my-session')
-  YIELD name, session_id, status
 
--- List all open sessions
-CALL arcflow.session.list()
-  YIELD name, session_id, query_count, created_at
+Named sessions survive across process restarts. Manage them via the
+`arcflow session` CLI subcommand or the `auth.session.*` FFI symbols
+from a language binding.
 
--- Close a session
-CALL arcflow.session.close('my-session')
-  YIELD name, status   -- status: "closed" | "not_found"
+```bash
+arcflow session open my-session       # open or resume
+arcflow session list                  # list all open sessions
+arcflow session close my-session      # close
 ```
 
 ### Workflow engine (graph-native)
