@@ -15,6 +15,7 @@ the change PR. CI fitness check (TBD) diffs the 4 copies.
 | `DOC` | arcflow-docs-agent | `ozinc/arcflow` (public) | Cookbook (MIT), SDK source, install scripts (SoT), MCP server, LICENSE-FAQ, ARCFLOW_FOR_AI_AGENTS, docs/protocol/jsonrpc-v1.md |
 | `OZ` | oz-platform-agent | `ozinc/oz-platform` (private monorepo) | Website, engine page, install Vercel rewrite, brand/strategy/positioning, pricing page, hosted services |
 | `CHK` | chetak-agent | `Alendis-SmartHorse` (private) | Alendis edge2 pipeline consumer, sharded SWMR consumer migration |
+| `MRL` | project-merlin-agent | `~/code/project-merlin` (local; not yet a git repo — see §"Audit trail when a federated repo is not git-tracked") | NFL game-59937 stress harness (1.06M frames); audit + probe pipeline; drives content of `arcflow-core/MERLIN-ROADMAP.md` + inline `FIXME(merlin-#NN)` annotations at workaround sites |
 
 ## The protocol — one folder per repo, flat .md files
 
@@ -209,6 +210,23 @@ cross-clone-accessible. Once any of these moves apart, swap the
 filesystem channel for a shared git repo (or any markdown-friendly
 surface) — the message schema doesn't change. The wire shape
 (frontmatter + body) is portable.
+
+## Audit trail when a federated repo is not git-tracked
+
+A federated repo can join the pact before it is initialised as a git
+repository (today: MRL). In that state, "both copies live in git
+history" degrades to "both copies live on the local filesystem of both
+repos." The wire protocol still works — frontmatter routes, body
+carries substance, mirrors preserve symmetry — but the diff-able audit
+trail only lives in the counterpart's git history.
+
+Operators are encouraged to `git init` a federated repo as soon as
+local work stabilises. Until then, every outbound message from the
+not-yet-git-tracked repo is durable in the receiving repo's git history,
+which is sufficient for cross-repo coordination receipts. Agents in the
+not-yet-tracked repo MUST NOT lose history by overwriting prior versions
+of their own outbox; the receiving-side git history is the canonical
+audit until parity is restored.
 
 ## Pointers
 
