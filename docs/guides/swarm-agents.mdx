@@ -295,6 +295,30 @@ A scout that crashes and restarts opens the same named session — its task queu
 | Pipeline orchestration | External orchestrator | Built-in workflow engine, stored as graph nodes |
 | Agent identity | External registry | Named sessions — persistent across restarts |
 
+## When to use
+
+- Multiple AI agents (LLM-driven workers, robot controllers, pipeline stages) must share state without a message broker — ArcFlow's single in-process world model is the coordination substrate instead of a pub/sub bus.
+- You need task assignment with zero external infrastructure: tasks as `:Task` nodes, workers claiming via `MATCH ... SET status = 'claimed'`, and coordinators monitoring via `db.subscribe()`.
+- Post-hoc audit is a requirement — you need to answer "which agent observed what, and with what confidence, at the moment a decision was made?" using the same query language as live queries (`AS OF seq N`).
+- An agent swarm has heterogeneous sensing quality: some agents observe with lidar at 0.95 confidence, others infer from secondary signals at 0.60. You need the world model to reflect that differential without application-layer bookkeeping.
+- Agent sessions must survive process restarts: named sessions (`arcflow.session.open`) let each agent resume its identity, task queue, and observation history after a crash.
+
+## When not to use
+
+- ArcFlow is not a distributed message bus. `db.subscribe()` fires in-process; if agents run in separate OS processes or on separate machines, they each need their own `open()` connection to the same on-disk database, or must use the HTTP/MCP server. Cross-process live notifications require the server layer. <!-- DRAFT: confirm whether server-mode live subscriptions propagate across all connected clients -->
+- Do not use this pattern for swarms of hundreds of simultaneously writing agents without first measuring write contention. ArcFlow uses a single-writer model; concurrent `db.mutate()` calls are serialised. Read throughput scales with reader count, but write throughput does not.
+- Named sessions are not access-control boundaries. Any agent with a reference to the `db` object can read and write any other agent's nodes. Do not use session isolation as a security mechanism.
+- The task-assignment pattern (`MATCH (t:Task {status: 'pending'}) ... SET status = 'claimed'`) is safe against double-claim only within a single ArcFlow instance. If multiple ArcFlow instances open the same on-disk database file concurrently, the single-writer serialisation guarantee no longer applies. <!-- DRAFT: confirm file-level locking behaviour when two processes open the same path -->
+- Durable workflows (`arcflow.workflow.create`) are not a replacement for a general-purpose orchestration platform (Temporal, Airflow). They are designed for short, crash-recoverable pipelines stored as graph nodes. Complex branching logic, external service calls, and SLA-managed retries belong in a dedicated orchestrator.
+
+## Failure modes
+
+- **Task double-claim race between live query and mutate**: a worker's `db.subscribe()` fires for a pending task, but by the time the worker calls `db.mutate` to claim it, another worker already claimed it. The `MATCH (t:Task {id: $id, status: 'pending'})` in the claim mutation will match zero rows and the mutation silently no-ops. Workers must check that the `SET` actually succeeded by querying the updated status afterward.
+- **Observation overwrite without versioning**: two agents write to the same `Observation {key: 'target_pos'}` via `MERGE ... SET`. The last writer wins; earlier observations are silently overwritten. If the swarm needs the full observation history, use `CREATE` per observation with a unique key (e.g., `key: 'target_pos-' + timestamp()`), not `MERGE`.
+- **`AS OF seq` audit gap**: if a coordinator reads `AS OF seq 5000` to reconstruct swarm state at a decision point but the relevant mutation actually landed at seq 5002, the reconstruction is wrong. Sequence numbers must be recorded at decision time — there is no "nearest-seq-before-timestamp" convenience function.
+- **Session leak on agent crash**: if `arcflow.session.close($id)` is never called because the agent process crashes, the session node remains in the graph with `status: 'open'`. A liveness monitor that counts active sessions (`CALL arcflow.session.list()`) will overcount. Coordinators should call a session-cleanup routine on startup.
+- **Live view stale after schema change**: a `CREATE LIVE VIEW` is defined against a pattern that includes a specific label (e.g., `:Task`). If a later migration renames the label to `:WorkItem`, the view continues to exist but returns zero rows — no error, no notification. View definitions are not schema-aware.
+
 ## See Also
 
 - [Autonomous Systems](/docs/use-cases/autonomous-systems) — multi-robot world model coordination

@@ -135,6 +135,30 @@ ORDER BY e._confidence DESC
 
 ---
 
+## When to use
+
+- Any node or relationship that enters the world model through a sensor, API, or external data feed should be tagged `_observation_class: 'observed'` — this is the anchor class that downstream queries and skills treat as ground truth.
+- Use `_observation_class: 'inferred'` when your application derives a new fact from existing observed nodes (e.g., a ReID algorithm matches two detections to the same person). The inferred class signals that downstream consumers should verify before high-stakes action.
+- Use `_observation_class: 'predicted'` for any neural world model or statistical forecast output. This class explicitly communicates to query authors that the data is model-generated and should be treated as a planning input, not a confirmed fact.
+- Use `CALL db.nodesByObservation.observed()` / `.inferred()` / `.predicted()` when you need to quickly enumerate all nodes of a given epistemic class — useful for monitoring dashboards and data quality sweeps.
+- When setting `_agent_id` on a write, rely on the engine's automatic `:BELIEVES` and `:DETECTED` edge creation to build fleet-wide provenance graphs without additional manual mutations.
+
+## When not to use
+
+- Do not use observation class as a lifecycle status field (e.g., `predicted` → `observed` as a state machine for task completion). The three classes are epistemic, not workflow states. Use a separate `status` property for workflow state.
+- Do not create custom observation class values beyond `observed`, `inferred`, and `predicted`. The built-in procedures (`db.nodesByObservation.*`) and confidence propagation algorithms only recognise these three strings. Custom values are silently ignored by the engine. <!-- DRAFT: confirm whether the engine enforces the closed set or silently ignores unknown classes -->
+- Avoid setting `_observation_class: 'predicted'` on manually asserted facts (e.g., seed data you are certain about). The predicted class degrades trust in all downstream queries that filter on observation class — seed data should be `observed` at confidence 1.0.
+- If your domain has no epistemic uncertainty (e.g., a simple CRUD app with no sensor or model inputs), adding `_observation_class` and `_confidence` to every node is unnecessary ceremony. The Evidence Model is designed for systems where data quality is heterogeneous.
+- Do not rely on `CALL db.causalChain` for regulatory audit chains without first confirming the causal chain depth limit — very long derivation chains may be truncated. <!-- DRAFT: confirm causal chain depth limit and truncation behaviour -->
+
+## Failure modes
+
+- **Predicted nodes not cleaned up after confirmation**: a predicted contact (`_observation_class: 'predicted'`) is later confirmed by a direct sensor observation. If the application creates a new `observed` node rather than updating the existing predicted node, the graph accumulates duplicate entities — one predicted, one observed — pointing to the same physical object. Queries that don't filter on observation class see both.
+- **Missing `_observation_class` on ingest**: a developer creates entities with `CREATE (p:Person {id: $id, x: $x, y: $y})` without setting `_observation_class`. The property is `null`. `CALL db.nodesByObservation.observed()` does not return these nodes. Downstream queries that assume all entities have an observation class will silently miss them.
+- **Confidence propagation over inferred chains producing overconfident results**: an inference chain `A observed (0.9) → B inferred (0.85) → C inferred (0.88)` has a path confidence of ~0.67. If a downstream query filters at `> 0.6` and assumes the result is high quality, it may act on a fact that is actually marginally above the threshold.
+- **`_agent_id` set without corresponding Agent node**: the engine auto-creates `:BELIEVES` and `:DETECTED` edges from Agent to Entity when `_agent_id` is set. If no `:Agent` node with that id exists in the graph, the auto-created edge references a non-existent source. Fleet-wide queries (`MATCH (a:Agent)-[:BELIEVES]->...`) return fewer results than expected. <!-- DRAFT: confirm whether the engine creates the Agent node automatically or requires it to pre-exist -->
+- **`observed` class applied to model outputs for simplicity**: a developer uses `_observation_class: 'observed'` on neural WFM outputs because it produces cleaner query results (no need to add `AND _observation_class = 'observed'` everywhere). The epistemic distinction is lost. Safety-critical queries that rely on the class distinction to gate actions will not fire correctly.
+
 ## See Also
 
 - [Confidence & Provenance](/concepts/confidence-and-provenance) — `_confidence` scores and provenance edges in depth

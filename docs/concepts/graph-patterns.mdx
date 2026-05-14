@@ -193,6 +193,30 @@ RETURN b.name
 LIVE MATCH (n:Person) WHERE n.score > 0.95 RETURN n.name, n.score
 ```
 
+## When to use
+
+- Use `MATCH` patterns whenever you need to express a relationship between entities — they are always more readable and more performant than equivalent JOIN chains for connected data.
+- Use variable-length paths (`[:KNOWS*1..3]`) when the number of hops between entities is not fixed or not known in advance — the typical case in social graphs, dependency trees, and communication topology analysis.
+- Use `OPTIONAL MATCH` when a relationship may or may not exist and you still want to return the base node — the GQL equivalent of a LEFT JOIN, without requiring a junction table.
+- Apply ArcFlow's `_confidence` filter on relationship patterns (`WHERE r._confidence > 0.8`) when traversing a world model where edge quality is heterogeneous — this prunes low-signal paths before returning results.
+- Use `LIVE MATCH` (standing patterns) when your application must react to new matches the instant they appear in the graph — live monitoring, alert pipelines, and task-assignment systems all benefit from this pattern.
+
+## When not to use
+
+- Do not use unbounded variable-length paths (`[:KNOWS*]`) on large graphs without a `LIMIT` or a tight `WHERE` predicate. Every reachable node is a candidate match; on a dense graph this produces Cartesian explosion in result size and can exhaust memory. <!-- DRAFT: confirm whether the engine enforces a configurable hop-depth cap on unbounded paths -->
+- The multi-pattern syntax (`MATCH (a) MATCH (b)` without a shared variable) produces a Cartesian product. If both patterns match thousands of nodes independently, the result set will have millions of rows. Always share at least one variable between consecutive `MATCH` clauses unless a Cartesian product is intended.
+- `LIVE MATCH` subscriptions are not appropriate for patterns that match the majority of the graph. Standing queries are maintained incrementally on every mutation — a pattern that matches 90% of nodes will fire on nearly every write and degrade write throughput.
+- GQL patterns are not suited for fuzzy structural matching (e.g., "find nodes that are similar to this subgraph"). Patterns are exact — label, type, and direction are hard constraints. For structural similarity, combine graph patterns with vector search.
+- Do not use anonymous nodes (`(:Label)`) in mutation clauses (`CREATE`, `MERGE`). Anonymous nodes cannot be referenced later in the same query and produce nodes that are immediately orphaned from the variable binding scope.
+
+## Failure modes
+
+- **Direction mismatch produces empty results**: `MATCH (a)-[:WORKS_AT]->(c:Company)` and `MATCH (a)-[:WORKS_AT]-(c:Company)` return different results when the stored edge direction is opposite to what the pattern expects. Direction errors are silent — the engine returns zero rows, not an error. Always verify edge direction with `MATCH ()-[r:TYPE]->() RETURN count(r)` before building traversal queries.
+- **Implicit Cartesian product from unrelated MATCH clauses**: a query with `MATCH (p:Person) MATCH (c:Company)` where neither `p` nor `c` is constrained to each other returns every person paired with every company. On a graph with 10K persons and 1K companies this produces 10M rows. No warning is emitted.
+- **Property filter on missing property returns empty**: `MATCH (n:Person {city: 'Reykjavik'})` returns zero rows if no `:Person` node has a `city` property at all (versus having `city` set to a different value). There is no distinction between "property absent" and "property has a different value" in the match result.
+- **Variable reuse across MATCH clauses binds unexpectedly**: if the same variable name is used in two `MATCH` clauses (`MATCH (n:A) MATCH (n:B)`), GQL treats it as a single binding — `n` must satisfy both labels simultaneously. If the intent was two independent nodes, use different variable names.
+- **`LIVE MATCH` fires on its own mutations**: an agent that subscribes to a pattern and then writes mutations that change that pattern will receive its own mutations as events. If the handler naively re-writes on every event, it can create a feedback loop. Handlers must be idempotent and guard against self-triggered re-entry. <!-- DRAFT: confirm whether the engine provides a built-in way to suppress self-generated events in live subscriptions -->
+
 ## Further reading
 
 - [MATCH reference](/worldcypher/query-syntax/match) — full syntax and edge cases

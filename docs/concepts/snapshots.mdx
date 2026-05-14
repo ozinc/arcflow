@@ -137,6 +137,30 @@ This is what makes ArcFlow safe to use behind a customer-facing answer pipeline.
 output is provenanced. Every claim is reproducible. There is no "works on my machine"
 for world model state.
 
+## When to use
+
+- You need reproducible query results in a pipeline where the world model is being written concurrently — pin the snapshot URI after the first query and use `db.queryAt(uri, ...)` for all subsequent queries in that pipeline run.
+- An AI agent or human analyst reports a surprising answer from a world-model query; take the `__snapshot` URI from the result envelope and `arcflow rerun` it to confirm whether the answer was correct at that moment.
+- You are building a compliance or audit system that must demonstrate what the world model showed at a specific decision point — the snapshot URI is the citation.
+- You need to compare two versions of the world model deterministically (e.g., before and after a data migration) — compute fingerprints of both snapshots and diff the URIs.
+- Cross-service pipelines where service A queries ArcFlow and passes results to service B — include the snapshot URI in the payload so service B can re-query the exact same world state if it needs to validate A's results. <!-- DRAFT: confirm whether snapshot URIs are stable across WAL compaction and checkpoint -->
+
+## When not to use
+
+- Snapshot URIs are not persistent bookmarks for human-facing URLs. They are content-addressed references valid for the lifetime of the WAL segments that produced them. After WAL compaction or a database restore, a URI from an old WAL generation may not be resolvable. <!-- DRAFT: confirm WAL retention policy and snapshot URI validity window -->
+- Do not use `db.queryAt(uri, ...)` as a general-purpose "read-only mode". It is intended for point-in-time re-query of a specific past state, not for broad historical browsing. For that, use `AS OF seq N` temporal queries directly.
+- The `X-Arcflow-Snapshot-Id` HTTP header is informational — it tells you what snapshot the server observed, but it does not guarantee that the server's world model has not advanced since the request. Do not use the header as a freshness check.
+- Do not rely on snapshot URIs for deduplication of write operations. Two identical writes to different databases produce the same URI, but the same write to the same database at different times produces different URIs. The hash is over the write set, not the resulting graph state.
+- If your query does not care about historical reproducibility (e.g., a live dashboard showing current entity positions), snapshot pinning adds latency and complexity for no benefit. Use live queries or plain `db.query()`.
+
+## Failure modes
+
+- **URI extracted from the wrong result envelope**: a pipeline that runs five sequential queries but only records the snapshot URI from the first one will pin re-runs to that early state. If the intent was to capture the state after all five mutations, the URI is wrong and `arcflow rerun` will return stale data with no error.
+- **Snapshot URI silently ignored by older client**: if a TypeScript or Python wrapper predating snapshot URI support is used, `result.snapshotUri` is `undefined` and accessing it does not throw. Code that logs or forwards `undefined` as the URI may produce invalid pins downstream.
+- **`arcflow rerun` on a compacted snapshot**: if the WAL segment containing the snapshot has been compacted and the snapshot URI is no longer resolvable, `arcflow rerun` fails with an error. The error message should reference the URI; if it does not, the failure is hard to diagnose. <!-- DRAFT: confirm exact error code / message for unresolvable snapshot URIs -->
+- **Concurrent writes shifting the snapshot between check and re-query**: a caller reads `result.snapshotUri` and then issues a mutation before calling `db.queryAt(uri, ...)`. The mutation does not affect the pinned query — but if the caller expected to see the mutation in the re-query, it will not. This is a misunderstanding of snapshot semantics, not a bug, but it produces silent result discrepancies.
+- **MCP `snapshot_uri` input field ignored when not provided**: the MCP `read_query` tool accepts an optional `snapshot_uri`. If the caller omits it, the tool reads the latest snapshot — which is almost always correct, but means two calls to the same MCP tool within the same agent turn may observe different snapshots if a concurrent writer is active.
+
 ## See Also
 
 - [Persistence & WAL](/concepts/persistence) — how snapshots are produced and stored
