@@ -66,5 +66,5 @@ jobs:
 
       - name: Run cookbook CI
         run: |
-          export ARCFLOW_WHEEL="$(pwd)/arcflow-engine/python/dist/oz_arcflow-0.7.1-py3-none-any.whl"
+          export ARCFLOW_WHEEL="$(pwd)/arcflow-engine/python/dist/oz_arcflow-0.7.2-py3-none-any.whl"
           bash cookbooks/run-ci.sh

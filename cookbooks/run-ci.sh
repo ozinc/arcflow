@@ -11,7 +11,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
-WHEEL="${ARCFLOW_WHEEL:-/Users/gudjon/code/arcflow/python/dist/oz_arcflow-0.7.1-py3-none-any.whl}"
+WHEEL="${ARCFLOW_WHEEL:-/Users/gudjon/code/arcflow/python/dist/oz_arcflow-0.7.2-py3-none-any.whl}"
 
 if [ ! -f "${WHEEL}" ]; then
     echo "FATAL: arcflow wheel not found at ${WHEEL}" >&2

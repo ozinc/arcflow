@@ -101,7 +101,7 @@ Identity + uptime + active-config snapshot.
 ```jsonrpc
 → {"id":N, "method":"daemon.info"}
 ← {"id":N, "result": {
-    "version": "0.7.1",
+    "version": "0.7.2",
     "uptime_seconds": 12345,
     "wal_durability": true,
     "limits": {"max_line_bytes": 1048576, "max_connections": 256},

@@ -8,6 +8,43 @@ For an engine-internal commit-grade changelog (wave numbering, dossier links), s
 
 ---
 
+## [0.7.2] — 2026-05-14
+
+**Patch wheel.** Post-v0.7.1 batch. Capability surface unchanged; bug fixes and substrate additions only.
+
+### Mirrored from arcflow-core v0.7.2
+
+- **MRL-AF-021 resolved** — Tier-1 residual from MRL-AF-013. Column-projection leak of `d.position` (Frame Point3d) to traversed-to `(:Player).position` string role in cross-MATCH RETURN clauses. Two compound causes fixed in `typed.rs` partial-scoped Expand mode + `eval_typed.rs` CartesianProduct re-prefixing. Preemptive sister-bug fix in `optional_expand_typed_rows`. 4 MRL regression tests + 1560 runtime tests green. project-merlin's PLAY_KNN_QUERY can now collapse to the natural TRACKED-edge form.
+- **Wave K substrate** — aggregate-lowering decision substrate + EXPLAIN wire-up (PS-08).
+- **Wave S substrate** — LIVE-view lifecycle state machine (PS-22).
+- **Wave H exit criterion** — `live_view_commit_latency` probe lands.
+
+### Release-publication fixes (workflow-only; applied as side-commits at the v0.7.2 tag)
+
+- **Windows daemon matrix** — drop `arcflow-daemon` from Windows build steps (UDS-only crate doesn't compile on Windows). Windows ships `arcflow` + `arcflow-mcp` only. Same fix as v0.7.1's side-commit; arcflow-core main awaiting cherry-pick.
+- **Musl `libarcflow.so` packaging** — Rust drops `cdylib` for static-musl targets (no dynamic-library output). Package step now skips libarcflow for `*-musl` platforms; linux-`*-gnu`, darwin, windows still ship the cdylib.
+
+### Documentation alignment
+
+- All cookbook `pyproject.toml` / `meta.toml` pins bumped to `oz-arcflow==0.7.2`.
+- Illustrative install / version examples across `docs/` and `LICENSE-*.md` bumped to `0.7.2`.
+- `docs/reference/data/SYNC.json` engine_version → `0.7.2`.
+- Conformance dashboard pages re-sync to engine `0.7.2`.
+
+### Release content
+
+GitHub Release v0.7.2 ships **58 assets** (up from 30 in v0.7.1):
+
+- `arcflow` CLI for 6 unix + 2 windows (16 assets — tarball + raw)
+- `arcflow-daemon` for 6 unix (12 assets)
+- `arcflow-mcp` for 6 unix + 2 windows (16 assets)
+- `libarcflow.dylib` for 2 darwin + `libarcflow.so` for 2 linux-gnu + `arcflow.dll` for 2 windows (12 assets — tarball/zip + raw)
+- `SHA256SUMS` + `release-matrix.json`
+
+`install.sh` end-to-end resolves to v0.7.2 across all 6 unix + 2 windows platforms. `arcflow upgrade` correctly detects and applies the v0.7.1 → v0.7.2 upgrade path.
+
+---
+
 ## [0.7.1] — 2026-05-14
 
 **Alpha-state versioning.** Per operator directive, ArcFlow moves from

@@ -9,7 +9,7 @@ inputs, same outputs, the queries themselves are the comparison.
 
 **Audience:** python · data-engineer · sql-user
 **Runtime:** under 1 minute total
-**Pins:** `oz-arcflow==0.7.1`
+**Pins:** `oz-arcflow==0.7.2`
 
 ## The four hard problems this addresses
 

@@ -175,7 +175,7 @@ Three tiers, three rules:
 
 - **Static text** (`llms.txt`, `llms-full.txt`, `README.md`, `AGENTS.md`,
   `cookbooks/*/README.md`): production URLs canonical. No exceptions.
-  Cookbook `pyproject.toml`s pin `oz-arcflow==0.7.1` against public
+  Cookbook `pyproject.toml`s pin `oz-arcflow==0.7.2` against public
   PyPI, even though the wheel itself is not yet published; that pin is
   target end-state (see RAM-C2 / 2026-Q3 on the roadmap).
 

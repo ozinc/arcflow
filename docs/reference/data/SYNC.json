@@ -1,7 +1,7 @@
 {
   "_comment": "Engine version surfaced in generated reference pages (scripts/generate-reference.py). The SSoT is release-matrix.json engine.version (https://github.com/ozinc/arcflow/releases/latest/download/release-matrix.json). This literal mirrors the value AT THE TIME OF LAST SYNC; bump on each release until manifest-fetch is wired into generate-reference.py. See docs/reference/versioning for the full version chain.",
-  "engine_version": "0.7.1",
+  "engine_version": "0.7.2",
   "synced_at": "2026-05-14T09:50:00Z",
-  "source": "https://github.com/ozinc/arcflow/releases/tag/v0.7.1",
+  "source": "https://github.com/ozinc/arcflow/releases/tag/v0.7.2",
   "source_commit": "auto-resolved-from-git-tag"
 }

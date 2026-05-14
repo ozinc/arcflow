@@ -25,7 +25,7 @@ where the project is.
 ```
 arcflow-core/Cargo.toml
   [workspace.package]
-    version = "0.7.1"            ← The single source of truth
+    version = "0.7.2"            ← The single source of truth
         │
         │ Cargo workspace inheritance — every crate
         ▼
@@ -45,7 +45,7 @@ arcflow-core/Cargo.toml
         │ `git describe --tags --abbrev=0`
         ▼
   release-matrix.json
-    engine.version: "0.7.1"
+    engine.version: "0.7.2"
         │
         ├──► oz.com install matrix              (build-time fetch)
         ├──► install.sh (releases/latest)       (runtime resolve)
@@ -61,14 +61,14 @@ either inherits from the workspace `Cargo.toml` at build time or reads
 
 | Surface | Returns | Source |
 |---|---|---|
-| `arcflow --version` | `ArcFlow 0.7.1` | `env!("CARGO_PKG_VERSION")` |
-| `arcflow status --json` `version` | `"0.7.1"` | same |
-| `arcflow doctor` `Engine:` line | `ArcFlow 0.7.1` | same |
-| `SHOW SERVER_VERSION` (psql) | `0.7.1` | same |
-| `CALL db.version` (WorldCypher) | `"0.7.1"` | same |
-| `ArcFlow.version()` (Python) | `"0.7.1"` | FFI symbol — `CARGO_PKG_VERSION` |
-| `arcflow.__version__` (Python) | `"0.7.1"` | `importlib.metadata.version("oz-arcflow")` |
-| `release-matrix.json` `engine.version` | `"0.7.1"` | `git describe --tags --abbrev=0` |
+| `arcflow --version` | `ArcFlow 0.7.2` | `env!("CARGO_PKG_VERSION")` |
+| `arcflow status --json` `version` | `"0.7.2"` | same |
+| `arcflow doctor` `Engine:` line | `ArcFlow 0.7.2` | same |
+| `SHOW SERVER_VERSION` (psql) | `0.7.2` | same |
+| `CALL db.version` (WorldCypher) | `"0.7.2"` | same |
+| `ArcFlow.version()` (Python) | `"0.7.2"` | FFI symbol — `CARGO_PKG_VERSION` |
+| `arcflow.__version__` (Python) | `"0.7.2"` | `importlib.metadata.version("oz-arcflow")` |
+| `release-matrix.json` `engine.version` | `"0.7.2"` | `git describe --tags --abbrev=0` |
 
 All surfaces converge on the same string.
 
@@ -89,23 +89,23 @@ release cadence.
 ```python
 # Python — the version your application is running against
 import arcflow
-print(arcflow.__version__)        # → "0.7.1"
+print(arcflow.__version__)        # → "0.7.2"
 
 # Or via the FFI binding
 from arcflow import ArcFlow
-print(ArcFlow.version())          # → "0.7.1"
+print(ArcFlow.version())          # → "0.7.2"
 ```
 
 ```bash
 # Shell — the installed CLI
 arcflow --version
-# ArcFlow 0.7.1
+# ArcFlow 0.7.2
 ```
 
 ```ts
 // TypeScript — the SDK version
 import { version } from "arcflow";
-console.log(version);              // → "0.7.1"
+console.log(version);              // → "0.7.2"
 ```
 
 For machine-consumable use across all surfaces, fetch
@@ -114,7 +114,7 @@ For machine-consumable use across all surfaces, fetch
 ```bash
 curl -fsSL https://github.com/ozinc/arcflow/releases/latest/download/release-matrix.json \
   | jq -r '.engine.version'
-# 0.7.1
+# 0.7.2
 ```
 
 ## Pinning a version
@@ -123,13 +123,13 @@ curl -fsSL https://github.com/ozinc/arcflow/releases/latest/download/release-mat
 # Cookbook pyproject.toml
 [project]
 dependencies = [
-    "oz-arcflow==0.7.1",
+    "oz-arcflow==0.7.2",
 ]
 ```
 
 ```bash
 # Install script — pin to a specific tag
-ARCFLOW_VERSION=0.7.1 curl -fsSL https://oz.com/install/arcflow | sh
+ARCFLOW_VERSION=0.7.2 curl -fsSL https://oz.com/install/arcflow | sh
 
 # Or accept the latest (default — resolves via releases/latest redirect)
 curl -fsSL https://oz.com/install/arcflow | sh
