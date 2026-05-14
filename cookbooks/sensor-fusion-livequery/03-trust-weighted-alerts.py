@@ -51,7 +51,7 @@ def main() -> None:
         )
 
     # Confidence-weighted aggregate.
-    # WorldCypher 1.6.6 returns scalars as strings, so the per-row pairs come
+    # WorldCypher returns scalars as strings, so the per-row pairs come
     # back from one MATCH and we reduce in Python.
     print(f"\n[3] Confidence-weighted mean temperature per robot:")
     result = db.execute(

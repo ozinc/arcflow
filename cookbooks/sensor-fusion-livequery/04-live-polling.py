@@ -6,8 +6,8 @@ query is re-executed against the always-current graph. The query asks
 about the *recent past* (the last WINDOW frames), not the all-time mean —
 that is what a live-monitoring system actually wants.
 
-This is the recipe for live queries against the shipped 1.6.6 surface:
-the agent re-runs `execute()` after each event ingest. The query is the
+This is the recipe for live queries against the shipped surface: the
+agent re-runs `execute()` after each event ingest. The query is the
 contract; the polling cadence and window are the agent's choice.
 
 Run:

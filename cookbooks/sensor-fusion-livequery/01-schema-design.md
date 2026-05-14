@@ -43,7 +43,7 @@ r.confidence) / sum(r.confidence)`) — both are pure WorldCypher.
 
 Two reasons:
 
-1. **Edge identity in 1.6.6.** The shipped engine treats `(Sensor)-[:READ]->(Robot)`
+1. **Edge identity.** The shipped engine treats `(Sensor)-[:READ]->(Robot)`
    as one edge per `(Sensor, Robot)` pair regardless of how many CREATEs you
    issue. Anchoring the edge to a per-timestamp `Frame` node makes every
    reading a distinct edge: 6 sensors × 100 frames = 600 unique pairs.

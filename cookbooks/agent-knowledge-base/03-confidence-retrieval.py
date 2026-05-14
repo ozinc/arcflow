@@ -13,8 +13,8 @@ user, with citation back to the source document.
 
 The chain queries (q2, q3, q4) anchor the MATCH at the disease end and
 walk back toward drugs. Anchoring at the property-known node is what
-WorldCypher 1.6.6 plans cleanest; multi-segment WHERE on deeply-bound
-nodes is filtered in Python instead.
+WorldCypher plans cleanest; multi-segment WHERE on deeply-bound nodes
+is filtered in Python instead.
 
 Run:
     uv run python 03-confidence-retrieval.py

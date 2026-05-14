@@ -56,8 +56,7 @@ my-pipeline/
 
 The Python template demonstrates the **fast paths** (`bulk_create_nodes`,
 `bulk_create_relationships`, `result.to_arrow()` / `to_polars()` /
-`to_pandas()`) — these bypass the Cypher parser and run at ~1M ops/sec. They
-require `oz-arcflow >= 1.6.7`; see the [version note in the project README](../README.md#python-fast-paths-version-note).
+`to_pandas()`) — these bypass the Cypher parser and run at ~1M ops/sec.
 
 Project-name hyphens become underscores in the Python package name (e.g.
 `my-pipeline` → `import my_pipeline`).
