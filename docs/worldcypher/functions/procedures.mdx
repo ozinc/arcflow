@@ -142,8 +142,8 @@ Returns the path as "id1 -> id2 -> id3", total cost, and hop count.
 | `CALL algo.nodeSimilarity()` | `node1`, `node2`, `similarity` | Pairs of nodes with Jaccard similarity scores (top 20) |
 | `CALL algo.similarNodes()` | `nodeId`, `score` | Nodes similar to the first vector-bearing node (cosine similarity) |
 | `CALL algo.pairSimilarity(sourceIds, targetIds)` | `node1`, `node2`, `score` | Jaccard similarity for explicit node pairs (variadic — accept paired or interleaved args) |
-| `CALL algo.nearestNodes(point, label, k)` | `node`, `distance` | K nearest nodes by exact spatial distance (ArcFlow Spatial Index, ≥ 2000/s at 11K entities) |
-| `CALL algo.objectsInFrustum($frustum)` | `node`, `distance` | Entities within a camera frustum (6-plane containment, < 2ms for 50 entities) |
+| `CALL algo.nearestNodes(point, label, k)` | `node`, `distance` | K nearest nodes by exact spatial distance (ArcFlow Spatial Index) |
+| `CALL algo.objectsInFrustum($frustum)` | `node`, `distance` | Entities within a camera frustum (6-plane containment) |
 | `CALL algo.nearestVisible($pos, label, k)` | `node`, `distance` | Nearest entities with direct line-of-sight from a point |
 | `CALL spatial.raycast(origin, direction, maxDist)` | `hit`, `distance` | First node along a ray within max distance |
 

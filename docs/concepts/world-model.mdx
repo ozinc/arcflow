@@ -30,15 +30,15 @@ WHERE d.confidence >= 0.90 AND z.hazard > 0.15 AND r.battery < 30
 RETURN r.name, z.name, avg(s.reliability * d.confidence) AS trust
 ```
 
-This runs in ~0.1ms. Deterministically. Against exact sensor history.
+Deterministic. Against exact sensor history.
 
 | Question | ArcFlow |
 |---|---|
-| What did sensor-3 detect at seq 14,207 with confidence > 0.9? | `AS OF seq 14207` — instant |
+| What did sensor-3 detect at seq 14,207 with confidence > 0.9? | `AS OF seq 14207` |
 | Which entity triggered the hazard alert, and which sensor saw it? | Multi-hop graph traversal — exact |
-| What is the confidence-weighted state of Zone-B right now? | Live view — sub-millisecond |
+| What is the confidence-weighted state of Zone-B right now? | Live view |
 | How has this entity's trajectory changed over the last 5 minutes? | `AS OF seq N` comparison — deterministic |
-| Which agents are within 20m of a high-confidence obstacle? | `algo.nearestNodes()` — ~0.1ms |
+| Which agents are within 20m of a high-confidence obstacle? | `algo.nearestNodes()` |
 | Is this observation class `observed` or `predicted`? | `_observation_class` on every node/edge |
 | What was the confidence score, and from which sensor? | `_confidence` + provenance edge — always |
 

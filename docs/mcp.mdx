@@ -149,13 +149,13 @@ string. See [Snapshot-Pinned Reads](/concepts/snapshots) for the full surface.
 
 ## Latency
 
-MCP operates over stdio JSON-RPC. Each tool call has ~100ms of overhead from process boundary, serialization, and JSON-RPC round-trip. This is acceptable for cloud chat interfaces where the user is already waiting for a response. It is not acceptable for application code or shell agent loops.
+MCP operates over stdio JSON-RPC. Each tool call carries process-boundary, serialization, and JSON-RPC round-trip overhead. This is acceptable for cloud chat interfaces where the user is already waiting for a response. It is not acceptable for application code or shell agent loops.
 
-| Surface | Latency | Use when |
-|---|---|---|
-| napi-rs in-process | ~1 µs | Application code in Node.js |
-| `arcflow` CLI binary | < 10 ms | Shell-capable agents (Claude Code, Codex, Gemini CLI) |
-| MCP server | ~100 ms | Cloud chat UIs with no local shell |
+| Surface | Use when |
+|---|---|
+| napi-rs in-process | Application code in Node.js |
+| `arcflow` CLI binary | Shell-capable agents (Claude Code, Codex, Gemini CLI) |
+| MCP server | Cloud chat UIs with no local shell |
 
 ---
 

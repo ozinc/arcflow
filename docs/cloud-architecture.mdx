@@ -74,7 +74,7 @@ Every node in the mesh runs the same ArcFlow engine. The optimized WASM engine h
 | **Temporal queries** | No | `AS OF` built-in |
 | **Confidence/provenance** | No | Built-in (Trusted GraphRAG) |
 | **GPU acceleration** | No | CUDA + Metal, 29 kernels |
-| **Cold start** | ~200ms connection | 0ms (in-process) |
+| **Cold start** | Connection setup per session | None — function call into the in-process engine |
 | **Binary size** | ~500MB+ JVM | optimized WASM / under 20MB Docker |
 | **Cost** | \$65+/month | \$0 (self-hosted) |
 

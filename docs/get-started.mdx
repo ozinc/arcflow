@@ -20,11 +20,11 @@ WHERE d.confidence >= 0.90 AND z.hazard > 0.15 AND r.battery < 30
 RETURN r.name, z.name, avg(s.reliability * d.confidence) AS trust
 ```
 
-This runs in ~0.1ms. Deterministic. Against exact history. ArcFlow tells you what *did* happen — which sensor, which detection, what confidence, which zone, at any moment in the past — with one query.
+Deterministic. Against exact history. ArcFlow tells you what *did* happen — which sensor, which detection, what confidence, which zone, at any moment in the past — with one query.
 
 The AI infrastructure stack has three tiers. Foundation models handle language and perception. Neural world models simulate how the world evolves under actions. ArcFlow is the persistence tier — the layer where actual world state lives, versioned, spatially indexed, confidence-scored, queryable.
 
-It runs in-process — **no server, no network hop, no inference cluster**. Neural world models require GPU infrastructure and return in 100–1000ms. ArcFlow returns in microseconds, co-located with the agent, robot, or vehicle that needs it. For any real-time control loop, this is an architectural requirement, not a convenience.
+It runs in-process — **no server, no network hop, no inference cluster**. Co-located with the agent, robot, or vehicle that needs it. For any real-time control loop, in-process execution is an architectural requirement, not a convenience.
 
 Every mutation is versioned via **ArcFlow Clock Domains** — each source advances at its own rate, the world model merges them. Every fact is graded by the **ArcFlow Evidence Model** — observation class (`observed`, `inferred`, `predicted`), confidence score, and provenance chain are storage primitives, not optional annotations. The full history is queryable with ISO GQL.
 

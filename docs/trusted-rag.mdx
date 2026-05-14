@@ -270,7 +270,7 @@ Your vector store retriever becomes `algo.vectorSearch()`. Your graph retriever 
 These are purpose-built for vector similarity. ArcFlow is a knowledge graph with vector search built in — you get similarity search AND graph traversal, temporal queries, confidence scoring, and relationship-aware retrieval in one in-process database. Trade-off: dedicated vector databases offer higher-throughput vector indexing at scale (millions of vectors); ArcFlow's strength is combining vector similarity with graph structure and provenance in a single query.
 
 ### Traditional graph databases + GraphRAG?
-Traditional graph database GraphRAG typically requires a separate analytics product and has no confidence scoring, no observation classes, and no temporal awareness. ArcFlow's Trusted RAG is built in, with provenance on every edge. Trade-off: traditional graph databases have a mature distributed clustering story; ArcFlow is single-process with in-process performance (2.7M nodes/sec creation, 154M PageRank nodes/sec).
+Traditional graph database GraphRAG typically requires a separate analytics product and has no confidence scoring, no observation classes, and no temporal awareness. ArcFlow's Trusted RAG is built in, with provenance on every edge. Trade-off: traditional graph databases have a mature distributed clustering story; ArcFlow is single-process with in-process performance.
 
 ---
 

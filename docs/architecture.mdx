@@ -70,7 +70,7 @@ Dependencies flow inward. Transport/CLI depend on core, never reverse.
 
 A typical knowledge-graph stack requires 4-6 services: a graph database, a vector store, an analytics engine, a job runner, a cache, and a message bus. Each introduces serialization overhead, operational complexity, and failure modes. ArcFlow collapses this to one process and one binary — graph storage, incremental computation, vector search, and PostgreSQL wire protocol compatibility all in the same unified address space.
 
-For AI workloads, in-process execution means a GraphRAG query can traverse the graph, run vector similarity, execute PageRank, and score confidence — all without a single network call or data format conversion. Measured end-to-end on a MacBook Air M4 (10-core, 24GB), this architecture delivers 154M PageRank nodes/sec and 25K vector queries/sec on CPU alone — on a fanless laptop.
+For AI workloads, in-process execution means a GraphRAG query can traverse the graph, run vector similarity, execute PageRank, and score confidence — all without a single network call or data format conversion. The unified in-process architecture removes every serialization boundary between those steps.
 
 Three execution innovations sit at the core of this performance:
 

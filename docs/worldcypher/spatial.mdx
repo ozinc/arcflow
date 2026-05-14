@@ -35,7 +35,7 @@ CALL algo.nearestNodes(point({x: 10.0, y: 10.0}), 'Player', 5)
   RETURN node.name, distance
 ```
 
-Throughput: ≥ 2,000 queries/sec at 11K live entities. Inserts, updates, and deletes are O(log N) — no index rebuild required.
+Inserts, updates, and deletes are O(log N) — no index rebuild required.
 
 ## Radius Queries
 
@@ -59,7 +59,7 @@ RETURN e.name, e.position
 ## Frustum / Visibility Queries
 
 ```cypher
--- Entities within a camera frustum (6-plane containment, < 2ms for 50 entities / 10 frusta)
+-- Entities within a camera frustum (6-plane containment, index-narrowed)
 CALL algo.objectsInFrustum($frustum)
   YIELD node, distance
   RETURN node.name, distance
@@ -163,7 +163,7 @@ CALL arcflow.spatial.trigger_stats()
 - **Insert:** node with spatial property → ArcFlow Spatial Index entry added in O(log N)
 - **Update:** position changes → old entry removed, new entry inserted
 - **Delete:** node deleted → entry retracted
-- **Bulk ingest:** optimized bulk packing via `ingestUsdPrims()` — 500K prims in under 1 second, 5–10× faster than incremental insert
+- **Bulk ingest:** optimized bulk packing via `ingestUsdPrims()` — substantially faster than incremental insert for large scenes
 
 The index is dynamic. No rebuild required on updates.
 

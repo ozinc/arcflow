@@ -138,7 +138,7 @@ The detection edge is not a log entry. It is a first-class fact in the graph —
 Once entities exist in space, proximity becomes a native query — not a computed join, not a spatial extension, not an external GIS call.
 
 ```cypher
--- K-nearest: 5 entities closest to a point (ArcFlow Spatial Index backed, ≥ 2000/s at 11K entities)
+-- K-nearest: 5 entities closest to a point (ArcFlow Spatial Index backed)
 CALL algo.nearestNodes(point({x: 40.0, y: 60.0}), 'Entity', 5)
   YIELD node, distance
 RETURN node.name, node.type, distance
@@ -435,7 +435,7 @@ This is the infrastructure layer the AI stack has been missing. Foundation model
 
 ## When to use
 
-- Your application needs to answer questions about entities in space — where they are, how close they are to each other, what is visible from a given point — faster than a relational database with spatial extensions can provide (ArcFlow Spatial Index targets ≥ 2000 proximity queries per second at 11K entities).
+- Your application needs to answer questions about entities in space — where they are, how close they are to each other, what is visible from a given point — faster than a relational database with spatial extensions can provide.
 - You need to replay the exact state of the world at a past moment for incident reconstruction, compliance audit, or training data generation — not from logs but from the live graph with `AS OF seq N`.
 - Multiple agents or services must read and write shared world state concurrently without a central broker; ArcFlow's MVCC engine handles concurrent reads and writes in-process.
 - Sensor data arrives with epistemic uncertainty (predicted contacts, inferred positions, low-reliability readings) and downstream logic must act differently depending on observation class and confidence score.

@@ -5,7 +5,7 @@
 ArcFlow is an in-process database for systems that need to reason about the physical world in real time. It runs inside your application — no server, no round-trip — and unifies graph relationships, geospatial indexes, time-versioned history, vector search, full-text search, and live standing queries behind a single ISO GQL surface.
 
 ```bash
-# CLI — shell-native, ≤10ms cold start (the only shipped install today)
+# CLI — shell-native (the only shipped install today)
 curl -fsSL https://staging.oz.com/install/arcflow | sh
 
 # Python — embedded in-process, 5MB binary bundled in the wheel
@@ -85,7 +85,7 @@ db.subscribe(`
 ArcFlow is designed to be addressable by agents — Claude Code, Codex, Cursor, Gemini CLI, Aider, MCP-aware chat UIs. Three agent-native surfaces:
 
 ```bash
-# 1. CLI — shell-native, composable like grep, exits in <10ms
+# 1. CLI — shell-native, composable like grep, no protocol overhead
 arcflow query "MATCH (e:Entity) RETURN e.name LIMIT 5" --json
 
 # 2. Filesystem projection — write the world model to a directory tree
@@ -158,15 +158,21 @@ Neural world models simulate possible futures. ArcFlow records what actually hap
 
 ## Performance
 
-| Operation | Throughput |
+Throughput depends on host hardware and graph shape. Measure on your
+own host:
+
+```bash
+# From the ozinc/arcflow repo:
+cargo bench
+```
+
+Conformance and standards:
+
+| | |
 |---|---|
-| Spatial KNN (11K entities) | ≥ 2,000 queries/sec |
-| Node creates | 9.3M/sec |
-| PageRank (154M nodes) | <1 second |
-| Geofence trigger latency | <20ms |
-| Temporal `AS OF` query | Same as current-state query — no separate index |
 | openCypher TCK | 100% (3,881 / 3,881) |
 | ISO/IEC 39075 GQL | V2 native |
+| Temporal `AS OF` query | Same execution path as current-state query — no separate index |
 
 ---
 

@@ -72,7 +72,7 @@ CREATE (lidar)-[:DETECTED {
 ## Spatial perception queries
 
 ```cypher
--- All entities within 20m (k-nearest, ArcFlow Spatial Index backed, >2000/s at 11K entities)
+-- All entities within 20m (k-nearest, ArcFlow Spatial Index backed)
 CALL algo.nearestNodes(point({x: 0.0, y: 0.0}), 'Entity', 50)
   YIELD node AS e, distance
 WHERE distance < 20.0

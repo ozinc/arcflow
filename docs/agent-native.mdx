@@ -44,12 +44,12 @@ The architectural error is subtle: protocol tooling is built on assumptions abou
 
 ArcFlow exposes the world model through three surfaces. The choice depends entirely on where the agent runs — not on preference or familiarity.
 
-| Consumer | Surface | Latency | Why |
+| Consumer | Surface | Characteristic | Why |
 |---|---|---|---|
-| **Application daemons, services** | napi-rs in-process | **~1 µs** | Same memory, zero boundary |
-| **Claude Code, Codex, Cursor, shell scripts** | `arcflow` CLI binary | **< 10 ms** | Shell-native, composable, linked Rust binary |
-| **Claude.ai, ChatGPT, Gemini web** | MCP server | **~100 ms** | No local shell — protocol is the only bridge |
-| **Python / shell pipelines** | `arcflow` CLI binary | **< 10 ms** | Same as CLI agents |
+| **Application daemons, services** | napi-rs in-process | **Function call** | Same memory, zero boundary |
+| **Claude Code, Codex, Cursor, shell scripts** | `arcflow` CLI binary | **Shell exec** | Shell-native, composable, linked Rust binary |
+| **Claude.ai, ChatGPT, Gemini web** | MCP server | **Protocol RPC** | No local shell — protocol is the only bridge |
+| **Python / shell pipelines** | `arcflow` CLI binary | **Shell exec** | Same as CLI agents |
 
 **If your agent has a shell, use the CLI.** There is no scenario where adding a protocol layer to a shell-capable agent is the right call. MCP is the right choice for exactly one context: cloud chat interfaces with no local execution environment.
 
@@ -203,8 +203,8 @@ The agent checks before executing. No wasted mutations.
 
 | Dimension | Filesystem | Protocol (MCP) |
 |---|---|---|
-| **Latency** | Disk I/O (~0.1ms) | JSON-RPC round-trip (~5–50ms) |
-| **Token cost** | Zero | ~100–500 tokens per call |
+| **Latency** | Disk I/O | JSON-RPC round-trip |
+| **Token cost** | Zero | Per-call protocol overhead |
 | **Batch queries** | One CLI call for N queries | N tool calls, N round-trips |
 | **Persistence** | Queries and results are durable files | Session-scoped, ephemeral |
 | **Version control** | `git add queries/` — commit your world model | Not possible |

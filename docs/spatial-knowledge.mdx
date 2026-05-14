@@ -39,7 +39,7 @@ Most spatial indexes in the graph database world are built for the wrong problem
 
 HNSW finds "approximately similar" embeddings. For exact containment, bounding-box overlap, and dynamic 2D/3D boundaries it produces false positives and has no structural advantage over a spatial tree. Random-walk sampling is explicitly approximate — controlled by a `sampleRate` parameter that trades correctness for speed.
 
-The R\*-tree uses **forced reinsertion on node overflow** — instead of immediately splitting a full node, it removes ~30% of entries and reinserts them. This stochastic restructuring minimises bounding-box overlap and dead space, giving 2–5× faster queries than a basic R-tree on clustered data.
+The R\*-tree uses **forced reinsertion on node overflow** — instead of immediately splitting a full node, it removes ~30% of entries and reinserts them. This stochastic restructuring minimises bounding-box overlap and dead space, giving faster queries than a basic R-tree on clustered data.
 
 ---
 
@@ -58,7 +58,7 @@ CREATE (r:Robot {name: 'AGV-7', position: point({x: 12.5, y: 8.3, z: 0.0})})
 CREATE (s:Sensor {name: 'Cam-01', location: point({latitude: 51.5074, longitude: -0.1278})})
 ```
 
-Flat coordinate properties (`x`, `y`, `z`) are also indexed automatically. Point and Point3d values are stored in a SIMD-optimized columnar layout — axes are contiguous in memory, enabling AVX2 to evaluate 4 distance comparisons per instruction. This eliminates the ~6.9× cache-miss penalty of pointer-chasing through heap-allocated node structs.
+Flat coordinate properties (`x`, `y`, `z`) are also indexed automatically. Point and Point3d values are stored in a SIMD-optimized columnar layout — axes are contiguous in memory, enabling AVX2 to evaluate 4 distance comparisons per instruction. This eliminates the cache-miss penalty of pointer-chasing through heap-allocated node structs.
 
 ### K-Nearest Neighbor
 
@@ -116,7 +116,7 @@ CALL spatial.raycast(
 RETURN hit.name, distance
 ```
 
-Performance: `objectsInFrustum` over 50 entities, 10 frusta: < 2ms.
+`objectsInFrustum` uses 6-plane containment over an index-narrowed candidate set.
 
 ---
 
@@ -364,18 +364,24 @@ RETURN a.name, b.name, distance(a.position, b.position)
 
 ---
 
-## Performance Reference
+## Measuring on your hardware
 
-| Operation | Entities | Result |
-|---|---|---|
-| K-nearest (k=10) | benchmark surface | ~471K ops/s |
-| Radius search | benchmark surface | ~5.8K ops/s |
-| Frustum query (10 frusta) | 50 | < 2ms |
-| Line crossing check | 50 tracks | < 0.5ms |
-| Zone occupancy (50fps, 500 entities) | 500 | < 50ms per 10s window |
-| Live geofence trigger latency | — | incremental, edge-triggered |
-| USD bulk ingest | 500K prims | < 1 second |
-| Spatial join (5-NN + 2-hop graph) | 11K | ≥ 500/s |
+Spatial operation throughput depends on host CPU, memory bandwidth,
+and entity count. Measure on the hardware you'll deploy on:
+
+```bash
+# From the ozinc/arcflow repo:
+cargo bench --bench spatial
+```
+
+| Operation | Behaviour |
+|---|---|
+| K-nearest, radius search | O(log N) on the R*-tree |
+| Frustum / line-crossing checks | Index-narrowed candidate set |
+| Zone occupancy | Incremental, edge-triggered |
+| Live geofence trigger | Incremental, edge-triggered |
+| USD bulk ingest | Bulk packing for large scenes |
+| Spatial join (NN + multi-hop graph) | Combines spatial-index narrowing with graph traversal |
 
 ---
 

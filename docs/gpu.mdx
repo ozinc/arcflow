@@ -49,19 +49,23 @@ Zero configuration. The same GQL query runs identically on a laptop, a workstati
 
 ---
 
-## Benchmark Results
+## Measuring on your hardware
 
-Performance measured against ArcFlow's own CPU path on the same hardware:
+Performance depends on host CPU/GPU/memory characteristics and graph
+shape. Rather than quote per-host numbers that decay, ArcFlow ships a
+benchmark harness so you can measure on the hardware you'll actually
+deploy on:
 
-| Algorithm | CPU | GPU Speedup |
-|---|---|---|
-| PageRank | 154M nodes/sec | 2.4x |
-| BFS Frontier | 6.3M edges/sec | 3.5x |
-| Vector Distance | 25K queries/sec | 4.2x |
-| Triangle Count | 943K nodes/sec | 19.8x |
-| Community Detection | 185K nodes/sec | 29.6x |
+```bash
+# From the ozinc/arcflow repo:
+cargo bench --bench algo                # CPU + GPU comparisons across algorithms
+cargo run --bin metal_baseline          # Apple Silicon Metal-specific baseline
+```
 
-Speedup is most pronounced for algorithms with high parallelism (community detection, triangle counting). For simpler traversals, the CPU path is already fast — GPU dispatch adds value when the graph is large and the algorithm is inherently parallel.
+GPU speedup is most pronounced for algorithms with high parallelism
+(community detection, triangle counting). For simpler traversals the
+CPU path is already fast — GPU dispatch adds value when the graph is
+large and the algorithm is inherently parallel.
 
 ---
 
@@ -96,10 +100,6 @@ For scenes with thousands of identical geometry instances (seats, sensors, obsta
 ## Metal GPU (Apple Silicon)
 
 On macOS and iOS, ArcFlow Adaptive Dispatch routes to Metal compute shaders. Apple Silicon's unified memory means the ArcFlow Graph Kernel and GPU Index operate in the same physical memory as the CPU — zero copy overhead.
-
-```
-PageRank on 10K nodes — CPU: 0.6ms / GPU: 0.25ms (2.4x)
-```
 
 If Metal is unavailable or the graph is below the dispatch threshold, routing falls back to CPU transparently.
 

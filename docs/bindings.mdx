@@ -153,8 +153,8 @@ need find-or-create.
 Compile a Cypher query once for repeated execution. Each `.execute(params)`
 call skips the parser and goes straight to the executor. For analytics
 workloads that issue the same query thousands of times with different
-parameters (dashboards, real-time scoring, ML feature pipelines), this is
-5–50× faster than `db.execute(q, params=…)` per call.
+parameters (dashboards, real-time scoring, ML feature pipelines), this
+avoids the per-call parse cost.
 
 ```python
 stmt = db.prepare("MATCH (e:Entity {id: $eid}) RETURN e.x, e.y, e.speed")

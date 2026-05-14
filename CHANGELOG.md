@@ -53,8 +53,8 @@ These were tracked privately in `arcflow-core/CHANGELOG.md` (commit-level wave n
 
 ### GPU acceleration milestone (2026-03)
 
-- 17 CUDA kernels — PageRank (2.4x), vector distance (4.2x), BFS frontier (3.5x), triangle counting (19.8x), Louvain (29.6x)
-- CUDA graph capture pipeline — record kernel sequences into replayable graphs (+1.2x)
+- 17 CUDA kernels — PageRank, vector distance, BFS frontier, triangle counting, Louvain
+- CUDA graph capture pipeline — record kernel sequences into replayable graphs
 - Auto-routes CPU vs GPU based on workload + backend availability
 - 630 engine tests across the GPU pipeline
 

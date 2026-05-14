@@ -6,9 +6,9 @@ The operational world model layer — the persistence tier where actual world st
 
 | Consumer | Integration | Why |
 |---|---|---|
-| **Multi-process same-machine** (TS shell + Python workers + Rust capture all sharing one graph + pub/sub) | **`arcflow-daemon` over UDS** ★ recommended for IPC | Cross-process publish/subscribe + WAL durability, ~1.3 M events/sec on `topic.publish_batch`, no port allocation. See [Daemon mode](docs/deployment/daemon.mdx). |
+| **Multi-process same-machine** (TS shell + Python workers + Rust capture all sharing one graph + pub/sub) | **`arcflow-daemon` over UDS** ★ recommended for IPC | Cross-process publish/subscribe + WAL durability, high-throughput batched publish, no port allocation. See [Daemon mode](docs/deployment/daemon.mdx). |
 | **Single-process embedded** (one binary owns the graph end-to-end) | **napi-rs / WASM / C ABI in-process** | No IPC overhead at all — every operation is a function call. Browser apps, single-process daemons, embedded SDK use. |
-| Claude Code, Codex, Gemini CLI | **`arcflow` CLI binary** | Shell-native, composable, <10ms, no config |
+| Claude Code, Codex, Gemini CLI | **`arcflow` CLI binary** | Shell-native, composable, no config |
 | Cloud chat UIs (Claude.ai, browser agents) | **MCP server** | No local execution context, chat latency budget |
 | Browser web apps that want server-pushed events | **HTTP/SSE bridge on the daemon** | Standard `EventSource` API; no extra protocol the browser doesn't already speak |
 | Python / shell pipelines | **`arcflow` CLI binary** | Same as CLI agents |
@@ -706,7 +706,7 @@ WHERE e.position.x >= 0 AND e.position.x <= 100
   AND e.position.y >= 0 AND e.position.y <= 50
 RETURN e.name
 
--- Frustum / visibility (6-plane containment, < 2ms for 50 entities / 10 frusta)
+-- Frustum / visibility (6-plane containment, index-narrowed)
 CALL algo.objectsInFrustum($frustum) YIELD node, distance RETURN node.name, distance
 
 -- Raycast (line-of-sight)

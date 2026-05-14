@@ -11,7 +11,7 @@ playground:
 
 **Embeddings are first-class properties of the world model — semantic dimensions queryable alongside graph relationships, confidence scores, and temporal state.**
 
-No dedicated vector database. No separate similarity service. An embedding lives on a node the same way a position, a confidence score, or an observation class does — queryable with the same GQL that traverses the graph. Combine semantic similarity with graph structure and temporal snapshots in one query, one process. 25,000 queries/sec at 128d. GPU acceleration delivers 4.2x additional speedup when available.
+No dedicated vector database. No separate similarity service. An embedding lives on a node the same way a position, a confidence score, or an observation class does — queryable with the same GQL that traverses the graph. Combine semantic similarity with graph structure and temporal snapshots in one query, one process. GPU acceleration available when supported hardware is present.
 
 ```cypher
 -- Vector search + graph traversal in one query, one process
@@ -138,20 +138,20 @@ List all vector indexes:
 CALL db.indexes()
 ```
 
-## Performance
+## Measuring on your hardware
 
-| Dimension | Throughput | Latency (p50) |
-|---
---------|---
---------|---
-------
-------|
-| 128d | 25,000 queries/sec | 0.04ms |
-| 768d | 4,600 queries/sec | 0.22ms |
+Vector throughput depends on host CPU/GPU and embedding dimension.
+Measure on the hardware you'll deploy on:
 
-GPU acceleration delivers 4.2x speedup on vector search when available. Dispatch is automatic based on index size — no configuration required.
+```bash
+# From the ozinc/arcflow repo:
+cargo bench --bench vector
+```
 
-On CUDA hardware with larger vector collections, **ArcFlow Adaptive Dispatch** routes automatically to the GPU-accelerated nearest neighbor path — higher throughput at scale. Same query, zero configuration.
+GPU acceleration is automatic based on index size — no configuration
+required. On CUDA hardware with larger vector collections,
+**ArcFlow Adaptive Dispatch** routes automatically to the
+GPU-accelerated nearest-neighbour path. Same query, zero configuration.
 
 ## Use Cases
 

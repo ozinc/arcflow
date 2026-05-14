@@ -12,13 +12,13 @@ playground:
 
 29 graph algorithms built into the world model — no projection lifecycle, no separate analytics service, no plugin installation. Every algorithm operates over the same confidence-scored, temporally-versioned graph that your queries run against. Centrality rankings respect observation class. Community detection propagates across fact confidence. Contradiction detection surfaces conflicting beliefs in the world model. Six algorithms run incrementally via `LIVE CALL`, maintaining results as standing queries that update with every mutation.
 
-154M PageRank nodes/sec on CPU. 29.6x GPU speedup on community detection. 19.8x on triangle count. GPU acceleration is automatic when hardware is available: same query, same syntax — **ArcFlow Adaptive Dispatch** routes to the fastest backend at runtime (see [GPU Acceleration](/gpu)).
+GPU acceleration is automatic when hardware is available: same query, same syntax — **ArcFlow Adaptive Dispatch** routes to the fastest backend at runtime (see [GPU Acceleration](/gpu)).
 
 ## Centrality
 
 ### PageRank
 
-Iterative eigenvector centrality. 20 iterations, damping factor 0.85. 154M nodes/sec on CPU, 2.4x faster on GPU.
+Iterative eigenvector centrality. 20 iterations, damping factor 0.85. GPU-accelerated when supported hardware is present.
 
 ```cypher
 CALL algo.pageRank()
@@ -131,7 +131,7 @@ CALL algo.degreeCentrality()
 
 ### Louvain
 
-Hierarchical community detection via modularity optimization. 29.6x GPU speedup on large graphs.
+Hierarchical community detection via modularity optimization. GPU-accelerated on large graphs.
 
 ```cypher
 CALL algo.louvain()
@@ -205,7 +205,7 @@ Fast community detection using label propagation. Near-linear time complexity.
 CALL algo.communityDetection()
 ```
 
-Returns nodeId, name, and community columns. 29.6x GPU speedup on large graphs.
+Returns nodeId, name, and community columns. GPU-accelerated on large graphs.
 
 ### K-Core Decomposition
 
@@ -229,7 +229,7 @@ CALL algo.kCore()
 
 ### BFS Shortest Path
 
-Unweighted shortest path via breadth-first search. 6.3M edges/sec on CPU, 3.5x faster on GPU.
+Unweighted shortest path via breadth-first search. GPU-accelerated on large graphs.
 
 ```cypher
 MATCH p = shortestPath((a:Person {name: 'Alice'})-[*..10]->(b:Person {name: 'Dave'}))
@@ -351,7 +351,7 @@ GPU-accelerated: dispatches to CUDA/Metal when graph exceeds 50 nodes.
 
 ### Triangle Count
 
-Counts the number of triangles in the graph. 19.8x GPU speedup.
+Counts the number of triangles in the graph. GPU-accelerated on large graphs.
 
 ```cypher
 CALL algo.triangleCount()
@@ -698,28 +698,25 @@ Built on the [Live Delta Stack](/live-queries) and Z-set algebra. Every mutation
 
 Benchmarked on a MacBook Air M4 (10-core, 24GB) with 10K-node graphs, single-threaded CPU baseline. GPU speedups measured with CUDA on equivalent hardware. These are laptop numbers — server hardware with more cores and memory will scale further.
 
-| Algorithm | CPU Throughput | GPU Speedup | GPU Dispatch Threshold |
-|---
---------|---
-------
-------|---
-------
-----|---
-------
-------
--------|
-| PageRank | 154M nodes/sec | 2.4x | 500 nodes |
-| BFS Shortest Path | 6.3M edges/sec | 3.5x | 100 nodes |
-| Triangle Count | 943K nodes/sec | 19.8x | 100 nodes |
-| Community Detection | 185K nodes/sec | 29.6x | 200 nodes |
-| Louvain | — | 29.6x | 200 nodes |
-| Vector Search | 25K queries/sec @ 128d | 4.2x | 100 vectors |
-| All-Pairs Shortest Path | — | GPU-accelerated | 500 nodes |
-| Clustering Coefficient | — | GPU-accelerated | 100 nodes |
-| Node Similarity | — | GPU-accelerated | 100 nodes |
-| Leiden | — | CUDA 9.0+ (H100+) only | 10M nodes |
+| Algorithm | Acceleration | GPU Dispatch Threshold |
+|---|---|---|
+| PageRank | GPU-accelerated | 500 nodes |
+| BFS Shortest Path | GPU-accelerated | 100 nodes |
+| Triangle Count | GPU-accelerated | 100 nodes |
+| Community Detection | GPU-accelerated | 200 nodes |
+| Louvain | GPU-accelerated | 200 nodes |
+| Vector Search | GPU-accelerated | 100 vectors |
+| All-Pairs Shortest Path | GPU-accelerated | 500 nodes |
+| Clustering Coefficient | GPU-accelerated | 100 nodes |
+| Node Similarity | GPU-accelerated | 100 nodes |
+| Leiden | CUDA 9.0+ (H100+) only | 10M nodes |
 
-GPU dispatch is handled by **ArcFlow Adaptive Dispatch** — which measures graph size at query time and routes to the fastest available backend automatically. No configuration required.
+GPU dispatch is handled by **ArcFlow Adaptive Dispatch** — which
+measures graph size at query time and routes to the fastest available
+backend automatically. No configuration required.
+
+To measure throughput on your hardware, run
+`cargo bench --bench algo` from the `ozinc/arcflow` repo.
 
 When multiple CUDA devices are present, Adaptive Dispatch selects the least-loaded device and gates dispatch on a per-algorithm cost model. Use `CALL db.gpuStatus()` to inspect per-device load and `CALL dbms.gpuThresholds()` to see the per-algorithm dispatch registry.
 

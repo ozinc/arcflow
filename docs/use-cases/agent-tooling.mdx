@@ -165,7 +165,7 @@ The agent builds a graph in the browser, the user reviews it visually, then the 
 Shell-native agents call `arcflow` directly — the world model is a CLI tool, same invocation pattern as any other shell command. No protocol, no handshake, no session. The difference: every call returns from a confidence-scored, temporally-versioned graph, not a flat file:
 
 ```bash
-# Symbol lookup — exits in <10ms
+# Symbol lookup — single shell exec, no protocol handshake
 arcflow symbol login
 
 # Impact traversal — what breaks if login() changes?

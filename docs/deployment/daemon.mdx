@@ -81,18 +81,19 @@ The full method catalog lives in the daemon's source — `dispatch` in
 ## Throughput — pick the right publish pattern
 
 The daemon's per-request cost is dominated by JSON parse + UDS round-
-trip. **Pattern matters a lot** for throughput. Numbers below are
-single-thread on an M-series Mac, 30-topic round-robin workload:
+trip. **Pattern matters a lot** for throughput.
 
-| Pattern | Throughput | Use when |
-|---|---|---|
-| **`topic.publish_batch`** (recommended for bursts) | **1.33 M ev/s** | Producer has N events ready and doesn't need a per-event ack. **4.8× NATS Core** on the same workload. |
-| `topic.publish` pipelined (concurrent reader thread) | 409 k ev/s | Producer can fire-and-forget but needs each event journaled separately (e.g. per-event WAL replay semantics). |
-| `topic.publish` round-trip-per-request | 140 k ev/s | Producer needs a per-event ack before sending the next (rare; usually a footgun). |
+| Pattern | Use when |
+|---|---|
+| **`topic.publish_batch`** (recommended for bursts) | Producer has N events ready and doesn't need a per-event ack. |
+| `topic.publish` pipelined (concurrent reader thread) | Producer can fire-and-forget but needs each event journaled separately (e.g. per-event WAL replay semantics). |
+| `topic.publish` round-trip-per-request | Producer needs a per-event ack before sending the next (rare; usually a footgun). |
 
 If you're seeing low throughput, you're almost certainly on the
 round-trip-per-request path. **Switch to `publish_batch`** with a
-batch size of 100-1000 and you'll see >10× throughput.
+batch size of 100–1000 for substantially higher event rates. Measure
+on your host with the `topic.publish*` benchmarks in the `ozinc/arcflow`
+repo.
 
 ```jsonc
 // Batch publish — one RPC, many events
