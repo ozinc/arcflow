@@ -118,7 +118,7 @@ ArcFlow selects the optimal Metal Shading Language primitive for your Apple GPU 
 
 ### CPU-side integration
 
-Vector and dense-numeric paths route through Apple's Accelerate framework (AMX / SME on Apple Silicon, NEON elsewhere) for batched dot products and reductions. Apple Neural Engine dispatch is available for inference paths where the model shape qualifies. CPU work runs on `QOS_CLASS_USER_INITIATED` for foreground-quality scheduling alongside the GPU loop.
+Vector and dense-numeric paths route through Apple's Accelerate framework (AMX / SME on Apple Silicon, NEON elsewhere) for batched dot products and reductions — including the brute-force fallback path in vector search. CPU work runs on `QOS_CLASS_USER_INITIATED` for foreground-quality scheduling alongside the GPU loop.
 
 ---
 
