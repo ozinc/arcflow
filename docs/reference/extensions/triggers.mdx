@@ -1,0 +1,33 @@
+---
+title: "Triggers"
+description: "ArcFlow extension beyond ISO/IEC 39075 GQL — Triggers."
+section: "extensions-reference"
+status: "stable"
+generated: true
+---
+
+{/* GENERATED — do not hand-edit. Source: docs/reference/data/. Regenerate with scripts/generate-reference.py. */}
+
+# Triggers
+
+**Type:** ArcFlow extension beyond GQL
+
+**Syntax:**
+```gql
+CREATE TRIGGER auto_tag ON :Article WHEN CREATED RUN SKILL tag_skill
+```
+
+The legacy `CREATE REACTIVE SKILL` form is retained for backward
+compatibility but new code uses `CREATE TRIGGER`; the user-facing
+keyword "reactive" is retired per PAT-0038.
+
+**GQL compatibility:** No GQL equivalent.
+**Semantics:** Event-driven skill execution on CDC events. Skills fire when graph conditions match.
+
+## Standards relationship
+
+This is an extension to ISO/IEC 39075:2024 (GQL Edition 1 + V2 accepted proposals). It does not affect the engine's full conformance to the ISO standard — the extension surface is opt-in syntax that GQL leaves to implementations.
+
+---
+
+_Source: `docs/reference/data/arcflow-extensions-catalog.md`. This page is regenerated; edit the upstream data, not the MDX._
