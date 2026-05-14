@@ -3,6 +3,9 @@ dist/
 *.node
 .DS_Store
 
+# Claude Code session artifacts
+.claude/
+
 # Python venvs and bytecode caches inside cookbooks/
 .venv/
 __pycache__/
