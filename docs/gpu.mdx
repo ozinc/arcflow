@@ -148,6 +148,17 @@ CALL db.gpuStatus() YIELD device_id, inflight, sm_count, vram_mib, status
 
 Returns `{device_id: "N/A", status: "no CUDA devices"}` when no CUDA hardware is present.
 
+On **Apple Silicon (macOS / iOS)**, `db.gpuStatus()` currently enumerates CUDA devices only, so it returns the `"no CUDA devices"` shape even when the Metal GPU is fully active. To confirm Metal presence on Mac, inspect `db.capabilities()` instead:
+
+```cypher
+CALL db.capabilities()
+  YIELD capability, value
+  WHERE capability IN ['gpu_spmv_semirings', 'gpu_spgemm', 'gpu_deterministic_f64']
+  RETURN capability, value
+```
+
+Non-zero `gpu_spmv_semirings` and a populated `gpu_spgemm` value indicate Metal kernels are linked and dispatchable. The `gpu_backend` field reports the backend chosen for the *current* workload (Adaptive Dispatch keeps small graphs on CPU), not Metal availability.
+
 ### `CALL db.capabilities()`
 
 Returns the engine capability surface, including GPU presence, GPU
