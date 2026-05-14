@@ -1,0 +1,46 @@
+# Byte-identical fitness check between install/install.sh (SoT in this repo)
+# and the deployed copy at staging.oz.com/install/arcflow.
+#
+# Spec: MRL-DOC-2026-05-14-001 — "no CI regression check on the staging
+# install path." The deployed mirror at
+# oz-platform/apps/cloud/website/public/install/arcflow must stay in
+# lockstep with this repo's install/install.sh; a copy-edit to one without
+# the other silently breaks customer installs and detection today only
+# happens when a customer files a ticket.
+#
+# Runs:
+#   - on every push/PR that touches install/install.sh or this workflow
+#   - nightly at 03:00 UTC (catches drift introduced via oz-platform-only edits)
+#   - on-demand via workflow_dispatch
+#
+# Implementation: scripts/check-install-script-parity.sh
+# Override the target URL with INSTALL_PARITY_URL.
+
+name: install-script-parity
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "install/install.sh"
+      - "scripts/check-install-script-parity.sh"
+      - ".github/workflows/install-script-parity.yml"
+  pull_request:
+    paths:
+      - "install/install.sh"
+      - "scripts/check-install-script-parity.sh"
+      - ".github/workflows/install-script-parity.yml"
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  parity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify install/install.sh matches deployed copy
+        run: ./scripts/check-install-script-parity.sh

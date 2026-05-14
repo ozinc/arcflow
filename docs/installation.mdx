@@ -98,15 +98,38 @@ os.environ["ARCFLOW_NATIVE_DIR"] = "/abs/path/to/arcflow/target/release"
 from arcflow import ArcFlow
 ```
 
-### Anti-pattern: vendored wheel directory
+### When to vendor wheels
 
-Avoid the `wheels/` + `--find-links ./wheels` pattern for shared
-projects. It encodes a snapshot of the world that decays the moment
-ArcFlow lands a new API or bugfix; the next teammate who clones the
-repo is using a stale binary that doesn't match the docs they're
-reading. Use the staging registry for "I want a recent build" and the
-local-build path for "I want my exact in-progress change" — neither
-requires committing binaries.
+Two workflows are valid; the distinction is whether the wheel under
+test is published or in-progress.
+
+**Customer projects** consume ArcFlow as a published dependency. Pin
+`oz-arcflow==X.Y.Z` in `pyproject.toml` against PyPI. Don't vendor
+wheels — they go stale on every release, and the next teammate who
+clones the repo gets a binary that doesn't match the docs they're
+reading.
+
+**Engine-team stress harnesses** (e.g. `project-merlin`) test against
+an in-progress wheel built from `arcflow-core` HEAD. Vendor the wheel
+into `wheels/` and pin via `--find-links ./wheels`:
+
+```bash
+arcflow-core/python/build_wheel.sh    # produce the wheel
+cp arcflow-core/python/dist/oz_arcflow-*.whl <harness>/wheels/
+```
+
+```toml
+# Harness pyproject.toml
+[project]
+dependencies = ["oz-arcflow"]
+
+[tool.uv]
+find-links = ["./wheels"]
+```
+
+The vendored wheel rebuilds whenever the engine code changes; commit
+it alongside the test that depends on it for reproducible audit across
+sessions.
 
 ---
 
