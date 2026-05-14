@@ -9,8 +9,7 @@
 #   arcflow-docs/install/install.sh        ← source of truth (this file)
 #   oz-platform/.../public/install/arcflow ← deployed copy (oz.com/install/arcflow)
 #
-# Release source: GitHub Releases on the public ozinc/arcflow repo
-# (CUDA-style developer surface, switched from R2 on 2026-05-13).
+# Release source: GitHub Releases on the public ozinc/arcflow repo.
 # Binaries, SHA256SUMS, and release-matrix.json are all attached as
 # release assets — see release-binaries.yml in arcflow-core.
 #

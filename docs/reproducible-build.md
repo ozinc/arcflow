@@ -21,7 +21,7 @@ The CUDA pattern: closed implementation, open developer surface. Reproducible bu
 This puts ArcFlow in a different trust category than "trust us, it's safe":
 
 - **Tampering on a mirror:** detected by SHA256SUMS mismatch
-- **Compromise of OZ's R2 bucket / GitHub releases:** detected by sigstore attestation (the attestation lives in sigstore's transparency log, not on OZ infrastructure)
+- **Compromise of OZ's GitHub releases:** detected by sigstore attestation (the attestation lives in sigstore's transparency log, not on OZ infrastructure)
 - **Build pipeline backdoor:** detected by reproducible build (rebuild from source, sha256 won't match what OZ shipped if their pipeline injected anything)
 
 These are real attacker scenarios that affect every closed-source vendor. Most don't address them. We do, because — per [`LICENSE-FAQ.md`](../LICENSE-FAQ.md) — the lock-in escape valve has to be visible for the model to feel trustworthy.

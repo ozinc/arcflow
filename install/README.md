@@ -1,9 +1,9 @@
 # ArcFlow Binary Distribution
 
-Pre-built binaries are distributed via Cloudflare R2. The
-[`install.sh`](./install.sh) script in this directory is the canonical
-installer; it is deployed to `oz.com/install/arcflow` via the marketing
-site.
+Pre-built binaries ship as GitHub Releases on the public `ozinc/arcflow`
+repo. The [`install.sh`](./install.sh) script in this directory is the
+canonical installer; it is deployed to `oz.com/install/arcflow` via the
+marketing site.
 
 ## Asset naming convention
 

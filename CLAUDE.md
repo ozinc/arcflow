@@ -174,11 +174,9 @@ Three tiers, three rules:
   ```
 
 - **Static text** (`llms.txt`, `llms-full.txt`, `README.md`, `AGENTS.md`,
-  `cookbooks/*/README.md`): production URLs canonical. No exceptions —
-  the prior `staging.oz.com/pypi/simple/` PyPI-proxy exception was
-  retired with the R2 → GitHub Releases pivot (2026-05-13). Cookbook
-  `pyproject.toml`s now pin `oz-arcflow==1.6.86` against public PyPI,
-  even though the wheel itself is not yet published; that pin is
+  `cookbooks/*/README.md`): production URLs canonical. No exceptions.
+  Cookbook `pyproject.toml`s pin `oz-arcflow==1.6.86` against public
+  PyPI, even though the wheel itself is not yet published; that pin is
   target end-state (see RAM-C2 / 2026-Q3 on the roadmap).
 
 - **Code** (the website's TSX/TS) lives in oz-platform — see its

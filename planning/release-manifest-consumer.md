@@ -36,7 +36,7 @@ it up automatically.
 Three bounded contexts share one kernel:
 
 - **Engine domain** (`arcflow/`, closed) — authors `RELEASE-MATRIX.toml`,
-  publishes `release-matrix.json` to R2 on every release.
+  publishes `release-matrix.json` as a GitHub Release asset on every release.
 - **Documentation domain** (`arcflow-docs/`, this repo, public MIT) — public
   developer-facing docs, cookbooks, examples. Consumes the manifest.
 - **Marketing/web domain** (`oz-platform/apps/cloud/website/`) — public

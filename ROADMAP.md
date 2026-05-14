@@ -12,7 +12,6 @@ Roadmap items are not commitments — they're intent. Material changes will be a
 
 In active development; landing in the next 1-3 releases.
 
-- **GitHub Releases pivot complete** — full migration from Cloudflare R2 to `github.com/ozinc/arcflow/releases` for binary distribution. Sigstore provenance attestations on every binary. SHA256SUMS files. Cross-repo workflow trigger from `arcflow-core` to this repo.
 - **Multi-writer SWMR substrate** — sharded SWMR cluster, per-shard WAL, manifest atomic update, lease registry, fencing. Already substrate-complete (FF-27 5-producer E2E green); the residual handoff is `ConcurrentStore::execute` consumer-side routing migration in the runtime.
 - **JSON-RPC protocol spec v1 publication** — see [`docs/protocol/jsonrpc-v1.md`](./docs/protocol/jsonrpc-v1.md). 49 methods, stable semver-versioned interface, Apache 2.0 license for the protocol surface (reimplementation-permissive — the CUDA→PTX move).
 - **Provenance + reproducibility docs** — [`docs/reproducible-build.md`](./docs/reproducible-build.md) + sigstore attestations. "Verifiable closed-source" — you can prove a binary came from a specific source state without needing to read the source.
