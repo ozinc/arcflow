@@ -1,0 +1,128 @@
+---
+title: Versioning
+description: How ArcFlow versions are sourced and surfaced. The single source-of-truth chain and what each API returns.
+---
+
+# Versioning
+
+ArcFlow has one version. Every surface that reports a version reports
+the same string.
+
+## Source of truth
+
+```
+arcflow-core/Cargo.toml
+  [workspace.package]
+    version = "1.6.86"           ← The single source of truth
+        │
+        │ Cargo workspace inheritance — every crate
+        ▼
+  env!("CARGO_PKG_VERSION") in Rust source
+        │
+        ├──► arcflow --version              (CLI binary banner)
+        ├──► arcflow status --json          (version field)
+        ├──► SHOW SERVER_VERSION            (postgres-wire shim)
+        ├──► CALL db.version                (WorldCypher procedure)
+        ├──► libarcflow.dylib FFI symbol    (arcflow_version())
+        └──► python/pyproject.toml          (lockstep with workspace)
+
+  git tag v{X.Y.Z} = workspace version
+        │
+        │ release-binaries.yml workflow
+        │ resolves RELEASE-MATRIX.toml "auto" sentinel via
+        │ `git describe --tags --abbrev=0`
+        ▼
+  release-matrix.json
+    engine.version: "1.6.86"
+        │
+        ├──► oz.com install matrix              (build-time fetch)
+        ├──► install.sh (releases/latest)       (runtime resolve)
+        ├──► arcflow-docs cookbook renders      (build-time substitution)
+        └──► customer manifest consumers        (e.g. project-merlin)
+```
+
+The git tag is the authoritative release artifact. Everything else
+either inherits from the workspace `Cargo.toml` at build time or reads
+`release-matrix.json` at runtime.
+
+## What each call returns
+
+| Surface | Returns | Source |
+|---|---|---|
+| `arcflow --version` | `ArcFlow 1.6.86` | `env!("CARGO_PKG_VERSION")` |
+| `arcflow status --json` `version` | `"1.6.86"` | same |
+| `arcflow doctor` `Engine:` line | `ArcFlow 1.6.86` | same |
+| `SHOW SERVER_VERSION` (psql) | `1.6.86` | same |
+| `CALL db.version` (WorldCypher) | `"1.6.86"` | same |
+| `ArcFlow.version()` (Python) | `"1.6.86"` | FFI symbol — `CARGO_PKG_VERSION` |
+| `arcflow.__version__` (Python) | `"1.6.86"` | `importlib.metadata.version("oz-arcflow")` |
+| `release-matrix.json` `engine.version` | `"1.6.86"` | `git describe --tags --abbrev=0` |
+
+All surfaces converge on the same string.
+
+## Programmatic lookup
+
+```python
+# Python — the version your application is running against
+import arcflow
+print(arcflow.__version__)        # → "1.6.86"
+
+# Or via the FFI binding
+from arcflow import ArcFlow
+print(ArcFlow.version())          # → "1.6.86"
+```
+
+```bash
+# Shell — the installed CLI
+arcflow --version
+# ArcFlow 1.6.86
+```
+
+```ts
+// TypeScript — the SDK version
+import { version } from "arcflow";
+console.log(version);              // → "1.6.86"
+```
+
+For machine-consumable use across all surfaces, fetch
+`release-matrix.json`:
+
+```bash
+curl -fsSL https://github.com/ozinc/arcflow/releases/latest/download/release-matrix.json \
+  | jq -r '.engine.version'
+# 1.6.86
+```
+
+## Pinning a version
+
+```toml
+# Cookbook pyproject.toml
+[project]
+dependencies = [
+    "oz-arcflow==1.6.86",
+]
+```
+
+```bash
+# Install script — pin to a specific tag
+ARCFLOW_VERSION=1.6.86 curl -fsSL https://oz.com/install/arcflow | sh
+
+# Or accept the latest (default — resolves via releases/latest redirect)
+curl -fsSL https://oz.com/install/arcflow | sh
+```
+
+## For coding agents
+
+1. **Trust any of `arcflow.__version__`, `ArcFlow.version()`, or
+   `arcflow --version`** — all return the same string.
+2. **When generating install commands, read `engine.version`** from
+   `release-matrix.json` at the URL above rather than hardcoding a
+   literal.
+3. **When pinning dependencies in cookbooks / project templates**, match
+   the value in `release-matrix.json` `engine.version`.
+
+## See also
+
+- [`installation`](/docs/installation) — install matrix and version selection
+- [`reference/compatibility`](/docs/reference/compatibility) — GQL feature support
+- `RELEASE-MATRIX.toml` in arcflow-core — manifest schema

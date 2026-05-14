@@ -87,7 +87,7 @@ uv run python 04-live-polling.py
 | `_observation_class` + `_confidence` on every Reading edge | Per-sensor trust calibration travels with the reading; one filter predicate covers every sensor type |
 | Confidence-weighted aggregation in one query | Trust-weighted mean is `SUM(value × _confidence) / SUM(_confidence)` — one RETURN expression |
 | `db.execute()` poll-on-event | The agent re-reads the standing fusion query on each new event window |
-| Runtime introspection (`ArcFlow.version()`) | Production health checks confirm the engine build the recipe is talking to |
+| Runtime introspection (`arcflow.__version__` / `ArcFlow.version()`) | Production health checks confirm the ArcFlow build the recipe is talking to. See [versioning](/docs/reference/versioning) |
 
 ## Rust SDK alongside
 

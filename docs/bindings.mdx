@@ -96,8 +96,10 @@ db.execute("CALL algo.pageRank()")
 with ArcFlow() as db:
     db.execute("CALL db.demo()")
 
-# Version
-print(ArcFlow.version())
+# Version — both return the same string. See /docs/reference/versioning
+import arcflow
+print(arcflow.__version__)        # "1.6.86"
+print(ArcFlow.version())          # "1.6.86"
 ```
 
 ### Bulk ingest — three throughput tiers
@@ -537,7 +539,7 @@ const char* err = arcflow_last_error();
 | `arcflow_result_get_string(result, row, col)` | Cell value as string |
 | `arcflow_result_free(result)` | Free result memory |
 | `arcflow_last_error()` | Last error message (thread-local) |
-| `arcflow_version()` | Engine version string |
+| `arcflow_version()` | ArcFlow version string. See [`reference/versioning`](/docs/reference/versioning) |
 
 ## C++
 

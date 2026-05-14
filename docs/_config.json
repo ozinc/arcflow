@@ -683,7 +683,7 @@
         {
           "slug": "reference/naming",
           "title": "Naming & Domain Map",
-          "order": 10
+          "order": 11
         },
         {
           "slug": "reference/types",
@@ -711,13 +711,18 @@
           "order": 7
         },
         {
-          "slug": "licensing",
-          "title": "Licensing",
+          "slug": "reference/versioning",
+          "title": "Versioning",
           "order": 8
         },
         {
+          "slug": "licensing",
+          "title": "Licensing",
+          "order": 9
+        },
+        {
           "title": "Conformance",
-          "order": 9,
+          "order": 10,
           "children": [
             {
               "slug": "reference/conformance/overview",
