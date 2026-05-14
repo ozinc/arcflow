@@ -161,7 +161,7 @@ Install [gh CLI](https://cli.github.com/) and run:
 
 ```sh
 # Verify a downloaded tarball
-gh attestation verify arcflow-1.6.86-linux-x86_64-musl.tar.gz --owner ozinc
+gh attestation verify arcflow-0.7.1-linux-x86_64-musl.tar.gz --owner ozinc
 
 # Or verify a binary already installed
 gh attestation verify ~/.arcflow/bin/arcflow --owner ozinc
@@ -176,7 +176,7 @@ The following 1 attestation matched the policy filters:
 - Build repository: ozinc/arcflow-core
 - Build workflow: .github/workflows/release-binaries.yml
 - Source SHA: 955d03b3...
-- Build trigger: refs/tags/v1.6.86
+- Build trigger: refs/tags/v0.7.1
 - Builder: actions.runner.github.com
 ```
 
@@ -184,7 +184,7 @@ The attestation proves:
 
 - The binary was produced by the named workflow (`release-binaries.yml`) running in the named repo (`ozinc/arcflow-core`)
 - At the named source SHA (`955d03b3...`)
-- Triggered by the named tag push (`refs/tags/v1.6.86`)
+- Triggered by the named tag push (`refs/tags/v0.7.1`)
 - Signed by GitHub Actions' OIDC identity (the builder)
 
 Without trusting OZ. The attestation lives in [sigstore's public transparency log](https://search.sigstore.dev/) — anyone can fetch it independently.

@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """Lint: hardcoded ArcFlow version literals outside permitted SoT-bearing files.
 
-Rule: version literals matching the SDK distribution version (e.g. "1.6.86") or
-the legacy engine FFI version (e.g. "5.1.0") must NOT appear in prose docs,
-MDX, illustrative examples, or cookbook narrative. The SoT is the manifest at
-release-matrix.json (rendered from the git tag of arcflow-core); everything
-else either reads from the manifest at render/runtime or is explicitly listed
-in the allow-list below as a SoT-bearing file (e.g. cookbook pyproject.toml
-pins, install.sh env-var example).
+Rule: version literals matching the current `0.x` alpha-state line (e.g.
+"0.7.1"), the pre-revision `1.6.x` line (e.g. "1.6.86"), or the legacy engine
+FFI literal ("5.1.0") must NOT appear in prose docs, MDX, illustrative
+examples, or cookbook narrative outside an explicit allow-list of SoT-bearing
+files. The SoT is the manifest at release-matrix.json (rendered from the git
+tag of arcflow-core); everything else either reads from the manifest at
+render/runtime or is explicitly listed in the allow-list below as a
+SoT-bearing file (e.g. cookbook pyproject.toml pins, install.sh env-var
+example).
 
 Run: python3 scripts/lint-version-literals.py
 Exit code: 0 if clean, 1 on first violation.
@@ -23,11 +25,11 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-# Matches the SDK-distribution shape "X.Y.Z" where X is single digit 1, Y/Z
-# can be multi-digit. Bounds with non-digit / start-of-word.
-# Also catches the legacy engine FFI form "5.1.0" pre-convergence.
+# Matches current ArcFlow version literals across both the alpha-state `0.x`
+# line and the pre-revision `1.6.x` line, plus the legacy FFI form "5.1.0"
+# pre-convergence. Bounds with non-digit boundaries to avoid false positives.
 VERSION_PATTERN = re.compile(
-    r"(?<![0-9])(?:1\.6\.\d+|5\.1\.0)(?![0-9])"
+    r"(?<![0-9])(?:0\.7\.\d+|1\.6\.\d+|5\.1\.0)(?![0-9])"
 )
 
 # Files PERMITTED to contain hardcoded version literals.

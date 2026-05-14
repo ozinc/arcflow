@@ -8,9 +8,82 @@ For an engine-internal commit-grade changelog (wave numbering, dossier links), s
 
 ---
 
-## [Unreleased]
+## [0.7.1] — 2026-05-14
 
-Will be cut as `v1.6.27` once the GitHub Releases pipeline is fully wired (per `release-binaries.yml` in arcflow-core; cross-repo PAT minting in progress).
+**Alpha-state versioning.** Per operator directive, ArcFlow moves from
+`1.x` (which suggested production-release semantics) to `0.x` (SemVer
+convention for pre-1.0 unstable / alpha software). The previous
+`v1.6.88` line is succeeded by `v0.7.1` — every fix and feature
+shipped under `1.x` is present in this release. The convention reversal
+makes the alpha boundary unambiguous; `v1.0.0` is now reserved for the
+first production-ready release. See
+[`docs/reference/versioning`](./docs/reference/versioning.mdx) for the
+full bump-rule policy and [`VERSIONING.md`](https://github.com/ozinc/arcflow-core/blob/main/VERSIONING.md)
+in arcflow-core for the canonical source.
+
+### Why 1.x → 0.x
+
+Most projects ship a `0.x` cycle, hit `1.0`, and declare "production-
+ready." ArcFlow's earlier `1.x` line numbers were a labelling
+convention that implied production maturity ArcFlow hasn't yet claimed.
+The reversal aligns the version line with where the project actually
+is: alpha (`0.x`), heading toward `1.0` when the production-readiness
+criteria are met. No capability has been removed; the engine surface
+is unchanged from the `v1.6.88` line. The bump-rules (patch / minor /
+major / `-rc.N`) carry over verbatim and apply to the `0.x` series.
+
+### Mirrored from arcflow-core v0.7.1
+
+The arcflow-core release accompanying this docs cut includes (per the
+upstream CHANGELOG):
+
+- **MRL-AF-013** parser symmetrization — comma-MATCH parser fix in
+  `match_return.rs`; right-side Expand now mirrors the left-side
+  subplan. Closes the 0-rows / 40-50× slowdown shape filed by
+  project-merlin.
+- **Wave F perf landings (Apple Silicon)** — `simdgroup_matrix<float, 8, 8>`
+  matmul on Apple9+, AMX caller wiring through `cblas_sgemm` for vector
+  brute-force fallback, adaptive cost router decisive override across
+  CUDA + Metal dispatch sites, `simd_prefix_inclusive_sum` (Apple8+),
+  ResidencyScope RAII pinning hot PageRank buffers.
+- **Wave H release artifacts** — `arcflow-mcp` + `libarcflow.{dylib,so,dll}`
+  added to the release matrix.
+- **Wave V observability** — SLO-grade LIVE-view metrics (PS-25).
+
+### Documentation alignment
+
+- All cookbook `pyproject.toml` / `meta.toml` pins bumped to
+  `oz-arcflow==0.7.1`.
+- All illustrative install examples in prose and code blocks use
+  `0.7.1`.
+- `docs/reference/versioning.mdx` rewritten with the convention-
+  revision section and the 0.x bump rules.
+- `docs/reference/data/SYNC.json`, `gql-conformance.json`, and the
+  rendered conformance MDX pages re-synced to engine version `0.7.1`.
+- `scripts/lint-version-literals.py` extended to also catch `0.7.x`
+  literals outside SoT-bearing files.
+
+### Deferrals (durable, dossier-tracked in arcflow-core)
+
+- ANE in-engine model inference (out of scope per ANTI-0020; AMX
+  covers the in-engine matmul case).
+- `MTLIndirectCommandBuffer` GPU-driven multi-iter dispatch
+  (overlapping with C06 pinning).
+- `grb_mxv_metal` rewrite (needs separate benchmark dossier).
+
+---
+
+## [Pre-0.7.1 — 1.x line]
+
+The entries below describe the pre-convention-reversal `1.x` line.
+Capability shipped under those tags is present in `0.7.1`; only the
+version-line labelling has changed.
+
+## [Unreleased — pre-revision, superseded by 0.7.1]
+
+Originally tracked as `v1.6.27`; superseded by the alpha-state version
+line. The capability listed below shipped in arcflow-core under the
+`1.6.x` series and is present in `0.7.1`.
 
 ### Added
 

@@ -1,13 +1,13 @@
 [project]
 name = "arcflow-cookbook-sensor-fusion-livequery"
-version = "1.6.86"
+version = "0.7.1"
 description = "ArcFlow recipe: multi-sensor fusion with trust-weighted alerts — every reading carries its own confidence, the fusion query is one MATCH with one weighted-aggregate expression."
 requires-python = ">=3.10"
 dependencies = [
     # `oz-arcflow` Python wheel is planned for RAM-C2 (2026-Q3) on
     # public PyPI. This pin describes the target end-state; `uv sync`
     # will fail until the wheel ships.
-    "oz-arcflow==1.6.86",
+    "oz-arcflow==0.7.1",
     "pyarrow>=16",
     "numpy>=1.26",
 ]

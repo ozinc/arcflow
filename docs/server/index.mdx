@@ -106,7 +106,7 @@ SQL compatibility shims handle common PostgreSQL client expectations:
 |---|---|
 | `SET ...` | Acknowledged silently |
 | `BEGIN` / `COMMIT` / `ROLLBACK` | Acknowledged (single-node, no distributed transactions) |
-| `SHOW SERVER_VERSION` | Returns the ArcFlow version (e.g. `1.6.86`). See [`reference/versioning`](/docs/reference/versioning) |
+| `SHOW SERVER_VERSION` | Returns the ArcFlow version (e.g. `0.7.1`). See [`reference/versioning`](/docs/reference/versioning) |
 | `SELECT VERSION()` | Returns ArcFlow build info |
 | `SELECT CURRENT_SCHEMA()` | Returns "public" |
 | `DISCARD ALL` | Acknowledged (psql compatibility) |

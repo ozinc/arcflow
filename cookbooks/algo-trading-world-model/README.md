@@ -5,7 +5,7 @@
 
 **Audience:** quant developers · ML engineers · LLM-agent builders
 **Runtime:** under 3 minutes total
-**Pins:** `oz-arcflow==1.6.86`
+**Pins:** `oz-arcflow==0.7.1`
 
 ## The four hard problems this addresses
 

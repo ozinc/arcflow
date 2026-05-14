@@ -11,5 +11,5 @@ arcflow_apis = [
 external_deps = []
 runtime_minutes = 1
 gpu_required = false
-manifest_pin = "1.6.86"
+manifest_pin = "0.7.1"
 data_provenance = "synthesized"
