@@ -110,7 +110,7 @@ Embedding ArcFlow inside your application as part of a broader product offering 
 
 Because:
 
-1. **Performance and algorithmic depth are the product.** ArcFlow ships GPU kernels, reactive incremental view maintenance, bitemporal indexing, SWMR sharding, and other engine internals that took years to build. Open-sourcing them would invite immediate commercial cloning by hyperscalers, eliminating the revenue model that funds further development. Reference: the Redis/Elastic/MongoDB rounds of cloud-hyperscaler value capture.
+1. **Performance and algorithmic depth are the product.** ArcFlow ships GPU kernels, incremental view maintenance for live queries, bitemporal indexing, SWMR sharding, and other engine internals that took years to build. Open-sourcing them would invite immediate commercial cloning by hyperscalers, eliminating the revenue model that funds further development. Reference: the Redis/Elastic/MongoDB rounds of cloud-hyperscaler value capture.
 2. **You don't need source access to build with it.** The JSON-RPC spec, language bindings (SDK source IS open), cookbook examples, and CLI cover every developer use case. CUDA's success proves this.
 3. **You don't need source access to verify it.** Every release binary is signed with sigstore provenance attestations. Reproducible-build instructions are public. The protocol surface is documented and stable.
 4. **You're never trapped.** The wire protocol is public and Apache-licensed (or CC-BY) — any third party could write a competing daemon implementing the same protocol. The engine is replaceable in principle; that's the lock-in escape hatch.

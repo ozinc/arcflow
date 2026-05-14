@@ -65,7 +65,7 @@ These were tracked privately in `arcflow-core/CHANGELOG.md` (commit-level wave n
 ### Bitemporal + standing queries (2026-01)
 
 - Bitemporal AS OF queries — system-time + valid-time axes; immutable history
-- Standing queries — reactive incremental view maintenance over Cypher queries; subscribe to result deltas
+- Standing queries — incremental view maintenance over Cypher queries; subscribe to result deltas
 
 ### Vector index (2025-12)
 

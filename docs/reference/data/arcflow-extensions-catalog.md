@@ -161,13 +161,9 @@ CALL algo.leiden()        -- community detection
 CREATE TRIGGER auto_tag ON :Article WHEN CREATED RUN SKILL tag_skill
 ```
 
-The legacy `CREATE REACTIVE SKILL` form is retained for backward
-compatibility but new code uses `CREATE TRIGGER`; the user-facing
-keyword "reactive" is retired per PAT-0038.
-
 **GQL compatibility:** No GQL equivalent.
 **Semantics:** Event-driven skill execution on CDC events. Skills fire when graph conditions match.
-**Evidence:** I-INIT-0035, PAT-0037, PAT-0038
+**Evidence:** I-INIT-0035, PAT-0037
 
 ---
 

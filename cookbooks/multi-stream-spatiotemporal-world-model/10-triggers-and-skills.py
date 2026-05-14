@@ -125,8 +125,7 @@ def main() -> None:
         "dispatches SKILLs via an executor IPC bridge that keeps DNN\n"
         "inference and other heavy logic in a separate crash domain. This\n"
         "step demonstrates the LOGIC; production deployments wire the\n"
-        "dispatch via CREATE TRIGGER / CREATE SKILL once the Python\n"
-        "binding's reactive surface lands."
+        "dispatch via CREATE TRIGGER / CREATE SKILL."
     )
 
 

@@ -7,11 +7,11 @@ Relation), runs the same confidence-thresholded retrieval queries.
 
 The Rust binding is fully in-process — no FFI marshalling tax, no GIL —
 which matters when the agent loop wants `register_skill` /
-`register_live_proof` style reactive behaviour on top of retrieval.
+`register_live_proof` style event-driven behaviour on top of retrieval.
 
 ## When the Rust version pays off
 
-- **Reactive agent skills** — `arcflow_sdk::register_skill(&db, "rag",
+- **Event-driven agent skills** — `arcflow_sdk::register_skill(&db, "rag",
   "alert-on-low-conf-claim", trigger, query)` fires the named query
   every time a graph mutation matches the trigger. Useful for "alert
   when an extraction below 0.5 confidence enters the corpus" without a

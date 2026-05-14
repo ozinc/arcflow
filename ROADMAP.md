@@ -49,8 +49,8 @@ Setting expectations cleanly — these are intentional non-goals:
 - **Open-sourcing the engine core** — see [`LICENSE-FAQ.md`](./LICENSE-FAQ.md) §"Why is the engine closed-source." Not a near-term direction; the moat is engine internals + cookbook ecosystem, not "we promise to open source someday."
 - **Docker image for the engine** — see `RELEASE-MATRIX.toml` `[[artifacts]] kind = "docker"` — explicitly refused. ArcFlow is a 5MB statically-linked embedded library; Docker would add ~20MB of container overhead and subvert the in-process design. Use the language bindings or native CLI.
 - **NATS / Kafka feature parity** — ArcFlow's pub/sub is in-process scope. For cross-cluster streaming at Kafka scale, use Kafka. ArcFlow is the embedded substrate next to your hot path, not a replacement for distributed message brokers.
-- **OLAP analytical engine** — ArcFlow is graph + vector + spatial + reactive. For columnar analytical OLAP, use DuckDB.
-- **Generic OLTP relational features** — joins, transactions, schemas — Postgres exists. ArcFlow's value is graph-native + reactive + bitemporal, not "another relational database."
+- **OLAP analytical engine** — ArcFlow is graph + vector + spatial + live. For columnar analytical OLAP, use DuckDB.
+- **Generic OLTP relational features** — joins, transactions, schemas — Postgres exists. ArcFlow's value is graph-native + live + bitemporal, not "another relational database."
 
 ---
 

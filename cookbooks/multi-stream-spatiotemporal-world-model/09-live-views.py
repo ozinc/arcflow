@@ -1,6 +1,6 @@
 """Step 09 — LIVE views: maintained query state at the 60 Hz tick.
 
-In TypeScript, ArcFlow exposes the reactive layer directly:
+In TypeScript, ArcFlow exposes the live-query layer directly:
 
     const sub = db.subscribe(
         'MATCH (a:Entity)-[r1:OBSERVED_AT]->(f:Frame), '
@@ -12,15 +12,16 @@ In TypeScript, ArcFlow exposes the reactive layer directly:
 The callback fires per-mutation; updates land within ~20 ms of the
 graph change.
 
-The Python ctypes binding doesn't yet expose subscribe callbacks. The
-pattern still works — you poll the maintained query state at
-the source tick rate, and compute the precise distance in Python over a
-spatial-index-narrowed candidate set. At 60 Hz that's a 16.67 ms loop;
-ArcFlow's query path resolves well under that bound, so polling delivers
-the same semantics with a slightly higher floor.
+The Python ctypes binding exposes the same surface via polling: re-run
+the maintained query at the source tick rate, and compute the precise
+distance in Python over a spatial-index-narrowed candidate set. At 60 Hz
+that's a 16.67 ms loop; ArcFlow's query path resolves well under that
+bound, so polling delivers the same semantics with a slightly higher
+floor.
 
-This step walks through three reactive shapes — proximity, separation,
-region occupancy — by stepping frame-by-frame and reporting the delta.
+This step walks through three live-query shapes — proximity,
+separation, region occupancy — by stepping frame-by-frame and reporting
+the delta.
 
 Run:
     uv run python 09-live-views.py
