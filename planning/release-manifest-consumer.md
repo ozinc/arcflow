@@ -97,7 +97,7 @@ The marketing repo authors its own local patterns:
 
 When RAM-B3 lands:
 
-- `<InstallMatrix />` fetches `https://pub-a0a196dbe10340f8af22524547fdd476.r2.dev/releases/arcflow/release-matrix.json`
+- `<InstallMatrix />` fetches `https://github.com/ozinc/arcflow/releases/latest/download/release-matrix.json`
   at build time.
 - Schema is `schema_version: 1`. Unknown major versions are rejected (build fails).
 - Build fails if the fetch fails. **No fallback to a baked-in last-known-good

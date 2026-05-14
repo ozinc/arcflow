@@ -40,7 +40,7 @@ The customer-facing install matrix is rendered from the engine's release
 manifest:
 
 - **Live page**: <https://oz.com/docs/installation>
-- **Manifest source**: <https://pub-a0a196dbe10340f8af22524547fdd476.r2.dev/releases/arcflow/release-matrix.json>
+- **Manifest source**: <https://github.com/ozinc/arcflow/releases/latest/download/release-matrix.json>
 - **Schema**: `arcflow/schemas/release-matrix.schema.json` (`schema_version: 1`)
 
 Every binding's install command — current shipping status, target quarter

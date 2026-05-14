@@ -5,7 +5,7 @@
 
 **Audience:** python · data-engineer · compliance · agent
 **Runtime:** under 1 minute total
-**Pins:** `oz-arcflow==1.6.7`
+**Pins:** `oz-arcflow==1.6.27`
 
 Three small standalone scripts demonstrating the same pattern in three
 different contexts. A system makes a decision based on world-model

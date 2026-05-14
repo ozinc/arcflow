@@ -12,7 +12,7 @@ requires-python = ">=3.9"
 # oz-arcflow ships the embedded engine. PyArrow + Polars are optional but
 # unlock the zero-copy fast paths (`result.to_arrow()`, `to_polars()`).
 dependencies = [
-    "oz-arcflow>=1.6.7",
+    "oz-arcflow>=1.6.27",
     "pyarrow>=18.0",
     "polars>=1.18",
 ]

@@ -1,20 +1,13 @@
 [project]
 name = "arcflow-cookbook-multi-stream-spatiotemporal-world-model"
-version = "1.6.7"
+version = "1.6.27"
 description = "ArcFlow cookbook recipe: 60 Hz multi-entity tracking world model with synced auxiliary streams (3D scene reconstruction, biomechanical telemetry, event annotations)."
 requires-python = ">=3.10"
 dependencies = [
-    "oz-arcflow==1.6.7",
+    # `oz-arcflow` Python wheel is planned for RAM-C2 (2026-Q3) on
+    # public PyPI. This pin describes the target end-state; `uv sync`
+    # will fail until the wheel ships.
+    "oz-arcflow==1.6.27",
     "pyarrow>=16",
     "numpy>=1.26",
 ]
-
-# `oz-arcflow` resolves through OZ's PEP 503 simple index — same protocol
-# PyPI implements, so `uv sync` treats it like any normal package.
-[[tool.uv.index]]
-name = "oz"
-url = "https://staging.oz.com/pypi/simple/"
-explicit = true
-
-[tool.uv.sources]
-oz-arcflow = { index = "oz" }

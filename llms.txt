@@ -10,14 +10,13 @@ Open https://oz.com/engine in your browser. Paste any query. Persistent storage.
 
 The current shipping install matrix is at:
 https://oz.com/docs/installation
-Source: https://pub-a0a196dbe10340f8af22524547fdd476.r2.dev/releases/arcflow/release-matrix.json
+Source: https://github.com/ozinc/arcflow/releases/latest/download/release-matrix.json
 (schema: arcflow/schemas/release-matrix.schema.json)
 
 Currently shipped:
   curl -fsSL https://oz.com/install/arcflow | sh                                # native CLI
-  uv add --index https://staging.oz.com/pypi/simple/ oz-arcflow                 # Python (import: arcflow)
-The Node and Rust bindings are still in progress — see the matrix above
-for current status. ArcFlow does not ship a Docker image for the engine
+The Python, Node, and Rust bindings are planned (RAM-C2 / 2026-Q3) —
+see the matrix above for current status. ArcFlow does not ship a Docker image for the engine
 itself (5MB embedded library; Docker would subvert the in-process design).
 See https://oz.com/docs/deployment/docker for the rationale.
 

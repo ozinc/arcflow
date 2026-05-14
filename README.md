@@ -5,11 +5,12 @@
 ArcFlow is an in-process database for systems that need to reason about the physical world in real time. It runs inside your application — no server, no round-trip — and unifies graph relationships, geospatial indexes, time-versioned history, vector search, full-text search, and live standing queries behind a single ISO GQL surface.
 
 ```bash
-# CLI — shell-native, ≤10ms cold start
+# CLI — shell-native, ≤10ms cold start (the only shipped install today)
 curl -fsSL https://staging.oz.com/install/arcflow | sh
 
 # Python — embedded in-process, 5MB binary bundled in the wheel
-pip install --index-url https://staging.oz.com/pypi/simple/ oz-arcflow
+#   planned for RAM-C2 / 2026-Q3 on public PyPI:
+#   pip install oz-arcflow
 
 # Browser — try it before installing
 open https://staging.oz.com/engine
@@ -244,9 +245,9 @@ The [install matrix](https://staging.oz.com/docs/installation) renders from a re
 |---|---|---|
 | Browser playground | ✓ shipped | [staging.oz.com/engine](https://staging.oz.com/engine) — zero install |
 | Native CLI binary | ✓ shipped | `curl -fsSL https://staging.oz.com/install/arcflow \| sh` |
-| Python (in-process) | ✓ shipped | `pip install --index-url https://staging.oz.com/pypi/simple/ oz-arcflow` |
-| Node.js (napi-rs) | planned | — |
-| Rust crate | planned | — |
+| Python (in-process) | planned RAM-C2 / 2026-Q3 | `pip install oz-arcflow` (pending public PyPI publish) |
+| Node.js (napi-rs) | planned RAM-C2 / 2026-Q3 | `npm install arcflow` (pending) |
+| Rust crate | planned RAM-C3 / 2026-Q4 | `cargo add arcflow` (pending) |
 | Docker image | refused | ArcFlow is a 5MB embedded library; shipping as Docker would subvert the in-process design. [Why](docs/deployment/docker.mdx). |
 
 Pre-built native binaries for macOS (Apple Silicon + Intel), Linux (x86_64 GNU + musl, ARM64 GNU + musl). No build tools required.

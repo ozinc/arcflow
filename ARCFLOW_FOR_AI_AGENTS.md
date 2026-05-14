@@ -66,17 +66,17 @@ curl -fsSL https://oz.com/install/arcflow | sh
 
 Drops `arcflow`, `arcflow-daemon`, `arcflow-mcp` binaries to `~/.arcflow/bin/`. macOS arm64, macOS x86_64, Linux x86_64 (gnu + musl), Linux arm64 (gnu + musl) supported.
 
-Alternative installs (when applicable):
+Alternative installs (all planned — not yet on public registries):
 
 ```sh
-# Python (in-process wheel)
-pip install --index-url https://staging.oz.com/pypi/simple/ oz-arcflow
+# Python (in-process wheel — planned RAM-C2 / 2026-Q3)
+# pip install oz-arcflow
 
-# Rust (crate — planned 2026-Q4)
-# cargo add arcflow
-
-# Node (napi-rs — planned 2026-Q3)
+# Node (napi-rs — planned RAM-C2 / 2026-Q3)
 # npm install arcflow
+
+# Rust (crate — planned RAM-C3 / 2026-Q4)
+# cargo add arcflow
 ```
 
 Current install matrix: [oz.com/docs/installation](https://staging.oz.com/docs/installation). Machine-readable: [release-matrix.json](https://github.com/ozinc/arcflow/releases/latest/download/release-matrix.json).

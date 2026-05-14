@@ -10,7 +10,7 @@ needed to integrate ArcFlow into any TypeScript/Node.js application.
 The current shipping install matrix is at:
 https://oz.com/docs/installation
 Source manifest:
-https://pub-a0a196dbe10340f8af22524547fdd476.r2.dev/releases/arcflow/release-matrix.json
+https://github.com/ozinc/arcflow/releases/latest/download/release-matrix.json
 (schema: arcflow/schemas/release-matrix.schema.json — schema_version: 1)
 
 Currently shipped:
@@ -18,15 +18,10 @@ Currently shipped:
 ```bash
 # Native CLI
 curl -fsSL https://oz.com/install/arcflow | sh
-
-# Python (resolves through OZ's PEP 503 simple index)
-uv add --index https://staging.oz.com/pypi/simple/ oz-arcflow
-# or: pip install --index-url https://staging.oz.com/pypi/simple/ oz-arcflow
-# distribution: oz-arcflow; import: `import arcflow`
 ```
 
-The Node and Rust bindings are status: planned — check the
-release-matrix.json for the current shipping state. The Docker artifact is
+The Python, Node, and Rust bindings are status: planned (RAM-C2 / 2026-Q3) —
+check the release-matrix.json for the current shipping state. The Docker artifact is
 status: refused — ArcFlow is a 5MB embedded library and shipping the
 engine as a Docker image would subvert the in-process design; see
 https://oz.com/docs/deployment/docker.

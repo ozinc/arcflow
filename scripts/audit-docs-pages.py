@@ -57,7 +57,6 @@ REDIRECT_SLUGS = {
 # to these bare hosts are expected to 404 or be unreachable; that is not
 # a broken link.
 EXTERNAL_HOST_ALLOWLIST = {
-    "https://pub-a0a196dbe10340f8af22524547fdd476.r2.dev",  # R2 bucket base
     "https://vercel-storage.com",
     "https://www.googletagmanager.com",
 }

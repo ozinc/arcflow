@@ -4,7 +4,7 @@
 
 **Audience:** python · agent · ML engineer
 **Runtime:** ~30 seconds
-**Pins:** `oz-arcflow==1.6.7`
+**Pins:** `oz-arcflow==1.6.27`
 
 A confidence-scored GraphRAG knowledge base an LLM agent reads from
 with one tunable knob (`min_confidence`) trading recall for precision.

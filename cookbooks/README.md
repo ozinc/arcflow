@@ -4,7 +4,7 @@ Runnable, manifest-aligned reference implementations of ArcFlow capabilities.
 
 Every recipe here is a self-contained, end-to-end working example. CI runs each
 recipe on every commit. Recipes use only ArcFlow APIs whose status in
-[`release-matrix.json`](https://pub-a0a196dbe10340f8af22524547fdd476.r2.dev/releases/arcflow/release-matrix.json)
+[`release-matrix.json`](https://github.com/ozinc/arcflow/releases/latest/download/release-matrix.json)
 is `shipped`.
 
 Inspired by [`cursor/cookbook`](https://github.com/cursor/cookbook), with a
@@ -35,8 +35,10 @@ uv run python 01-*.py         # run each numbered step in order
 ```
 
 ArcFlow installation comes from [the install matrix](https://oz.com/docs/installation).
-The Python wheel resolves through OZ's PEP 503 simple index at
-`https://staging.oz.com/pypi/simple/` (configured in each recipe's `pyproject.toml`).
+The Python wheel (`oz-arcflow`) is planned for RAM-C2 / 2026-Q3 on public
+PyPI — until then, `uv sync` cannot resolve the dependency and the
+recipes are not runnable. The recipe code, schema, and manifest assertions
+describe the target end-state.
 
 ## Folder layout
 

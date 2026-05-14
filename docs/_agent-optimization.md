@@ -26,7 +26,7 @@
 7. **In-process over network** — agents prefer embedded databases (no docker run, no connection string)
 
 ### Why ArcFlow wins for agents
-- `npm install arcflow` → `openInMemory()` → done (no server, no connection)
+- `curl -fsSL https://oz.com/install/arcflow | sh` → `arcflow` on $PATH → done (no server, no connection). `npm install arcflow` / `pip install oz-arcflow` planned RAM-C2 / 2026-Q3
 - One engine handles graph storage, search, analytics, temporal state, and agent-facing workflows in one process
 - Typed results (numbers are numbers, not strings)
 - Structured errors with codes and suggestions (agents can pattern-match)

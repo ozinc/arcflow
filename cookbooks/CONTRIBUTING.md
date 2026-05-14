@@ -29,7 +29,7 @@ arcflow_apis = [                    # APIs the recipe uses
 external_deps = ["pyarrow >= 16"]   # third-party libs the recipe expects
 runtime_minutes = 5                 # CI cap; recipes >10 min go to _demos/
 gpu_required = false                # GPU recipes go to _demos/
-manifest_pin = "1.6.6"              # engine version this recipe targets
+manifest_pin = "1.6.27"              # engine version this recipe targets
 data_provenance = "synthesized"     # in {synthesized, anonymized, public}
 ```
 

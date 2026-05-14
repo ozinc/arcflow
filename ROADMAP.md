@@ -23,7 +23,7 @@ In active development; landing in the next 1-3 releases.
 Scoped, not yet started.
 
 - **TypeScript SDK + napi-rs Node bindings public release** — `npm install arcflow` end-to-end shipping. Source already in this repo's `typescript/` directory under MIT; the publish pipeline lands the prebuilt binaries.
-- **Python wheel public PyPI publish** — currently alpha-channel via `staging.oz.com/pypi/simple/`. Migrating to public `pypi.org` as `oz-arcflow` package (import name stays `arcflow`).
+- **Python wheel public PyPI publish** — `oz-arcflow` package (import name stays `arcflow`), published to public `pypi.org` via the cibuildwheel matrix (manylinux + macosx + windows). No interim alpha channel; the wheel arrives directly on PyPI when this lands.
 - **Cookbook expansion** — target 50+ MIT recipes across: agent state management, RAG with graph context, real-time dashboards via standing queries, geospatial joins, bitemporal audit, hybrid graph + vector search, MCP tool patterns for LLM agents.
 - **ArcFlow-WASM browser bindings** — engine compiled to wasm32; runs in browser tab. Companion to the in-process Node/Python embedding story for client-side apps.
 - **MCP server v2** — extended tool surface, query result streaming over MCP, OAuth integration for hosted MCP deployments.

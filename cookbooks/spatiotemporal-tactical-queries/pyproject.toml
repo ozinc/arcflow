@@ -4,11 +4,8 @@ version = "0.1.0"
 description = "Tactical query patterns over a spatiotemporal world model — counterfactual replay, confidence-weighted ER, observed-vs-predicted fusion."
 requires-python = ">=3.11"
 dependencies = [
-  "oz-arcflow==1.6.7",
+  # `oz-arcflow` Python wheel is planned for RAM-C2 (2026-Q3) on
+  # public PyPI. This pin describes the target end-state; `uv sync`
+  # will fail until the wheel ships.
+  "oz-arcflow==1.6.27",
 ]
-
-[tool.uv]
-index-url = "https://staging.oz.com/pypi/simple/"
-
-[tool.uv.sources]
-oz-arcflow = { index = "https://staging.oz.com/pypi/simple/" }

@@ -20,7 +20,7 @@ they were live.
 ## How this page stays accurate
 
 The matrix above is rendered from
-[`release-matrix.json`](https://pub-a0a196dbe10340f8af22524547fdd476.r2.dev/releases/arcflow/release-matrix.json),
+[`release-matrix.json`](https://github.com/ozinc/arcflow/releases/latest/download/release-matrix.json),
 published by the engine repo on every release. CI in the engine repo asserts
 on every commit that:
 
@@ -74,32 +74,15 @@ above shows you the install command for whichever path is currently shipped.
 
 Working against an unreleased ArcFlow change — testing a fix the engine
 team just merged, or building against `main` ahead of a release —
-shouldn't require carrying wheels around in your project. Two supported
-paths:
-
-### Staging registry (recommended)
-
-The engine repo publishes pre-release artifacts to a staging registry on
-every commit to `main`:
-
-```bash
-# Python
-pip install --extra-index-url https://staging.arcflow.dev/pypi/simple oz-arcflow
-
-# npm
-npm install @ozinc/arcflow --registry https://staging.arcflow.dev/npm
-```
-
-The same `release-matrix.json` (linked above) carries staging URLs for
-each binding. `--extra-index-url` keeps PyPI as the primary source and
-falls back to staging only when the version isn't on PyPI yet, so your
-pin doesn't break when the version eventually ships to the public
-registry.
+means building from source. There is no separate staging registry: the
+canonical release path is the GitHub Release on `ozinc/arcflow` (created
+by the engine repo's `release-binaries.yml` on tag push). Per-commit
+pre-release artifacts are not published.
 
 ### Local build
 
-If you need to test an in-progress engine change before it's published
-even to staging, build the wheel locally and install it from a path:
+To test an unreleased engine change, build the wheel locally and install
+it from a path:
 
 ```bash
 git clone https://github.com/ozinc/arcflow

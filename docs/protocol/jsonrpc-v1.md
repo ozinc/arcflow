@@ -646,7 +646,7 @@ The protocol described in this document is **open** under the Apache 2.0 license
 
 Client SDKs talking this protocol are in this repo:
 - TypeScript: [`typescript/`](../../typescript/)
-- Python: alpha-channel wheel (`pip install --index-url https://staging.oz.com/pypi/simple/ oz-arcflow`)
+- Python: planned RAM-C2 / 2026-Q3 (public PyPI publish pending)
 - Shell: `arcflow rpc --socket /path '{"method":"...","params":{...}}'`
 - Rust crate: planned 2026-Q4
 - Node napi-rs: planned 2026-Q3

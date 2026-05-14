@@ -6,7 +6,7 @@
 
 **Audience:** python · data-engineer · ml · agent
 **Runtime:** ~30 seconds (load) plus a couple of minutes for the per-step queries
-**Pins:** `oz-arcflow==1.6.7`
+**Pins:** `oz-arcflow==1.6.27`
 
 ## The four hard problems this addresses
 
@@ -590,8 +590,9 @@ path is independent of the bulk-create / Arrow paths above.
 
 ## Notes
 
-- `oz-arcflow` resolves through OZ's PEP 503 simple index at
-  `https://staging.oz.com/pypi/simple/`.
+- `oz-arcflow` Python wheel publication is planned for RAM-C2 / 2026-Q3
+  on public PyPI. Until the wheel ships, `uv sync` will not resolve this
+  dependency.
 - The recipe deliberately uses **only ArcFlow + pyarrow + numpy** for
   validation — no external analytical engine. The point is that ArcFlow's
   built-in aggregates produce the same answers as the ground-truth ledger

@@ -28,7 +28,7 @@ One engine for graphs, vectors, full-text search, algorithms, time-series, live 
 | Capability | How |
 |---|---|
 | Try it | **Browser — zero install** (oz.com/engine) |
-| Install | `npm install arcflow` |
+| Install | `curl -fsSL https://oz.com/install/arcflow \| sh` (CLI — only shipped path today; `npm install arcflow` planned RAM-C2 / 2026-Q3) |
 | Server needed | **No** — in-process, like SQLite |
 | Runs in browser | **Yes** (WASM) |
 | Testing | `openInMemory()` — fresh graph per test, no teardown |
