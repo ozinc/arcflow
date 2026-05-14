@@ -83,7 +83,7 @@ This means you can ship an Electron app, a Tauri desktop app, a Docker image, a 
 
 ## What happens if ArcFlow's licensing terms change?
 
-**Released versions stay under the license they shipped under.** If you deployed ArcFlow v1.6.27 in production today, you can continue using v1.6.27 under today's terms forever.
+**Released versions stay under the license they shipped under.** If you deployed ArcFlow v1.6.86 in production today, you can continue using v1.6.86 under today's terms forever.
 
 Material pricing or licensing changes apply only to **future versions** (newer than the change-announcement date) and will be announced **at least 180 days in advance** on this repo's release notes + via the [oz.com/pricing](https://staging.oz.com/pricing) page.
 
@@ -121,12 +121,12 @@ Three layers:
 
 1. **SHA256SUMS** — every release ships a `SHA256SUMS` aggregate file. Verify with:
    ```sh
-   curl -fsSL https://github.com/ozinc/arcflow/releases/download/v1.6.27/SHA256SUMS \
+   curl -fsSL https://github.com/ozinc/arcflow/releases/download/v1.6.86/SHA256SUMS \
        | sha256sum -c --ignore-missing
    ```
 2. **Sigstore attestation** — every binary has a sigstore provenance attestation. Verify with:
    ```sh
-   gh attestation verify arcflow-1.6.27-linux-x86_64-musl.tar.gz --owner ozinc
+   gh attestation verify arcflow-1.6.86-linux-x86_64-musl.tar.gz --owner ozinc
    ```
    This proves the binary was built by GitHub Actions in `ozinc/arcflow-core` at a specific source SHA. You don't need to trust OZ infrastructure — the proof is in the sigstore transparency log.
 3. **Reproducible builds** — for the most paranoid case, rebuild from source yourself per [`docs/reproducible-build.md`](./docs/reproducible-build.md) and verify the SHA256 matches what we shipped.

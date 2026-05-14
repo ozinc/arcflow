@@ -1,12 +1,12 @@
 [project]
 name = "arcflow-cookbook-fraud-graph-traversal"
-version = "1.6.27"
+version = "1.6.86"
 description = "ArcFlow recipe: fraud detection over a transfer graph — fan-in, fan-out, layering chains, all as one-line MATCH patterns instead of K-1 self-joins."
 requires-python = ">=3.10"
 dependencies = [
     # `oz-arcflow` Python wheel is planned for RAM-C2 (2026-Q3) on
     # public PyPI. This pin describes the target end-state; `uv sync`
     # will fail until the wheel ships.
-    "oz-arcflow==1.6.27",
+    "oz-arcflow==1.6.86",
     "pyarrow>=16",
 ]

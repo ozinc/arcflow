@@ -6,7 +6,7 @@
 
 **Audience:** python · ml · data-engineer
 **Runtime:** ~1 minute
-**Pins:** `oz-arcflow==1.6.27`
+**Pins:** `oz-arcflow==1.6.86`
 
 ## The four hard problems this addresses
 

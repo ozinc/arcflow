@@ -6,7 +6,7 @@
 
 **Audience:** python · data-engineer · compliance · ML engineer
 **Runtime:** ~1 minute
-**Pins:** `oz-arcflow==1.6.27`
+**Pins:** `oz-arcflow==1.6.86`
 
 A bank-transfer graph plus three pattern queries: fan-out (one source,
 many recipients), fan-in (many sources, one beneficiary — the classic

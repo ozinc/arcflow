@@ -6,7 +6,7 @@
 
 **Audience:** python · data-engineer · ml · agent
 **Runtime:** ~30 seconds (load) plus a couple of minutes for the per-step queries
-**Pins:** `oz-arcflow==1.6.27`
+**Pins:** `oz-arcflow==1.6.86`
 
 ## The four hard problems this addresses
 

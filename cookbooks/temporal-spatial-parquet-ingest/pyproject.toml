@@ -1,13 +1,13 @@
 [project]
 name = "arcflow-cookbook-temporal-spatial-parquet-ingest"
-version = "1.6.27"
+version = "1.6.86"
 description = "ArcFlow recipe: large-batch temporal + spatial Parquet → graph world model, validated cell-for-cell against DuckDB on the same input."
 requires-python = ">=3.10"
 dependencies = [
     # `oz-arcflow` Python wheel is planned for RAM-C2 (2026-Q3) on
     # public PyPI. This pin describes the target end-state; `uv sync`
     # will fail until the wheel ships.
-    "oz-arcflow==1.6.27",
+    "oz-arcflow==1.6.86",
     "pyarrow>=16",
     "duckdb>=1.0",
     "numpy>=1.26",

@@ -7,6 +7,6 @@ dependencies = [
   # `oz-arcflow` Python wheel is planned for RAM-C2 (2026-Q3) on
   # public PyPI. This pin describes the target end-state; `uv sync`
   # will fail until the wheel ships.
-  "oz-arcflow==1.6.27",
+  "oz-arcflow==1.6.86",
   "duckdb>=1.0",
 ]

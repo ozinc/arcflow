@@ -22,7 +22,7 @@
 #
 # Environment overrides:
 #   ARCFLOW_VERSION      — install a specific version instead of latest
-#                          (e.g. ARCFLOW_VERSION=1.6.27)
+#                          (e.g. ARCFLOW_VERSION=1.6.86)
 #   ARCFLOW_INSTALL_DIR  — install to a custom directory
 #                          (default: ~/.arcflow/bin)
 #   ARCFLOW_REPO         — override the release-host repo

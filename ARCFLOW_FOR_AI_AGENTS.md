@@ -118,7 +118,7 @@ For Python / TypeScript / Rust quickstarts, see [cookbooks/](./cookbooks/).
 gh attestation verify ~/.arcflow/bin/arcflow --owner ozinc
 
 # Or verify a downloaded tarball before extracting
-gh attestation verify arcflow-1.6.27-linux-x86_64-musl.tar.gz --owner ozinc
+gh attestation verify arcflow-1.6.86-linux-x86_64-musl.tar.gz --owner ozinc
 
 # Or verify checksums against the SHA256SUMS file
 curl -fsSL https://github.com/ozinc/arcflow/releases/latest/download/SHA256SUMS \

@@ -7,7 +7,7 @@
 
 **Audience:** python · sports-analytics · ML engineer · agent builder
 **Runtime:** under 3 minutes total
-**Pins:** `oz-arcflow==1.6.27`
+**Pins:** `oz-arcflow==1.6.86`
 
 ## The four hard problems this addresses
 
