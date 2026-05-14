@@ -433,6 +433,30 @@ This is the infrastructure layer the AI stack has been missing. Foundation model
 
 ---
 
+## When to use
+
+- Your application needs to answer questions about entities in space — where they are, how close they are to each other, what is visible from a given point — faster than a relational database with spatial extensions can provide (ArcFlow Spatial Index targets ≥ 2000 proximity queries per second at 11K entities).
+- You need to replay the exact state of the world at a past moment for incident reconstruction, compliance audit, or training data generation — not from logs but from the live graph with `AS OF seq N`.
+- Multiple agents or services must read and write shared world state concurrently without a central broker; ArcFlow's MVCC engine handles concurrent reads and writes in-process.
+- Sensor data arrives with epistemic uncertainty (predicted contacts, inferred positions, low-reliability readings) and downstream logic must act differently depending on observation class and confidence score.
+- You are building on top of a neural world model (WFM) and need a persistence layer to store its outputs as queryable, provenanced, temporally versioned facts.
+
+## When not to use
+
+- If your graph will exceed available RAM and you require server-side paging or horizontal sharding, ArcFlow's in-process design is not appropriate — choose a server-oriented graph database.
+- ArcFlow is not a time-series database. If your primary workload is append-only sensor streams with range queries over millions of timestamped samples (and graph traversal is incidental), a purpose-built TSDB will outperform it. <!-- DRAFT: confirm whether WAL segments are optimised for high-frequency monotonic time-series ingest -->
+- Do not use ArcFlow as a drop-in replacement for a relational database if your data is purely tabular with no meaningful graph structure. The operational overhead of managing `_observation_class` and `_confidence` adds noise without benefit.
+- If you need multi-user ACID transactions with full rollback semantics across long-lived operations, ArcFlow's single-writer model is not designed for that use case.
+- Live query subscriptions (`db.subscribe()`) are not appropriate as a replacement for an event bus between distributed processes. They are designed for in-process observers; cross-process coordination requires the HTTP or MCP server layer.
+
+## Failure modes
+
+- **Stale predicted observations accumulate**: agents write `_observation_class: 'predicted'` nodes that are never confirmed or retracted. Over time the world model contains a growing set of ghost entities with high `_confidence` from the model but no observed corroboration. Queries that forget to filter on observation class act on phantom state.
+- **Sequence number misuse in temporal queries**: `AS OF seq N` requires the caller to know which sequence number corresponds to the moment of interest. If the application does not record sequence numbers alongside business events, temporal reconstruction becomes approximate. The engine has no "AS OF timestamp" shortcut — the sequence is the clock. <!-- DRAFT: confirm whether any helper exists for mapping wall-clock time to sequence number -->
+- **In-memory database used in production**: `openInMemory()` is fast and convenient for tests. If a developer deploys it in production (accidentally or for simplicity), all world model state is lost on process restart. The engine does not warn at close time if data was never persisted.
+- **Live view read on empty graph**: `CREATE LIVE VIEW` succeeds even when the underlying pattern matches zero nodes. A caller that reads from the view immediately after creation receives zero rows and may incorrectly conclude the world model is empty, rather than that no matching entities have been written yet.
+- **Spatial index not populated for `point()` properties**: if entities are created with `x`, `y`, `z` as separate float properties rather than a `point({x, y, z})` value, `algo.nearestNodes()` will not find them via the Spatial Index and will fall back to a full scan (or return empty). The engine does not raise an error — proximity queries silently degrade. <!-- DRAFT: confirm exact property name / type required for spatial index eligibility -->
+
 ## Next steps
 
 - [Autonomous Systems](/docs/use-cases/autonomous-systems) — robot fleets and UAV coordination on a shared world model

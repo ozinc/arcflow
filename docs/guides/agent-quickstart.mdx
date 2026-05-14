@@ -314,6 +314,30 @@ app.listen(3000)
 
 ---
 
+## When to use
+
+- You are integrating ArcFlow into a new project and need a self-contained reference that covers the full CRUD lifecycle — create, read, update, delete — with working code you can paste directly.
+- An LLM coding agent (Claude Code, Copilot, Codex, Cursor) needs to generate ArcFlow queries; point the agent at this page for the API surface and parameter idioms.
+- You want to add ArcFlow to an existing Express or Fastify service and need a ready-made server integration pattern including graceful shutdown.
+- You need a reliable test pattern — `openInMemory()` per test with `db.close()` in teardown — before setting up a full test harness.
+- You are encountering `ArcflowError` in production and need a quick reference for machine-readable error codes (`e.code`, `e.category`, `e.suggestion`) to map to monitoring alerts.
+
+## When not to use
+
+- This guide is a starting point, not an exhaustive API reference. For method signatures, generics, and advanced options, use the [TypeScript API Reference](/reference/api) directly.
+- Do not use `openInMemory()` in production deployments; world model state is not persisted across process restarts. This page deliberately simplifies the distinction — see [Persistence & WAL](/concepts/persistence) for the production path.
+- The Express/Fastify pattern shown here creates a single global `db` instance. For multi-tenant deployments where each tenant needs an isolated graph, this pattern is inappropriate — each tenant should open its own database path.
+- The `batchMutate()` example is optimised for bulk initial writes, not for transactional updates that must succeed or fail together. ArcFlow's single-writer model serialises mutations, but `batchMutate` does not provide cross-mutation atomicity guarantees. <!-- DRAFT: confirm batchMutate atomicity semantics with maintainer -->
+- If you need to pass ArcFlow results to a browser client, do not call `result.rows.map(r => r.toObject())` on large result sets in a hot path — the object allocation overhead is significant. Use typed column access for performance-sensitive paths.
+
+## Failure modes
+
+- **DB_CLOSED after early `db.close()`**: calling `db.close()` in a middleware or cleanup function before all in-flight requests have resolved will cause subsequent `db.query()` calls to throw `ArcflowError` with code `DB_CLOSED`. The error is structured and catchable, but the root cause is lifecycle management, not a query problem.
+- **Injection via string interpolation**: copying the pattern `db.query("MATCH (n {id: '" + id + "'}) RETURN n")` from examples that do not use `$params` exposes the query to injection. Every call with dynamic values must use the parameterised form `db.query(cypher, { id })`.
+- **`result.rows[0]` on empty result**: if a query returns zero rows (e.g., the entity does not exist), accessing `result.rows[0].get('e.id')` throws a runtime error. The page's examples do not show this guard; callers must check `result.rowCount > 0` before indexing.
+- **Algorithm output column name mismatch**: `CALL algo.pageRank()` returns columns named `name` and `rank` in the examples, but the actual column names depend on the algorithm variant and engine version. If `row.get('rank')` returns `undefined`, run `CALL db.help()` to inspect the current output schema. <!-- DRAFT: confirm canonical column names for pageRank, louvain, betweenness outputs -->
+- **Vector index created after data inserted**: creating a `VECTOR INDEX` after nodes with `embedding` properties already exist does not automatically index the existing nodes in all configurations. New nodes are indexed; pre-existing ones may be missed depending on whether a backfill was triggered. <!-- DRAFT: confirm vector index backfill behaviour on existing nodes -->
+
 ## See Also
 
 - [Agent-Native Database](/agent-native) — filesystem workspace, CLI binary, watch mode, batch execution

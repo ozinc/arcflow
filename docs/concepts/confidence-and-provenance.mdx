@@ -105,6 +105,30 @@ RETURN r.name, r.x, r.y, r._confidence
 
 ---
 
+## When to use
+
+- You need queries to return only facts the system has high confidence in — e.g., safety-critical decisions that must not act on unverified sensor data.
+- An agent pipeline must distinguish between what was measured directly versus what was inferred or predicted, before routing to different action paths.
+- You are debugging an unexpected world-model result and need to trace which source, skill version, or model fingerprint produced a specific edge.
+- You want to trigger re-evaluation of stale or low-confidence edges after a sensor is recalibrated or a skill is updated (`REPROCESS EDGES WHERE confidence < 0.6`).
+- You are building an audit trail — a regulatory or post-incident record showing exactly how a conclusion was reached and what evidence score it carried.
+
+## When not to use
+
+- Confidence scoring on edges is not a substitute for business-logic validation. A `_confidence: 0.99` edge does not mean the underlying data model is correct — it means the producer was highly certain at write time.
+- Do not use `_confidence` as a general-purpose "quality" field for non-epistemic attributes (e.g., "how complete is this record?"). Use a separate property for that; mixing semantics breaks `REPROCESS EDGES` behaviour.
+- Do not propagate multiplicative path confidence across more than 3–4 hops in production queries without a lower-bound filter. At 0.9 per edge, a 5-hop path has path confidence ~0.59 — filtering at 0.85 would silently drop valid long-range inferences. <!-- DRAFT: confirm path-confidence hop budget with maintainer -->
+- If your use case only ever has manually asserted facts (all `CREATE` / `MERGE` at confidence 1.0), the provenance properties are still present but carry no signal — avoid building logic that branches on `_skill_version` in that context.
+- Do not use `_provenance_hash` as a deduplication key across pipelines. It is a lineage fingerprint, not a content hash of the edge value.
+
+## Failure modes
+
+- **Silent low-confidence accumulation**: skills run on incrementally updated data, but `REPROCESS EDGES` is never scheduled. Over time the graph fills with edges at 0.5–0.7 confidence that were good enough at first ingest but are never re-evaluated. Queries filtering at 0.85 return shrinking result sets without any error.
+- **Confidence threshold mismatch**: a query filters `r._confidence > 0.75` and a downstream consumer filters `> 0.85`. Both pass, but the downstream consumer silently drops 30% of the data the upstream query intended to surface. The discrepancy is invisible until an audit.
+- **Treating predicted observations as facts**: an agent reads `_observation_class = 'predicted'` nodes without filtering on observation class. Model outputs (e.g., Kalman filter positions) are treated as ground truth. The world model shows a confident but fabricated view of reality. <!-- DRAFT: confirm whether the engine enforces any read-time warning on predicted class -->
+- **Provenance chain broken by manual SET**: a developer runs `SET r._skill_version = NULL` to "clean up" an edge. The `REPROCESS EDGES` mechanism can no longer identify which edges belong to which skill, so re-runs re-process everything indiscriminately.
+- **Over-filtering on `_confidence` removes all results**: a safety query sets a threshold of `0.95` but the skill that produces the relevant edges only materialises at `0.87`. The query returns zero rows silently. No error is thrown; the caller assumes no entities match.
+
 ## See Also
 
 - [Observations & Evidence](/concepts/observations) — observation classes and the ArcFlow Evidence Model
