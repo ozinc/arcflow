@@ -1,0 +1,17 @@
+slug = "virtual-labels-over-parquet"
+title = "Virtual Labels Over Parquet — Lakehouse Fast-Path"
+audience = ["python", "data-engineer", "ml"]
+tags = ["lakehouse", "parquet", "virtual-labels", "iceberg"]
+arcflow_apis = [
+    "python.ArcFlow.execute",
+    "python.ArcFlow.register_virtual_partition",
+    "python.ArcFlow.close",
+    "worldcypher.CREATE_NODE_LABEL_VIRTUAL",
+]
+external_deps = [
+    "pyarrow >= 16",
+]
+runtime_minutes = 5
+gpu_required = false
+manifest_pin = "0.8.0"
+data_provenance = "synthesized"
