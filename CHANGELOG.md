@@ -24,7 +24,16 @@ for v0.7.x consumers.
   `schema`, `workspace`) and the I/O substrate primitive layer (`io`)
   are reachable. Legacy crate-root modules (`mvcc`, `dense_store`,
   `column_store`, `csr`) remain as canonical re-exports — **no
-  migration required** for v0.7.x-pinned consumers.
+  migration required** for v0.7.x-pinned consumers who stay on
+  `bulk_create_*` ingest.
+
+  Consumers ingesting **high-cardinality immutable rows** (Frames,
+  telemetry samples, event-stream rows) SHOULD migrate to the new
+  `CREATE NODE LABEL ... VIRTUAL FROM PARTITION '<lake-uri>'` DDL to
+  avoid the legacy bulk-ingest memory profile — that fast-path is
+  what the substrate rewrite was opened to enable. See the
+  Lakehouse-over-Parquet cookbook
+  (`cookbooks/virtual-labels-over-parquet/`) for the full recipe.
 - **Virtual labels.** New DDL: `CREATE NODE LABEL <name> [(col TYPE,
   ...)] VIRTUAL FROM PARTITION '<lake-uri>'`. Rows live in a
   Lakehouse partition; the engine holds the typed schema, the catalog
