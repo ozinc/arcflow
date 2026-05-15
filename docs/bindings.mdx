@@ -17,6 +17,8 @@ engine release manifest — no hand-rolled commands here.
 
 All bindings wrap a single C ABI shared library (`libarcflow`). Direct function calls when in-process. TCP / HTTP / MCP when you need network access.
 
+If you are writing a *custom* binding, read [Adapter Discipline](/docs/concepts/adapter-discipline) first — it is the boundary contract every binding inherits. The short version: the edge translates; only the core decides.
+
 ## Rust SDK
 
 The primary interface.
