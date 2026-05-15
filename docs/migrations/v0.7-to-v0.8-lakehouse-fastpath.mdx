@@ -1,0 +1,183 @@
+---
+title: "v0.7 → v0.8 Lakehouse Fast-Path"
+kind: guide
+description: "For consumers ingesting high-cardinality immutable rows under v0.7. The Lakehouse fast-path moves observation rows out of engine RAM into Hive-partitioned Parquet partitions, accessed via virtual labels. The graph holds typed schema + adjacency + catalog pointer."
+status: "stable"
+---
+
+# v0.7 → v0.8 Lakehouse Fast-Path
+
+The `0.8.0` cut introduces the **Lakehouse fast-path** — a way to ingest high-cardinality immutable rows (frames, telemetry samples, event-stream rows) without materialising them into engine RAM. This guide is for v0.7.x consumers who hit the substrate cliff and want to migrate.
+
+**You do not need to migrate if:**
+
+- Every class you ingest is *mutable* (charting, entity-resolution merges, derived state).
+- Every class you ingest is *low-cardinality* (≤ ~50K rows total — players, plays, devices, agents).
+- Your `bulk_create_*` calls fit comfortably in memory.
+
+The legacy `bulk_create_*` ingest path stays. The crate-root modules (`mvcc`, `dense_store`, `column_store`, `csr`) remain as canonical re-exports of their `worldgraph::*` counterparts; v0.7.x-pinned consumers continue to work without code change.
+
+**You should migrate if:**
+
+- You ingest *immutable observation rows* — anything that arrived once and never changes.
+- The class is *high-cardinality* — frames per game, samples per device, events per stream.
+- The v0.7 ingest left engine RAM growing faster than disk should justify.
+
+The fast-path is what the substrate rewrite was opened to enable.
+
+## Step 1 — Classify your node classes
+
+For each class in your schema, apply the mechanical decision rule (see [World Graph](/docs/concepts/layers/world-graph) for the full R1–R3 boundary):
+
+1. **Is the class mutable?** Yes → keep as Owned (`bulk_create_*`).
+2. **Is the class an immutable observation row?** Yes → migrate to Virtual.
+3. **Edges are always Owned** regardless of endpoint classification.
+
+A worked example from a sports-tracking workload:
+
+| Class | Cardinality | Mutability | Read pattern | Today | After migration |
+|---|---|---|---|---|---|
+| `Player` | ~95 / season | mutable (roster, injury) | property + traversal | `bulk_create_nodes` | unchanged |
+| `Play` | ~176 / game | mutable (charting) | property + traversal | `bulk_create_nodes` | unchanged |
+| `Charting` | per source | mutable | property + traversal | `bulk_create_nodes` | unchanged |
+| `Frame` | ~1M / game | immutable | columnar predicate scan | `bulk_create_nodes` | **`VIRTUAL FROM PARTITION`** |
+| `Telemetry` | ~1M / game | immutable | columnar predicate scan | `bulk_create_nodes` | **`VIRTUAL FROM PARTITION`** |
+| `TRACKED` (edge) | high-card | append-only | CSR traversal | `bulk_create_relationships` | unchanged — edges are always Owned |
+
+If a class produces an ambiguous classification — *mutable AND high-cardinality AND read-by-traversal*, or *immutable AND low-cardinality AND written-multiple-times* — the R1–R3 rules cannot resolve it in isolation. Treat that as a stop condition: surface the class for review, pick one axis as the dominant, and document the tradeoff.
+
+## Step 2 — Author the `lake://` mount config
+
+The substrate addresses Lake partitions through the `lake://` URI scheme. A registration takes the form:
+
+```text
+lake://<mount>/<table>/{var}=<glob>[/{var}=<glob>]…/<file-glob>.parquet
+```
+
+For the worked-example schema above:
+
+| Class | Partition pattern |
+|---|---|
+| `Frame` | `lake://nfl/tracks/{season}/{week}/{game_key}.parquet` |
+| `Telemetry` | `lake://sensors/temperature/{year}/{month}/{day}/{sensor_id}.parquet` |
+
+The mount (`nfl`, `sensors`) is configured at workspace open time and binds the URI's authority to a backing storage location (a local directory, an S3 bucket, a GCS bucket, an Iceberg catalog endpoint). Template variables in braces are recognised as Hive-partitioned columns and used by the engine for partition pruning at query time.
+
+The full [Virtual Labels Over Parquet cookbook](https://github.com/ozinc/arcflow/tree/main/cookbooks/virtual-labels-over-parquet) walks through a runnable example end-to-end.
+
+## Step 3 — Register the virtual label
+
+Two paths, same effect.
+
+### Via DDL
+
+```cypher
+CREATE NODE LABEL Frame (
+  entity_id STRING,
+  ts        TIMESTAMP,
+  x         DOUBLE,
+  y         DOUBLE,
+  speed     DOUBLE
+) VIRTUAL FROM PARTITION 'lake://nfl/tracks/{season}/{week}/{game_key}.parquet';
+```
+
+The DDL parser validates the typed schema against the Parquet files' schema. A `VirtualLabelEntry { label, partition_pattern, schema_ref, resolver_kind }` row is committed to the catalog manifest at `<workspace>/canonical/manifest_<epoch>.json`. The manifest commit is atomic (`write-tmp + fsync + atomic_rename` with two-file protocol; `F_FULLFSYNC` on macOS, `fdatasync` on Linux).
+
+### Via Python FFI
+
+```python
+from arcflow import ArcFlow
+
+db = ArcFlow("/path/to/workspace")
+epoch = db.register_virtual_partition(
+    label="Frame",
+    partition="lake://nfl/tracks/{season}/{week}/{game_key}.parquet",
+)
+```
+
+The C ABI counterpart is `arcflow_register_virtual_partition(session, label, partition) -> i64`.
+
+## Step 4 — Stop ingesting Virtual classes through `bulk_create_*`
+
+Once a class is registered as Virtual, its rows live in the Lakehouse partitions. The bulk-ingest path no longer applies to that class. New observation rows arrive as new partitions in the Lake; the manifest version advances; the graph picks up the new partition on its next manifest read.
+
+If your existing pipeline still calls `bulk_create_nodes` against a class you've moved to Virtual, the path becomes a no-op classification error at the schema layer — exactly the wrong thing was attempted. Remove the `bulk_create_*` calls; replace them with whatever writes the Parquet files.
+
+## Step 5 — Verify the workspace is on the fast-path
+
+Two checks confirm the migration landed.
+
+**Catalog inspection** — list every virtual label registered against the workspace:
+
+```cypher
+CALL db.constraints() YIELD name, kind, target
+WHERE kind = 'VIRTUAL_LABEL'
+RETURN name, target;
+```
+
+Each row is a label/partition-pattern pair. The `target` is the `lake://` URI.
+
+**Manifest reading** — every committed epoch's manifest survives on disk:
+
+```bash
+ls <workspace>/canonical/manifest_*.json
+cat <workspace>/canonical/manifest_$(cat <workspace>/canonical/CURRENT).json | jq '.virtual_labels'
+```
+
+The `virtual_labels` array enumerates every Virtual class with its partition pattern and resolver kind. Atomic-commit guarantees the manifest is never half-written; the `CURRENT` pointer is the two-rename target.
+
+## Step 6 — Query against virtual labels
+
+The intent at the query surface is that virtual labels are indistinguishable from Owned labels:
+
+```cypher
+MATCH (f:Frame {entity_id: 'Unit-01'})
+WHERE f.ts >= datetime('2026-03-14T08:00:00')
+  AND f.ts <  datetime('2026-03-14T09:00:00')
+RETURN f.ts, f.x, f.y, f.speed
+ORDER BY f.ts;
+```
+
+The planner-side rewriter for `MATCH (:VirtualLabel ...)` patterns — which decomposes the pattern into a manifest-pruned, predicate-pushed Parquet scan — is the next wave of substrate work. Until it lands, queries against virtual labels return a typed `QueryError::VirtualLabelNotYetQueryable`. The registration path described above is real bytes on disk now; the read path is wired but gated.
+
+Plan for the rollout accordingly: the migration produces correct catalog state today, and the queries that depend on it light up when the rewriter ships. Until then, downstream reads against Virtual rows go through the Parquet files directly (the partitions remain Lakehouse-shaped; any Arrow / Parquet / Iceberg tool can read them in parallel with the migration).
+
+## A note on overlay tables — correcting a Virtual row
+
+Virtual rows are immutable by contract. Corrections happen via *overlay tables*: an Owned class that the Query Engine joins at read time. Pattern:
+
+```cypher
+-- The Virtual class
+CREATE NODE LABEL Frame (...) VIRTUAL FROM PARTITION '...';
+
+-- The Owned overlay class — small, mutable
+CREATE NODE LABEL FrameCorrection (
+  frame_id    STRING,    -- the entity_id of the Frame being corrected
+  field_name  STRING,
+  new_value   ANY,
+  authored_at TIMESTAMP,
+  authored_by STRING
+);
+```
+
+A reader query joins both: take the Frame row from the Parquet partition; if a `FrameCorrection` exists for that `frame_id` + `field_name`, the overlay wins. This is the discipline `:CAUSED_BY` edges layer on top of — see [Causal Edges](/docs/concepts/causal-edges) for the full pattern.
+
+## Worked example — project-merlin
+
+The project-merlin NFL stress harness ran this exact migration as the v0.8.0 day-zero plan: 22 entities × 5 plays × 1M frames per game × hundreds of games. The transition document at `project-merlin/SHIP-v0.8-TRANSITION.md` (in the project-merlin repo) is a consumer-side worked example referenceable verbatim. It covers:
+
+- The before-and-after schema (Frame moved from Owned to Virtual; Player + Play stayed Owned).
+- The partition layout authored against the `merlin-nfl-2025/canonical/` Iceberg-shaped tree.
+- The mount config + registration sequence.
+- The verification steps that confirmed the catalog scan opens in well under 100 ms over 280+ partitions.
+
+If you are migrating a similar shape — high-cardinality observation rows on the side of a small mutable entity model — that document is the closest worked precedent available.
+
+## See also
+
+- [Virtual Labels Over Parquet](https://github.com/ozinc/arcflow/tree/main/cookbooks/virtual-labels-over-parquet) — the runnable cookbook recipe.
+- [World Graph](/docs/concepts/layers/world-graph) — the conceptual layer and R1–R3 boundary.
+- [Perception Lake](/docs/concepts/layers/perception-lake) — the sibling immutable-observation layer.
+- [World Graph Substrate](/docs/architecture/worldgraph) — the engine-architecture deep-dive.
+- [Causal Edges](/docs/concepts/causal-edges) — the discipline for overlay-table corrections.
+- [CHANGELOG](https://github.com/ozinc/arcflow/blob/main/CHANGELOG.md) — the v0.8.0 release notes.
