@@ -1,11 +1,11 @@
 [project]
 name = "arcflow-cookbook-team-sports-tactical-world-model"
-version = "0.7.2"
+version = "0.8.0"
 description = "ArcFlow recipe: advanced tactical pattern detection — pressing, line-breaking pass, defensive compression, counter-attack origin — against a frame-resolution operational world model."
 requires-python = ">=3.11"
 dependencies = [
     # `oz-arcflow` Python wheel is planned for RAM-C2 (2026-Q3) on
     # public PyPI. This pin describes the target end-state; `uv sync`
     # will fail until the wheel ships.
-    "oz-arcflow==0.7.2",
+    "oz-arcflow==0.8.0",
 ]

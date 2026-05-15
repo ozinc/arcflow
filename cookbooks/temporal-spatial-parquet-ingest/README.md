@@ -6,7 +6,7 @@
 
 **Audience:** python · data-engineer · ml
 **Runtime:** ~5 minutes
-**Pins:** `oz-arcflow==0.7.2`
+**Pins:** `oz-arcflow==0.8.0`
 
 The on-ramp for batch-Parquet-to-graph migrations — sports analytics,
 fleet tracking, robotics telemetry, sensor logs. A small set of

@@ -1,6 +1,6 @@
 # ArcFlow Extensions Catalog
 
-**Version:** v0.7.2  
+**Version:** v0.8.0  
 **Date:** 2026-04-07  
 **Initiative:** I-INIT-0052 (GQL-Native Extensions)
 

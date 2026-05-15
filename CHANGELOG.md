@@ -8,6 +8,102 @@ For an engine-internal commit-grade changelog (wave numbering, dossier links), s
 
 ---
 
+## [0.8.0] — 2026-05-15
+
+**Minor — World Graph substrate cut.** The eighteen-initiative
+worldgraph::io v0.8 batch (I-INIT-0132..0149) closed in arcflow-core
+commit `c0a7181f` (Phase-D atomic cut). Additive — no breaking changes
+for v0.7.x consumers.
+
+### Mirrored from arcflow-core v0.8.0
+
+- **`arcflow.worldgraph` is the public substrate layer.** The
+  doctrinal rename "World Store" → "World Graph" lands here. The
+  top-level `arcflow_core::worldgraph::*` module is public; six
+  bounded capabilities (`catalog`, `topology`, `nodes`, `wal`, `mmap`,
+  `schema`, `workspace`) and the I/O substrate primitive layer (`io`)
+  are reachable. Legacy crate-root modules (`mvcc`, `dense_store`,
+  `column_store`, `csr`) remain as canonical re-exports — **no
+  migration required** for v0.7.x-pinned consumers.
+- **Virtual labels.** New DDL: `CREATE NODE LABEL <name> [(col TYPE,
+  ...)] VIRTUAL FROM PARTITION '<lake-uri>'`. Rows live in a
+  Lakehouse partition; the engine holds the typed schema, the catalog
+  pointer, and the adjacency. The planner-side predicate-pushdown
+  rewriter for `MATCH (:VirtualLabel ...)` patterns lands as a
+  follow-on; until then, queries against Virtual labels return a
+  typed `QueryError::VirtualLabelNotYetQueryable`.
+- **Python FFI `register_virtual_partition(label, partition)`** —
+  drives virtual-label registration without a Cypher round-trip.
+  C ABI: `arcflow_register_virtual_partition(session, label,
+  partition) -> i64 epoch`.
+- **Real bytes on disk** — WAL writer + replay (length-prefixed
+  CRC32-IEEE framing, torn-tail tolerance, group-commit fsync),
+  streaming-stripe writer (append-only ARC1 hot-tier files,
+  capacity-bounded), manifest atomic commit (`write-tmp + fsync +
+  atomic_rename`; two-file protocol), Memory Governor admission gate
+  (per-residency-class byte accounting against `TierBudget` caps).
+- **Platform-divergent storage primitives** — `PlatformOps` trait
+  with macOS (`F_FULLFSYNC`) and Linux (`fdatasync` + drive-cache
+  flush) implementations; WSL2 detection surfaces degraded-atomicity
+  warning at mount.
+- **Frozen type vocabulary** — `oz://` brand-level URI scheme (six
+  variants: workspace / snapshot / label / edge / catalog /
+  partition), 9-state `ResidencyClass` + 6-tier `TierBudget` model,
+  ARC1 file magic + version constants, Iceberg-shaped
+  `ManifestPayload`, 5-variant `MutationOp`.
+
+### Not yet in v0.8 (carried forward)
+
+- Planner-side predicate-pushdown rewriter for virtual labels — Cypher
+  patterns against `(:VirtualLabel ...)` will rewrite to Parquet
+  predicate-pushdown when the rewriter ships.
+- Heat-score eviction policy — the admission gate is in place; the
+  eviction policy that complements it lands in a follow-on.
+- ARC1 reader + Parquet decoder bodies — the type vocabulary and
+  writer-side primitives are shipped; the corresponding readers are
+  queued behind the executor wiring.
+- Iceberg v3 strict reader — the v0.8 manifest reader is
+  Iceberg-shaped (field names match v3 conventions), not v3-strict.
+
+### Documentation alignment
+
+- Six new pages landed for the AF-DOC-2026-05-15-{001,002} bundle:
+  `docs/concepts/execution-models.mdx` (LIVE / TRIGGER / SKILL /
+  PROGRAM vocabulary), `docs/concepts/causal-edges.mdx`
+  (`:CAUSED_BY` discipline + constraint),
+  `docs/concepts/adapter-discipline.mdx` (PAT-0049 humble-object for
+  binding authors), `docs/concepts/time-decay.mdx`
+  (`decay_with_half_life` Z-set operator),
+  `docs/guides/scale-patterns.mdx` (four scale primitives), and
+  `docs/architecture/worldgraph.mdx` (engine-architecture preview
+  of the v0.8 substrate).
+- Seven layer pages added under `docs/concepts/layers/` — one per
+  engine layer (Perception Lake, World Graph, Query Engine, Live
+  Surface, Event Bus, Behavior Engine, Algorithm Library).
+- Cross-references closed so the new pages are reachable from
+  their canonical-page siblings (live-queries, event-bus,
+  behavior-graph, algorithms, worldcypher, bindings, architecture).
+- `docs/reference/versioning.mdx` mirrors the workspace `0.8.0` SoT.
+- All cookbook `pyproject.toml` / `meta.toml` pins bumped to
+  `oz-arcflow==0.8.0`.
+- Illustrative install / version examples across `docs/` and
+  `LICENSE-*.md` bumped to `0.8.0`.
+- `docs/reference/data/SYNC.json` engine_version → `0.8.0`.
+- Conformance dashboard pages re-sync to engine `0.8.0`.
+
+### Release content
+
+GitHub Release v0.8.0 ships from `arcflow-core` tag
+[`v0.8.0`](https://github.com/ozinc/arcflow-core/releases/tag/v0.8.0).
+`cargo add arcflow-core@0.8` is available once the release workflow
+lands green and crates.io publish flows through.
+
+`install.sh` end-to-end resolves to v0.8.0. `arcflow upgrade`
+detects and applies the v0.7.x → v0.8.0 upgrade path; legacy module
+paths continue to work via the canonical re-export shims.
+
+---
+
 ## [0.7.2] — 2026-05-14
 
 **Patch wheel.** Post-v0.7.1 batch. Capability surface unchanged; bug fixes and substrate additions only.

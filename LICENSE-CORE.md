@@ -128,7 +128,7 @@ ArcFlow Core executes locally in Your process or on Your infrastructure. There i
 
 ## 7. No surprise changes
 
-**Released versions of ArcFlow Core continue to be usable under the License under which they shipped.** If You deployed ArcFlow Core version `v0.7.2` in production today under v1.0 of this License, You can continue using `v0.7.2` under v1.0 of this License indefinitely.
+**Released versions of ArcFlow Core continue to be usable under the License under which they shipped.** If You deployed ArcFlow Core version `v0.8.0` in production today under v1.0 of this License, You can continue using `v0.8.0` under v1.0 of this License indefinitely.
 
 Material pricing or licensing changes apply **only to future versions** released after the announcement, and **only after at least 180 days of prior notice**, published in:
 

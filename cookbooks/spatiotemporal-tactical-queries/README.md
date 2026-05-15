@@ -6,7 +6,7 @@
 
 **Audience:** python · data-engineer · ml · agent
 **Runtime:** under 1 minute total
-**Pins:** `oz-arcflow==0.7.2`
+**Pins:** `oz-arcflow==0.8.0`
 
 This recipe is a pattern catalog, not an end-to-end pipeline. The
 [`multi-stream-spatiotemporal-world-model`](../multi-stream-spatiotemporal-world-model/)

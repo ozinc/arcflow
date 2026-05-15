@@ -2,7 +2,7 @@
   "standard": "ISO/IEC 39075:2024",
   "standard_version": "GQL Edition 1 + V2 accepted proposals",
   "implementation": "ArcFlow WorldCypher",
-  "version": "0.7.2",
+  "version": "0.8.0",
   "date": "2026-05-14",
   "conformance_level": "full",
   "initiative": "I-INIT-0088",

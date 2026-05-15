@@ -1,15 +1,15 @@
 ---
-title: "World Graph Substrate (Engine Preview)"
+title: "World Graph Substrate"
 kind: operation
-description: "Engine-architecture preview of the World Graph substrate — module structure, virtual labels, six-tier residency, oz:// URI scheme, and the ARC1 on-disk format. Type vocabulary is frozen; implementation lands progressively."
-status: "preview"
+description: "Engine-architecture deep dive on the World Graph substrate — module structure, virtual labels, six-tier residency, oz:// URI scheme, and the ARC1 on-disk format."
+status: "stable"
 ---
 
-# World Graph Substrate (Engine Preview)
+# World Graph Substrate
 
-This page is an **engine-architecture preview**, not a user-facing capability reference. It describes the substrate the World Graph layer is being built on — the module structure, the type vocabulary, the storage hierarchy, the addressing scheme, and the on-disk format. The types are frozen and exhaustively tested; the implementation that animates them lands progressively as the substrate cuts.
+This page is an **engine-architecture deep dive**. It describes the substrate the World Graph layer is built on — the module structure, the type vocabulary, the storage hierarchy, the addressing scheme, and the on-disk format. The substrate cut as the engine's `0.8.0` release; the type vocabulary is the public surface, and the runtime that animates it is real bytes on disk.
 
-When an external surface is documented elsewhere (DDL, procedures, the SDK), this page links to it. When a substrate concept does not yet have a user-facing surface, this page describes the concept and does not invent one. *Live, not aspirational* — every claim here either describes types that exist in the engine source today, or marks a downstream surface that arrives when the substrate's resolvers wire through.
+When an external surface is documented elsewhere (DDL, procedures, the SDK), this page links to it. When a substrate concept has not yet surfaced through a user-facing API, this page describes the concept at the architectural level and does not invent one. Items still queued behind the substrate cut (reader bodies, executor wiring, planner-side rewrites) are called out in *Status* at the bottom — they are not described as live.
 
 ## Section 1 — `arcflow.worldgraph` module structure
 
@@ -142,37 +142,32 @@ Two on-disk formats by design:
 
 The substrate's two formats are not a transition; they are two different *roles*. ARC1 is what the engine writes; Parquet is what every other tool reads, and what Virtual labels resolve through.
 
-## Status — what is frozen, what is in flight
+## Status — what is shipping, what is still queued
 
-The type vocabulary in the engine source today:
+What the substrate cut delivered as real bytes on disk:
 
-- `arcflow.worldgraph` module skeleton with the six bounded capabilities + `io` substrate.
-- Typed schema (`NodeLabel`, `ColumnDef`, `ColumnType`, `EdgeLabel`).
-- Virtual-label contracts (`VirtualLabelEntry`, `PartitionPattern`, `ResolverKind`).
-- DDL parser for `CREATE NODE LABEL ... VIRTUAL FROM PARTITION`.
-- `MutationOp` enum (row-level and bulk-stripe variants).
-- WAL record envelope and bulk-stripe protocol.
-- `TierBudget` + nine-state `ResidencyClass`.
-- `oz://` URI parser.
-- ARC1 file magic + version constants.
-- LSM compaction policy types.
-- Streaming-stripe writer policy + state machine.
-- Block-cache key + handle + policy types.
-- Catalog skeleton.
-- Platform probe (macOS / Linux / WSL2) with capability dispatch.
+- The `arcflow.worldgraph` public module with the six bounded capabilities + the `io` substrate primitive layer.
+- The full typed schema (`NodeLabel`, `ColumnDef`, `ColumnType`, `EdgeLabel`).
+- Virtual-label contracts (`VirtualLabelEntry`, `PartitionPattern`, `ResolverKind`) and the `CREATE NODE LABEL ... VIRTUAL FROM PARTITION` DDL parser.
+- The Python FFI `register_virtual_partition(label, partition)` and its C ABI counterpart `arcflow_register_virtual_partition`.
+- The `MutationOp` enum (row-level and bulk-stripe variants).
+- The WAL writer + replay path — length-prefixed CRC32-IEEE framing, torn-tail tolerance, group-commit fsync.
+- The streaming-stripe writer — append-only ARC1 hot-tier files, capacity-bounded with typed `CapacityExceeded` refusal.
+- The manifest atomic-commit protocol — write-tmp + fsync + atomic-rename, two-file protocol with `F_FULLFSYNC` on macOS and `fdatasync` on Linux.
+- The Memory Governor's admission gate — per-residency-class byte accounting against `TierBudget` caps; refuses over-commit; tracks shared cap pools.
+- The platform-divergent storage primitives (`PlatformOps` trait) — macOS / Linux / WSL2 paths with capability dispatch + degraded-atomicity warning at mount where appropriate.
+- The `oz://` URI parser, `TierBudget` + nine-state `ResidencyClass`, ARC1 file magic + version constants, LSM compaction policy types, block-cache key + handle + policy types, Iceberg-shaped `ManifestPayload`.
 
-In flight — the page does not describe these as live:
+Still queued behind the cut — not described as live on this page:
 
-- Streaming-stripe write bodies, manifest replay + snapshot pinning.
-- Object-cache fetch bodies, Parquet decoder.
-- Apply-mutation row-store wiring, column-store lift, MVCC, dense-store.
-- WAL append + replay bodies.
-- Level-compaction scheduler + bandwidth governor.
-- Memory Governor enforcement body.
-- ARC1 reader + Parquet decoder paths.
-- `oz://` resolvers + fsspec binding.
+- The Memory Governor's heat-score eviction policy. The admission gate is in place; the eviction policy that complements it lands in a follow-on.
+- The planner-side predicate-pushdown rewriter for virtual-label patterns. Until it ships, `MATCH (:VirtualLabel ...)` returns `QueryError::VirtualLabelNotYetQueryable`.
+- The ARC1 reader + Parquet decoder bodies. The type vocabulary and writer-side primitives are shipped; the corresponding readers are queued behind the executor wiring.
+- The apply-mutation row-store executor wiring against `worldgraph::nodes`.
+- The `oz://` resolvers + the fsspec Python binding. The parser and the URI vocabulary are public; the resolvers land at K-WAVE-WG-O2..O7.
+- The Iceberg v3 strict reader. The substrate's manifest reader is Iceberg-shaped (field names match v3 conventions), not v3-strict — Avro codec + deletion vectors arrive separately.
 
-When these wire through, the corresponding user-facing surfaces become discoverable through the SDK + DDL + procedure references. Until they do, this preview is the canonical description.
+When these land, the corresponding user-facing surfaces become discoverable through the SDK + DDL + procedure references.
 
 ## See also
 

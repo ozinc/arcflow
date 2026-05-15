@@ -90,6 +90,11 @@ Bulk ingest:
 - `db.bulk_create_nodes_from_arrow(label, pa.Table)` / `bulk_create_relationships_from_arrow(rel_type, pa.Table)` — Arrow-direct, no JSON marshal.
 - `db.load_parquet(path, label, chunk_size=100_000)` / `db.load_csv(path, label)` — file-direct.
 
+Virtual labels (Lakehouse-backed nodes):
+- `CREATE NODE LABEL <name> [(col TYPE, ...)] VIRTUAL FROM PARTITION '<lake-uri>'` — DDL form. Rows live in the Lakehouse partition; the engine holds typed schema + adjacency + catalog pointer.
+- `db.register_virtual_partition(label, partition)` → `int` epoch — direct registration without a Cypher round-trip. C ABI: `arcflow_register_virtual_partition`.
+- Workspace addressing: `oz://workspace`, `oz://snapshot/<digest>`, `oz://label/<name>`, `oz://edge/<name>`, `oz://catalog`, `oz://partition/<digest>`.
+
 Read:
 - `db.execute(query, params=None)` → QueryResult.
 - `db.prepare(query)` → PreparedStatement (parser cached; `.execute(params)` for replays).

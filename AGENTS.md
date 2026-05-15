@@ -36,6 +36,9 @@ One engine for graphs, vectors, full-text search, algorithms, time-series, live 
 | Vector search | Built-in HNSW — no separate service |
 | Window functions | `LAG`, `LEAD`, `STDDEV_POP`, `PERCENT_RANK` |
 | Incremental views | `CREATE LIVE VIEW` — auto-maintained, Z-set algebra |
+| Virtual labels (Lakehouse-backed nodes) | `CREATE NODE LABEL Frame VIRTUAL FROM PARTITION 'lake://nfl/tracks/{season}/{week}'` — rows live in Iceberg / Parquet partitions; engine holds schema + adjacency + catalog pointer |
+| Workspace addressing | `oz://workspace`, `oz://snapshot/<digest>`, `oz://label/<name>`, `oz://edge/<name>`, `oz://catalog`, `oz://partition/<digest>` — one URI scheme, every addressable resource |
+| Storage hierarchy | Six tiers (L0 GPU VRAM → L5 object storage) + 9-state `ResidencyClass` + operator-set `TierBudget`; Memory Governor admission gate refuses over-commit, never silent-downgrades |
 | CLI binary | `arcflow query '...'` — shell-native agents (Claude Code, Codex, Gemini CLI) |
 | MCP server | `npx arcflow-mcp` — cloud chat UIs only (Claude.ai and similar, no local shell) |
 | Typed results | Numbers are numbers, not strings |
@@ -137,6 +140,11 @@ interface ArcflowDB {
   // Prefer the `CodeGraph` wrapper for typed args/results; these are the raw forms.
   ingestDelta(deltaJson: string): string                              // Returns DeltaStats JSON
   impactSubgraph(rootIdsJson: string, edgeKindsJson: string, maxDepth: number): string  // Returns { nodes: [{id, hop}] } JSON
+
+  // Virtual labels — register a Lakehouse partition pattern against a label.
+  // The engine holds the schema + catalog pointer + adjacency; row data lives
+  // in the Lakehouse. Returns the manifest epoch (monotonic int).
+  registerVirtualPartition(label: string, partition: string): number
 }
 
 type QueryParams = Record<string, string | number | boolean | null>
@@ -213,6 +221,18 @@ db.bulk_create_nodes_from_arrow("Entity", pa.table({"id": [...], "x": [...]}))  
 db.bulk_create_relationships_from_arrow("OBSERVED_AT", pa.table({"_from": [...], "_to": [...]}))
 db.load_parquet("data/tracking.parquet", "TrackingObs")                          # File-direct
 db.load_csv("data/players.csv", "Player", chunk_size=100_000)
+
+# Virtual-label registration — rows live in a Lakehouse partition; engine holds
+# schema + adjacency + catalog pointer. Returns the manifest epoch.
+db.execute(
+    "CREATE NODE LABEL Frame (ts TIMESTAMP, x DOUBLE) "
+    "VIRTUAL FROM PARTITION 'lake://nfl/tracks/{season}/{week}'"
+)
+# Or skip the Cypher round-trip and register directly:
+epoch = db.register_virtual_partition(
+    label="Frame",
+    partition="lake://nfl/tracks/{season}/{week}",
+)   # → int (monotonic manifest epoch)
 
 # Prepared statements (parser cached, replay with params)
 stmt = db.prepare("MATCH (e:Entity {id: $eid}) RETURN e.x, e.y")

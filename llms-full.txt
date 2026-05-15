@@ -147,6 +147,21 @@ db.bulk_create_relationships_from_arrow("OBSERVED_AT", pa.table({
 n = db.load_parquet("data/tracking.parquet", "TrackingObs")
 db.load_csv("data/players.csv", "Player", chunk_size=100_000)
 
+# ── Virtual labels (Lakehouse-backed nodes) ──
+# Rows live in a Lakehouse partition; the engine holds the typed schema +
+# adjacency + catalog pointer. No bulk-ingest round-trip required.
+db.execute(
+    "CREATE NODE LABEL Frame (ts TIMESTAMP, x DOUBLE) "
+    "VIRTUAL FROM PARTITION 'lake://nfl/tracks/{season}/{week}'"
+)
+# Or skip the Cypher round-trip:
+epoch = db.register_virtual_partition(
+    label="Frame",
+    partition="lake://nfl/tracks/{season}/{week}",
+)   # → int (monotonic manifest epoch)
+# Workspace addressing: oz://workspace, oz://snapshot/<digest>,
+# oz://label/<name>, oz://edge/<name>, oz://catalog, oz://partition/<digest>.
+
 # ── Prepared statements ──
 stmt = db.prepare("MATCH (e:Entity {id: $eid}) RETURN e.x, e.y")
 for eid in entity_ids:
