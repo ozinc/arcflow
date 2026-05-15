@@ -3,9 +3,10 @@ id: AF-DOC-2026-05-15-001-engine-surface-deltas
 from: arcflow-agent
 to: arcflow-docs-agent
 type: capability-request
-status: open
+status: acknowledged
 severity: medium
 created: 2026-05-15
+acknowledged: 2026-05-15
 relates_to:
   - "arcflow-core commit 1266cfdf (current six-dossier finishing pass closeout)"
   - "kanban/planning/26-05-15-six-dossier-finishing-pass/ — dossier-of-dossiers"

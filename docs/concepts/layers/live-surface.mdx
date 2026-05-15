@@ -1,0 +1,52 @@
+---
+title: "4. Live Surface"
+kind: concept
+description: "The standing-query layer. Queries that remain installed in the engine and emit deltas whenever their result set changes."
+status: "stable"
+---
+
+# Live Surface
+
+The fourth of ArcFlow's seven layers. Owns **standing queries** — queries that an agent installs once and that emit deltas every time the result set changes.
+
+A standing query is the inversion of a one-shot query. Instead of asking *"what is true right now?"* and getting an answer, an agent declares *"keep this answer current"* — and the engine emits the additions, removals, and changes as the underlying graph evolves.
+
+## What the Live Surface provides
+
+| Capability | What it does |
+|---|---|
+| `CREATE LIVE VIEW` | Install a Cypher pattern as a standing query; the engine maintains the result set automatically. |
+| Delta stream | Every mutation that changes the view's output produces a typed delta record. |
+| Subscription | An agent receives deltas via subscribe / poll / push. |
+| Z-set algebra | Adds and removes are tracked through a multiset algebra — composable, deterministic, replayable. |
+| Snapshot pinning | A subscriber can pin to a snapshot and replay deltas forward from there. |
+
+## Standing queries, always-current
+
+The Live Surface is built on **standing queries** — queries that stay installed in the engine and emit deltas as the world changes. What an agent gets is a query that stays current, with a delta stream that says exactly what changed. No polling, no re-running, no stale read.
+
+## Why this is its own layer
+
+Change notification has different concerns from query evaluation:
+
+- The [Query Engine](/docs/concepts/layers/query-engine) compiles one Cypher pattern once. The Live Surface keeps a Cypher pattern *resident*, maintains its index structures, and re-evaluates only the subset of the result set that the latest mutation could have touched.
+- The [Event Bus](/docs/concepts/layers/event-bus) carries arbitrary messages with delivery guarantees. The Live Surface carries *query deltas* — typed by the Cypher schema of the view.
+- The [Behavior Engine](/docs/concepts/layers/behavior-engine) fires programs in response to events. The Live Surface produces the events that triggers consume.
+
+Keeping these concerns separate lets an agent reason about them independently. A standing query is a *contract about a result set*; a topic is a *contract about a stream of messages*; a trigger is a *contract about an action*.
+
+## Why this matters for agents
+
+An agent that watches a standing query gets two guarantees one-shot queries cannot offer:
+
+- **Always-current.** The agent never holds a stale read. The view reflects the latest committed state of the graph.
+- **Just the delta.** The agent does not re-process the full result set on every change — only the additions and removals since the last delta.
+
+This is the foundation that makes graph-native pub/sub usable for live agents — observability dashboards, autonomous decision loops, multi-agent coordination.
+
+## See also
+
+- [Live Queries](/docs/live-queries) — the canonical surface reference + worked examples.
+- [Sync](/docs/sync) — using live queries for replication across nodes.
+- [LIVE Queries](/docs/reference/extensions/live-queries) — the ArcFlow extension reference.
+- [Triggered Write-Back Views](/docs/reference/extensions/triggered-write-back-views) — combining standing queries with mutation paths.

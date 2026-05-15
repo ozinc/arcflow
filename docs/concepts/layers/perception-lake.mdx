@@ -1,0 +1,55 @@
+---
+title: "1. Perception Lake"
+kind: concept
+description: "The immutable-observation layer. Raw frames, telemetry samples, sensor streams, and pre-graph row data — append-only, columnar, partitioned by time × source."
+status: "stable"
+---
+
+# Perception Lake
+
+The first of ArcFlow's seven layers. Owns every **immutable observation row** the system has ever seen.
+
+A perception is anything the world handed you: a frame from a camera, a telemetry sample from a sensor, a row from a log file, a pre-graph record from an upstream pipeline. The Perception Lake records perceptions exactly as they arrived — once written, never edited.
+
+## What lives here
+
+| In the Lake | Not in the Lake |
+|---|---|
+| Raw frames (vision, lidar, radar) | Mutable entity state |
+| Telemetry samples (position, speed, heading) | Derived embeddings |
+| Event streams (sensor pings, log lines) | Charting corrections / overlays |
+| Pre-graph row data from any upstream source | Edges between entities |
+| Time-partitioned snapshots of external systems | Identity resolvers |
+
+If a value can be **corrected** after the fact, it does not belong in the Lake — it belongs in the [World Graph](/docs/concepts/layers/world-graph). Corrections happen via overlay tables in the Graph that the Query Engine joins at read time.
+
+## The mutability bright-line
+
+The Lake is **append-only**. There is no `UPDATE`, ever. New observations arrive as new partitions; supersession happens via manifest versioning, not in-place edit.
+
+This is the foundational rule that lets ArcFlow stay honest to physical-world semantics. A sensor reading at 10:14:32.117 happened at 10:14:32.117 — re-writing it later would be a lie. If the reading was wrong, the right move is to record the *correction* (a new fact, attributed to the corrector, at the time it was decided) — not to edit the original observation.
+
+## Why this matters for agents
+
+An agent reading the Lake sees the exact bytes the world produced. There is no hidden mutation history, no in-place edit log to reconcile. Every observation carries its time + source + confidence, and the columnar format means a query like "every detection in zone 4 between 08:00 and 09:00" is a Parquet scan — bounded by disk bandwidth, not by graph traversal.
+
+## Where Lake rows surface in queries
+
+Lake-resident node classes appear in the graph schema as **virtual labels** — they are queryable through the standard graph query surface, but the rows themselves live in the columnar files. A `MATCH (f:Frame ...)` pattern rewrites to a columnar scan with predicate pushdown; the graph engine never materialises the underlying rows into property bags.
+
+## The boundary contract
+
+The Lake and the [World Graph](/docs/concepts/layers/world-graph) coordinate through three boundary rules:
+
+- **R1** — Identity is owned by the Graph. The Lake holds rows; the Graph holds the resolver from a stable ID to the row that backs it.
+- **R2** — Mutability is bright-line. Immutable observations stay in the Lake; mutable state lives in the Graph.
+- **R3** — Topology is owned by the Graph. Edges between Lake-resident endpoints are still Graph-resident.
+
+These rules are mechanical — an agent can apply them to any node class and decide where it lives without ambiguity.
+
+## See also
+
+- [World Graph](/docs/concepts/layers/world-graph) — the mutable-state sibling layer.
+- [Observations](/docs/concepts/observations) — the data model that describes what an observation actually carries.
+- [Confidence & Provenance](/docs/concepts/confidence-and-provenance) — how trust is attached to every observation row.
+- [Persistence & WAL](/docs/concepts/persistence) — how Lake partitions become durable.

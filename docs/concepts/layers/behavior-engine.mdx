@@ -1,0 +1,61 @@
+---
+title: "6. Behavior Engine"
+kind: concept
+description: "The programs + triggers layer. Declarative behaviors that fire in response to graph events, run inside the engine, and write their results back through the same Cypher surface."
+status: "stable"
+---
+
+# Behavior Engine
+
+The sixth of ArcFlow's seven layers. Owns **declarative behaviors** — programs and triggers that fire in response to graph events, execute inside the engine, and write their results back through the same Cypher surface.
+
+A behavior is a piece of work the engine performs *on the graph's behalf* whenever the graph changes in a way the behavior cares about. Behaviors are how an agent encodes "when X happens, do Y" without writing an external poll loop, a webhook listener, or a sidecar worker.
+
+## What the Behavior Engine provides
+
+| Capability | What it does |
+|---|---|
+| Programs | Declarative units of work registered against the engine; named, versioned, composable. |
+| Triggers | Conditions that fire a program — node created, property changed, edge added, live-view delta. |
+| Skills | Reusable behavior fragments invoked by name; the building blocks of larger programs. |
+| Behavior graphs | Compose programs + skills into directed graphs of work; the engine schedules execution. |
+| Write-back | Results land in the graph through the same `CREATE` / `SET` / `MERGE` surface a user would write. |
+
+## Why behaviors live in the engine
+
+A behavior could be an external service that subscribes to the [Event Bus](/docs/concepts/layers/event-bus) and posts mutations through the client SDK. That works, but it loses three properties:
+
+- **Transactional grounding.** A behavior running inside the engine sees the same mutation that triggered it, in the same transaction. The result it writes commits atomically with the input that caused it.
+- **No round-trip.** No network hop, no serialisation, no reconnect logic.
+- **One identity story.** The program is registered against the workspace; it carries the same provenance as any other authored fact.
+
+Behaviors are the engine's answer to "stored procedure" — typed, declarative, graph-aware.
+
+## Why this is its own layer
+
+The Behavior Engine is downstream of every other layer:
+
+- It consumes deltas from the [Live Surface](/docs/concepts/layers/live-surface) — that is how triggers fire.
+- It emits results through the [Query Engine](/docs/concepts/layers/query-engine) — the same Cypher surface a user writes against.
+- It publishes intents through the [Event Bus](/docs/concepts/layers/event-bus) — other behaviors and external consumers can subscribe.
+- It can invoke the [Algorithm Library](/docs/concepts/layers/algorithm-library) — `CALL algo.*` and `CALL arcflow.*` procedures.
+
+Keeping behaviors separate from the layers they consume keeps each layer's responsibilities clean. A behavior is a *composition* of the lower layers' guarantees.
+
+## Why this matters for agents
+
+For agents, the Behavior Engine is what turns the database from a record-keeper into a participant. Examples:
+
+- A perception arrives; a program normalises it, runs entity resolution, and writes a typed entity reference.
+- A new edge appears in the call graph; a trigger fires a code-intelligence skill that updates the symbol table.
+- A live view's delta indicates a fraud-ring threshold crossing; a behavior emits an intent the responder consumes.
+
+The agent does not poll. The agent does not glue services together. The agent declares the behavior once; the engine fires it whenever the graph changes in a matching way.
+
+## See also
+
+- [Behavior Graphs](/docs/behavior-graph) — the canonical surface reference + worked examples.
+- [Skills](/docs/skills) — the reusable building blocks.
+- [Programs](/docs/programs) — the program manifest format.
+- [Triggers](/docs/reference/extensions/triggers) — the extension reference.
+- [Relationship Skills](/docs/reference/extensions/relationship-skills) — edge-aware skill patterns.

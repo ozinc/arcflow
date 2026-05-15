@@ -1,0 +1,56 @@
+---
+title: "3. Query Engine"
+kind: concept
+description: "The Cypher / GQL parser, planner, and executor. Translates declarative graph queries into plans that touch the World Graph and the Perception Lake through one schema."
+status: "stable"
+---
+
+# Query Engine
+
+The third of ArcFlow's seven layers. Owns the parser, planner, and executor that turn declarative Cypher / GQL into work against the [World Graph](/docs/concepts/layers/world-graph) and the [Perception Lake](/docs/concepts/layers/perception-lake).
+
+The Query Engine is what makes the storage layers feel like a single graph. An agent writes one Cypher pattern; the planner decides which parts of it become in-memory traversal, which parts become columnar scans, and how to combine the results — none of which is visible at the query surface.
+
+## What the engine provides
+
+| Surface | What it does |
+|---|---|
+| Parser | openCypher TCK + ISO/IEC 39075 GQL syntax. 100% TCK conformance. |
+| Planner | Predicate pushdown, projection elimination, virtual-label rewriting, join ordering. |
+| Executor | Mixed in-memory + columnar execution; SIMD on Owned tables, Arrow Compute on Lake partitions. |
+| Cost model | Per-column scan rates, CSR traversal cost, vector-index probe cost. |
+| Procedure surface | `CALL algo.*` (graph algorithms), `CALL arcflow.*` (vector + RAG primitives), `CALL db.*` (introspection). |
+
+## Why "one query, two storage shapes" works
+
+The boundary between the Lake and the Graph is invisible at the query surface. A pattern like:
+
+```cypher
+MATCH (p:Player {team: 'Alpha'})-[:OBSERVED_IN]->(f:Frame)
+WHERE f.speed > 5.0
+RETURN p.name, count(f) AS observations
+```
+
+— mixes a Graph-resident class (`Player`) with a Lake-resident class (`Frame`). The planner reads the catalog, decides that `(:Player)` is an in-memory probe against the Graph's label index, and that `(f:Frame) WHERE f.speed > 5.0` is a columnar scan with `speed > 5.0` pushed down to the storage layer. The traversal edge `[:OBSERVED_IN]` runs against the Graph's CSR adjacency. Three execution shapes, one query.
+
+This is the load-bearing property of the architecture: agents do not pick "the graph engine" or "the analytics engine." They write graph queries, and the planner picks the right execution shape per pattern.
+
+## What the engine does NOT do
+
+- It does not own storage. Storage lives in [Perception Lake](/docs/concepts/layers/perception-lake) and [World Graph](/docs/concepts/layers/world-graph).
+- It does not own change notification. That is the [Live Surface](/docs/concepts/layers/live-surface).
+- It does not own delivery semantics. That is the [Event Bus](/docs/concepts/layers/event-bus).
+- It does not own behavior firing. That is the [Behavior Engine](/docs/concepts/layers/behavior-engine).
+
+The Query Engine is **read-modify-write at the query level** — Cypher in, results out, mutations applied. Everything change-driven is downstream.
+
+## Conformance + dialect
+
+ArcFlow targets the ratified ISO/IEC 39075 **GQL** standard while keeping openCypher source compatibility. Existing Neo4j-shaped Cypher runs unchanged for the conforming subset. ArcFlow's additions sit cleanly inside both grammars — see [GQL Conformance](/docs/reference/gql-conformance) and [WorldCypher](/docs/worldcypher) for the binding contract.
+
+## See also
+
+- [WorldCypher](/docs/worldcypher) — the surface this engine consumes.
+- [Graph Patterns](/docs/concepts/graph-patterns) — how to read a Cypher pattern.
+- [Query Results](/docs/concepts/results) — typed columns; numbers stay numbers.
+- [EXPLAIN](/docs/worldcypher/functions/explain) — inspect the plan the engine chose.

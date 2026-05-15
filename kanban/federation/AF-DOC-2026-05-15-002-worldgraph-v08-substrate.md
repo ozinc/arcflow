@@ -3,9 +3,10 @@ id: AF-DOC-2026-05-15-002-worldgraph-v08-substrate
 from: arcflow-agent
 to: arcflow-docs-agent
 type: capability-request
-status: open
+status: acknowledged
 severity: medium
 created: 2026-05-15
+acknowledged: 2026-05-15
 relates_to:
   - "arcflow-core 55-commit batch 2114f4fe..e2f123ac (worldgraph::io v0.8 substrate session)"
   - "kanban/planning/26-05-15-implementation-of-arcflow.graph/ — MANTLE dossier"

@@ -1,0 +1,59 @@
+---
+title: "5. Event Bus"
+kind: concept
+description: "The pub/sub messaging layer. Durable topics with consumer groups, ack/nack, WAL-backed delivery, and dead-letter handling — embedded in the same process as the graph."
+status: "stable"
+---
+
+# Event Bus
+
+The fifth of ArcFlow's seven layers. Owns **pub/sub** — topics, consumer groups, durable offsets, ack/nack semantics, dead-letter handling — all backed by the same WAL that makes the graph itself durable.
+
+The Event Bus is what lets agents coordinate without a separate message broker. Two processes on the same machine that share a workspace can publish + subscribe to topics; the bus carries the messages, persists them, replays them on restart, and tracks per-consumer offsets — without spinning up a JVM, a sidecar, or a network listener.
+
+## What the bus provides
+
+| Capability | What it does |
+|---|---|
+| Topics | Named streams of typed messages. |
+| Publish | Producers append to a topic; the bus commits the message to the WAL. |
+| Consumer groups | Multiple subscribers can join a group; each message is delivered to one member of the group. |
+| Offsets + ack/nack | Per-consumer offsets persist across restarts; explicit ack advances the offset, nack redelivers. |
+| Dead letter | Failed-redelivery messages move to a DLQ topic the operator can inspect. |
+| Pattern subscription | `pattern.topics_matching` lets a consumer subscribe to a glob of topics. |
+
+## Why pub/sub is embedded
+
+Most pub/sub systems are external — a separate process, a network protocol, a cluster of brokers. The Event Bus rejects that shape for the same reason ArcFlow rejects the "graph database as a server" shape:
+
+- **In-process pub/sub is sub-millisecond.** No serialisation hop, no network round-trip, no broker.
+- **One durability story.** The same WAL that records graph mutations records bus messages. One fsync, one replay path, one crash-recovery sequence.
+- **One identity story.** A message carrying a graph node ID does not need translation between systems.
+
+For multi-process coordination on the same machine, the bus surfaces over a Unix Domain Socket — see [Daemon (UDS)](/docs/deployment/daemon).
+
+## Why this is its own layer
+
+The Event Bus and the [Live Surface](/docs/concepts/layers/live-surface) look similar from the outside — both produce streams of typed records. They are different in what they carry:
+
+- The Live Surface carries **deltas from a standing query**. The Cypher pattern is the contract; the delta is the change to the result set.
+- The Event Bus carries **messages on a topic**. The topic name is the contract; the message is whatever the producer published.
+
+A subscriber to a live view watches *the graph*. A subscriber to a topic watches *whatever the producer chose to publish*. Both have their place.
+
+## Why this matters for agents
+
+The bus is how agents talk to each other in the same workspace. Examples:
+
+- A capture process publishes telemetry to `telemetry.{source}`; a perception process subscribes pattern-matched.
+- A behavior program emits intents to `intents.{agent_id}`; a controller subscribes to a single agent's intents.
+- A long-running ingest publishes progress to `ingest.progress`; an observer in a separate process consumes.
+
+Compared to building this on top of a generic message broker, the bus is one binary, one config file, one persistence story.
+
+## See also
+
+- [Event Bus](/docs/event-bus) — the canonical surface reference + worked examples.
+- [Event Sourcing](/docs/event-sourcing) — using the bus as the source-of-truth log.
+- [Daemon (UDS)](/docs/deployment/daemon) — the cross-process delivery shape.
+- [Intent Relay](/docs/relay) — high-level coordination patterns layered on top of the bus.

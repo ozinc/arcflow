@@ -103,6 +103,47 @@
           "slug": "concepts/error-handling",
           "title": "Error Handling",
           "order": 10
+        },
+        {
+          "title": "Layers",
+          "order": 11,
+          "children": [
+            {
+              "slug": "concepts/layers/perception-lake",
+              "title": "1. Perception Lake",
+              "order": 1
+            },
+            {
+              "slug": "concepts/layers/world-graph",
+              "title": "2. World Graph",
+              "order": 2
+            },
+            {
+              "slug": "concepts/layers/query-engine",
+              "title": "3. Query Engine",
+              "order": 3
+            },
+            {
+              "slug": "concepts/layers/live-surface",
+              "title": "4. Live Surface",
+              "order": 4
+            },
+            {
+              "slug": "concepts/layers/event-bus",
+              "title": "5. Event Bus",
+              "order": 5
+            },
+            {
+              "slug": "concepts/layers/behavior-engine",
+              "title": "6. Behavior Engine",
+              "order": 6
+            },
+            {
+              "slug": "concepts/layers/algorithm-library",
+              "title": "7. Algorithm Library",
+              "order": 7
+            }
+          ]
         }
       ]
     },

@@ -1,0 +1,68 @@
+---
+title: "2. World Graph"
+kind: concept
+description: "The topology + mutable-state layer. Owns identity, edges, low-cardinality node tables, and the catalog that binds graph queries to underlying storage."
+status: "stable"
+---
+
+# World Graph
+
+The second of ArcFlow's seven layers. Owns everything a graph engine is uniquely good at — identity, topology, mutable state, and the catalog that binds graph queries to whichever storage holds the underlying rows.
+
+The World Graph is what makes ArcFlow a *graph database* rather than a column store with extra steps. It holds the adjacency lists, the label indexes, the vector indexes, the entity-resolution merges, the charting overlays, the live signals — every fact that can change after it was first written.
+
+## What lives here
+
+| In the Graph | Not in the Graph |
+|---|---|
+| Canonical entity IDs | Raw frames |
+| Edges (CSR adjacency) | Raw telemetry samples |
+| Mutable node tables (Player, Play, Charting, …) | Pre-graph row data |
+| Label indexes + HNSW vector indexes | Append-only observation streams |
+| Entity-resolution merges, derived embeddings | |
+| The catalog manifest binding graph schema to backing storage | |
+
+If a class is **mutable** — a charter correcting a play call, a telemetry correction, a derived embedding, an entity-resolution merge, a live signal — it lives in the Graph. If it is an **immutable observation**, it lives in the [Perception Lake](/docs/concepts/layers/perception-lake).
+
+## Why topology stays in the Graph
+
+Even when both endpoints of an edge are observation rows in the Lake, the *edge itself* is owned by the Graph. A `(:Frame)-[:TRACKED]->(:Frame)` relationship is two Lake-resident endpoints plus one Graph-resident edge. The graph engine holds the adjacency in a compressed CSR (compressed-sparse-row) layout; the Lake holds the row payloads.
+
+This decoupling means new observations arriving in the Lake do not require Graph mutation. New edges discovered in post-processing require Graph mutation but no Lake change. Each side evolves at its own pace.
+
+## Identity is graph-resident
+
+Every node — Lake-resident or Graph-resident — has a stable identity owned by the Graph. The catalog resolves an identity to one of two shapes:
+
+- **Direct** — `(partition, row_offset)` for exact-row lookup.
+- **Predicate** — `(partition, row_predicate)` for property-scoped lookup such as `entity_id = 'Unit-01'`.
+
+A Cypher pattern that touches a Lake-resident label compiles down to a Lake scan; one that touches a Graph-resident label runs against the in-memory tables. The agent writes the same query either way.
+
+## Why this matters for agents
+
+The World Graph is the durable, queryable shape an agent reasons against. It owns:
+
+- **Identity** — a stable ID an agent can carry across sessions, conversations, and replay windows.
+- **Connectivity** — the edges that turn "rows" into "a world."
+- **Mutable state** — the only place an agent can record a correction, a merge, a derived fact.
+- **Indexes** — the structures that make "find entities like this one" a sub-second operation.
+
+Combined with the [Perception Lake](/docs/concepts/layers/perception-lake), this gives agents two surfaces with one schema: heavy columnar scans go to the Lake, low-latency graph traversal stays in the Graph, and the catalog hides the boundary at query time.
+
+## The three boundary rules
+
+The Lake ↔ Graph boundary is governed by three mechanical rules — see [Perception Lake](/docs/concepts/layers/perception-lake) for the full statement. Summary:
+
+- **R1** — Identity owned by Graph.
+- **R2** — Mutability bright-line; Lake = immutable, Graph = mutable.
+- **R3** — Topology owned by Graph, exclusively.
+
+Apply R2 first; the first rule that resolves wins.
+
+## See also
+
+- [Perception Lake](/docs/concepts/layers/perception-lake) — the immutable-observation sibling layer.
+- [Graph Model](/docs/concepts/graph-model) — the node / edge / property data model.
+- [Persistence & WAL](/docs/concepts/persistence) — how Graph mutations become durable.
+- [Snapshot-Pinned Reads](/docs/concepts/snapshots) — how a reader sees a consistent point-in-time view across both layers.
