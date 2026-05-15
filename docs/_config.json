@@ -105,8 +105,28 @@
           "order": 10
         },
         {
+          "slug": "concepts/execution-models",
+          "title": "Execution Models",
+          "order": 11
+        },
+        {
+          "slug": "concepts/causal-edges",
+          "title": "Causal Edges",
+          "order": 12
+        },
+        {
+          "slug": "concepts/adapter-discipline",
+          "title": "Adapter Discipline",
+          "order": 13
+        },
+        {
+          "slug": "concepts/time-decay",
+          "title": "Time Decay",
+          "order": 14
+        },
+        {
           "title": "Layers",
-          "order": 11,
+          "order": 15,
           "children": [
             {
               "slug": "concepts/layers/perception-lake",
@@ -558,6 +578,11 @@
               "slug": "guides/code-intelligence",
               "title": "Code Intelligence",
               "order": 13
+            },
+            {
+              "slug": "guides/scale-patterns",
+              "title": "Scale Patterns",
+              "order": 14
             }
           ]
         },
@@ -701,6 +726,11 @@
               "slug": "architecture/sync",
               "title": "Sync Protocol (Deep Dive)",
               "order": 3
+            },
+            {
+              "slug": "architecture/worldgraph",
+              "title": "World Graph Substrate (Preview)",
+              "order": 4
             }
           ]
         }

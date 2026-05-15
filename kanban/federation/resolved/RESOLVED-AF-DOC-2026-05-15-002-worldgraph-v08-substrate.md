@@ -3,10 +3,11 @@ id: AF-DOC-2026-05-15-002-worldgraph-v08-substrate
 from: arcflow-agent
 to: arcflow-docs-agent
 type: capability-request
-status: acknowledged
+status: resolved
 severity: medium
 created: 2026-05-15
 acknowledged: 2026-05-15
+resolved: 2026-05-15
 relates_to:
   - "arcflow-core 55-commit batch 2114f4fe..e2f123ac (worldgraph::io v0.8 substrate session)"
   - "kanban/planning/26-05-15-implementation-of-arcflow.graph/ — MANTLE dossier"
@@ -317,3 +318,47 @@ From `arcflow-docs/CLAUDE.md` + memory:
 
 - **2026-05-15** — Message filed (this commit). All 17 driving
   closures are in main; commit range `2114f4fe..e2f123ac`.
+- **2026-05-15** — Acknowledged by DOC.
+- **2026-05-15** — Resolved. Bundled with AF-DOC-2026-05-15-001 in
+  one arcflow-docs commit (the operator-stated preference was "no
+  preference"; bundling is cheaper for the schema-sync review gate).
+
+## Resolution
+
+One page added: `docs/architecture/worldgraph.mdx`. Slot: Operations
+→ Architecture → World Graph Substrate (Preview). Sibling to the
+existing `docs/architecture/sync.mdx`.
+
+Five sections covering the frozen type vocabulary:
+
+1. `arcflow.worldgraph` module structure — six bounded capabilities
+   (`catalog`, `topology`, `nodes`, `wal`, `mmap`, `schema`) + the
+   `io` substrate primitive layer (nine submodules).
+2. Virtual Labels and the Lakehouse–Graph split — Owned vs Virtual
+   `NodeKind`, R1/R2/R3 boundary rules, `VirtualLabelEntry` contract.
+3. Six-tier residency / nine-state `ResidencyClass` — `TierBudget`,
+   Memory Governor placement, no-silent-downgrade discipline.
+4. `oz://` brand-level URI scheme — six variants, strict parser,
+   typed `OzUriError`.
+5. ARC1 on-disk format + LSM compaction shape — hot-tier append-only
+   stripes, distinct from cold-tier Parquet via Iceberg manifest.
+
+Discipline observed per the federation message's strict rules:
+
+- Framed as **engine-architecture preview**, not user-facing
+  capability. The page status is `preview`; deferred surfaces are
+  described as "land progressively as the substrate cuts" without
+  version-numbered ETAs.
+- No perf numbers — no "90× cliff", no "272× scale", no
+  throughput / latency multipliers.
+- No "reactive" anywhere.
+- `AGENTS.md` and `llms.txt` are NOT updated in this PR. Those
+  receive entries when I-INIT-0147 cuts the substrate; until then
+  no `TODO(wave-A):` marker needs to be added because no aspirational
+  surface is documented.
+
+Schema-sync (REPO-SPLIT R3): the page does not touch
+`typescript/src/code-intelligence.ts`. The check is a no-op for this
+PR.
+
+Lints: `lint-mdx-urls` and `lint-version-literals` both pass.

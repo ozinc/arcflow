@@ -1,0 +1,65 @@
+---
+title: "Adapter Discipline"
+kind: concept
+description: "The boundary contract for anyone building on ArcFlow: the edge translates; only the core decides. Adapters carry the minimum logic needed to translate between the outside world and the engine — nothing more."
+status: "stable"
+---
+
+# Adapter Discipline
+
+If you are writing code that sits between an outside-world interface and the ArcFlow engine — a custom binding, an embedding integration, a service adapter, a CLI wrapper — this page is the contract you are inheriting.
+
+> The edge translates; only the core decides.
+
+That single rule shapes every other call the engine makes available, every test it runs, every public type it exposes. Bindings that follow it stay swappable, testable, and consistent across languages. Bindings that violate it create logic that has to be duplicated and kept in sync across every language target — and that path leads to drift the engine's CI is built to catch.
+
+## The two-question gate
+
+When you write a new adapter function — a new SDK method, a new procedure invocation wrapper, a new pipeline step — apply two questions before merging:
+
+1. **What decision does this code make?**
+   - If the answer is *"translate format X into format Y"* — proceed.
+   - If the answer is *"decide which engine call to make based on input shape"*, *"validate before passing through"*, or *"retry on failure"* — that decision belongs in the engine. Push it inward, expose a typed API, and let your adapter call that.
+
+2. **If the transport changed, would this code have to move?**
+   - If yes — it is correctly adapter-side.
+   - If no — it is logic in the wrong place. Move it into the engine.
+
+The gate is fast and catches drift before it sticks.
+
+## What the rule rules out
+
+Common shapes that look helpful but violate the discipline:
+
+- **The adapter takes a domain trait by reference.** A C ABI symbol whose signature couples to a Rust trait forces every binding to reproduce that trait. The decision shape that crosses the boundary must be a plain struct, an opaque handle, or a query the engine dispatches internally.
+- **The adapter implements its own conflict / retry / consistency logic.** A daemon handler that retries a write three times on `WriteConflict` before bubbling up has *moved a decision out of the engine*. If retries are needed, the engine exposes a retry-bounded API; the adapter calls it once.
+- **The adapter computes derived state from raw values.** A Python wrapper that computes `confidence × recency_weight` before passing the value to the engine has reimplemented a policy the engine owns. The wrapper translates `(value, timestamp)`; the engine decides what those mean together.
+- **The CLI subcommand re-orders engine operations.** `arcflow upgrade` running `migrate; reindex; vacuum` to give the operator one button has built a small state machine in the wrong place. Those three operations belong in a single engine API; the CLI translates *operator intent* into one call.
+- **The adapter holds an in-flight transaction.** Any adapter that keeps a write transaction open across a network or process boundary has broken the boundary. Transactions are an in-engine invariant. The correct shape is a queue of typed operations the engine consumes atomically; the adapter never sees the transaction directly.
+
+## What the rule rules in
+
+The same boundary, stated positively:
+
+- **Engine types cross the boundary as opaque handles and value structs.** The store, the query, the result, the subscription cross as pointers or tagged unions; their methods are explicit calls into the engine.
+- **Adapters never combine engine operations into transactions of their own.** Two engine calls are two engine calls. If atomicity is required, the engine exposes the combined operation.
+- **Adapters carry transport telemetry only.** Request ID, span ID, hop count, bytes-in / bytes-out — these belong to the adapter. Plan-shape histograms, MVCC contention, execution-phase latency — these belong to the engine.
+- **Adapters are written so they could be swapped.** If a different binding transport replaced yours tomorrow, no engine source would need to change. The boundary is the interface; your adapter is one implementation.
+
+## The CI tripwire
+
+The engine carries a fitness check that monitors the size of each adapter relative to the engine core. When an adapter's line count grows faster than the work it has to translate, the check flags the PR for review.
+
+The signal is not *"your code is too large"* — it is *"is the growth carrying translation, or carrying decisions?"* The two-question gate above is how to answer it.
+
+The gate is not a stylistic preference. It is what keeps the cost of a new binding bounded by the *interface* the engine exposes, not by the *decisions* the engine makes. The more languages the engine supports, the more this matters: every fragment of logic that lives in an adapter is duplicated, kept in sync, and documented per adapter; every fragment that lives in the engine is written once and exposed identically everywhere.
+
+## Why this matters for agents
+
+An agent that calls the engine through any binding gets the same answer to the same query — because every binding is humble. An agent that calls the engine through one binding gets *different* behaviour than through another only if some binding stopped being humble. The discipline is what makes the binding choice irrelevant to the agent's contract with the engine.
+
+## See also
+
+- [Language Bindings](/docs/bindings) — the binding catalogue this discipline applies to.
+- [Architecture](/docs/architecture) — the in-process / shared-memory shape that makes humble adapters viable.
+- [Agent-Native](/docs/agent-native) — the typed-surface contract adapters expose unchanged.

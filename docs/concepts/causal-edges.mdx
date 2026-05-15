@@ -1,0 +1,115 @@
+---
+title: "Causal Edges"
+kind: concept
+description: "Every fact that influences belief carries a `:CAUSED_BY` edge to the event that justified it. The edge is mandatory at the ingest boundary; the engine returns a typed error if it is absent."
+status: "stable"
+---
+
+# Causal Edges
+
+When a value in the graph reflects a belief — a confidence score, an authority plane, a classification, anything an agent or a model decided rather than directly observed — it must be traceable back to the event that justified it. The mechanism is the `:CAUSED_BY` edge.
+
+`:CAUSED_BY` is mandatory at the ingest boundary for the properties an operator has constrained. Writing a constrained property without a same-transaction `:CAUSED_BY` edge to an anchor node is a typed failure — the engine returns `CAUSED_BY_VIOLATION` and rolls back the whole transaction.
+
+This page describes the edge as a discipline, the constraint that enforces it, and the patterns that make it usable.
+
+## The edge
+
+```cypher
+(player:Player {confidence: 0.83})-[:CAUSED_BY]->(evidence:Evidence)
+```
+
+Read: *the value `0.83` on `player.confidence` was caused by `evidence`.*
+
+The edge has three properties that make it load-bearing:
+
+- **It carries identity, not opinion.** The edge points at the anchor node that *justified* the belief — a sensor reading, a classifier output, an authored fact. Not "why we think this is true" in free text; an actual graph reference an audit can follow.
+- **It is same-transaction.** The edge is created in the same write transaction as the property mutation it justifies. Cross-transaction binding is rejected — it would defeat the audit guarantee, since a reader could observe "belief without evidence" between the two commits.
+- **It is checked at commit, not mid-stream.** A transaction can write `confidence` before creating the edge, or vice versa. The engine evaluates the committed shape; ordering inside the transaction is the author's choice.
+
+## The constraint that enforces it
+
+The edge becomes mandatory when an operator declares a constraint:
+
+```cypher
+CREATE CONSTRAINT FOR (n:Player)
+  REQUIRE confidence CAUSED_BY (:Evidence)
+```
+
+After this declaration, any transaction that writes `confidence` on a `:Player` node must also commit a `:CAUSED_BY` edge from that node to a `:Evidence` node — in the same transaction.
+
+The constraint accepts an optional name and an `IF NOT EXISTS` guard:
+
+```cypher
+CREATE CONSTRAINT confidence_traceability_v1 IF NOT EXISTS
+  FOR (n:Player)
+  REQUIRE confidence CAUSED_BY (:Evidence)
+```
+
+It composes with the rest of the constraint family — see [Constraints](/docs/worldcypher/schema/constraints) for the full reference.
+
+## What a violation looks like
+
+A write that touches a constrained property without a same-transaction `:CAUSED_BY` edge fails at commit:
+
+```text
+CAUSED_BY_VIOLATION
+  property: Player.confidence
+  node_id:  <stable id>
+  required: edge of type CAUSED_BY to a node labelled :Evidence
+```
+
+The error is typed — SDKs surface it as a structured value, not a string an agent has to parse. The transaction rolls back atomically; the partial write is not visible to any reader.
+
+## Authoring patterns
+
+Two patterns cover almost every case in practice.
+
+### Request → response
+
+A request arrived. A response was computed. The response's belief value is caused by the request.
+
+```cypher
+CREATE (req:Request {id: 'r-001', text: 'classify image'})
+CREATE (resp:Player {id: 'p-001', confidence: 0.91})
+CREATE (resp)-[:CAUSED_BY]->(req)
+```
+
+The anchor node is the request itself — the evidence type is whatever the constraint declared (`:Request`, `:Evidence`, `:Observation`, etc.).
+
+### Input → derived
+
+A raw observation arrived. A derived fact is computed from it. The derived fact is caused by the observation.
+
+```cypher
+MATCH (obs:Observation {id: $obs_id})
+CREATE (claim:Player {id: 'p-002', confidence: 0.74, authority_plane: 'sensor'})
+CREATE (claim)-[:CAUSED_BY]->(obs)
+```
+
+The pattern generalises to chains — a derived fact can be the anchor for the next derivation, producing a `:CAUSED_BY` chain an audit can walk back to the original observation.
+
+## What the edge is NOT for
+
+- **Not for relationships between entities.** A `:Player` plays for a `:Team`. That is a domain relationship, not a causal one. Use a domain edge type (`:PLAYS_FOR`).
+- **Not for general provenance metadata.** Author, timestamp, source tool — those go on the anchor node's properties, not on the edge. The edge says *what justified the value*; the anchor's properties say *who and when*.
+- **Not retroactive.** The constraint binds writes at and after the declaration. Pre-existing rows that lack edges are not rejected on read — `MATCH` ignores the constraint entirely. See [Constraints](/docs/worldcypher/schema/constraints) for declaration-time options.
+
+## Why this matters for agents
+
+Agents make decisions that affect downstream behaviour. The `:CAUSED_BY` discipline gives every decision a *replayable lineage*:
+
+- **Audit.** Walk back from a current belief to the events that justified it.
+- **Retraction.** When an evidence node is invalidated, every belief caused by it can be located through one traversal.
+- **Replay.** Re-derive the same belief from the same evidence chain, deterministically.
+- **Multi-agent coordination.** When two agents disagree on a value, the causal edges show *what each is reasoning from* — not just the conclusion they reached.
+
+The constraint turns the discipline from a convention agents may follow into a contract the engine enforces.
+
+## See also
+
+- [Constraints](/docs/worldcypher/schema/constraints) — the full constraint DDL reference.
+- [Confidence & Provenance](/docs/concepts/confidence-and-provenance) — the data model that the causal edges thread through.
+- [Evidence Model](/docs/concepts/evidence-model) — how observations + inferences + predictions compose.
+- [Event Sourcing](/docs/event-sourcing) — the broader pattern of treating mutations as caused-by chains.
+- [Proof Artifacts & Gates](/docs/concepts/proof-artifacts) — how the causal chain supports proof generation.

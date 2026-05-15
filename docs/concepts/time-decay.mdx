@@ -1,0 +1,114 @@
+---
+title: "Time Decay"
+kind: concept
+description: "`decay_with_half_life(value, timestamp, half_life)` — a Z-set algebra operator that weights a value by its age. Composes with SUM and COUNT under live queries; deterministic, NULL-safe, time-monotonic."
+status: "stable"
+---
+
+# Time Decay
+
+Beliefs go stale. A sensor reading from a second ago is more credible than one from an hour ago. A score derived from observations over a week should treat last Tuesday differently than last Monday. The `decay_with_half_life` operator is how ArcFlow expresses that, on the standing-query surface, as a primitive every live aggregation can compose with.
+
+## Signature
+
+```cypher
+decay_with_half_life(value_expr, timestamp_expr, half_life_duration)
+```
+
+| Argument | Type | Meaning |
+|---|---|---|
+| `value_expr` | numeric | The value to decay. Typically a confidence, a weight, a count. |
+| `timestamp_expr` | timestamp | When the value was observed. Resolved against `now()` at evaluation time. |
+| `half_life_duration` | duration | A duration literal — `duration('PT1H')`, `duration('P7D')`. The time after which the value's contribution halves. |
+
+Returns a `Float`. The result is `value × 2^((timestamp - now) / half_life)` — exact at zero age, halved every `half_life` thereafter.
+
+## Worked example — decaying-confidence aggregation
+
+A live view aggregates per-entity confidence weighted by recency. Detections from the last minute count fully; detections from an hour ago contribute ~1.6%; older detections contribute almost nothing.
+
+```cypher
+CREATE LIVE VIEW entity_confidence AS
+MATCH (e:Entity)<-[:DETECTED]-(d:Detection)
+RETURN
+  e.id AS entity_id,
+  SUM(decay_with_half_life(d.confidence, d.observed_at, duration('PT10M'))) AS score
+```
+
+As new detections arrive, the engine updates the score incrementally. As time advances without any new detection, the score decays — automatically, without any per-row rewrite.
+
+## Why this composes with live queries
+
+`decay_with_half_life` is **linear in its first argument**:
+
+```
+decay(w₁ + w₂, t, h)  ≡  decay(w₁, t, h) + decay(w₂, t, h)
+```
+
+That property is what lets it sit inside an incremental aggregation like `SUM`. When one detection arrives, the engine adds one term to the sum; it does not re-evaluate the whole window. The result is a standing query that maintains a recency-weighted score for every entity in the graph with cost proportional to the *change*, not the total.
+
+Operators that are *not* linear (a normalisation, a log) cannot sit inside an incremental `SUM` without forcing a full re-aggregation on every change. `decay_with_half_life` was designed specifically so it can.
+
+## Semantics
+
+The operator is governed by four invariants the engine enforces. They matter when an agent is reasoning about what the value *means*.
+
+- **Identity at zero age.** A value observed *right now* emits unchanged: `decay(w, now, h) = w`. No implicit normalisation, no scaling.
+- **Time-monotonic.** For any fixed input, the magnitude of the output is non-increasing as `now` advances. A decayed value never grows.
+- **NULL-propagating.** If any argument is `NULL` — including a missing timestamp property — the result is `NULL`. Heterogeneous corpora are legal input; missing timestamps do not crash queries.
+- **Subnormal flush.** When the decay factor underflows below ~`2.2e-308`, the result is exactly `0.0` rather than a subnormal float. The effect on result precision is below anything an agent could observe; the effect on downstream arithmetic speed is significant.
+
+## Errors
+
+| Condition | Result |
+|---|---|
+| Any argument is `NULL` | Result is `NULL`. |
+| `value_expr` evaluates to `NULL` for some rows | Those rows produce `NULL`; the rest decay normally. |
+| `timestamp_expr` property is absent on some rows | Those rows produce `NULL`. |
+| `half_life_duration` is zero or negative | `QueryError::InvalidHalfLife`. Caught at plan time when the half-life is a literal; at run time when it comes from an expression. |
+| `timestamp_expr` is in the future | The decay factor is `> 1`; the value is *amplified*. (Future timestamps are accepted but rarely intended — agents commonly clamp the timestamp to `now()`.) |
+
+## Composition recipes
+
+### Newest-observation-wins
+
+When *one* observation should set the score, not a sum, use the decayed value directly:
+
+```cypher
+MATCH (e:Entity)<-[:DETECTED]-(d:Detection)
+WITH e, MAX(d.observed_at) AS latest
+MATCH (e)<-[:DETECTED]-(d:Detection {observed_at: latest})
+RETURN e.id, decay_with_half_life(d.confidence, d.observed_at, duration('PT5M')) AS score
+```
+
+### Multiple half-lives
+
+A score can blend a *fast* and *slow* decay — the fast component reacts to new data; the slow component remembers history.
+
+```cypher
+MATCH (e:Entity)<-[:DETECTED]-(d:Detection)
+RETURN
+  e.id,
+  SUM(decay_with_half_life(d.confidence, d.observed_at, duration('PT1M'))) AS fast,
+  SUM(decay_with_half_life(d.confidence, d.observed_at, duration('PT1H'))) AS slow
+```
+
+The agent reads `fast` as *what's happening right now*, `slow` as *the longer baseline* — both maintained by the engine in one pass.
+
+### Decay-as-confidence
+
+The decayed value is itself a confidence: a recency-weighted likelihood that the underlying value is still relevant. Threshold on it the same way as on any other confidence:
+
+```cypher
+LIVE MATCH (e:Entity)<-[:DETECTED]-(d:Detection)
+WITH e, decay_with_half_life(d.confidence, d.observed_at, duration('PT15M')) AS conf
+WHERE conf > 0.5
+RETURN e.id, conf
+```
+
+## See also
+
+- [Live Queries](/docs/live-queries) — the standing-query surface this operator composes with.
+- [Algorithms](/docs/algorithms) — the broader catalogue of built-in graph operations.
+- [Confidence & Provenance](/docs/concepts/confidence-and-provenance) — how decayed scores fit the broader confidence model.
+- [Temporal](/docs/temporal) — the timestamp / duration types this operator consumes.

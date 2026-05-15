@@ -1,0 +1,125 @@
+---
+title: "Scale Patterns"
+kind: guide
+description: "Four primitives that compose for high-throughput, large-graph, spatial-temporal workloads — named-argument procedure calls, R-tree spatial indexes, sharded fan-out, and domain-agnostic spatial primitives."
+status: "stable"
+---
+
+# Scale Patterns
+
+A workload that fits comfortably on a workstation often grows. Sensor capture rate climbs from kilohertz to megahertz, partition counts grow from hundreds to thousands, spatial predicates start dominating the plan cost, and queries that worked unchanged need help.
+
+This guide documents the four primitives an agent reaches for as those pressures show up:
+
+1. **Named arguments** on fusion procedures — keep call sites readable as the parameter list grows.
+2. **R-tree spatial indexes** — make geometry-bound predicates an index probe, not a scan.
+3. **Sharded fan-out** — run an analytical query in parallel across partitions, with typed partial results.
+4. **Spatial primitives** — `cone_intersection`, `kth_nearest_with_velocity`, `occlusion_area` — the building blocks for domain-specific spatial reasoning.
+
+Each primitive is independent. Together they cover the shape of high-throughput perception, identity, and spatial-analysis pipelines.
+
+## 1. Named arguments on fusion procedures
+
+Procedures in the `arcflow.fusion.*` family — `spatialGraph`, `vectorGraph`, `graphAggregate` — accept a `NamedArgs` value alongside their positional arguments. Positional calls work unchanged; the named-arguments lane makes the call site self-documenting as the parameter count grows.
+
+```cypher
+-- Named-argument form
+CALL arcflow.fusion.spatialGraph(
+  source: 'detections',
+  radius: 5.0,
+  metric: 'euclidean',
+  min_confidence: 0.7,
+  max_neighbours: 32
+) YIELD node, score
+```
+
+The same call positionally is parser-equivalent — but at a real call site with five-to-eight parameters, the named form is what an agent will reach for. Use it whenever you have more than two arguments or whenever a reader needs to know what an argument means without looking up the signature.
+
+## 2. R-tree spatial indexes
+
+When a query predicate filters by geometry — *within a polygon*, *inside a radius*, *intersecting a bounding box* — the engine can take it from a scan to an index probe with one DDL statement.
+
+```cypher
+CREATE INDEX detection_xy FOR (n:Detection) ON (n.position)
+  WITH OPTIONS { method: 'rtree' };
+```
+
+Subsequent spatial predicates against `Detection.position` are evaluated against the R-tree. The planner picks the index automatically; an agent does not need to hint.
+
+R-tree indexes are most useful when:
+
+- The query touches **a region**, not a single point.
+- The region is **bounded** — a polygon, a circle, a bounding box.
+- The label has **many rows** where the region selects a small fraction.
+
+For full-table point-distance queries against small graphs, the scan is fine.
+
+## 3. Sharded fan-out — `execute_fan_out`
+
+An analytical query that scans many partitions can be dispatched in parallel. `execute_fan_out` divides the work across shards, evaluates each piece independently, and emits typed `ShardFanOutPartial` records that compose into the final result.
+
+```cypher
+CALL arcflow.execute_fan_out(
+  query: 'MATCH (d:Detection) WHERE d.score > 0.9 RETURN count(*) AS n, avg(d.score) AS s',
+  partition_by: 'game_key'
+) YIELD partial
+RETURN sum(partial.n) AS total, avg(partial.s) AS overall_score
+```
+
+The interesting property is that *each partial is typed*. The agent gets back a stream of `ShardFanOutPartial` values it composes with ordinary aggregations. No string parsing, no manual sharding bookkeeping, no per-shard error-handling skeleton.
+
+Sharded fan-out is the right call when:
+
+- The query is **analytical** — predominantly aggregations or counts, not high-fanout traversal.
+- The data **partitions naturally** — by time, by source, by region.
+- A single-shard run would touch **more partitions than fit in the working set**.
+
+For traversals that hop frequently between partitions, the single-shard executor is usually faster — the fan-out overhead is real and is not always worth it.
+
+## 4. Domain-agnostic spatial primitives
+
+Three spatial primitives compose into a wide range of domain-specific operations:
+
+| Primitive | What it computes |
+|---|---|
+| `cone_intersection(origin, direction, half_angle, points)` | The subset of `points` that lies inside a cone whose tip is at `origin`, axis along `direction`, half-angle `half_angle`. |
+| `kth_nearest_with_velocity(point, candidates, k, velocity_field)` | The `k`-th nearest candidate to `point`, ranked by a distance metric that incorporates the candidate's velocity. |
+| `occlusion_area(viewer, obstacles, target_plane)` | The area on `target_plane` that is hidden from `viewer` by `obstacles`. |
+
+These primitives are deliberately *domain-agnostic*. An agent working on autonomous navigation, sports analytics, or industrial inspection composes them into the operation it actually needs. The domain-specific name — *release point at throw*, *catch radius*, *shadowed-by* — lives in the agent's adapter layer, not in the engine.
+
+This split exists for a reason. Domain primitives in the engine would force every downstream consumer to share a vocabulary; primitives at the level of geometry let each consumer name them in its own terms. See [Adapter Discipline](/docs/concepts/adapter-discipline) for the rule that makes this split load-bearing.
+
+### Composition example
+
+A perception pipeline asks: *which of these tracked objects are inside the camera's field of view, ranked by closest-approach time, accounting for occluders?* That's a one-statement composition:
+
+```cypher
+WITH $camera AS cam, $tracks AS tracks, $obstacles AS obs
+WITH cone_intersection(cam.position, cam.heading, cam.fov_half_angle, tracks) AS in_view, cam, obs
+UNWIND in_view AS t
+RETURN
+  t,
+  kth_nearest_with_velocity(cam.position, in_view, 1, 'velocity') AS closest,
+  occlusion_area(cam.position, obs, t.plane) AS occluded
+```
+
+The three primitives compose under the existing Cypher syntax — no new DSL, no string parsing, no domain dialect.
+
+## When to reach for which
+
+| Pressure | Reach for |
+|---|---|
+| Call site has too many positional arguments to read at a glance | Named arguments on the fusion procedures. |
+| Spatial-predicate cost dominates the plan | R-tree spatial index. |
+| Analytical scan over many partitions blows the working set | `execute_fan_out`. |
+| A domain-specific spatial operation is needed | Compose the three primitives in the adapter. |
+
+These primitives are independent and ship in the engine — an agent can adopt them one at a time, without committing to a redesign.
+
+## See also
+
+- [Algorithms](/docs/algorithms) — the full catalogue of built-in graph operations.
+- [Spatial Knowledge](/docs/spatial-knowledge) — the spatial data model these primitives operate on.
+- [Adapter Discipline](/docs/concepts/adapter-discipline) — why domain-specific names stay in the adapter.
+- [WorldCypher Indexes](/docs/worldcypher/schema/indexes) — the full index DDL reference.

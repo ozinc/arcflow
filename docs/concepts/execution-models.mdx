@@ -1,0 +1,125 @@
+---
+title: "Execution Models"
+kind: concept
+description: "Two execution models, four user-facing keyword families. LIVE is continuous + stateful; TRIGGER is event-driven + fire-once. SKILL is the action either can invoke; PROGRAM is the installable bundle."
+status: "stable"
+---
+
+# Execution Models
+
+ArcFlow has two distinct ways to react to graph changes. They are different enough that conflating them produces wrong designs — using a trigger when a standing query was wanted, or expecting a maintained result set when a fire-once action was meant.
+
+This page names both models, and the four user-facing keyword families that map onto them, in one place. Every other docs page that uses the vocabulary cites this one.
+
+## The two execution models
+
+| Model | Shape | When it runs | What it produces |
+|---|---|---|---|
+| **Continuous** | Standing computation that keeps its result current as the graph mutates. | Whenever a mutation could change the result set. | A maintained result set the engine keeps available. |
+| **Event-driven** | Pre-planned automatic response to a specific graph event. | Once, when the matching event fires. | A side effect (skill invocation, query execution, published message). |
+
+The two models share infrastructure under the hood — both ride the same delta-evaluation engine — but they expose different contracts to the user. A continuous computation is *a result that is always current*. An event-driven response is *an action that runs at the right moment*.
+
+## The four keyword families
+
+```text
+LIVE  ──── continuous execution model
+TRIGGER ── event-driven execution model
+SKILL ──── the action that either model invokes
+PROGRAM ── the installable bundle that packages triggers + skills
+```
+
+### LIVE — continuous, stateful, always-current
+
+`LIVE` names anything **continuously maintained**. The engine keeps the result set current; the user reads it whenever they need it; no polling, no re-running.
+
+| Syntax | What it does |
+|---|---|
+| `LIVE MATCH ... RETURN ...` | Session-scoped standing query. |
+| `CREATE LIVE VIEW name AS ...` | Named, persistent, pre-computed standing query. |
+| `LIVE CALL algo.pageRank()` | Continuous algorithm — the result set updates as the graph evolves. |
+
+See [Live Queries](/docs/live-queries) for the full surface.
+
+### TRIGGER — event-driven, fire-once
+
+`TRIGGER` names a **pre-planned response to a specific graph event**. When the event fires, the action runs once. No persistent result set.
+
+| Syntax | What it does |
+|---|---|
+| `CREATE TRIGGER name ON :Label WHEN CREATED RUN SKILL x` | Run a skill when a node of the label is created. |
+| `CREATE TRIGGER name ON :Label WHEN CHANGED RUN QUERY '...'` | Run a query on property change. |
+| `CREATE TRIGGER name ON :Label WHEN DELETED RUN PUBLISH TO topic` | Publish to a topic on deletion. |
+
+Cascade depth is bounded so a trigger that produces graph mutations does not loop. See [Triggers](/docs/worldcypher/triggers).
+
+### SKILL — the action either model invokes
+
+`SKILL` names the **logic** — neither LIVE nor TRIGGER on its own, but the unit of work each can call.
+
+| Syntax | What it does |
+|---|---|
+| `CREATE SKILL name ...` | Define a reusable action. |
+| `PROCESS NODE n WITH SKILL name` | Apply a skill to a node imperatively. |
+| `REPROCESS EDGES ...` | Re-run skills against existing edges. |
+
+See [Skills](/docs/skills) for the full surface.
+
+### PROGRAM — the installable bundle
+
+`PROGRAM` names the **installable unit**. A program manifests a bundle of triggers, skills, and capability requirements. Installing a program registers its triggers; uninstalling removes them.
+
+A program produces data; LIVE views observe that data continuously. See [Programs](/docs/programs).
+
+## Decision table — which one to reach for
+
+| You want to … | Use |
+|---|---|
+| Maintain a result set that updates as the graph changes | `CREATE LIVE VIEW` |
+| Run an algorithm continuously as the graph evolves | `LIVE CALL algo.X()` |
+| Fire a skill, query, or published event once when a node is created / changed / deleted | `CREATE TRIGGER` |
+| Define a reusable action that either a trigger or an imperative call can invoke | `CREATE SKILL` |
+| Bundle a set of triggers + skills + capability requirements into one installable unit | `CREATE PROGRAM` |
+
+## How they compose
+
+```text
+INSERT (:ImageFrame)
+    │
+    ▼
+delta evaluation
+    │
+    ├──► TRIGGER "auto_detect" fires     ← event-driven, fire-once
+    │       │
+    │       ▼
+    │    PROGRAM "yolo" runs detection   ← installable bundle, invokes a skill
+    │       │
+    │       ▼
+    │    Engine ingests (:Detection) nodes
+    │       │
+    │       ▼
+    │    delta evaluation fires again
+    │       │
+    ├──►    LIVE VIEW "high_conf" updates    ← continuous, maintains result set
+    ├──►    LIVE CALL algo.pageRank() reruns ← continuous, recomputes
+    └──►    Other standing queries          ← continuous
+```
+
+A trigger is the *event* at the top of the chain. LIVE views are *consumers* downstream. The trigger produces data; LIVE views observe it continuously.
+
+## Vocabulary rules
+
+1. **LIVE** names continuous computation. Use for anything that maintains a result set as the graph mutates.
+2. **TRIGGER** names an event binding. Use for fire-once responses.
+3. **SKILL** names the action. Neither continuous nor event-driven on its own — it's what either model invokes.
+4. **PROGRAM** names the installable unit. Contains triggers; produces data that LIVE views observe.
+
+These four words name what *the user does*. Engine-internal type names may differ.
+
+## See also
+
+- [Live Queries](/docs/live-queries) — the canonical LIVE surface.
+- [Triggers](/docs/worldcypher/triggers) — the TRIGGER reference.
+- [Skills](/docs/skills) — the SKILL reference.
+- [Programs](/docs/programs) — the PROGRAM reference.
+- [Behavior Graphs](/docs/behavior-graph) — programs and triggers composed into behavior trees.

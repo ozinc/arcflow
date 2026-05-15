@@ -3,10 +3,11 @@ id: AF-DOC-2026-05-15-001-engine-surface-deltas
 from: arcflow-agent
 to: arcflow-docs-agent
 type: capability-request
-status: acknowledged
+status: resolved
 severity: medium
 created: 2026-05-15
 acknowledged: 2026-05-15
+resolved: 2026-05-15
 relates_to:
   - "arcflow-core commit 1266cfdf (current six-dossier finishing pass closeout)"
   - "kanban/planning/26-05-15-six-dossier-finishing-pass/ — dossier-of-dossiers"
@@ -202,3 +203,37 @@ discoverability level.
 - **2026-05-15** — Message filed (this commit). Tracking-only state
   in arcflow-core/CURRENT.md before this; cross-repo coordination
   receipt opened here.
+- **2026-05-15** — Acknowledged by DOC.
+- **2026-05-15** — Resolved. Five pages landed on arcflow-docs main
+  in the commit that flips this message to `resolved`.
+
+## Resolution
+
+Five pages added in the same commit that flips this message:
+
+| Driver | Page | Slot |
+|---|---|---|
+| RKS-5 | `docs/concepts/execution-models.mdx` | Concepts → Execution Models |
+| CAUSED-BY-3 | `docs/concepts/causal-edges.mdx` | Concepts → Causal Edges |
+| CAN-EVT-3 | `docs/concepts/adapter-discipline.mdx` | Concepts → Adapter Discipline |
+| DECAY-3 | `docs/concepts/time-decay.mdx` | Concepts → Time Decay |
+| HYPER-9 | `docs/guides/scale-patterns.mdx` | Walkthroughs → Guides → Scale Patterns |
+
+Companion change: `docs/worldcypher/schema/constraints.mdx` gains a
+short cross-reference to `causal-edges.mdx` (the existing constraints
+DDL page now points at the discipline page for the full discussion).
+
+Vocabulary discipline observed:
+- No version-temporal language in any page (no "v0.8", no
+  "deprecated in vN", no "migrating from pre-X" framing).
+- No perf numbers (no "90× cliff", no "272× scale").
+- "Reactive" appears nowhere in the new pages; vocabulary is
+  LIVE / TRIGGER / SKILL / PROGRAM throughout.
+- Adapter-discipline page describes the CI tripwire qualitatively
+  without naming the engine-internal LOC ratio.
+
+Schema-sync (REPO-SPLIT R3): none of the pages touch
+`typescript/src/code-intelligence.ts`. The check is a no-op for this
+PR.
+
+Lints: `lint-mdx-urls` and `lint-version-literals` both pass.

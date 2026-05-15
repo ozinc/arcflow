@@ -1,0 +1,182 @@
+---
+title: "World Graph Substrate (Engine Preview)"
+kind: operation
+description: "Engine-architecture preview of the World Graph substrate — module structure, virtual labels, six-tier residency, oz:// URI scheme, and the ARC1 on-disk format. Type vocabulary is frozen; implementation lands progressively."
+status: "preview"
+---
+
+# World Graph Substrate (Engine Preview)
+
+This page is an **engine-architecture preview**, not a user-facing capability reference. It describes the substrate the World Graph layer is being built on — the module structure, the type vocabulary, the storage hierarchy, the addressing scheme, and the on-disk format. The types are frozen and exhaustively tested; the implementation that animates them lands progressively as the substrate cuts.
+
+When an external surface is documented elsewhere (DDL, procedures, the SDK), this page links to it. When a substrate concept does not yet have a user-facing surface, this page describes the concept and does not invent one. *Live, not aspirational* — every claim here either describes types that exist in the engine source today, or marks a downstream surface that arrives when the substrate's resolvers wire through.
+
+## Section 1 — `arcflow.worldgraph` module structure
+
+The World Graph layer is implemented as a single top-level module, `arcflow_core::worldgraph::*`, replacing the previously scattered store / mvcc / mmap-store / WAL modules. The decomposition follows two patterns.
+
+**Six bounded-capability submodules**, each owning *what* it does:
+
+| Submodule | Owns |
+|---|---|
+| `catalog` | The Iceberg-shaped manifest reader. The boundary between this layer and the Perception Lake. |
+| `topology` | CSR adjacency. Immutable, GPU-uploadable. |
+| `nodes` | Low-cardinality mutable node tables. |
+| `wal` | The WAL durability contract. Crash-replayable. |
+| `mmap` | Read-only mmap path; column files; cache coherency. |
+| `schema` | Typed `CREATE NODE LABEL` registration, including the `VIRTUAL` variant. |
+
+**One substrate primitive layer (`worldgraph::io`)**, owning *how* bytes move:
+
+| Submodule | Owns |
+|---|---|
+| `io::segment` | Segment containers + extents; checksums. |
+| `io::stripe` | Append-stripe writer (`pwrite + fsync + atomic rename`). Mmap is not used for writes. |
+| `io::cache` | The Memory Governor — heat scores, admission, auto-prefetch, tier transitions. |
+| `io::wal_store` | WAL segment manager; group commit; full-fsync on platforms that need it. |
+| `io::manifest_txn` | Atomic manifest commit protocol (two-rename). |
+| `io::object_cache` | Universal Parquet reader (local + remote partitions). |
+| `io::compaction` | Compaction scheduler — levels, bandwidth cap, read-amp limit. |
+| `io::platform` | macOS / Linux / Windows storage primitive abstraction. |
+| `io::metrics` | Page faults; resident vs dirty bytes; read amp. |
+
+The six bounded capabilities call into `io::*` rather than the OS directly. The split exists because mmap policy, fsync policy, cache governance, manifest-commit protocol, and segment-container layout otherwise leak into every capability and re-emerge as duplicated, drifting policy. Concentrating them in `io/` gives the substrate one place to enforce storage doctrine.
+
+Two structural disciplines apply:
+
+- **PAT-0046 — Path = capability.** Every submodule name describes the capability it owns. No `utils.rs`, no `helpers.rs`.
+- **PAT-0047 — `mod.rs` is a navigable index.** Module roots carry submodule declarations + module-level documentation only; no `impl` blocks, no helper functions, no flat re-exports beyond what callers strictly need.
+
+The substrate is internal — every submodule is `pub(crate)`. External consumers reach the World Graph through the SDK and FFI surfaces, not through `worldgraph::*` directly. The atomic public-surface flip lands in the doctrinal sweep that closes the substrate cut.
+
+## Section 2 — Virtual Labels and the Lakehouse–Graph split
+
+The substrate's central doctrinal concept is that a node class lives in exactly one of two places:
+
+- **Owned** — rows live in the World Graph's own stripe store. Mutable, low-cardinality, queryable by property and traversal.
+- **Virtual** — rows live in a Lakehouse (Iceberg or Parquet-glob); the engine holds the typed schema, the catalog pointer, and the topology. Immutable observations, high-cardinality, read via columnar scan.
+
+`NodeKind` is the tagged value that distinguishes them. The DDL admits both forms:
+
+```cypher
+-- Owned class — rows live in the engine
+CREATE NODE LABEL Player (name STRING, level INT);
+
+-- Virtual class — rows live in a Lakehouse partition
+CREATE NODE LABEL Frame (ts TIMESTAMP, x DOUBLE)
+  VIRTUAL FROM PARTITION 's3://nfl-feed/frames/{date}/{game}.parquet';
+```
+
+A Virtual label produces a `VirtualLabelEntry { label, partition_pattern, schema_ref, resolver_kind }` row in the catalog. `ResolverKind` is one of `Iceberg`, `ParquetGlob`, or `Custom`. The substrate registers the contract; the resolvers themselves wire through as the substrate cuts.
+
+The split is governed by three mechanical rules (see [World Graph](/docs/concepts/layers/world-graph)):
+
+- **R1 — Identity owned by the Graph.** Every node, Owned or Virtual, has a stable ID and a Graph-resident resolver.
+- **R2 — Mutability bright-line.** Mutable → Owned; immutable observation → Virtual.
+- **R3 — Topology owned by the Graph.** Edges live in the Graph's CSR adjacency, even when both endpoints are Virtual.
+
+The architectural consequence is that the substrate does not need to ingest a Lakehouse partition's rows into engine RAM to make them queryable. The schema and adjacency suffice; row access pushes down to the catalog at query time. The query engine's predicate-pushdown rewriter for `MATCH (:VirtualLabel ...)` patterns lands as a follow-on; until it does, queries against Virtual labels return a typed `QueryError::VirtualLabelNotYetQueryable`.
+
+## Section 3 — Six-tier residency, nine-state classification
+
+The substrate is **storage-hierarchy-aware**. Every fragment of data is classified into one of six storage tiers, with a nine-state finer classification that the Memory Governor uses to decide prefetch, eviction, and fetch-on-miss.
+
+Six tiers (`TierBudget` — operator-set byte budgets):
+
+| Tier | What it is |
+|---|---|
+| L0 — GPU VRAM | Compute-staging only. Not durable. Fragments transit through L0 to be consumed by GPU kernels. |
+| L1 — CPU RAM | Main system memory. Decompressed Arrow buffers; arena allocations; structured state. |
+| L2 — OS page cache | Kernel-managed subset of L1 holding pages of mmap'd files. Same physical bytes as L1; semantically distinct (kernel evicts; the engine doesn't). |
+| L3 — NVMe SSD | Hot durable tier on local NVMe. ARC1 stripes. |
+| L4 — HDD / cold local | Cold durable tier. Zstd-compressed Parquet. |
+| L5 — object storage | Remote durable tier (S3 / GCS / Azure). Iceberg-shaped Parquet. |
+
+Nine states (`ResidencyClass`):
+
+```text
+L0GpuResident
+L1CpuPinned       L1CpuHot        L1CpuWarm
+L3SsdLocal
+L4HddLocal
+L5RemoteCached    L5RemoteStreamed    L5RemoteCold
+```
+
+The nine-state granularity exists because the substrate dispatches different policies based on the finer state — pinned memory is not evicted; hot memory may be demoted before warm; remote-cached has different fetch latency than remote-streamed.
+
+The `Memory Governor` (`worldgraph::io::cache`) is the substrate's active control. It owns fragment placement based on heat scores, the operator-set `TierBudget`, and the per-query `SpeedLaneHint`. Capability and current placement are reported through the engine's metrics surface; the substrate never silently downgrades a fragment's tier — every transition is observable, and a fragment that cannot be promoted to satisfy a `SpeedLaneOnly` query returns `FragmentError::BelowSpeedLane` instead of stalling.
+
+## Section 4 — `oz://` brand-level URI scheme
+
+The substrate exposes one URI scheme for every addressable resource in a workspace. It is **brand-level** — `oz://`, not `arcflow://` — so the same URI shape works across all surfaces: the engine, the daemon, the fsspec Python binding, federation peers.
+
+Six variants:
+
+| URI | Resolves to |
+|---|---|
+| `oz://workspace` | The workspace root. |
+| `oz://snapshot/<hex-digest>` | A pinned snapshot. |
+| `oz://label/<name>` | A node label. |
+| `oz://edge/<name>` | An edge label. |
+| `oz://catalog` | The Iceberg-shaped catalog manifest. |
+| `oz://partition/<content-addressed-digest>` | A partition file. |
+
+Parsing is **strict**. Invalid forms produce a typed `OzUriError` — `MissingScheme`, `EmptyAuthority`, `UnknownAuthority`, `MissingPath`, `UnexpectedPath`. The substrate never silently coerces a malformed URI into the wrong variant.
+
+Variants are **additive**. New addressable resource kinds extend the enum; renaming or removing a variant is a major-version concern. The pattern — one URI scheme, multiple resolvers — mirrors the precedent set by other "one namespace over heterogeneous backends" designs.
+
+At this step the parser, the `OzUri` enum, and its display contract are in the engine source. The fsspec Python binding, CLI flag wire-up, FFI resolver, and catalog-resolver dispatch land as the substrate cuts.
+
+## Section 5 — ARC1 on-disk format + LSM compaction shape
+
+The substrate's **hot-tier on-disk format is ARC1**, distinct from the cold-tier Parquet that flows through the Iceberg manifest. ARC1 is a sequential append-only stripe format designed for the substrate's write path.
+
+The file header is an 8-byte magic followed by a version byte, in the style of well-known binary formats (PNG, JPEG-XL, Parquet) — a stable signature any tool can identify without reading further. The append-only stripe writer (`worldgraph::io::stripe::StripeWriter`) targets ARC1; the read path is mmap-based with explicit cache governance.
+
+Compaction follows an **LSM shape** — seven levels with 10× fanout and 64 MiB target file size, modelled on the RocksDB level policy. Per-level bandwidth caps and a per-trigger scheduler keep compaction from interfering with the foreground write path. The policy types are frozen; the scheduler body lands progressively.
+
+Two on-disk formats by design:
+
+- **ARC1 — hot tier.** Append-only stripes, mmap-read, LSM-compacted, designed for the substrate's write path.
+- **Parquet — cold tier and Virtual-label resolution.** Iceberg-manifested, columnar, broadly readable by every Lakehouse tool.
+
+The substrate's two formats are not a transition; they are two different *roles*. ARC1 is what the engine writes; Parquet is what every other tool reads, and what Virtual labels resolve through.
+
+## Status — what is frozen, what is in flight
+
+The type vocabulary in the engine source today:
+
+- `arcflow.worldgraph` module skeleton with the six bounded capabilities + `io` substrate.
+- Typed schema (`NodeLabel`, `ColumnDef`, `ColumnType`, `EdgeLabel`).
+- Virtual-label contracts (`VirtualLabelEntry`, `PartitionPattern`, `ResolverKind`).
+- DDL parser for `CREATE NODE LABEL ... VIRTUAL FROM PARTITION`.
+- `MutationOp` enum (row-level and bulk-stripe variants).
+- WAL record envelope and bulk-stripe protocol.
+- `TierBudget` + nine-state `ResidencyClass`.
+- `oz://` URI parser.
+- ARC1 file magic + version constants.
+- LSM compaction policy types.
+- Streaming-stripe writer policy + state machine.
+- Block-cache key + handle + policy types.
+- Catalog skeleton.
+- Platform probe (macOS / Linux / WSL2) with capability dispatch.
+
+In flight — the page does not describe these as live:
+
+- Streaming-stripe write bodies, manifest replay + snapshot pinning.
+- Object-cache fetch bodies, Parquet decoder.
+- Apply-mutation row-store wiring, column-store lift, MVCC, dense-store.
+- WAL append + replay bodies.
+- Level-compaction scheduler + bandwidth governor.
+- Memory Governor enforcement body.
+- ARC1 reader + Parquet decoder paths.
+- `oz://` resolvers + fsspec binding.
+
+When these wire through, the corresponding user-facing surfaces become discoverable through the SDK + DDL + procedure references. Until they do, this preview is the canonical description.
+
+## See also
+
+- [Architecture](/docs/architecture) — the broader engine-architecture page.
+- [World Graph](/docs/concepts/layers/world-graph) — the conceptual layer this substrate implements.
+- [Perception Lake](/docs/concepts/layers/perception-lake) — the sibling immutable-observation layer.
+- [Sync Protocol (Deep Dive)](/docs/architecture/sync) — companion deep-dive page on the sync surface.

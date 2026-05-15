@@ -29,6 +29,22 @@ DROP CONSTRAINT ON (n:Person) ASSERT n.email IS UNIQUE
 CALL db.constraints()
 ```
 
+## Causal constraints
+
+`REQUIRE <prop> CAUSED_BY (:<AnchorLabel>)` declares that any write to the
+named property on a node of the given label must carry a same-transaction
+`:CAUSED_BY` edge to a node of the anchor label.
+
+```cypher
+CREATE CONSTRAINT FOR (n:Player)
+  REQUIRE confidence CAUSED_BY (:Evidence)
+```
+
+Writes that violate the constraint fail at commit with a typed
+`CAUSED_BY_VIOLATION` error and roll back the entire transaction. See
+[Causal Edges](/docs/concepts/causal-edges) for the full discipline.
+
 ## See Also
 
 - [Indexes](/worldcypher/schema/indexes) — performance indexes
+- [Causal Edges](/docs/concepts/causal-edges) — the `:CAUSED_BY` discipline
