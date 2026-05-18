@@ -1,0 +1,133 @@
+---
+title: "1a. World Store · Smart Reader"
+kind: concept
+description: "ArcFlow's format-aware read planner. Footer-only fast paths, row-group skip, column projection, lane-explicit transport (mmap / GPU-direct / Arrow IPC) — every read consults the plan, never the kernel surprise."
+status: "stable"
+---
+
+# World Store · Smart Reader
+
+> **The Smart Reader's Phase B surface is live.** Footer-only count, column-projection scans, predicate pushdown across row groups, lazy stats cache, the parquet + safetensors planners, the mmap / GPU-direct / Arrow-IPC transports, the lane-explicit router, mission-tier eviction priority via `ReadProvenance`, and **deadline-over-completeness query mode** (PAT-0053, `arcflow.QueryOptions(deadline_ms=N)` reachable from Python with `result.transport_outcome` returning `truncated` / `complete` / `None`) are all shipped substrate. The page describes that surface as-is.
+>
+> **Two design dimensions remain target-state**, named here for completeness:
+>
+> - **Per-range integrity anchor** (PAT-0052). Closes the GPU-direct DMA path's checksum gap (`Lane::CudaGds` bypasses CPU-side hashing). Not customer-observable today.
+> - **Graph-resolved deduplication** — a substrate primitive that turns the catalog into a storage resolution oracle (not just a byte-level content-addressed map). Operator-approved as a planning dossier (GRD-A1..A6); the engine team is opening `kanban/planning/26-05-17-graph-resolved-dedup/` on the next /loop tick. This is a separate concept from the Smart Reader's read contract; named here for cross-reference.
+
+The Smart Reader sits inside the [World Store](/docs/concepts/layers/world-store) — it is the substrate's read surface for format-aware workloads. The general substrate stores bytes; the Smart Reader knows what *shape* those bytes have (parquet, safetensors, arrow, …) and turns Cypher access patterns into the smallest possible byte fetch.
+
+The contract is simple: the reader emits a typed `ReadPlan`; the transport executes it. Reader and transport are independently testable, and the plan is inspectable by `EXPLAIN`.
+
+## The two halves
+
+| Half | Owns | Lives at |
+|---|---|---|
+| **Reader** | Format-aware planning — footer parsing, row-group skip, column projection, coalescing | `worldstore::serve::reader::*` |
+| **Transport** | Lane-explicit execution — mmap, GPU-direct (cuFile + GDS), Arrow IPC (shared-memory) | `worldstore::serve::transport::*` |
+
+A `ReadPlan` is the typed contract between them. Plans describe *what* bytes to fetch and *in what order*; they never describe *how* to fetch (that's the transport's job).
+
+## What the reader plans
+
+The reader returns a `ReadPlan` with:
+
+- **Range fetches** — file-by-file `(offset, length, column_id)` triples for contiguous or coalesced byte ranges.
+- **Coalesce threshold** — a hint to the transport ("these ranges are within N bytes of each other; fetch as one"), computed from the format's index layout.
+- **Result schema** — the typed columns the result will carry, resolved against the projection.
+- **Provenance** — snapshot, label, catalog reference. Feeds the Memory Governor's mission-tier eviction priority.
+
+### Footer-only fast path
+
+When the projection is empty (a pure `count(*)`), the plan has **zero** range fetches. The result is computed from per-row-group `num_rows` summed across the parquet footer. No column bytes leave object storage.
+
+```python
+import arcflow, os
+os.environ["OZ_LAKE_ROOT"] = "/path/to/lake/root"
+
+db = arcflow.ArcFlow("/path/to/workspace")
+db.register_virtual_partition(
+    label="Frame",
+    partition="lake://nfl/tracks/{season}/{week}",
+)
+result = db.execute("MATCH (f:Frame) RETURN count(f) AS n")
+# {'n': 311000000}  ← reads from parquet footers; no column scan
+```
+
+— under the virtual label backed by `lake://nfl/tracks/{season}/{week}`, the Cypher pattern resolves to a footer scan against the matching parquet files. No row data is read; the answer is computed from manifest + footer metadata alone. Cost is bounded by footer parse time (~tens of µs per file), so a 311-million-frame count returns in sub-second wall time against the full partition.
+
+### Column-pruned scan
+
+When the projection names specific columns, only those column chunks become range fetches. Untouched columns never leave object storage.
+
+```cypher
+MATCH (f:Frame) WHERE f.season = 2024 RETURN f.x, f.y
+```
+
+— pulls only the `x` and `y` column chunks for row groups whose `season` stats overlap `2024`. Predicate-pushdown against row-group min/max stats prunes most row groups before any data reads.
+
+## What the transport does
+
+Three transports, three lanes. The router picks one based on the execution context and probe results; **never silently downgrades**.
+
+| Transport | When chosen | What the result carries |
+|---|---|---|
+| **`mmap`** *(default)* | CPU lane; default for typed-entity queries | `mmap`'d region; result columns reference slices of the mapping (lifetime tied to the mapping) |
+| **`gpu_direct`** | GPU lane requested AND CUDA + cuFile + GDS-capable NVMe all present | Device-side buffers via `cuFileRead` (NVMe → HBM, zero CPU mediation) |
+| **`arrow_ipc`** | Routed to an inference sidecar (separate crash domain per ANTI-0020) | Shared-memory Arrow IPC handle delivered via UDS |
+
+### Why mmap is the correct default (not lazy)
+
+- **Page cache is shared across processes** — engine and any loader process reading the same file share kernel pages, no daemon coordination required.
+- **`madvise(WILLNEED)`** is the right prefetch primitive — the kernel schedules async reads optimally for the underlying device.
+- **NUMA-aware** on modern Linux and macOS.
+- **Userland caches compete with the page cache for the same memory** — net effect is lower aggregate hit rate, higher memory pressure.
+
+The Smart Reader's mmap transport does *not* maintain a userland LRU / LFU cache. Reinventing the page cache is an explicit anti-pattern.
+
+### Why GPU-direct matters
+
+When the projection lands in a GPU consumer — model inference, vector index probe, spatial GPU kernel — `cuFileRead` reads bytes from NVMe directly into device memory, bypassing host RAM entirely. The Smart Reader's router probes at startup for CUDA driver + cuFile library + GDS-capable NVMe; if all three are present and the lane request is `GPU`, the transport is `gpu_direct`. Otherwise the request errors with a structured `RouterError::GpuNotAvailable` naming which probe failed — never a silent fallback to mmap.
+
+## Mission-tier eviction priority
+
+The plan's provenance feeds the Memory Governor:
+
+- Reader emits `ReadProvenance { mission_tier, snapshot_id, label }`.
+- Transport admits bytes through the Memory Governor.
+- On admission pressure, eviction order within a residency class is **`predicted > inferred > observed`** — predicted entities (cheapest to recompute) evict first; observed entities (irreplaceable) evict last.
+
+No DSL, no per-path quotas. The typed entity layer carries the priority into the substrate via the plan.
+
+## Inspectability
+
+Plans are inspectable. An `EXPLAIN` over a virtual-label query dumps the plan:
+
+```text
+ReadPlan {
+  ranges: 0,                          // footer-only fast path
+  result_schema: Int64 "count(*)",
+  provenance: {
+    mission_tier: observed,
+    snapshot_id: "snap_2026_05_16_…",
+    label: "Frame",
+  },
+  transport: CpuMmap,
+}
+```
+
+Plans are also testable without I/O — unit tests construct synthetic plans and assert reader output without touching the filesystem. Reader and transport concerns are independently testable.
+
+## What the Smart Reader does NOT do
+
+- It does not own the catalog. Partition resolution lives in `worldstore::catalog`.
+- It does not own bytes-on-disk. Storage primitives live in `worldstore::io::*`.
+- It does not own typed-entity reasoning. That's the [World Graph](/docs/concepts/layers/world-graph).
+- It does not maintain a userland cache. The OS page cache is the cache.
+- It does not silently downgrade lanes. GPU-direct unavailable returns an explicit error; the caller decides.
+
+## See also
+
+- [World Store](/docs/concepts/layers/world-store) — the substrate the Smart Reader sits inside.
+- [World Graph](/docs/concepts/layers/world-graph) — the typed entity layer that consumes plan results.
+- [Query Engine](/docs/concepts/layers/query-engine) — the layer that calls the Smart Reader for virtual-label patterns.
+- [Algorithm Library](/docs/concepts/layers/algorithm-library) — GPU-resident algorithms that drive `gpu_direct` plans.

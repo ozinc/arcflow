@@ -1,5 +1,5 @@
 ---
-title: "7. Algorithm Library"
+title: "8. Algorithm Library"
 kind: concept
 description: "The built-in procedure layer. Graph algorithms, vector search, RAG primitives, GPU kernels — invoked by name through the standard Cypher CALL surface."
 status: "stable"
@@ -7,7 +7,7 @@ status: "stable"
 
 # Algorithm Library
 
-The seventh and outermost of ArcFlow's seven layers. Owns the **built-in procedure surface** — graph algorithms, vector search, RAG primitives, GPU-accelerated kernels — every one invoked by name through the standard `CALL` syntax.
+The eighth and outermost of ArcFlow's eight layers. Owns the **built-in procedure surface** — graph algorithms, vector search, RAG primitives, GPU-accelerated kernels — every one invoked by name through the standard `CALL` syntax.
 
 If the [Query Engine](/docs/concepts/layers/query-engine) is the parser-planner-executor for *general-purpose* Cypher, the Algorithm Library is the catalogue of *named operations* the engine ships out of the box. PageRank, BFS, shortest path, Leiden community detection, HNSW vector probes, cosine similarity, embedding-aware procedures — all reachable through one consistent invocation shape:
 
@@ -21,6 +21,8 @@ RETURN node.name, score ORDER BY score DESC LIMIT 10
 | Family | Examples | Procedure namespace |
 |---|---|---|
 | Graph algorithms | PageRank, BFS, DFS, shortest path, connected components, Leiden, Louvain | `CALL algo.*` |
+| Multi-source disagreement | Categorical / numeric / spatial weighted-median resolution across sources | `CALL arcflow.multi_source_disagreement()` |
+| Trajectory analytics | Nearest-at-frame, leverage gain, release point, line-of-sight shadow | `CALL arcflow.trajectory.*` |
 | Vector primitives | Cosine, dot product, embed | `arcflow.cosine()`, `arcflow.embed()` |
 | Vector search | HNSW similarity probe | `CALL arcflow.similar()` |
 | Graph-aware retrieval | Multi-hop RAG with citation provenance | `CALL arcflow.graphrag()` |
@@ -28,7 +30,7 @@ RETURN node.name, score ORDER BY score DESC LIMIT 10
 | Workflow | Durable workflows over a graph | extension family |
 | Introspection | Engine capabilities, GPU status, query plans | `CALL db.*` |
 
-The complete surface is enumerated in the [Procedures](/docs/worldcypher/functions/procedures) reference; this page documents the *layer* — why it exists, where it sits, and what guarantees it offers.
+The complete surface is enumerated in the [Procedures](/docs/worldcypher/functions/procedures) reference; the full algorithm catalogue with worked examples lives at [Graph Algorithms](/docs/algorithms). This page documents the *layer* — why it exists, where it sits, and what guarantees it offers.
 
 ## Why algorithms are a separate layer
 
@@ -49,7 +51,7 @@ The library also defines the *additive-surface boundary* for ArcFlow's release c
 
 - It does not own scheduling. That is the [Behavior Engine](/docs/concepts/layers/behavior-engine).
 - It does not own change notification. That is the [Live Surface](/docs/concepts/layers/live-surface).
-- It does not own storage. Storage lives in [Perception Lake](/docs/concepts/layers/perception-lake) + [World Graph](/docs/concepts/layers/world-graph).
+- It does not own storage. Storage lives in [World Store](/docs/concepts/layers/world-store), [Perception Lake](/docs/concepts/layers/perception-lake), and [World Graph](/docs/concepts/layers/world-graph).
 
 An algorithm is a *function over the graph at a point in time*. Combining algorithms with the layers below them — running PageRank inside a behavior that fires on a live-view delta — is how an agent assembles real applications.
 

@@ -1,0 +1,131 @@
+---
+title: "1. World Store"
+kind: concept
+description: "ArcFlow's storage substrate. Iceberg-shaped manifests, WAL segments, snapshots, content-addressed blocks — internal infrastructure with a brand-clean name. Addressed by lake:// URIs."
+status: "stable"
+---
+
+# World Store
+
+The first of ArcFlow's eight layers. The **storage substrate** the engine sits on — every byte that survives an engine restart, every manifest that pins a snapshot, every WAL segment that makes a write durable.
+
+The World Store is internal infrastructure with a brand-clean name. It is *not* a product, a sellable SKU, or the hero of ArcFlow's pitch — ArcFlow itself is the hero. The Store is named at all so the engine's module tree is navigable, and so the layer doctrine has a place to anchor durability, residency, and content-addressing concerns. Everything customer-facing about ArcFlow ultimately exists because the Store quietly does its job.
+
+The substrate is a generic, content-addressed durable store: parquet column files, Iceberg-shaped manifests, WAL segments, version pointers, snapshots, segment containers. It knows nothing about `Node`, `Edge`, mission tiers, or schema-typed entities — that vocabulary lives one layer up in the [World Graph](/docs/concepts/layers/world-graph), which is where the engine's typed identity actually lives.
+
+## What lives here
+
+| In the Store | Not in the Store |
+|---|---|
+| Iceberg-shaped table + partition manifests | Node / edge identity |
+| WAL segments + group-commit records | Mutable typed entity state |
+| Parquet column files (mmap-backed) | Adjacency / CSR topology |
+| Snapshot version pointers | Indexes built from typed columns |
+| Content-addressed object blocks | Mission tier (observed / inferred / predicted) |
+| Atomic manifest-commit transactions | Hybrid Logical Clocks |
+| Per-partition free-form `provides:` codec tags | Standing queries, Z-set deltas |
+
+If a value carries **typed entity semantics** — anything that says "this is a Player, that is a Frame, here is the edge between them" — it lives in the [World Graph](/docs/concepts/layers/world-graph). If a value is **pure bytes plus a tabular schema** — column files, manifest entries, WAL records — it lives in the World Store.
+
+## The lake:// URI scheme
+
+The World Store is addressed by `lake://` URIs. The scheme is the canonical substrate-layer namespace:
+
+```
+lake://<bucket>/<path/template/{variable}>
+```
+
+Worked example — a virtual partition registration:
+
+```python
+db.register_virtual_partition(
+    label="Frame",
+    partition="lake://nfl/tracks/{season}/{week}",
+)
+```
+
+The `lake://` URI is the substrate handle. The catalog binds it to a typed `VirtualLabelEntry` so that `MATCH (f:Frame) RETURN count(f)` resolves through the [Query Engine](/docs/concepts/layers/query-engine), the [World Graph](/docs/concepts/layers/world-graph) catalog, and finally the World Store scan.
+
+A `lake://` resolver maps to the underlying physical scheme — `file://` for local development, `s3://` / `gs://` for cloud deployments — based on the partition's residency class. Substrate-internal indirection is the point: the engine never sees a raw cloud URI, and consumers never have to encode cloud topology in their queries.
+
+## Lakehouse capability — what the Store gives you
+
+The World Store is **Iceberg-shaped, parquet-resident, and queryable as a graph** without ever materialising the rows. Three properties make the lakehouse story load-bearing:
+
+**Zero-copy virtual labels.** A `lake://` partition pattern + a `CREATE NODE LABEL <Label> VIRTUAL FROM PARTITION '<pattern>'` (or the equivalent `register_virtual_partition()` SDK call) binds a Lakehouse partition to a graph node class. From then on, `MATCH (f:Frame) RETURN count(f)` resolves to a parquet footer scan (sub-millisecond on partitions of any size). `MATCH (f:Frame) WHERE f.x > 50 RETURN f` resolves to a column-pruned scan that reads only the `x` column chunks for row groups whose statistics overlap the predicate. **Row data never enters the engine's RAM**; the columns the query needs are streamed from the parquet files at disk bandwidth.
+
+**Iceberg-compatible catalog reader.** Any catalog that emits Iceberg-shaped manifests works — **Polaris, Unity, AWS Glue, or a plain manifest file on local disk** are all readable. The substrate's manifest reader doesn't care which catalog produced the metadata; it cares that the layout conforms.
+
+**Composes with the typed entity layer.** A query that touches a virtual-label class and an in-engine class compiles to a mixed-execution plan: the planner reads the catalog, decides which part of the pattern is a Lakehouse scan and which is an in-memory graph probe, runs both, joins the results. The agent writes one Cypher pattern; the engine picks the right execution shape per node class.
+
+**Computed columns — derived properties, no materialization.** A virtual label can declare derived properties in catalog metadata via a `COMPUTE` clause on its DDL. The Smart Reader evaluates the expressions at row-decode time against the decoded `RecordBatch`; the values surface in `Node.properties` alongside parquet-resident columns; predicates on them push down through the planner. The canonical case is a relative-frame projection on operational telemetry — `distance_to_target = sqrt((agent_position[0]-target_position[0])^2 + …)` declared once, queried as `WHERE f.distance_to_target < 5.0`, never written to disk. See [Virtual computed columns](/docs/concepts/virtual-computed-columns).
+
+Worked example — register, count, scan:
+
+```python
+import arcflow, os
+os.environ["OZ_LAKE_ROOT"] = "/path/to/lake/root"
+
+db = arcflow.ArcFlow("./workspace")
+
+# Bind a Lakehouse partition to a graph node class.
+db.register_virtual_partition(
+    label="Frame",
+    partition="lake://nfl/tracks/{season}/{week}",
+)
+
+# count(*) → parquet footer scan, zero column reads
+db.execute("MATCH (f:Frame) RETURN count(f) AS n")
+# {'n': 311000000}  on the canonical NFL tracking dataset
+
+# Predicate-pushed scan → only the season + week + x columns are read
+db.execute(
+    "MATCH (f:Frame) "
+    "WHERE f.season = 2024 AND f.week = 12 AND f.x > 50.0 "
+    "RETURN count(f)"
+)
+
+# Composed with in-engine entities — one query, two storage shapes
+db.execute("""
+  MATCH (p:Player {team: 'Alpha'})-[:OBSERVED_IN]->(f:Frame)
+  WHERE f.season = 2024 AND f.x > 50.0
+  RETURN p.name, count(f) AS observations
+""")
+```
+
+The format-aware reader that plans these scans lives at [Smart Reader (`world-store/serve`)](/docs/concepts/layers/world-store-serve) — `serve::reader::parquet` for parquet today; `serve::reader::safetensors` for tensor archives; `serve::reader::*` extends as new column-typed formats land.
+
+## Why this layer is separate
+
+The World Store and the [World Graph](/docs/concepts/layers/world-graph) have fundamentally different operating characteristics:
+
+| | World Store | World Graph |
+|---|---|---|
+| **Durability** | Object-store economics, regional replication, lifecycle policies | In-memory typed view, rebuilt on engine start |
+| **SLA bound by** | Disk + network bandwidth | Query latency |
+| **Lifecycle** | Outlives the engine process | Per-engine-instance |
+| **Coupling to schema** | None — generic bytes + tabular schemas | Full — `Node`, `Edge`, mission tiers, HLC |
+| **What the engine uses it for** | Durability, residency tiering, replication | Identity, topology, mission-tier reasoning, query compute |
+
+Splitting the substrate from the typed entity layer is a module-boundary decision, not a product decision. It lets the engine's storage concerns evolve on their own SLA without dragging the typed entity layer into every fsync, manifest commit, or compaction policy change. From the consumer's perspective, it's all one engine — ArcFlow.
+
+## The boundary contract
+
+The World Store and [World Graph](/docs/concepts/layers/world-graph) coordinate through a single mechanical rule:
+
+- **The Graph is a view over the Store.** A `Node` in the World Graph corresponds to one or more rows in a partition in the World Store. The mapping is the catalog. The Graph is rebuilt from the Store on engine start; the Store never references the Graph.
+
+The substrate boundary is a module boundary, not a process boundary — ArcFlow remains the one in-process engine — but the architectural separation is real, and `lake://` is its visible expression. The same boundary lets the engine swap residency tiers, change replication policy, and evolve its durability story without disturbing the typed entity layer or any code that consumes it.
+
+## Why this matters for agents
+
+An agent that needs to ship a heavy analytical scan — "every detection in zone 4 between 08:00 and 09:00 of the 2024 season" — runs through the engine, which plans the scan against the Store directly. The catalog resolves `lake://` to concrete parquet files; the result is bounded by disk bandwidth, not graph traversal. The same agent can pivot to a typed-entity question — "the player who recorded those detections" — and the catalog binds the Store-resident rows to Graph-resident identity without re-materialising the bytes.
+
+The agent writes one Cypher pattern. The engine decides which layer of itself answers which part of it.
+
+## See also
+
+- [World Graph](/docs/concepts/layers/world-graph) — the typed entity layer that sits on top of the Store.
+- [Perception Lake](/docs/concepts/layers/perception-lake) — the append-only observation landing zone (a reserved layer between Store and Graph for sensor-grade ingest).
+- [Persistence & WAL](/docs/concepts/persistence) — how Store writes become durable.
+- [Snapshots](/docs/concepts/snapshots) — how a reader sees a consistent point-in-time view across the Store.

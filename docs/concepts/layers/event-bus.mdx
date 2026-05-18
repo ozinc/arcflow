@@ -1,5 +1,5 @@
 ---
-title: "5. Event Bus"
+title: "6. Event Bus"
 kind: concept
 description: "The pub/sub messaging layer. Durable topics with consumer groups, ack/nack, WAL-backed delivery, and dead-letter handling — embedded in the same process as the graph."
 status: "stable"
@@ -7,9 +7,27 @@ status: "stable"
 
 # Event Bus
 
-The fifth of ArcFlow's seven layers. Owns **pub/sub** — topics, consumer groups, durable offsets, ack/nack semantics, dead-letter handling — all backed by the same WAL that makes the graph itself durable.
+The sixth of ArcFlow's eight layers. Owns **pub/sub** — topics, consumer groups, durable offsets, ack/nack semantics, dead-letter handling — all backed by the same WAL that makes the graph itself durable.
+
+> **One-sentence disambiguation:** Event Bus watches what *publishers* say; [Live Surface](/docs/concepts/layers/live-surface) watches the *graph*. If the question is *"what did the producer say?"*, you want the Event Bus. If the question is *"what changed in my view of the graph?"*, you want the Live Surface.
 
 The Event Bus is what lets agents coordinate without a separate message broker. Two processes on the same machine that share a workspace can publish + subscribe to topics; the bus carries the messages, persists them, replays them on restart, and tracks per-consumer offsets — without spinning up a JVM, a sidecar, or a network listener.
+
+## Event Bus vs Live Surface — when to use which
+
+The two layers both produce streams of typed records, which is why they're often conflated. They differ in **what the contract is about** — a topic name on one side, a Cypher pattern's result set on the other:
+
+| Property | **Event Bus** | **Live Surface** |
+|---|---|---|
+| What you subscribe to | A topic name (or wildcard pattern) | A Cypher pattern's result set |
+| Who decides what's emitted | The publisher, by choosing what to send | The engine, by observing graph mutations against the pattern |
+| Payload shape | Whatever the publisher published — opaque to the bus | Typed deltas (added / removed rows) — schema matches the `RETURN` clause |
+| When events fire | When a publisher calls `publish(topic, payload)` | When a graph mutation changes the pattern's result set |
+| Canonical question | *"What did the producer say?"* | *"What changed in my view of the graph?"* |
+| Typical uses | Sensor telemetry; cross-process intent relay; ingest progress notifications; system events like `_system.partitions.added` | Live dashboards; agent loops watching for new high-confidence facts; replication of derived state |
+| Wrong tool when… | You want to react to graph changes without writing a publisher | The producer wants to send a message that isn't a Cypher result |
+
+The same agent often uses both: a standing query observes the graph and emits deltas (Live Surface); a workflow program turns those deltas into outbound notifications on a topic (Event Bus); downstream consumers subscribe to the topic. Same agent, two layers, separate contracts.
 
 ## What the bus provides
 

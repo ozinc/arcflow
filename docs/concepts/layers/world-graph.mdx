@@ -1,13 +1,15 @@
 ---
-title: "2. World Graph"
+title: "3. World Graph"
 kind: concept
-description: "The topology + mutable-state layer. Owns identity, edges, low-cardinality node tables, and the catalog that binds graph queries to underlying storage."
+description: "ArcFlow's typed-entity layer — the layer that carries the hero. Owns identity, edges, low-cardinality node tables, and the catalog that binds graph queries to the World Store substrate beneath."
 status: "stable"
 ---
 
 # World Graph
 
-The second of ArcFlow's seven layers. Owns everything a graph engine is uniquely good at — identity, topology, mutable state, and the catalog that binds graph queries to whichever storage holds the underlying rows.
+The third of ArcFlow's eight layers — and the layer that carries the hero. **This is where typed real-world entities live**: identity, topology, mutable state, mission tiers, hybrid-logical-clock provenance, and the catalog that binds graph queries to the [World Store](/docs/concepts/layers/world-store) substrate beneath.
+
+When someone asks "what is ArcFlow modeling?" the answer points here. The World Store quietly holds bytes; the World Graph is where those bytes acquire identity, become connected, and start carrying meaning. Everything above this layer — query, live, event, behavior, algorithm — exists to read and write against the typed entities the World Graph defines.
 
 The World Graph is what makes ArcFlow a *graph database* rather than a column store with extra steps. It holds the adjacency lists, the label indexes, the vector indexes, the entity-resolution merges, the charting overlays, the live signals — every fact that can change after it was first written.
 
@@ -62,6 +64,7 @@ Apply R2 first; the first rule that resolves wins.
 
 ## See also
 
+- [World Store](/docs/concepts/layers/world-store) — the durable byte substrate the Graph is a view over.
 - [Perception Lake](/docs/concepts/layers/perception-lake) — the immutable-observation sibling layer.
 - [Graph Model](/docs/concepts/graph-model) — the node / edge / property data model.
 - [Persistence & WAL](/docs/concepts/persistence) — how Graph mutations become durable.

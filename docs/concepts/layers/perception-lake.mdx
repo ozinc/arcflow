@@ -1,13 +1,15 @@
 ---
-title: "1. Perception Lake"
+title: "2. Perception Lake"
 kind: concept
-description: "The immutable-observation layer. Raw frames, telemetry samples, sensor streams, and pre-graph row data — append-only, columnar, partitioned by time × source."
-status: "stable"
+description: "The immutable-observation landing layer. Raw frames, telemetry samples, sensor streams, and pre-graph row data — append-only, columnar, partitioned by time × source — sitting on the World Store substrate."
+status: "reserved"
 ---
 
 # Perception Lake
 
-The first of ArcFlow's seven layers. Owns every **immutable observation row** the system has ever seen.
+> **Layer 2 — Perception Lake — is reserved in the 8-layer doctrine, but no substrate ships today.** The page below describes the target-state design. Ingest workloads that need an observation landing zone today land directly in the canonical [World Store](/docs/concepts/layers/world-store) (Layer 1) and are tier-promoted by the engine. This page becomes active when the first sensor-grade workload pulls the Bronze tier apart from canonical.
+
+The second of ArcFlow's eight layers. Owns every **immutable observation row** the system has ever seen — the append-only landing zone where sensor data, telemetry samples, and pre-graph rows first touch durable storage.
 
 A perception is anything the world handed you: a frame from a camera, a telemetry sample from a sensor, a row from a log file, a pre-graph record from an upstream pipeline. The Perception Lake records perceptions exactly as they arrived — once written, never edited.
 
@@ -33,6 +35,10 @@ This is the foundational rule that lets ArcFlow stay honest to physical-world se
 
 An agent reading the Lake sees the exact bytes the world produced. There is no hidden mutation history, no in-place edit log to reconcile. Every observation carries its time + source + confidence, and the columnar format means a query like "every detection in zone 4 between 08:00 and 09:00" is a Parquet scan — bounded by disk bandwidth, not by graph traversal.
 
+## How the Lake relates to the World Store
+
+The Perception Lake is the observation-time landing tier; the [World Store](/docs/concepts/layers/world-store) is the canonical durable substrate beneath it. Observation rows arrive at the Lake first, with their original timestamps and source identifiers intact; the World Store hosts the actual parquet column files, manifests, and snapshots, addressed by `lake://` URIs. The Lake adds the **observation-time discipline** — no edits, no corrections, no overwrites — that the substrate alone does not enforce.
+
 ## Where Lake rows surface in queries
 
 Lake-resident node classes appear in the graph schema as **virtual labels** — they are queryable through the standard graph query surface, but the rows themselves live in the columnar files. A `MATCH (f:Frame ...)` pattern rewrites to a columnar scan with predicate pushdown; the graph engine never materialises the underlying rows into property bags.
@@ -49,6 +55,7 @@ These rules are mechanical — an agent can apply them to any node class and dec
 
 ## See also
 
+- [World Store](/docs/concepts/layers/world-store) — the substrate beneath the Lake; where the bytes actually live.
 - [World Graph](/docs/concepts/layers/world-graph) — the mutable-state sibling layer.
 - [Observations](/docs/concepts/observations) — the data model that describes what an observation actually carries.
 - [Confidence & Provenance](/docs/concepts/confidence-and-provenance) — how trust is attached to every observation row.

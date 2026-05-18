@@ -1,5 +1,5 @@
 ---
-title: "4. Live Surface"
+title: "5. Live Surface"
 kind: concept
 description: "The standing-query layer. Queries that remain installed in the engine and emit deltas whenever their result set changes."
 status: "stable"
@@ -7,9 +7,27 @@ status: "stable"
 
 # Live Surface
 
-The fourth of ArcFlow's seven layers. Owns **standing queries** — queries that an agent installs once and that emit deltas every time the result set changes.
+The fifth of ArcFlow's eight layers. Owns **standing queries** — queries that an agent installs once and that emit deltas every time the result set changes.
+
+> **One-sentence disambiguation:** Live Surface watches the *graph*; [Event Bus](/docs/concepts/layers/event-bus) watches what *publishers* say. If the question is *"what changed in my view of the graph?"*, you want the Live Surface. If the question is *"what did the producer say?"*, you want the Event Bus.
 
 A standing query is the inversion of a one-shot query. Instead of asking *"what is true right now?"* and getting an answer, an agent declares *"keep this answer current"* — and the engine emits the additions, removals, and changes as the underlying graph evolves.
+
+## Live Surface vs Event Bus — when to use which
+
+The two layers both produce streams of typed records, which is why they're often conflated. They differ in **what the contract is about** — a Cypher pattern's result set on one side, a topic name on the other:
+
+| Property | **Live Surface** | **Event Bus** |
+|---|---|---|
+| What you subscribe to | A Cypher pattern's result set | A topic name (or wildcard pattern) |
+| Who decides what's emitted | The engine, by observing graph mutations against the pattern | The publisher, by choosing what to send |
+| Payload shape | Typed deltas (added / removed rows) — schema matches the `RETURN` clause | Whatever the publisher published — opaque to the bus |
+| When events fire | When a graph mutation changes the pattern's result set | When a publisher calls `publish(topic, payload)` |
+| Canonical question | *"What changed in my view of the graph?"* | *"What did the producer say?"* |
+| Typical uses | Live dashboards; agent loops watching for new high-confidence facts; replication of derived state | Sensor telemetry; cross-process intent relay; ingest progress notifications; system events like `_system.partitions.added` |
+| Wrong tool when… | The producer wants to send a message that isn't a Cypher result | You want to react to graph changes without writing a publisher |
+
+The same agent often uses both: a standing query observes the graph and emits deltas (Live Surface); a workflow program turns those deltas into outbound notifications on a topic (Event Bus); downstream consumers subscribe to the topic. Same agent, two layers, separate contracts.
 
 ## What the Live Surface provides
 
