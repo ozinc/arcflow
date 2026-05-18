@@ -26,7 +26,8 @@ RETURN node.name, score ORDER BY score DESC LIMIT 10
 | Trajectory analytics | Nearest-at-frame, leverage gain, release point, line-of-sight shadow | `CALL arcflow.trajectory.*` |
 | Counterfactual branching | Branch the World Graph at a WAL seq for hypothetical rollouts | `CALL arcflow.counterfactual.branchAt()` |
 | Statistical tests | Chi-square goodness-of-fit, Mann-Whitney U, Kolmogorov-Smirnov | `CALL arcflow.chiSquare()`, `CALL arcflow.mannWhitneyU()`, `CALL arcflow.kolmogorovSmirnov()` |
-| Bias detection | Substrate-native composer — group a typed label by category, run a test, return per-group statistic + p-value | `CALL arcflow.biasDetection(label, group_by, target, test?)` (chi-square / mann_whitney_u / kolmogorov_smirnov) |
+| Bias detection | Substrate-native composer — group a typed label by category, run a test, return per-group statistic + p-value. Optional `confidence_weight` argument weights per-row contributions by `_confidence` (or any numeric property) so low-credibility observations don't anchor the group statistic. | `CALL arcflow.biasDetection(label, group_by, target, test?, confidence_weight?)` (chi-square / mann_whitney_u / kolmogorov_smirnov) |
+| Spatial autocorrelation | Moran's I global statistic — are spatially-near nodes correlated, dispersed, or random in a chosen scalar? Plus LISA per-node hot-spot mapping for explain-then-locate. | `CALL arcflow.moransI(label, value_property, ...)`, `CALL arcflow.localMoransI(label, value_property, ...)` |
 | Vector primitives | Cosine, dot product, embed | `arcflow.cosine()`, `arcflow.embed()` |
 | Vector search | HNSW similarity probe | `CALL arcflow.similar()` |
 | Graph-aware retrieval | Multi-hop RAG with citation provenance | `CALL arcflow.graphrag()` |
