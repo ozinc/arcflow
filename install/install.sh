@@ -130,73 +130,75 @@ resolve_version() {
 # ── Download and install ─────────────────────────────────────────────────────
 
 download_and_install() {
-  TARBALL="arcflow-${VERSION}-${PLATFORM}.tar.gz"
   TAG="v${VERSION}"
-  # /releases/download/<tag>/<asset> is the canonical download URL.
-  # GitHub serves it via redirect-to-CDN; curl/wget follow -L.
-  URL="${GH_RELEASES}/download/${TAG}/${TARBALL}"
-  SHA256URL="${GH_RELEASES}/download/${TAG}/SHA256SUMS"
-
   TMPDIR="$(mktemp -d)"
   # shellcheck disable=SC2064
   trap 'rm -rf "$TMPDIR"' EXIT
 
   printf '\nInstalling ArcFlow v%s (%s)\n' "$VERSION" "$PLATFORM"
-  printf '  From: %s\n' "$URL"
+  printf '  From: %s/download/%s/\n' "$GH_RELEASES" "$TAG"
   printf '  To:   %s\n\n' "$INSTALL_DIR"
 
+  # Fetch the aggregate SHA256SUMS once; we'll verify each per-binary
+  # tarball against it. The SUMS file is published as a single release
+  # asset alongside the binaries.
+  SHA256URL="${GH_RELEASES}/download/${TAG}/SHA256SUMS"
   if command -v curl >/dev/null 2>&1; then
-    if ! curl -fsSL --progress-bar "$URL" -o "${TMPDIR}/${TARBALL}"; then
-      echo ""
-      echo "Error: binary not available for ${PLATFORM} in v${VERSION}."
-      echo ""
-      echo "Available platforms:"
-      echo "  darwin-arm64, darwin-x86_64"
-      echo "  linux-x86_64-gnu, linux-arm64-gnu"
-      echo "  linux-x86_64-musl, linux-arm64-musl"
-      echo ""
-      echo "Browse: ${GH_RELEASES}/tag/${TAG}"
-      echo "Build from source: cargo install arcflow-cli"
-      exit 1
-    fi
-  else
-    if ! wget -q --show-progress "$URL" -O "${TMPDIR}/${TARBALL}"; then
-      echo "Error: download failed. Check ${GH_RELEASES} for available platforms."
-      exit 1
-    fi
+    curl -fsSL "$SHA256URL" -o "${TMPDIR}/SHA256SUMS" 2>/dev/null || true
+  elif command -v wget >/dev/null 2>&1; then
+    wget -q "$SHA256URL" -O "${TMPDIR}/SHA256SUMS" 2>/dev/null || true
   fi
 
-  # Verify SHA256 against the SHA256SUMS aggregate file shipped on the
-  # same release. GitHub Releases serves both atomically; a mismatch
-  # means either the tarball or the SUMS file was tampered with on a
-  # mirror, or you hit a partial download.
-  if command -v sha256sum >/dev/null 2>&1; then
+  mkdir -p "$INSTALL_DIR"
+  INSTALLED=""
+
+  # ArcFlow ships as **per-binary tarballs** (one tarball per executable),
+  # NOT a single bundle. The loop downloads each one we care about. A
+  # binary not published for this platform (e.g. arcflow-daemon on
+  # Windows) is skipped silently; the failure-to-install-anything check
+  # at the end catches the case where nothing landed.
+  for bin in arcflow arcflow-daemon arcflow-mcp; do
+    BIN_TARBALL="${bin}-${VERSION}-${PLATFORM}.tar.gz"
+    BIN_URL="${GH_RELEASES}/download/${TAG}/${BIN_TARBALL}"
+    BIN_EXTRACT="${TMPDIR}/${bin}-extract"
+    mkdir -p "$BIN_EXTRACT"
+
+    DOWNLOADED=""
     if command -v curl >/dev/null 2>&1; then
-      curl -fsSL "$SHA256URL" -o "${TMPDIR}/SHA256SUMS" 2>/dev/null || true
+      if curl -fsSL "$BIN_URL" -o "${TMPDIR}/${BIN_TARBALL}" 2>/dev/null; then
+        DOWNLOADED="1"
+      fi
+    elif command -v wget >/dev/null 2>&1; then
+      if wget -q "$BIN_URL" -O "${TMPDIR}/${BIN_TARBALL}" 2>/dev/null; then
+        DOWNLOADED="1"
+      fi
     fi
-    if [ -f "${TMPDIR}/SHA256SUMS" ]; then
-      EXPECTED="$(grep "  ${TARBALL}$" "${TMPDIR}/SHA256SUMS" | awk '{print $1}')"
+
+    if [ -z "$DOWNLOADED" ]; then
+      # This binary isn't published for this platform; the primary
+      # `arcflow` failure is caught below. Companion binaries fail soft.
+      continue
+    fi
+
+    # Per-tarball SHA256 verification against the aggregate SUMS file.
+    if command -v sha256sum >/dev/null 2>&1 && [ -f "${TMPDIR}/SHA256SUMS" ]; then
+      EXPECTED="$(grep "  ${BIN_TARBALL}$" "${TMPDIR}/SHA256SUMS" | awk '{print $1}')"
       if [ -n "$EXPECTED" ]; then
-        ACTUAL="$(sha256sum "${TMPDIR}/${TARBALL}" | awk '{print $1}')"
+        ACTUAL="$(sha256sum "${TMPDIR}/${BIN_TARBALL}" | awk '{print $1}')"
         if [ "$EXPECTED" != "$ACTUAL" ]; then
-          echo "Error: SHA256 mismatch for ${TARBALL}"
+          echo "Error: SHA256 mismatch for ${BIN_TARBALL}"
           echo "  Expected: $EXPECTED"
           echo "  Actual:   $ACTUAL"
           echo ""
           echo "For full cryptographic verification, install gh CLI and run:"
-          echo "  gh attestation verify ${TARBALL} --owner ozinc"
+          echo "  gh attestation verify ${BIN_TARBALL} --owner ozinc"
           exit 1
         fi
       fi
     fi
-  fi
 
-  tar -xzf "${TMPDIR}/${TARBALL}" -C "$TMPDIR"
-
-  mkdir -p "$INSTALL_DIR"
-  INSTALLED=""
-  for bin in arcflow arcflow-mcp arcflow-bridge; do
-    BIN_PATH="$(find "$TMPDIR" -maxdepth 2 -name "$bin" -type f 2>/dev/null | head -1)"
+    tar -xzf "${TMPDIR}/${BIN_TARBALL}" -C "$BIN_EXTRACT"
+    BIN_PATH="$(find "$BIN_EXTRACT" -maxdepth 2 -name "$bin" -type f 2>/dev/null | head -1)"
     if [ -n "$BIN_PATH" ]; then
       mv "$BIN_PATH" "${INSTALL_DIR}/${bin}"
       chmod +x "${INSTALL_DIR}/${bin}"
@@ -205,9 +207,31 @@ download_and_install() {
   done
 
   if [ -z "$INSTALLED" ]; then
-    echo "Error: no arcflow binaries found in archive."
+    echo ""
+    echo "Error: no arcflow binaries downloaded successfully for ${PLATFORM} in v${VERSION}."
+    echo ""
+    echo "Supported platforms:"
+    echo "  darwin-arm64, darwin-x86_64"
+    echo "  linux-x86_64-gnu,  linux-arm64-gnu"
+    echo "  linux-x86_64-musl, linux-arm64-musl"
+    echo "  windows-arm64, windows-x86_64 (arcflow + arcflow-mcp only)"
+    echo ""
+    echo "Browse: ${GH_RELEASES}/tag/${TAG}"
+    echo "Build from source: cargo install arcflow-cli"
     exit 1
   fi
+
+  # Primary CLI must install; companion binaries are best-effort.
+  case " $INSTALLED " in
+    *" arcflow "*) ;;
+    *)
+      echo ""
+      echo "Error: arcflow CLI binary failed to install for ${PLATFORM} in v${VERSION}."
+      echo "(Companion binaries installed:${INSTALLED})"
+      echo "Browse: ${GH_RELEASES}/tag/${TAG}"
+      exit 1
+      ;;
+  esac
 }
 
 # ── PATH setup ───────────────────────────────────────────────────────────────

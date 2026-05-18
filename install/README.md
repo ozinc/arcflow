@@ -2,7 +2,7 @@
 
 Pre-built binaries ship as GitHub Releases on the public `ozinc/arcflow`
 repo. The [`install.sh`](./install.sh) script in this directory is the
-canonical installer; it is deployed to `oz.com/install/arcflow` via the
+canonical installer; it is deployed to `staging.oz.com/install/arcflow` via the
 marketing site.
 
 ## Asset naming convention
