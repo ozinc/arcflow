@@ -103,6 +103,48 @@ ops `SubscribePattern`, `RegisterPatternConsumer`, and
 per-topic durable consumers reconstruct from the regular
 `RegisterConsumer` journal — no separate "pattern replay" path.
 
+### System topics (`_system.*`)
+
+The engine reserves the `_system.*` topic namespace for substrate-level events the catalog and the runtime emit automatically. Application code never publishes to `_system.*`; consumers attach via pattern subscription.
+
+Today's reserved family:
+
+| Topic | Emitted when | Event payload |
+|---|---|---|
+| `_system.partitions.added` | `register_virtual_partition()` lands a new partition on disk | `{kind: "partition.added", label, partition, epoch}` |
+
+The `kind` field is the discriminator — handlers fan out to event-type-specific code without parsing topic names. Future system events on `_system.partitions.*` (`partition.removed`, `partition.compacted`, `partition.failed`) will extend the family without breaking existing consumers. The same convention extends to other `_system.*` families as substrate events surface.
+
+**Schema-drift detection — the canonical use case:**
+
+```python
+# Register the schema-drift handler once at boot.
+bus.register_pattern_consumer(
+    name="schema-drift-handler",
+    pattern="_system.partitions.*",
+    start="latest_only",
+)
+
+# Whenever loaders register a virtual partition, the partition.added
+# event fires automatically. No extra wiring needed.
+db.execute(
+    "CREATE NODE LABEL Tracks_NGS_2024_Week12 "
+    "VIRTUAL FROM PARTITION 'lake://nfl/tracks/2024/12/*.parquet'"
+)
+
+# The handler drains its consumer and reacts. Per-event payload:
+#   {kind: "partition.added", label: "Tracks_NGS_2024_Week12",
+#    partition: "lake://nfl/tracks/2024/12/*.parquet", epoch: 14}
+for topic, event in consumer.drain():
+    if event.data["kind"] == "partition.added":
+        revalidate_schema(event.data["label"])
+        reissue_standing_queries(event.data["label"])
+```
+
+The PatternConsumer auto-attach machinery means consumers registered **before** the first `_system.partitions.added` event match the first event — the engine lazily creates the system topic on first emission and auto-wires pre-registered consumers. Consumers registered **after** also match (bilateral attach scans existing topics at registration time).
+
+This is the substrate behind the "schema drift" / "auto-react to ingest events" pattern: register one handler at boot, every future ingest event reaches it without further wiring.
+
 ## Synchronous request-reply
 
 A publisher sends a request to a topic and waits — with a timeout —
