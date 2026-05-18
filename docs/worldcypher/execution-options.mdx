@@ -1,0 +1,77 @@
+---
+title: "Execution Options"
+kind: reference
+description: "Per-query execution options — wall-clock budgets, transport hints, and IO introspection. Bound query work explicitly; observe what the engine did."
+status: "stable"
+---
+
+# Execution Options
+
+Per-query execution options bound query work and surface what the engine actually did. Today's option is the **deadline-over-completeness** mode codified as PAT-0053; the option set will grow as the substrate's read fabric expands.
+
+The options live alongside the query, not inside it — they're set via the SDK's `QueryOptions` constructor and don't change the Cypher pattern's semantics. The engine honors the bound; the result carries an explicit verdict about whether that bound short-circuited execution.
+
+## Deadline-over-completeness mode
+
+A wall-clock budget for query work. The engine returns the partial result it has when the deadline fires, with `transport_outcome` indicating whether the result is `complete` or `truncated`. Useful when "best available at deadline T" beats "wait for completeness" — live UX (frame-clock replay, partial-consensus aggregations, bounded counterfactual exploration), interactive analytics with budgeted latency, and ingestion pipelines that prefer freshness to throughput.
+
+### Python
+
+```python
+import arcflow
+
+db = arcflow.connect("./workspace")
+
+result = db.execute(
+    "MATCH (f:Frame) WHERE f.play_id = 1024 RETURN f LIMIT 100",
+    options=arcflow.QueryOptions(deadline_ms=500),
+)
+
+result.transport_outcome   # 'truncated' | 'complete' | None
+result.io_stats            # IoStats(decoded_bytes=…, bytes_read=…,
+                           #         row_groups_pruned=…, files_opened=…,
+                           #         lane_used=…)
+```
+
+### `QueryOptions`
+
+| Field | Type | Default | What it does |
+|---|---|---|---|
+| `deadline_ms` | `int \| None` | `None` | Wall-clock budget for query work in milliseconds. When `None`, the query runs to completion. When set, the engine short-circuits at the deadline and returns the partial result with `transport_outcome = 'truncated'`. |
+
+### `result.transport_outcome`
+
+| Value | Meaning |
+|---|---|
+| `'complete'` | The query finished within the deadline (or no deadline was set). The result reflects the full work the query implied. |
+| `'truncated'` | The deadline fired before the engine finished. The result reflects what the engine had completed at the deadline; subsequent calls with the same query may return different rows. |
+| `None` | No deadline was set AND the substrate-level deadline path was not exercised. Common case for queries with `QueryOptions(deadline_ms=None)`. |
+
+### `result.io_stats`
+
+An `IoStats` dataclass capturing the work the engine did at the byte layer for this query. Useful for understanding why a query was slow, where time went, and which transport lane served the read.
+
+| Field | What it counts |
+|---|---|
+| `decoded_bytes` | Bytes the engine actually parsed (post-decompression for ZSTD / brotli / lz4 partitions). |
+| `bytes_read` | Bytes the transport pulled from storage (pre-decompression). The ratio `decoded_bytes / bytes_read` is the effective compression on the read path. |
+| `row_groups_pruned` | Parquet row groups skipped by predicate pushdown against column statistics. Higher is better for selective queries. |
+| `files_opened` | Number of distinct files the read plan touched. The catalog's lazy stats cache turns most repeat counts into zero-file scans. |
+| `lane_used` | Transport lane the read used — `cpu_mmap` (default), `cuda_gds` (GPU-direct via `cuFileRead`), or `arrow_ipc` (shared-memory handoff to an inference sidecar). |
+
+### Deadline mode at the substrate
+
+The deadline flows from the SDK's `QueryOptions` through the FFI boundary into the engine's `DeadlineGuard`. The guard propagates to the reader's `ReadProvenance.deadline_ms`, which the [Smart Reader](/docs/concepts/layers/world-store-serve) consults at every range-fetch boundary. When the deadline fires:
+
+- Reads in flight complete their current range fetch (no torn reads).
+- Subsequent ranges in the `ReadPlan` are skipped.
+- The transport returns `TransportOutcome::Truncated` to the engine.
+- The engine returns the partial result the query had accumulated.
+
+The composition is deterministic for a given snapshot — two queries with the same pattern and the same `deadline_ms` against the same snapshot will produce the same truncated result. This is the property that makes deadline-mode safe for live UX (a replay at the same wall-clock budget reproduces the same display).
+
+## See also
+
+- [World Store · Smart Reader](/docs/concepts/layers/world-store-serve) — the substrate that honors the deadline at the byte layer.
+- [EXPLAIN](/docs/worldcypher/functions/explain) — see the plan the engine chose for a query.
+- [PROFILE](/docs/worldcypher/functions/profile) — measure the execution of a chosen plan.

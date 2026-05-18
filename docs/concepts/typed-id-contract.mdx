@@ -1,0 +1,121 @@
+---
+title: "Typed ID Contract"
+kind: concept
+description: "ArcFlow property values are strictly typed. Int(58384) does not equal String(\"58384\") at the equality layer; the runtime never auto-coerces. Pick one type per identifier kind at ingest; the engine stays predictable end-to-end."
+status: "stable"
+---
+
+# Typed ID Contract
+
+ArcFlow property values are **strictly typed**. The equality test `n.nfl_id = 58384` matches only `Int(58384)` values; `String("58384")` does not coerce automatically.
+
+> **One-sentence rule:** Pick one physical type per identifier kind (`INT` or `STRING`) at ingest; apply it consistently across every source that feeds the graph. The engine never coerces at the equality layer — silent empty results are preferable to silent type promotion.
+
+## The trap
+
+When the same logical identifier (player ID, game key, season, partition key) is stored as **different physical types** in different data sources, a single Cypher predicate can return different results across handles:
+
+```python
+# Source A: parquet Int64 column → PropertyValue::Int(58384)
+db_a.execute("MATCH (p:Player {nfl_id: 58384}) RETURN p")    # → match
+db_a.execute("MATCH (p:Player {nfl_id: '58384'}) RETURN p")  # → empty
+
+# Source B: parquet Utf8 column → PropertyValue::String("58384")
+db_b.execute("MATCH (p:Player {nfl_id: 58384}) RETURN p")    # → empty
+db_b.execute("MATCH (p:Player {nfl_id: '58384'}) RETURN p")  # → match
+```
+
+Two handles, identical Cypher, opposite answers. The collision is **silent** — an empty result reads as *"no such player"* rather than *"type mismatch."* Production code defending against this writes manual casts everywhere, or maintains a string-vs-int adapter layer. Neither scales.
+
+The fix lives at the ingest boundary.
+
+## Supported patterns
+
+Pick one per identifier kind and apply it consistently across every source that feeds the graph:
+
+| Pattern | When to use | Tradeoff |
+|---|---|---|
+| **Int everywhere** | Native numeric IDs (`game_key`, `play_id`, `season`, integer primary keys) | Smaller storage; faster equality; can't carry leading zeros or mixed-case |
+| **String everywhere** | Composite IDs (UUIDs, slugs, mixed-case, hash digests, semver strings) | Larger property storage; lexicographic comparison only |
+| **Coerce at ingest** | When sources are heterogeneous (parquet Int64 from one feed, Utf8 from another) | One transform step at the ingest boundary; predictable downstream |
+
+The third pattern is what closes most real-world collisions. The canonical choice per identifier kind is recorded somewhere (`pyproject.toml` constants, a schema-defining `CREATE NODE LABEL`, an ops runbook); ingest pipelines coerce on the way in.
+
+### Coerce-at-ingest example
+
+When the parquet upstream gives you `Int64` but your schema says `nfl_id` is `STRING`:
+
+```python
+import pyarrow as pa
+import pyarrow.compute as pc
+
+raw = pq.read_table("players.parquet")
+# Coerce the nfl_id column to string at the ingest boundary.
+typed = raw.set_column(
+    raw.schema.get_field_index("nfl_id"),
+    "nfl_id",
+    pc.cast(raw.column("nfl_id"), pa.string()),
+)
+db.bulk_create_nodes_from_arrow("Player", typed)
+```
+
+Reverse direction (Utf8 → Int64) works the same way with `pc.cast(col, pa.int64())`. The transform is one row's worth of work per source row, applied once; downstream queries pay no per-row cost.
+
+## Query-time workarounds (pay per-row)
+
+When ingest can't be changed — heterogeneous upstream sources you don't own, retroactive schema choice, a migration window — parameterized union works:
+
+```cypher
+// Match both Int and String forms in one query
+MATCH (p:Player)
+WHERE p.nfl_id = $id OR p.nfl_id = toString($id)
+RETURN p
+```
+
+Or via prepared statements:
+
+```python
+stmt = db.prepare("""
+    MATCH (p:Player {nfl_id: $id_int}) RETURN p
+    UNION
+    MATCH (p:Player {nfl_id: $id_str}) RETURN p
+""")
+result = stmt.execute(id_int=58384, id_str="58384")
+```
+
+Both patterns add row-time work — the planner evaluates the predicate against every node in the label scan. For hot paths, the ingest-side fix is preferred; the workarounds above are for the migration window where ingest can't change fast enough.
+
+## Why the engine doesn't auto-coerce
+
+Three reasons the substrate keeps the strict-typing rule:
+
+1. **Predictability.** `Int(58384) = String("58384")` is structurally false in most type systems (Rust, TypeScript, Python with strict-typing on). Coercing at equality would make ArcFlow inconsistent with the typed-value model that powers vector search, range queries, and the rest of the predicate library.
+
+2. **Performance.** Auto-coerce at filter eval would force per-row type-checking + conversion on every equality predicate, regressing the hot path for the common case where both sides match. The hot path stays tight; the migration burden stays at the ingest boundary where the data is already being shaped.
+
+3. **Silent wrongness.** Coercion at the equality layer can mask genuine type mismatches — `Int(2024)` accidentally compared to `String("season_2024")` would coerce one way (extract digits?) or the other (stringify?), with neither being clearly right. Surfacing the mismatch as an empty result lets the caller fix the upstream collision rather than carrying the wrong assumption forward.
+
+A future engine extension might add an opt-in `EQUALS_COERCE` mode for primary-key columns under a deliberate per-label policy. Until then, ingest discipline + the workarounds above cover the case. The default stays strict; opting into coercion stays explicit.
+
+## Diagnostic — finding the collision in your graph
+
+When a query returns empty unexpectedly, check the actual property type for the rows you expected to match:
+
+```cypher
+MATCH (p:Player)
+RETURN p.nfl_id, apoc.meta.type(p.nfl_id) AS type
+LIMIT 5
+```
+
+If the `type` column shows `STRING` for some rows and `INTEGER` for others, you've found the collision. From there:
+
+1. **Choose the canonical type** for that identifier kind (`INT` for native numeric IDs; `STRING` for composite or leading-zero IDs).
+2. **Coerce the offending rows** — either re-ingest after fixing the upstream pipeline, or run a one-time `SET p.nfl_id = toString(p.nfl_id)` (or `toInteger(...)`) update across the affected partition.
+3. **Document the choice** somewhere durable — pyproject constants, a schema doc, a `CREATE NODE LABEL` annotation. Future ingest sources reference the canonical type.
+
+## See also
+
+- [Properties and types](/docs/concepts/world-model) — the typed-value model that powers the strict-equality rule.
+- [Bulk ingest patterns](/docs/guides/scale-patterns) — coerce-at-ingest worked examples.
+- [Graph Model](/docs/concepts/graph-model) — how nodes carry property values + the typed-value catalog.
+- [Threading Model](/docs/concepts/threading-model) — sibling contract page; describes ArcFlow's concurrency invariants.

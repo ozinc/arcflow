@@ -1,0 +1,12 @@
+[project]
+name = "arcflow-cookbook-deadline-aware-query"
+version = "0.0.0"
+requires-python = ">=3.10"
+dependencies = [
+    # `oz-arcflow` Python wheel is planned for RAM-C2 (2026-Q3) on
+    # public PyPI. This pin describes the target end-state; `uv sync`
+    # will fail until the wheel ships. Until then, use:
+    #   pip install -e ~/code/arcflow-core/python
+    "oz-arcflow==0.8.8",
+    "pyarrow>=14",
+]

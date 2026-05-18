@@ -1,0 +1,13 @@
+slug = "lakehouse-count-fast-path"
+title = "Lakehouse Count Fast-Path"
+audience = ["python", "data-engineer", "ml"]
+arcflow_apis = [
+    "python.ArcFlow.execute",
+    "python.ArcFlow.register_virtual_partition",
+    "python.ArcFlow.close",
+]
+external_deps = ["pyarrow"]
+runtime_minutes = 3
+gpu_required = false
+manifest_pin = "0.8.8"
+data_provenance = "synthesized"

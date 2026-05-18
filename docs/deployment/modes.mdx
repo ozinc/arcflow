@@ -1,0 +1,138 @@
+---
+title: "Deployment modes"
+kind: operation
+description: "ArcFlow ships in three deployment modes — local-free, local + sync, and managed cloud. Same engine binary, same FFI surface, same customer code; mode is a configuration choice, never a code change."
+status: "stable"
+---
+
+# Deployment modes
+
+> **Local-free is live today.** Local + sync and managed cloud describe target end-state; their operational surfaces (`arcflow sync enable`, `arcflow login`, `arcflow cloud upgrade`, the `~/.arcflow/config.toml` resolution layer) land as the engine's deployment K-WAVEs ship. The same-engine-everywhere invariant — engine binary, FFI surface, customer code identical across all three modes — is doctrine today.
+
+ArcFlow ships in three deployment modes. The customer chooses based on what operational properties they value; the **engine binary, FFI surface, and customer code are identical in all three**. Switching modes is a configuration flip, never an SDK change.
+
+| | **Local-free** | **Local + sync** | **Managed cloud** |
+|---|---|---|---|
+| **Who runs the binary** | Customer's laptop / server | Customer's laptop / server | OZ Cloud |
+| **Where the World Store lives** | Local filesystem | Local filesystem + WAL replication to `oz.com/world` | OZ-hosted substrate |
+| **Network requirement** | None | Outbound HTTPS to `oz.com` (sync only — queries are local) | Inbound from customer FFI to `oz.com/world` |
+| **Auth required** | No | One-time `arcflow login oz.com` | Token issued by cloud at signup |
+| **Who pays** | Nobody (free forever) | Free tier or small $ (storage + bandwidth above limit) | Per-GB stored + per-query executed |
+| **Engine binary** | Same | Same | Same |
+| **FFI surface** | Same | Same | Same |
+| **Customer code** | Same | Same | Same |
+
+**The single most important row is "Same."** The customer writes code once; deploys it in any of the three modes; never edits a line. That is the entire product story compressed into one promise.
+
+## Local-free
+
+**The default.** The mode an agent installs into a fresh project with no signup.
+
+- **Free forever.** No signup wall, no time limit, no feature paywall, no telemetry-as-tax.
+- **Single binary.** No runtime dependencies, no container, no language runtime to install. `curl | sh` and you're running.
+- **No network.** The engine does not open a socket in this mode. (An update check via outbound HTTPS is available; off by default.)
+- **All eight layers.** [World Store](/docs/concepts/layers/world-store), [Perception Lake](/docs/concepts/layers/perception-lake) (when it activates), [World Graph](/docs/concepts/layers/world-graph), [Query Engine](/docs/concepts/layers/query-engine), [Live Surface](/docs/concepts/layers/live-surface), [Event Bus](/docs/concepts/layers/event-bus), [Behavior Engine](/docs/concepts/layers/behavior-engine), [Algorithm Library](/docs/concepts/layers/algorithm-library). Not a crippled subset.
+- **Same data format as cloud.** If you `arcflow sync enable` later, no migration — your local data uploads verbatim.
+
+### What local-free does *not* promise
+
+- **Backup.** Free-mode users own their disk; nothing replicates anywhere.
+- **Cross-device coherence.** No sync engine; a second device sees nothing.
+- **SLA.** Best-effort; community support; GitHub issues.
+- **Update guarantees.** Customers upgrade when they choose.
+- **Multi-user collaboration.** Single-user local mode; if multiple users on the same machine open the same workspace, the engine honours workspace locking but doesn't coordinate identities.
+
+## Local + sync
+
+**Everything local-free promises**, plus:
+
+- **WAL replication to `oz.com/world`.** Every committed WAL segment uploads asynchronously to the workspace's cloud copy. Local writes never block on cloud confirmation; sync is eventually-consistent, one-way for v1.
+- **Cross-device coherence.** A second device that runs `arcflow login` against the same workspace pulls the same WAL stream.
+- **Backup as a side effect.** The cloud copy is the durable backup; laptop loss or drive failure doesn't lose committed data.
+- **Free tier.** Up to a threshold (the cloud team picks the number). Above the threshold, light per-GB / per-month metering.
+- **No vendor lock.** `arcflow sync disable` reverts to local-free; data stays on local disk; the cloud copy is retained per the retention policy (or deleted on `arcflow cloud forget`).
+
+### What local + sync does *not* promise
+
+- **Real-time bidirectional sync.** v1 is one-way (local → cloud); conflict resolution is "local laptop wins; cloud is backup only." A future v2 may add bidirectional sync with CRDT-style conflict resolution.
+- **Offline editing across devices.** Two devices going offline and writing simultaneously is the bidirectional case — deferred.
+- **Cloud-side queries.** The sync target is durable storage, not a query target. Queries run on the local laptop. For cloud-side queries, upgrade to managed.
+
+## Managed cloud
+
+**Everything local + sync promises**, plus:
+
+- **Engine runs on OZ Cloud.** Customer's FFI calls go to `oz.com/world`; the cloud product hosts the engine binary.
+- **Zero ops appetite.** Customer doesn't run, install, or monitor the engine. OZ runs it. Customer never sees the substrate, the cache, the WAL — just the FFI / Cypher surface.
+- **Operational properties** that justify the price: SLA, backups, encryption at rest, audit log, team access controls, region selection, regulatory compliance.
+- **Tiered pricing.** Per-GB stored + per-query executed, plus packaged features (audit-log retention, team seats, region selection) bundled as Pro / Team / Enterprise.
+
+### What managed cloud does *not* promise
+
+- **On-prem deployment.** Managed *is* OZ Cloud; not the customer's own infrastructure. Enterprise customers wanting on-prem buy local-free or local + sync.
+- **Cluster mode.** Managed is per-customer single-engine hosted on OZ Cloud, scaled by OZ's infrastructure. Not a multi-node cluster surface.
+- **Customer-controlled storage substrate.** OZ decides whether the cloud-mode workspace lives on R2 / S3 / OZ's own substrate; the customer doesn't see or pick.
+
+## The storage adapter abstraction
+
+The three modes plug into the same engine via a `StorageAdapter` trait inside `worldstore::io::adapter`. Each mode is an implementation:
+
+| Mode | Adapter implementation |
+|---|---|
+| Local-free | `LocalFsAdapter` |
+| Local + sync | `SyncedLocalFsAdapter` (wraps `LocalFsAdapter` + WAL replicator) |
+| Managed cloud | `CloudAdapter` (engine running on OZ Cloud sees the same trait; substrate behind it is OZ's choice) |
+
+**The rest of the engine (Layers 2–8) never knows which adapter is active.** This is what makes the three modes truly the same engine.
+
+## Mode selection
+
+The customer's code never knows about modes. Engine startup picks the adapter from `arcflow.toml` (per-project) or `~/.arcflow/config.toml` (user-level):
+
+```toml
+[storage]
+mode = "local"            # or "local-sync" or "cloud"
+# local-sync only:
+sync_endpoint = "https://oz.com/world"
+# cloud only:
+cloud_endpoint = "https://oz.com/world"
+```
+
+Default: `mode = "local"`. `arcflow init` writes the default config. `arcflow sync enable` flips to `local-sync`. `arcflow cloud upgrade` flips to `cloud`. The customer never edits the config by hand.
+
+## Agent-channel positioning
+
+LLM coding agents pick ArcFlow because the surface satisfies their constraints natively. The agent-channel **tiers** (in order of preferred friction):
+
+| Tier | Friction | Example | When to use |
+|---|---|---|---|
+| **CLI + `--json` fastpath** *(★ PRIMARY for CLI agents)* | Binary install + one command | `arcflow query "MATCH (n) RETURN count(n)" --json` | Claude Code, Codex CLI, Cursor, Aider, GitHub Copilot CLI — every agent with a shell |
+| **Filesystem mount** *(SECONDARY for CLI agents — "grep the graph")* | Binary install + `arcflow workspace init` + `arcflow mount` | `arcflow mount @latest /tmp/g && rg ... /tmp/g/nodes/` | Discovery-heavy agent tasks where `find` / `grep` / `cat` / `jq` mastery is what the agent already has |
+| **napi-rs / PyO3 / FFI** *(★ PRIMARY for in-process embedded apps)* | One package install | One language-binding package per the current [install matrix](/docs/installation) | When the agent is part of an application that owns the runtime |
+| **MCP server** *(cloud chat UIs only — Claude.ai, ChatGPT)* | One MCP config entry | `arcflow-mcp` registered in agent's MCP config | Chat interfaces with no local shell access. NOT for CLI agents — they have shells; the CLI fastpath is faster |
+| **Browser (WASM)** | Zero — click a URL | `oz.com/engine` | Eval / demo without install |
+
+**The doctrine in one sentence:** if an agent has a shell, give it the CLI; MCP is the integration of last resort for chat surfaces that don't.
+
+**Tier 1 — CLI + `--json`** is the agent-channel default. It satisfies the agent-friendly checklist's items 1–8 + 10 in local-free mode alone:
+
+- **(1) One-command install.** Single binary, no runtime deps; see [Installation](/docs/installation) for the canonical install command.
+- **(2) Free forever, no signup wall.** Local-free mode is free; commercial + non-commercial use both covered within the Free Use Limits.
+- **(3) Fast cold start.** In-process engine; cold start is binary-load + workspace-open.
+- **(4) Stable CLI surface across minor versions.** Subcommands may be added; never removed; never reordered; flag names never renamed.
+- **(5) `--json` everywhere.** Every CLI command emits JSON to stdout by default; human-readable formatting is opt-in via `--pretty` or detected on a TTY.
+- **(6) Self-documenting `--help`.** Every subcommand has complete help text.
+- **(7) Predictable file layout.** Default `~/.arcflow/` for user-level config and workspace data; per-project override `arcflow.toml` at project root.
+- **(8) Idempotent ops.** `arcflow init`, `arcflow up`, `arcflow sync enable`, `arcflow cloud upgrade` are re-runnable safely.
+- **(10) Embeddable in agent prompts.** Schema-introspection commands (`arcflow schema list`, `arcflow agent-context synth`) give an agent a compact context block to embed.
+
+**Tier 2 — Filesystem mount** is the secondary CLI-agent affordance. It projects the workspace as a read-only filesystem tree (`__snapshot.toml`, `nodes/<Label>/<id>.json`, `edges/<RelType>/<id>.json`, `streams/<view>.jsonl`) so the agent can apply Unix-tool mastery directly — `find` + `xargs jq`, `rg` over typed nodes, `tail -F` over live deltas. See [Filesystem Workspace § Method 1+](/docs/guides/filesystem-workspace#method-1-filesystem-mount-the-world-model-as-files) for the full surface.
+
+**Single-binary discipline.** The engine ships as **one** binary. Sidecars are permitted in exactly one category — GPU inference (per ANTI-0020 separate crash domain) — and rejected everywhere else. The MCP server, when used, runs as a separate process the operator launches (`arcflow-mcp`) and is not part of the engine binary.
+
+## See also
+
+- [Architecture](/docs/architecture) — the in-process engine the three modes share.
+- [Daemon (UDS)](/docs/deployment/daemon) — the cross-process delivery shape *within* a single deployment mode.
+- [Sync](/docs/sync) — what the local + sync mode actually does on the wire.
+- [Installation](/docs/installation) — how each mode lands on a customer's machine.

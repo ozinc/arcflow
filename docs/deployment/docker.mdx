@@ -1,0 +1,74 @@
+---
+title: "Why ArcFlow doesn't ship as Docker"
+kind: operation
+description: "ArcFlow is a 5 MB embedded library that runs in-process — in browsers, Node.js, Python, Rust, and native CLIs. Shipping the engine as a Docker image would subvert the in-process design; this page explains the rationale and the alternative integration paths."
+status: stable
+---
+
+# Why ArcFlow doesn't ship as Docker
+
+ArcFlow runs **in-process** — same address space as your application, no network hop, no container boundary, no second daemon. The engine is a ~5 MB embedded library that loads directly into:
+
+- **Browsers** via WebAssembly
+- **Node.js** via napi-rs native addon
+- **Python** via PyO3 / ctypes
+- **Rust** via the `arcflow-core` crate
+- **Native CLI** via the `arcflow` binary
+
+Wrapping the engine in a Docker image would put a network boundary between your application and the database — exactly what the in-process design exists to eliminate.
+
+## The architectural cost of containerizing
+
+If you stuff ArcFlow into a Docker container and reach it from another container or process, every query crosses a boundary that the engine was built to avoid:
+
+| Boundary added | Cost |
+|---|---|
+| Process boundary | Serialization on every call; lose typed zero-copy result handoff (`to_arrow()` / `to_polars()`) |
+| Network hop (even on localhost) | Microsecond → millisecond latency floor; lose the "0 ms in-process" SLA |
+| Connection lifecycle | Pool management, retries, timeouts — operational surface that doesn't exist for an embedded library |
+| Container orchestration | Healthchecks, restart policies, image registries, version pins — overhead unrelated to the data problem |
+
+For comparison, SQLite ships as a library, not as a server image, for the same reason. ArcFlow follows the same model.
+
+## The category mistake
+
+The instinct to package ArcFlow as Docker comes from the **client-server database** mental model (Postgres, Neo4j, MongoDB). Those are *managed services* — separate processes that own their own resources, scale independently, and accept client connections. They benefit from containerization because the deployment unit is the database itself.
+
+ArcFlow is an **embedded database** — closer to SQLite or RocksDB. The deployment unit is **your application**, with ArcFlow inside it. Your application is the Docker image (or WASM bundle, or .pyz, or Lambda function). ArcFlow rides along as a dependency.
+
+## What you do instead
+
+| Your scenario | How ArcFlow lands |
+|---|---|
+| Microservice in Kubernetes | Add `oz-arcflow` to your service's image; the engine runs inside the service container. One container per service, not "service + ArcFlow sidecar". |
+| Browser-side WASM app | Bundle the WASM build with your frontend. No Docker layer at all — the engine runs in the user's tab. |
+| Lambda / Cloud Functions | Add `oz-arcflow` to the function's deployment package. Cold-start cost is library load, not container spin-up. |
+| Edge worker (Cloudflare Workers, Deno Deploy) | Use the WASM build. Same engine, ~5 MB, runs at the edge. |
+| Local CLI agent | Install via the `curl \| sh` script on [Installation](/docs/installation). No Docker. |
+| Managed cloud deployment with multi-tenant isolation | OZ Cloud (third deployment mode — see [Deployment modes](/docs/deployment/modes)) packages ArcFlow into the per-tenant origin server image as part of its own deployment story. That's a managed-platform shape, not customer-shipped engine-as-Docker. |
+
+## Refusal in the deployment matrix
+
+The README's deployment matrix lists Docker explicitly as *refused* for the engine surface:
+
+> | Docker image | refused | ArcFlow is a 5 MB embedded library; shipping as Docker would subvert the in-process design. |
+
+This isn't a "we haven't gotten to it yet" — it's an architectural decision. The 5 MB library size is one of ArcFlow's core properties; containerizing it costs everything containerization is for (boundaries, isolation, orchestration) and gains nothing the embedded design doesn't already give you.
+
+## When containers DO make sense
+
+Two contexts where Docker enters the picture without subverting the design:
+
+1. **Your application is containerized.** Your app's Docker image bundles its dependencies, including `oz-arcflow`. ArcFlow runs in your application's process, in your container. No "ArcFlow container" exists.
+
+2. **OZ Cloud's origin servers** (the managed cloud deployment mode). OZ Cloud's platform team packages ArcFlow into the per-tenant origin image as part of its own deployment story. This is a managed-platform offering — not customer-shipped engine-as-Docker.
+
+The rule is consistent: **the database is part of your application, not next to it**.
+
+## See also
+
+- [Deployment modes](/docs/deployment/modes) — local-free, local + sync, managed cloud
+- [Daemon](/docs/deployment/daemon) — when you want a long-running process for multi-process access
+- [Installation](/docs/installation) — the `curl | sh` path that lands the CLI binary
+- [Bindings](/docs/bindings) — language-specific embed paths (Python / Node.js / Rust)
+- [Platform](/docs/platform) — runtime targets (browser WASM, Cloudflare Workers, mobile)

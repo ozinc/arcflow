@@ -1,0 +1,16 @@
+slug = "deadline-aware-query"
+title = "Deadline-Aware Query — Bounded Wall-Clock Budget for Live UX"
+audience = ["python", "data-engineer", "ml", "agent"]
+arcflow_apis = [
+    "python.ArcFlow.execute",
+    "python.ArcFlow.register_virtual_partition",
+    "python.ArcFlow.QueryOptions",
+    "python.QueryResult.transport_outcome",
+    "python.QueryResult.io_stats",
+    "python.ArcFlow.close",
+]
+external_deps = ["pyarrow"]
+runtime_minutes = 3
+gpu_required = false
+manifest_pin = "0.8.8"
+data_provenance = "synthesized"

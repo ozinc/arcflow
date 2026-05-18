@@ -1,0 +1,233 @@
+---
+title: "Virtual computed columns"
+description: "Derived properties on virtual labels — compute at scan time, no materialization. Same DDL surface as virtual labels; same Cypher access pattern as parquet-resident columns; predicates push down through the Smart Reader."
+kind: concept
+status: stable
+---
+
+# Virtual computed columns
+
+A *virtual computed column* is a derived property declared on a virtual
+label. The substrate registers the expression in catalog metadata, the
+Smart Reader evaluates it at row-decode time against the decoded
+`RecordBatch`, and the value surfaces in `Node.properties` alongside
+the columns that physically live in the parquet partition.
+
+The row data never grows. The parquet files on disk are unchanged. The
+derived property exists only as a value flowing through the scan.
+
+## Why
+
+There's a class of queries where the predicate is on a *derived*
+quantity, not a column the source partition stores. Operational world
+models are the canonical case:
+
+> *For every agent in the fleet on every observation tick, return its
+> position relative to its assigned target at the moment the target
+> becomes active.*
+
+`position_relative_to_target = agent_position - target_position` is a
+function of two columns the parquet files already store, but the *set*
+of useful "relative-to-X" derivations is unbounded — relative to the
+target, the nearest obstacle, the mission origin, the next waypoint,
+the centroid of the swarm, the last known peer position. Materialising
+each one at ingest doubles storage per derivation and forces a schema
+change every time a new analyst asks for a new relative-frame.
+Computing per row at query time, naively, defeats predicate pushdown.
+
+Virtual computed columns pick a third option: **declare once at the
+catalog level, evaluate at scan time, push predicates through.**
+
+## The DDL surface
+
+```cypher
+CREATE NODE LABEL FrameRelToTarget VIRTUAL FROM PARTITION
+  'lake://fleet/telemetry/{mission}/{day}/{shard}'
+  COMPUTE
+    position_relative_to_target = agent_position - target_position,
+    distance_to_target = sqrt(
+        (agent_position[0] - target_position[0])^2 +
+        (agent_position[1] - target_position[1])^2 +
+        (agent_position[2] - target_position[2])^2
+    );
+```
+
+The `COMPUTE` clause sits after the partition pattern. Each entry is a
+named expression. The names become first-class property keys on the
+virtual label — indistinguishable from parquet-resident columns at the
+Cypher surface.
+
+The expression language references:
+
+- **Parquet-resident columns** by name (`agent_position`, `target_position`).
+- **Partition-key variables** by name (`mission`, `day`, `shard`).
+  These come through as typed Ints / Strings via the same lossless
+  coercion path that surfaces partition keys on a non-COMPUTE virtual
+  label.
+- **Other computed columns** declared earlier in the same clause —
+  evaluation is topologically ordered.
+
+Arithmetic, array indexing (`position[0]`), math functions (`sqrt`,
+`abs`, `floor`, `ceil`, `pow`), and the standard comparison operators
+are supported. The IR is Arrow-integrated; expressions evaluate
+column-at-a-time against the decoded `RecordBatch`.
+
+## Querying
+
+The query surface is exactly the surface of a parquet-resident column:
+
+```cypher
+MATCH (f:FrameRelToTarget)
+WHERE f.distance_to_target < 5.0
+  AND f.mission = 'survey-NW-quadrant' AND f.day = '2026-03-14'
+RETURN f.agent_id, f.distance_to_target
+ORDER BY f.distance_to_target
+LIMIT 10
+```
+
+The planner is aware that `distance_to_target` is computed. The
+predicate `f.distance_to_target < 5.0` is pushable when the substrate
+has enough column statistics on the inputs (`agent_position`,
+`target_position`) to prove a row group can be skipped before
+evaluating. Partition + row-group pruning collapses the candidate set
+first; the per-row arithmetic runs only on what survives.
+
+For a 311M-frame quarter-scale query at the top of this page:
+
+```text
+~311M rows total
+  → partition prune (mission='survey-NW-quadrant', day='2026-03-14') → ~1M rows
+  → row-group prune on target_position stats                          → ~25 rows
+  → evaluate distance_to_target + filter < 5.0                       → final answer
+```
+
+The total cost is *O*(25 rows × eval + pruning) instead of *O*(311M
+rows × eval).
+
+## How it composes
+
+Computed columns only earn their keep because three already-shipped
+pieces compose with them:
+
+| Layer | Substrate | What it contributes |
+|---|---|---|
+| Planner | WHERE-pushdown into virtual-label scans | partition + row-group pruning collapses the candidate set before any per-row evaluation |
+| Smart Reader | partition-key column exposure | expressions reference `mission` / `day` / `frame_idx` directly as typed Ints / Strings |
+| Index | HIDX hybrid index | embedding-aware expressions (`THIS.embedding · peer.embedding`) hit the registered index |
+
+Same shape as the virtual-label registration itself: the user declares
+a typed surface; the engine decides which layer of itself answers
+which part of the query.
+
+## What ships in metadata
+
+Registration commits a `ComputedColumn` entry alongside the existing
+`VirtualLabelEntry` in the catalog manifest at
+`<workspace>/canonical/manifest_<epoch>.json`. Each entry carries the
+column name, the typed return shape, the dependency list (which
+parquet-resident columns + partition keys + earlier computed columns
+it references), and the Arrow-compatible expression IR.
+
+The manifest is the same `write-tmp + fsync + atomic_rename` two-file
+protocol that backs the base `VirtualLabelEntry` commit — atomic,
+crash-safe, monotonic epoch.
+
+## What stays materialized vs computed
+
+The mechanical rule:
+
+| Property | Parquet-resident | Computed |
+|---|---|---|
+| Storage cost | one column per file | zero — value flows through the scan |
+| Schema-change cost | adding a column rewrites the partition | adding a column edits the catalog only |
+| Read pattern | column-pruned scan | column-pruned scan over inputs + per-row arithmetic |
+| Mutability | append-only by partition rewrite | redeclare via `ALTER` (planned) — no row movement |
+| Useful for | values present in the source | derived projections, relative coordinates, embedding-aware distances, learned-function outputs (via downstream NN wave) |
+
+The two coexist on the same virtual label. A frame's `agent_position`
+is parquet-resident; its `distance_to_target` is computed; the Cypher
+query treats both the same way.
+
+## Worked example — Python SDK
+
+```python
+from arcflow import ArcFlow
+
+db = ArcFlow("./workspace")
+
+db.execute("""
+    CREATE NODE LABEL FrameRelToTarget VIRTUAL FROM PARTITION
+      'lake://fleet/telemetry/{mission}/{day}/{shard}'
+      COMPUTE
+        position_relative_to_target = agent_position - target_position,
+        distance_to_target = sqrt(
+            (agent_position[0] - target_position[0]) ^ 2 +
+            (agent_position[1] - target_position[1]) ^ 2 +
+            (agent_position[2] - target_position[2]) ^ 2
+        )
+""")
+
+# Predicate on a computed column — pushed through to the Smart Reader.
+result = db.execute("""
+    MATCH (f:FrameRelToTarget)
+    WHERE f.mission = 'survey-NW-quadrant' AND f.day = '2026-03-14'
+      AND f.distance_to_target < 5.0
+    RETURN f.agent_id, f.distance_to_target
+    ORDER BY f.distance_to_target
+    LIMIT 10
+""")
+
+for row in result:
+    print(row["agent_id"], row["distance_to_target"])
+```
+
+The result rows look indistinguishable from a non-COMPUTE virtual
+label query. The decoded `RecordBatch` carries the computed column
+alongside the parquet-resident ones; the Cypher result mapper doesn't
+distinguish.
+
+## What you give up
+
+- **No incremental refresh.** A computed column is always re-evaluated
+  on read. There's no materialized cache; if you need that, the right
+  shape is a downstream pipeline that emits a parquet column and a
+  non-COMPUTE virtual label over the result.
+- **The expression language is a strict subset of Cypher.** Functions
+  available inside `COMPUTE` are the Arrow-evaluable set —
+  arithmetic, math, array indexing, comparison. Graph traversals, path
+  patterns, and per-row Cypher procedures are not callable from inside
+  a `COMPUTE` expression. They remain callable in the surrounding
+  query.
+- **Dependency-cycle declarations are rejected at registration.** A
+  topological sort runs over the `COMPUTE` block; cyclic references
+  surface as a typed registration error.
+
+## Pattern stack
+
+Computed columns are structurally a sibling of two other "derived
+property without materialization" stories the engine is shipping:
+
+- **`PropertyValue::Tensor`** — tensor-typed properties carrying
+  shaped numerical payloads at the node level. Same operating
+  principle (typed-derived-property surfaces uniformly through the
+  Cypher result mapper); different physical substrate (in-engine
+  bytes vs. parquet-scan-time evaluation).
+- **NodeModel → predicted property** — a registered learned function
+  emits a property at the right moment. Where computed columns
+  evaluate at scan time against parquet, NodeModel evaluates at
+  observation time against an in-engine tensor.
+
+All three close the same gap differently: keep the typed-property
+contract at the query surface stable; pick the evaluation moment that
+makes the workload cheap.
+
+## See also
+
+- [World Store layer](/docs/concepts/layers/world-store) — the
+  substrate the COMPUTE expressions run against
+- [Virtual labels cookbook](/cookbooks/virtual-labels-over-parquet) —
+  the registration-and-query walkthrough this page builds on
+- [Smart Reader](/docs/concepts/layers/world-store-serve) — the
+  format-aware reader that evaluates the expressions
+- [`CREATE NODE LABEL`](/docs/worldcypher/statements/create) — the
+  full DDL syntax for virtual + computed declarations

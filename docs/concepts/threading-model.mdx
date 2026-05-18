@@ -1,0 +1,160 @@
+---
+title: "Threading Model"
+kind: concept
+description: "Reads scale lock-free via MVCC + ArcSwap snapshots; writes through a single handle serialise via a typed-error guard. Multi-handle and threading.Lock are the two supported parallel-write patterns."
+status: "stable"
+---
+
+# Threading Model
+
+ArcFlow's threading model is **MVCC-snapshot for reads, write-mutex for writes, and a typed-error guard at the handle boundary** that surfaces concurrent-write contention immediately instead of letting it become a silent slowdown.
+
+The model in one paragraph: any number of reader threads can scan the graph against an MVCC snapshot with zero coordination — readers never block readers, and readers never block writers. Writes through a single handle serialise on a per-handle write mutex; if a second thread tries to write through the same handle while one is in flight, the second call **fails fast** with `HANDLE_BUSY_CONCURRENT_WRITER` rather than queueing behind the first (which empirically regresses 10× under contention and spills into preceding indexing stages). The recovery is explicit: use multiple handles or serialise externally.
+
+## The matrix
+
+| Thread A | Thread B (concurrent) | Outcome |
+|---|---|---|
+| Read (`MATCH … RETURN`) | Read | both succeed; lock-free via ArcSwap snapshot |
+| Read | Write | both succeed; reads never see `BUSY` |
+| Write | Read (after A starts) | A succeeds; B succeeds (reads bypass the guard) |
+| Write | Write through the **same** handle | A succeeds; B returns `HANDLE_BUSY_CONCURRENT_WRITER` |
+| Write | Write through a **different** handle | both succeed independently |
+| Write | Write through the **same** handle, but serialised (A done before B starts) | both succeed sequentially |
+
+The lock-free read path is the load-bearing property — analytical scans, live-view subscribers, snapshot replays, and `EXPLAIN`/`PROFILE` introspection all run concurrently with writers and with each other.
+
+## Why a typed-error guard, not a queue
+
+A naive single-handle implementation would queue concurrent writes behind a mutex. Empirically that produces a **10× slowdown** under contention — the write_mutex's cache-line and NUMA invalidation spills into the preceding indexing stage as well, making the slowdown larger than the contention window itself. Worse: the slowdown is **silent** — the caller sees their writes complete, just slowly, and the cause hides inside the engine.
+
+ArcFlow's guard inverts that:
+
+- Single-thread write path: unchanged. Same latency as before.
+- Multi-thread write path through one handle: second call **returns immediately** with a typed `HANDLE_BUSY_CONCURRENT_WRITER` error.
+- The caller decides what to do — retry-after-delay, fan out across handles, or wrap in a Python `Lock`.
+
+The 10× slowdown is no longer a silent perf trap; it's a typed signal that surfaces the moment the caller hits it. Production code that *intended* to write concurrently fails fast and visibly; production code that *intended* to serialise still succeeds.
+
+## The typed error
+
+```json
+{
+  "class": "Integration",
+  "code": "HANDLE_BUSY_CONCURRENT_WRITER",
+  "message": "ArcFlow handle is already executing a write from another thread; concurrent writes via a single handle regress 10× under contention. Use multiple handles (arcflow.sharded) for write-side parallelism, or serialise writes via a Python Lock.",
+  "recovery_suggestion": "Use db_a / db_b / ... (multiple handles); or wrap writes in threading.Lock()"
+}
+```
+
+The error payload names the recovery shape — agents and applications consuming the error can branch on the `recovery_suggestion` field without parsing the message. The `code` value is stable across minor versions.
+
+## The two supported parallel-write patterns
+
+### Pattern 1 — Multiple handles (preferred for high-throughput parallel writes)
+
+Each thread holds its own `ArcFlow` handle. The handles share the underlying graph data via MVCC, so writes from any handle are visible to readers everywhere. Writes through *different* handles never contend on the guard:
+
+```python
+from concurrent.futures import ThreadPoolExecutor
+import arcflow
+
+# Open multiple handles against the same workspace.
+db_a = arcflow.ArcFlow("./workspace")
+db_b = arcflow.ArcFlow("./workspace")
+db_c = arcflow.ArcFlow("./workspace")
+
+handles = [db_a, db_b, db_c]
+
+def shard(idx: int, batch: list[tuple]) -> int:
+    handle = handles[idx % len(handles)]
+    handle.bulk_create_nodes_from_arrow("Event", batch)
+    return len(batch)
+
+with ThreadPoolExecutor(max_workers=len(handles)) as pool:
+    totals = list(pool.map(lambda b: shard(b[0], b[1]), enumerate(batches)))
+```
+
+This is what `arcflow.sharded` is for — see the [bulk-ingest patterns](/docs/guides/scale-patterns) when you need multi-thread write parallelism on a single workspace.
+
+### Pattern 2 — Single handle plus `threading.Lock`
+
+When you have one logical handle and want to keep things simple, wrap writes in a Python `Lock`. The lock makes the writes serial at the caller; the engine sees one writer at a time; the guard never fires:
+
+```python
+import threading
+import arcflow
+
+db = arcflow.ArcFlow("./workspace")
+write_lock = threading.Lock()
+
+def safe_write(query: str, params: dict) -> None:
+    with write_lock:
+        db.execute(query, params=params)
+```
+
+This pattern is the right answer for low-volume write workloads, agent-driven pipelines where the writer is rare, or any setup where simplicity beats throughput.
+
+## What about async / `asyncio`?
+
+`asyncio` doesn't change the picture — the constraint is "two writes through one handle in flight at the same time," and that can happen in async code just as easily as in threaded code:
+
+```python
+# WRONG — two writes through one handle in flight concurrently:
+await asyncio.gather(
+    db.execute_async("CREATE (n:A {...})"),
+    db.execute_async("CREATE (n:B {...})"),
+)  # one of these raises HANDLE_BUSY_CONCURRENT_WRITER
+```
+
+The fix is the same as Pattern 1 — use multiple handles, or sequence the awaits:
+
+```python
+# Right — sequenced:
+await db.execute_async("CREATE (n:A {...})")
+await db.execute_async("CREATE (n:B {...})")
+
+# Right — fanned across handles:
+await asyncio.gather(
+    db_a.execute_async("CREATE (n:A {...})"),
+    db_b.execute_async("CREATE (n:B {...})"),
+)
+```
+
+## What about read parallelism?
+
+Reads are always lock-free and never trigger the guard. You can fan out read work across as many threads as you want, all from a single handle:
+
+```python
+from concurrent.futures import ThreadPoolExecutor
+
+db = arcflow.ArcFlow("./workspace")
+
+with ThreadPoolExecutor(max_workers=16) as pool:
+    results = list(pool.map(db.execute, read_queries))
+```
+
+The underlying `ConcurrentStore` carries a lock-free `ArcSwap<Snapshot>` — each reader takes a snapshot, scans, and drops it. Writers swap a new snapshot in atomically; in-flight readers continue scanning the old snapshot to completion. No coordination between readers; no blocking by writers.
+
+## Substrate detail
+
+The guard is a `writer_busy: Arc<AtomicBool>` on `ConcurrentStore`. The mutating branch of `execute()` claims it via `compare_exchange` before entering the write transaction:
+
+```rust
+let _writer_claim = if query.is_mutating {
+    Some(self.try_claim_writer()?)   // returns HANDLE_BUSY on contention
+} else {
+    None                              // reads bypass the guard entirely
+};
+```
+
+`WriterClaim` is an RAII guard: `Drop` resets the `AtomicBool` even when the write panics. The flag never leaks; concurrent retries after a write failure proceed cleanly.
+
+`is_mutating` is determined at parse time by the query compiler — `MATCH`, `RETURN`, `EXPLAIN`, `CALL` (against a read-only procedure) all skip the guard; `CREATE`, `MERGE`, `SET`, `DELETE`, `CALL` (against a writing procedure) all engage it. This means concurrent reads + a single concurrent writer never see contention even within a single handle.
+
+## See also
+
+- [Architecture](/docs/architecture) — the in-process SoC monolith the threading model sits inside.
+- [Bulk Ingest Patterns](/docs/guides/scale-patterns) — the multi-handle `arcflow.sharded` pattern for high-throughput parallel writes.
+- [Snapshot-Pinned Reads](/docs/concepts/snapshots) — how MVCC snapshots stay consistent across read parallelism.
+- [Error Codes](/docs/reference/error-codes) — the canonical `HANDLE_BUSY_CONCURRENT_WRITER` entry.
