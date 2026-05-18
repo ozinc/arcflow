@@ -150,7 +150,7 @@ The REPL supports additional persistence commands:
 
 ## Connecting Claude Code
 
-Claude Code can interact with ArcFlow in three ways, from fastest to most compatible.
+Claude Code can interact with ArcFlow in four ways, from fastest to most compatible. Methods 1 and 1+ are the zero-friction ladder — bash and Unix tools work natively over typed memory. Methods 2 and 3 exist for environments without local shell access.
 
 ### Method 1: CLI commands (fastest)
 
@@ -190,6 +190,52 @@ arcflow agent-context synth --json
 ```bash
 arcflow query "MATCH (n:Person {name: \$name}) RETURN n" --param name=Alice --data-dir .arcflow/data --json
 ```
+
+### Method 1+: Filesystem mount (the world model as files)
+
+> **Target end-state.** The mount surface (`arcflow mount`) ships with AFP-0003 — substrate-pending. Today's filesystem-as-perception substrate ships at AFP-0001 / AFP-0002 (`arcflow workspace init`, the typed in-process API). The contract described below — read-only filesystem reads, typed writes — is doctrine today; the `arcflow mount` invocation lands when AFP-0003 cuts.
+
+`arcflow mount` projects the workspace as a read-only filesystem tree. Every label is a directory; every node is a JSON file; every snapshot is a path. The agent reads with `cat`, navigates with `ls`, searches with `grep` or `rg` — no protocol, no tokens, no round-trip. Writes still go through the typed API (mount is read-only by design); discovery happens at filesystem speed.
+
+```bash
+# Mount the workspace at a path of your choice
+arcflow mount ~/work/my-project/.arcflow ./world-fs
+
+# Now the world model is browsable as files
+ls ./world-fs/
+# __snapshot.toml  nodes/  edges/  labels/  streams/
+
+# Read a single node
+cat ./world-fs/nodes/Person/p1.json
+# {"id":"p1","name":"Alice","age":30,"_confidence":0.97,"_observation_class":"observed"}
+
+# Discover all labels in the world
+ls ./world-fs/labels/
+# Person  Org  Fact  Frame  Sensor  Zone  Robot
+
+# Find every File node with loc > 500 — no Cypher, just bash
+find ./world-fs/nodes/File -name '*.json' \
+  | xargs -I{} jq 'select(.loc > 500) | .path' {}
+
+# Live tail a standing query's deltas as a path
+tail -F ./world-fs/streams/fraud_threshold.jsonl
+```
+
+**Why this matters for agents.** LLM coding agents are extensively pre-trained on `ls`, `find`, `grep`, `cat`, `jq` — Unix tooling examples saturate the training distribution. Mounting the world model as a filesystem lets the agent apply mastery it already has, instead of learning a new query API. The same agent that writes `find . -name '*.ts' | xargs grep TODO` can write `find ./world-fs/nodes/File -name '*.json' | xargs jq` against the typed graph.
+
+**Layout** (per the workspace projection contract):
+
+```
+./world-fs/
+├── __snapshot.toml              # Snapshot ID + provenance for this projection
+├── nodes/<Label>/<id>.json      # One file per node, typed properties + confidence + observation class
+├── edges/<RelType>/<id>.json    # One file per relationship
+├── labels/<Label>/              # Listing of every node carrying the label
+├── streams/<view-name>.jsonl    # Tail-able delta stream for each LIVE VIEW
+└── _row_count.txt               # Quick counts per label (no scan required)
+```
+
+**The bright line: filesystem reads, typed writes.** The mount surface never accepts a write. Mutations always go through `arcflow query` (Method 1) or the FFI bindings. This keeps the typed-entity invariants intact while letting agents read at filesystem speed.
 
 ### Method 2: MCP server (cloud chat interfaces only)
 
