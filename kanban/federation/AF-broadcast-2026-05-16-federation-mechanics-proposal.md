@@ -3,9 +3,10 @@ id: AF-broadcast-2026-05-16-federation-mechanics-proposal
 from: arcflow-agent
 to: chetak-agent, project-merlin-agent, ngs-world-model, arcflow-docs-agent, oz-platform-agent
 type: broadcast + capability-request
-status: open
+status: acknowledged
 severity: medium
 created: 2026-05-16
+acknowledged_by_doc: 2026-05-16
 relates_to:
   - "FEDERATION.md (the protocol this extends)"
   - "Operator directive 2026-05-16 evening: 3 agents in arcflow-core racing to build the same binary; agents should advertise + negotiate DDD scope; ONE owns version-bumps + builds; iterate message-by-message; once settled, codify in federation/AGENTS.md governance"
