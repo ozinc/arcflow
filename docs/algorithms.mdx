@@ -1,7 +1,7 @@
 ---
 title: "Graph Algorithms"
 kind: capability
-description: "37 graph algorithms operating over a confidence-scored, temporally-versioned world model — from entity resolution to contradiction detection to causal lineage walks to substrate-level multi-source disagreement resolution to trajectory analytics, 6 running incrementally as standing queries"
+description: "37 graph algorithms operating over a confidence-scored, temporally-versioned world model — from entity resolution to contradiction detection to causal lineage walks to substrate-level multi-source disagreement resolution to trajectory analytics to counterfactual branching, 6 running incrementally as standing queries"
 status: "stable"
 playground:
   seed: world
@@ -12,7 +12,7 @@ playground:
 
 *Canonical surface for the [Algorithm Library](/docs/concepts/layers/algorithm-library) layer.*
 
-37 graph algorithms built into the world model — no projection lifecycle, no separate analytics service, no plugin installation. Every algorithm operates over the same confidence-scored, temporally-versioned graph that your queries run against. Centrality rankings respect observation class. Community detection propagates across fact confidence. Contradiction detection surfaces conflicting beliefs in the world model. Causal lineage walks `CAUSED_BY` provenance edges with cumulative confidence decay. Multi-source disagreement reconciles contested observations at the substrate level — the first such primitive in any graph engine. Trajectory analytics compose nearest-at-frame, leverage-gain, release-point, and shadow detection in a single Cypher block for sports / tracking / autonomous-vehicle workloads. Six algorithms run incrementally via `LIVE CALL`, maintaining results as standing queries that update with every mutation.
+37 graph algorithms built into the world model — no projection lifecycle, no separate analytics service, no plugin installation. Every algorithm operates over the same confidence-scored, temporally-versioned graph that your queries run against. Centrality rankings respect observation class. Community detection propagates across fact confidence. Contradiction detection surfaces conflicting beliefs in the world model. Causal lineage walks `CAUSED_BY` provenance edges with cumulative confidence decay. Multi-source disagreement reconciles contested observations at the substrate level — the first such primitive in any graph engine. Trajectory analytics compose nearest-at-frame, leverage-gain, release-point, and shadow detection in a single Cypher block for sports / tracking / autonomous-vehicle workloads. Counterfactual branching forks the World Graph at a chosen WAL sequence so swarm rollouts score in isolation against the canonical timeline. Six algorithms run incrementally via `LIVE CALL`, maintaining results as standing queries that update with every mutation.
 
 GPU acceleration is automatic when hardware is available: same query, same syntax — **ArcFlow Adaptive Dispatch** routes to the fastest backend at runtime (see [GPU Acceleration](/gpu)).
 
@@ -672,6 +672,95 @@ ORDER BY hop
 - Targeted "why does X depend on Y?" queries when you have specific endpoints.
 - Disambiguating between multiple plausible causal chains by picking the shortest.
 - Failure-mode diagnostics — `causalPath` from a low-confidence fact back to a known-bad source.
+
+## Counterfactual Branching
+
+A substrate primitive for **counterfactual exploration** — branch the World Graph at a specific WAL sequence point, apply hypothetical edits to the branch in isolation, score the alternative outcome, then drop or keep the branch. The substrate that makes "what if we'd called the play differently?" / "what if this sensor had reported X instead of Y?" / "what if the model had predicted this branch first?" queries answerable without polluting the canonical timeline.
+
+The CALL wrapper translates to ArcFlow's existing canonical `BRANCH AT SEQ` DDL substrate — branches created via CALL behave identically to those created via DDL (`DROP BRANCH`, `DIFF BRANCH … AGAINST HEAD`, `AS BRANCH 'name' MATCH …` routing all work uniformly).
+
+### Branch At
+
+Create a named branch of the World Graph at a specific WAL sequence point.
+
+```cypher
+CALL arcflow.counterfactual.branchAt(name: 'rollout-1', seq: 42)
+YIELD branch, base_seq, status
+```
+
+Returns one row: `{branch: "rollout-1", base_seq: "42", status: "created"}`.
+
+**Argument forms** (all equivalent):
+- Named: `name: 'r1', seq: 42` or `name = 'r1', seq = 42`
+- Positional: `'r1', 42`
+- Single or double quotes on the name
+
+**Boundary errors** (all typed, with `recovery_suggestion` payloads):
+
+| Error code | Cause |
+|---|---|
+| `COUNTERFACTUAL_BRANCH_AT_MISSING_NAME` | No `name` argument provided |
+| `COUNTERFACTUAL_BRANCH_AT_MISSING_SEQ` | No `seq` argument provided |
+| `COUNTERFACTUAL_BRANCH_AT_EMPTY_NAME` | Empty string passed as `name` |
+| `COUNTERFACTUAL_BRANCH_AT_UNKNOWN_ARG` | Unexpected kwarg |
+
+### Fan-out swarm pattern
+
+Counterfactual exploration usually fans out: N rollouts at the same base seq, each with a different hypothetical edit, scored independently, then dropped or kept based on the score:
+
+```python
+def counterfactual_swarm(db, play_id: int, n_rollouts: int = 10) -> list:
+    base_seq = db.current_seq()
+    rollouts = []
+
+    # Fan out N branches at the same base seq.
+    for i in range(n_rollouts):
+        rollout_id = f"rollout-{play_id}-{i}"
+        db.execute(
+            f"CALL arcflow.counterfactual.branchAt("
+            f"name: '{rollout_id}', seq: {base_seq})"
+        )
+        rollouts.append(rollout_id)
+
+    # Per-rollout scenario edit (your domain logic) + scoring.
+    results = []
+    for rollout_id in rollouts:
+        # Apply the counterfactual edit via AS BRANCH-targeted execute.
+        # Then score.
+        score = db.execute(
+            f"AS BRANCH '{rollout_id}' "
+            f"MATCH (p:Play {{play_id: {play_id}}}) "
+            f"CALL algo.confidencePageRank('SHADOWS') YIELD rank "
+            f"RETURN sum(rank) AS score"
+        )
+        results.append((rollout_id, score.rows[0]['score']))
+
+    # Cleanup.
+    for rollout_id in rollouts:
+        db.execute(f"DROP BRANCH '{rollout_id}'")
+
+    return results
+```
+
+For write-side parallelism over the fan-out (multiple branches created concurrently), use the multi-handle pattern from the [Threading Model](/docs/concepts/threading-model) — each handle holds its own `write_mutex`, so N handles fan out N branch creations in parallel without `HANDLE_BUSY_CONCURRENT_WRITER`. Reads against created branches don't hit the guard regardless.
+
+### Why a CALL surface (not just DDL)
+
+The DDL form (`BRANCH AT SEQ 42 AS 'rollout-1'`) and the CALL form return the same branch. The CALL form exists because:
+
+- **It composes with `YIELD`** — `CALL … YIELD branch, base_seq, status` returns a typed row that downstream Cypher can consume directly (filter, transform, drive a `MATCH` against the branch).
+- **It composes with Python orchestration** — `db.execute("CALL …")` is the natural shape for swarm fan-out where the rollout names are computed in code.
+- **It composes with EXPLAIN / PROFILE** — the CALL surface is a planner-level operator with introspectable cost.
+- **Typed errors with `recovery_suggestion`** — the DDL form returns parse errors; the CALL form returns the structured boundary errors named above.
+
+### Use cases
+
+- **Sports analytics counterfactual swarm** — "what if the QB had thrown to receiver Y instead of Z at frame 1024?" Fan out N branches at the snap frame, each with a different receiver target, score by composite pressure / completion-probability / yards-after-catch heuristics, surface the highest-EV alternative.
+- **Sensor-failure replay** — branch at the sensor-loss event, replay with the lost sensor's last-known reading held constant, compare downstream fusion outputs against the canonical timeline to bound the failure's blast radius.
+- **Decision audit** — when a low-confidence inferred fact lands, branch backward, apply the alternative inference, compare what would have followed. Pair with `arcflow.causalLineage` to trace which downstream facts depended on the original inference.
+- **A/B replay against historical data** — branch at a historical seq, apply the alternative policy, replay the same observation stream against the modified state, compare metrics.
+
+The branch's lifetime is the caller's responsibility — `DROP BRANCH 'name'` releases the WAL state when the analysis is done. Branches not dropped accumulate; long-running counterfactual analytics should pair every `branchAt` with a `DROP BRANCH` in a try/finally or context manager.
 
 ## GraphRAG Pipeline
 

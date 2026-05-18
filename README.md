@@ -193,6 +193,7 @@ Conformance and standards:
 | **Sports & motion analytics** | 60 Hz live tracking + auxiliary streams (3D scene reconstruction, biomechanical telemetry, sparse events) reconciled to one canonical timeline; built-in trajectory primitives (`shadowedBy`, `leverageGain`, `releasePoint`, `nearestAtFrame`) compose into per-play coverage descriptors in one Cypher block |
 | **Digital twins** | Live spatial replica of a physical facility — temporal history, anomaly detection, downstream topology |
 | **AI agent infrastructure** | Persistent working memory across sessions — confidence-scored observations, multi-agent coordination, durable workflows |
+| **Counterfactual analysis** | Branch the World Graph at any WAL seq (`arcflow.counterfactual.branchAt`); fan out N rollouts; score each in isolation against the canonical timeline; drop or keep based on the score |
 | **Trusted RAG** | Confidence-filtered retrieval; detect stale information via temporal queries; provenanced answers via snapshot URIs; causal-lineage walks justify every inferred fact |
 | **Fraud detection** | Circular transaction patterns, shared identity clusters, confidence-scored entity links — graph patterns SQL can't write |
 | **Multi-source data reconciliation** | Built-in `multi_source_disagreement` TVF resolves contested observations across sources (categorical / numeric / spatial-Weiszfeld-geomedian); pairs with `causalLineage` to trace conflicting claims back to their observations |
@@ -267,6 +268,10 @@ CALL arcflow.trajectory.shadowedBy(
   target_filter_property: "player_id",   target_filter_value: 12,
   defender_filter_property: "player_id", defender_filter_value: 28,
   angle_tol_rad: 0.1) YIELD frame
+
+-- Counterfactual branching: fork the World Graph at a WAL seq for swarm rollouts
+CALL arcflow.counterfactual.branchAt(name: 'rollout-1', seq: 42)
+  YIELD branch, base_seq, status
 ```
 
 Bounded latency for live UX — wall-clock deadlines compose naturally with any query:

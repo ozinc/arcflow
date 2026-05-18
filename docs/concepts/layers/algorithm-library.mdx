@@ -24,6 +24,7 @@ RETURN node.name, score ORDER BY score DESC LIMIT 10
 | Causal reasoning | BFS over `CAUSED_BY` with cumulative confidence; shortest causal chain; ancestry / delta / root / fanout | `CALL arcflow.causalLineage()`, `CALL arcflow.causalPath()`, `CALL arcflow.causalAncestry()`, `CALL arcflow.causalDelta()`, `CALL arcflow.causalRoot()`, `CALL arcflow.causalFanout()` |
 | Multi-source disagreement | Categorical / numeric / spatial weighted-median resolution across sources | `CALL arcflow.multi_source_disagreement()` |
 | Trajectory analytics | Nearest-at-frame, leverage gain, release point, line-of-sight shadow | `CALL arcflow.trajectory.*` |
+| Counterfactual branching | Branch the World Graph at a WAL seq for hypothetical rollouts | `CALL arcflow.counterfactual.branchAt()` |
 | Statistical tests | Chi-square goodness-of-fit, Mann-Whitney U, Kolmogorov-Smirnov | `CALL arcflow.chiSquare()`, `CALL arcflow.mannWhitneyU()`, `CALL arcflow.kolmogorovSmirnov()` |
 | Vector primitives | Cosine, dot product, embed | `arcflow.cosine()`, `arcflow.embed()` |
 | Vector search | HNSW similarity probe | `CALL arcflow.similar()` |
