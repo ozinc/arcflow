@@ -9,6 +9,22 @@ playground:
 
 # Installation
 
+## Quick install (CLI today)
+
+The canonical install command on macOS + Linux:
+
+```bash
+curl -fsSL https://staging.oz.com/install/arcflow | sh
+```
+
+This is the only install URL the docs publish. If a stale CLI build surfaces a different URL (any other domain, including a deployment-host alias), prefer the canonical command above; the published install URL is the source of truth.
+
+**What this gives you today:** the `arcflow` CLI binary at `~/.arcflow/bin/arcflow` (or platform equivalent), and that's it — a single executable. The install message will say *"Binaries: arcflow"* (singular) — that is the current shipping scope.
+
+**What this does NOT give you today:** the Python wheel, the npm package, or the Rust crate. Those are **planned for RAM-C2 / 2026-Q3** on their respective public registries (the current shipping status for each binding lives in the install matrix below). Until they publish, the public-registry installs for `oz-arcflow` / `arcflow` will fail with `No matching distribution`. See [Using ArcFlow from Python or Node today](#using-arcflow-from-python-or-node-today) below for the recovery path.
+
+---
+
 ArcFlow ships across multiple registries. This page is generated from a
 single source of truth — the engine's `RELEASE-MATRIX.toml`. Every binding
 listed below was probed by CI before this page was published; planned
@@ -16,6 +32,90 @@ artifacts are flagged with their target quarter and never advertised as if
 they were live.
 
 <InstallMatrix />
+
+## Upgrading from a pre-2026-05-14 install (the `v1.x` line)
+
+If you have an `arcflow` binary installed from before 2026-05-14 — anything reporting `v1.x.y` when you run `arcflow --version` — your `arcflow upgrade` command **cannot migrate you to the current line**. The v1.x line was retired 2026-05-14 when ArcFlow re-versioned to alpha (current line: `v0.7.x` and `v0.8.x`); legacy `v1.x` binaries hold their own retired upgrade-channel URLs in their compiled bytes and cannot self-correct.
+
+**Recovery: reinstall via the canonical install script.**
+
+```bash
+curl -fsSL https://staging.oz.com/install/arcflow | sh
+```
+
+(See [Quick install](#quick-install-cli-today) at the top of this page for the URL-stability context — the install URL standardized on `staging.oz.com` is what works today; the production-canonical `oz.com/install/arcflow` resolves once the oz-platform `dev → production` deploy lands, but the docs publish the working URL.)
+
+After reinstall, verify:
+
+```bash
+arcflow --version    # should show v0.7.x or v0.8.x (current line)
+arcflow upgrade      # works correctly from v0.7.x+; pulls the latest cut
+```
+
+**If you're already on `v0.7.x` or `v0.8.x`:** nothing to do. `arcflow upgrade` works correctly on the current line; you can keep using it.
+
+### Why this happens (one paragraph)
+
+ArcFlow moved from `1.x` to `0.x` versioning per an explicit operator directive — the alpha line restarts at `0.x`, with `v1.0` reserved for the first production-ready release. The `arcflow upgrade` code in any binary shipped before that pivot was compiled against the retired `v1.x` release channel; it has no awareness of the line move. The fix is to download a current binary via the install script (above), which then has the corrected upgrade-channel awareness for every future `arcflow upgrade` call. This is a one-time recovery per machine; no further intervention needed.
+
+## Using ArcFlow from Python or Node today
+
+If your project's `pyproject.toml` or `package.json` depends on `oz-arcflow` / `arcflow` and `pip install` / `npm install` returns *"No matching distribution found"*, the cause is the publish gap above — the SDK wheels are not yet on public registries. Until they ship (RAM-C2 / 2026-Q3), two recovery paths work today:
+
+### Path 1 — Editable install against the engine repo (recommended for dev)
+
+The Python wheel can be built and installed editable from the engine source:
+
+```bash
+git clone https://github.com/ozinc/arcflow
+cd arcflow
+cargo build --release -p arcflow-ffi
+pip install -e python/   # editable install, picks up the local libarcflow
+```
+
+Then in your project, replace the version pin with the local path:
+
+```toml
+# Your project's pyproject.toml
+[project]
+dependencies = [
+    # "oz-arcflow>=0.8"   ← swap this line out until public publish
+]
+```
+
+…and install your project against the local engine repo:
+
+```bash
+pip install -e ~/code/arcflow --force-reinstall --no-deps
+pip install -e .[dev] --no-deps   # your project, deps already satisfied
+```
+
+The `--no-deps` flag stops pip from re-trying public PyPI for `oz-arcflow`; you've already installed it from source.
+
+### Path 2 — Vendored wheel + `find-links`
+
+For workflows that need a reproducible wheel (CI, multi-developer projects, harnesses that test against a frozen engine commit), build the wheel into a vendored `wheels/` directory and pin via `find-links`:
+
+```bash
+~/code/arcflow/python/build_wheel.sh           # produce the wheel
+mkdir -p ./wheels
+cp ~/code/arcflow/python/dist/oz_arcflow-*.whl ./wheels/
+```
+
+```toml
+# Your project's pyproject.toml
+[project]
+dependencies = ["oz-arcflow"]
+
+[tool.uv]
+find-links = ["./wheels"]
+```
+
+Commit the vendored wheel alongside the tests that depend on it; refresh it whenever you bump the engine version.
+
+### What about the CLI?
+
+Path 1 and Path 2 both apply to the **Python / npm SDK** path. The **CLI binary** (`arcflow`, `arcflow-daemon`, `arcflow-mcp`) ships today via the curl install at the top of this page — no source build required. If your workflow only needs the CLI, the curl install is the complete answer. The SDK paths above only apply when your code calls ArcFlow as an in-process library.
 
 ## How this page stays accurate
 

@@ -385,11 +385,12 @@ queries = [
     # ...
 ]
 with ThreadPoolExecutor(max_workers=8) as pool:
-    results = list(pool.map(db.execute, queries))
+    results = list(pool.map(db.execute, queries))   # reads — lock-free
 ```
 
-Reads parallelize cleanly. Writes serialize through MVCC commit but do not
-deadlock or torn-read.
+**Reads parallelize cleanly via ArcSwap snapshots — no coordination needed.** Writes through a single handle are guarded: a second write on the same handle while one is in flight returns `HANDLE_BUSY_CONCURRENT_WRITER` immediately (rather than queueing through the write mutex and regressing 10× silently). The two supported parallel-write patterns are **multiple handles** (`arcflow.sharded`) and **`threading.Lock()`** around a single handle.
+
+See [Threading Model](/docs/concepts/threading-model) for the complete read/write matrix, the typed-error payload, and substrate detail (`writer_busy: AtomicBool` + RAII `WriterClaim` guard).
 
 ## TypeScript / Node.js
 

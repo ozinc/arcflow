@@ -75,7 +75,7 @@ The split is governed by three mechanical rules (see [World Graph](/docs/concept
 - **R2 — Mutability bright-line.** Mutable → Owned; immutable observation → Virtual.
 - **R3 — Topology owned by the Graph.** Edges live in the Graph's CSR adjacency, even when both endpoints are Virtual.
 
-The architectural consequence is that the substrate does not need to ingest a Lakehouse partition's rows into engine RAM to make them queryable. The schema and adjacency suffice; row access pushes down to the catalog at query time. The query engine's predicate-pushdown rewriter for `MATCH (:VirtualLabel ...)` patterns lands as a follow-on; until it does, queries against Virtual labels return a typed `QueryError::VirtualLabelNotYetQueryable`.
+The architectural consequence is that the substrate does not need to ingest a Lakehouse partition's rows into engine RAM to make them queryable. The schema and adjacency suffice; row access pushes down to the catalog at query time. The query engine's predicate-pushdown rewriter for `MATCH (:VirtualLabel ...)` patterns resolves the pattern into a manifest-pruned, predicate-pushed Parquet scan; `count`, filter, and projection all light up natively through the substrate.
 
 ## Section 3 — Six-tier residency, nine-state classification
 
@@ -161,7 +161,6 @@ What the substrate cut delivered as real bytes on disk:
 Still queued behind the cut — not described as live on this page:
 
 - The Memory Governor's heat-score eviction policy. The admission gate is in place; the eviction policy that complements it lands in a follow-on.
-- The planner-side predicate-pushdown rewriter for virtual-label patterns. Until it ships, `MATCH (:VirtualLabel ...)` returns `QueryError::VirtualLabelNotYetQueryable`.
 - The ARC1 reader + Parquet decoder bodies. The type vocabulary and writer-side primitives are shipped; the corresponding readers are queued behind the executor wiring.
 - The apply-mutation row-store executor wiring against `worldgraph::nodes`.
 - The `oz://` resolvers + the fsspec Python binding. The parser and the URI vocabulary are public; the resolvers land at K-WAVE-WG-O2..O7.

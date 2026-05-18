@@ -1,7 +1,7 @@
 ---
 title: "Get Started"
 kind: first-use
-description: "ArcFlow is the operational world model layer — the persistence tier for spatial-temporal, confidence-scored world state. Neural world models simulate. ArcFlow records."
+description: "ArcFlow is the blazing-fast graph engine for modeling the real world — the persistence tier for spatial-temporal, confidence-scored world state. Neural world models simulate. ArcFlow records."
 status: "stable"
 playground:
   seed: world
@@ -12,7 +12,9 @@ playground:
 
 Neural world models simulate how the world evolves under actions. ArcFlow records what actually happened. These are different tools for different jobs — simulation in the neural tier, persistence here.
 
-**ArcFlow is the operational world model layer.** A persistent, spatially indexed, temporally versioned, confidence-scored store of actual world state — exact, queryable in microseconds, running in-process alongside whatever generates the data.
+**ArcFlow is the blazing-fast graph engine for modeling the real world.** A persistent, spatially indexed, temporally versioned, confidence-scored store of actual world state — exact, queryable in microseconds, running in-process alongside whatever generates the data. The operational world model layer of your stack.
+
+**Eight engines under one query language.** Graph storage, query execution, live streaming views, an event bus, a behavior engine, an algorithm library, durability, and language bindings — pre-integrated, designed from scratch for spatial-temporal workloads. One ISO GQL dialect describes the schema, the query, the live view, the trigger, and the algorithm call. The coherence is the product; the sub-millisecond latency is the consequence of not assembling stacks.
 
 ```cypher
 MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)-[:OCCUPIES]->(z:Zone)
@@ -43,7 +45,7 @@ MATCH (e:Entity) AS OF seq 1 RETURN e.id, e._confidence
 ## Install
 
 ```bash
-curl -fsSL https://oz.com/install | sh
+curl -fsSL https://staging.oz.com/install/arcflow | sh
 ```
 
 Then:
