@@ -68,7 +68,7 @@ CALL algo.nearestNodes(point({x: 10.0, y: 10.0}), 'Sensor', 5)
   RETURN node.name, distance
 ```
 
-Recent engine benchmarks show spatial k-nearest throughput around `471K ops/s` on the corrected benchmark surface. The index is dynamic — inserts, updates, and deletes are O(log N) with no rebuild.
+The index is dynamic — inserts, updates, and deletes are O(log N) with no rebuild. Throughput characteristics are workload- and platform-dependent; run `cargo bench` against your dataset to measure on your hardware.
 
 ### Radius Search
 

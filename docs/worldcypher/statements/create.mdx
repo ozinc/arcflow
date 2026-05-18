@@ -22,6 +22,19 @@ CREATE (variable:Label {key: value, ...}) [RETURN variable]
 CREATE (a:Label {props})-[:TYPE]->(b:Label {props})
 ```
 
+DDL forms — declare label schemas:
+
+```cypher
+CREATE NODE LABEL Label (
+  col TYPE, ...
+)
+[VIRTUAL FROM PARTITION '<lake-uri-pattern>']
+[COMPUTE
+  derived_col = <expr>,
+  ...
+];
+```
+
 ## Examples
 
 ### Create a node
@@ -30,14 +43,59 @@ CREATE (a:Label {props})-[:TYPE]->(b:Label {props})
 CREATE (n:Person {name: 'Eve', age: 28}) RETURN n
 ```
 
+### Declare a virtual label over a Lakehouse partition
+
+```cypher
+CREATE NODE LABEL Frame (
+  agent_id       STRING,
+  ts             TIMESTAMP,
+  agent_position DOUBLE[3]
+) VIRTUAL FROM PARTITION 'lake://fleet/telemetry/{mission}/{day}/{shard}';
+```
+
+Rows stay in the parquet partitions; the engine holds the typed schema
++ adjacency + catalog pointer. See the
+[virtual labels cookbook](/cookbooks/virtual-labels-over-parquet) for
+the full walkthrough.
+
+### Declare derived properties with COMPUTE
+
+```cypher
+CREATE NODE LABEL FrameRelToTarget VIRTUAL FROM PARTITION
+  'lake://fleet/telemetry/{mission}/{day}/{shard}'
+  COMPUTE
+    position_relative_to_target = agent_position - target_position,
+    distance_to_target = sqrt(
+        (agent_position[0] - target_position[0]) ^ 2 +
+        (agent_position[1] - target_position[1]) ^ 2 +
+        (agent_position[2] - target_position[2]) ^ 2
+    );
+```
+
+`COMPUTE` columns are evaluated by the Smart Reader at row-decode time
+against the decoded `RecordBatch`. The values surface in
+`Node.properties` alongside parquet-resident columns; predicates on
+them push down through the planner. Row data on disk is unchanged —
+the derived properties exist only as values flowing through the scan.
+See [virtual computed columns](/docs/concepts/virtual-computed-columns)
+for the full surface.
+
 ## Notes
 
 - Node IDs are engine-assigned (monotonic `NodeId`).
 - Properties are set at creation time. Use [SET](/worldcypher/statements/set) for mutations.
 - For upsert semantics (find-or-create), use [MERGE](/worldcypher/statements/merge).
+- `VIRTUAL FROM PARTITION` and `COMPUTE` are DDL-only modifiers on
+  `CREATE NODE LABEL` — they declare a class, they don't create
+  individual nodes. Once registered, `MATCH (:Frame)` traverses the
+  rows in the bound partitions.
 
 ## See Also
 
 - [MERGE](/worldcypher/statements/merge) — upsert
 - [DELETE](/worldcypher/statements/delete) — removal
 - [SET](/worldcypher/statements/set) — property mutation
+- [Virtual computed columns](/docs/concepts/virtual-computed-columns) —
+  the `COMPUTE` clause in depth
+- [World Store layer](/docs/concepts/layers/world-store) — the
+  substrate the `VIRTUAL FROM PARTITION` clause binds against

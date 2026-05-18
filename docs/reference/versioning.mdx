@@ -74,13 +74,13 @@ All surfaces converge on the same string.
 
 ## Bump rules
 
-ArcFlow ships six contract-bearing layers (World Store, Query Engine,
-Live Surface, Event Bus, Behavior Engine, Algorithm Library). SemVer
-is keyed to **which layer's surface changes**, not to commit count or
-release cadence.
+ArcFlow ships eight contract-bearing layers (World Store, Perception
+Lake, World Graph, Query Engine, Live Surface, Event Bus, Behavior
+Engine, Algorithm Library). SemVer is keyed to **which layer's surface
+changes**, not to commit count or release cadence.
 
 - **Patch (`0.7.1 → 0.8.0`)** — bug fix where the documented behavior was wrong. No surface change.
-- **Minor (`0.7.x → 0.8.0`)** — additive surface in any layer (new `CALL` procedure, new algorithm, new RPC method, new release artifact). Existing surface unchanged. The `0.7.x → 0.8.0` cut shipped the World Graph substrate — the `arcflow.worldgraph` public module, virtual labels, `register_virtual_partition` FFI, the `oz://` URI scheme, the `ResidencyClass` + `TierBudget` vocabulary, and the ARC1 hot-tier format. Legacy crate-root modules (`mvcc`, `dense_store`, `column_store`, `csr`) remain as canonical re-exports — no migration required.
+- **Minor (`0.7.x → 0.8.0`)** — additive surface in any layer (new `CALL` procedure, new algorithm, new RPC method, new release artifact). Existing surface unchanged. The `0.7.x → 0.8.0` cut shipped the **World Store** substrate — Iceberg-shaped manifests, the `lake://` URI scheme, virtual labels, `register_virtual_partition` FFI, the `ResidencyClass` + `TierBudget` vocabulary, and the ARC1 hot-tier format — and the **World Graph** typed-entity layer that sits as a view over the Store.
 - **Major (`0.x.y → 1.0.0` or later)** — breaking change to a contract-bearing layer (query semantics, payload shape, FFI ABI, on-disk format, RPC signature). Requires migration dossier + pre-release `-rc.N` sequence + operator sign-off.
 - **Pre-release (`X.Y.Z-rc.N`)** — sequenced ship-gate validation against consumers before a major bump or large-minor cut.
 
@@ -129,10 +129,10 @@ dependencies = [
 
 ```bash
 # Install script — pin to a specific tag
-ARCFLOW_VERSION=0.8.0 curl -fsSL https://oz.com/install/arcflow | sh
+ARCFLOW_VERSION=0.8.0 curl -fsSL https://staging.oz.com/install/arcflow | sh
 
 # Or accept the latest (default — resolves via releases/latest redirect)
-curl -fsSL https://oz.com/install/arcflow | sh
+curl -fsSL https://staging.oz.com/install/arcflow | sh
 ```
 
 ## For coding agents

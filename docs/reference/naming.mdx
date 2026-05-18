@@ -8,11 +8,12 @@ status: "stable"
 # Naming & Domain Map
 
 ArcFlow is **a world-model engine** — one in-process Rust binary that
-holds the persistent property graph, the live query surface, the event
-bus, the behavior engine, and the algorithm library. The five layers
-each have an industry analog; the names below are the canonical labels
-for each one. Use these consistently in docs, marketing, API names,
-log messages, and commit subjects.
+holds the durable object substrate, the observation landing zone, the
+typed entity layer, the query engine, the live surface, the event bus,
+the behavior engine, and the algorithm library. The eight layers each
+have an industry analog; the names below are the canonical labels for
+each one. Use these consistently in docs, marketing, API names, log
+messages, and commit subjects.
 
 ## The World Model story (one sentence)
 
@@ -23,18 +24,79 @@ log messages, and commit subjects.
 
 Everything below is a way of saying *what part of this story you mean*.
 
+## The brand stack
+
+The names below have a hierarchy. ArcFlow is the hero; everything else
+is positioning context around the hero.
+
+```
+OZ                                  ← destination brand (the company)
+ │                                    "Where worlds are built."
+ │
+ ├── ArcFlow                ★ HERO  ← the engine product (the flagship)
+ │    │                               "The blazing-fast graph engine
+ │    │                                for modeling the real world."
+ │    │                               In-process. Single binary. Runs on
+ │    │                               a laptop. Free forever, locally.
+ │    │                               Loved by agents.
+ │    │
+ │    │  ─── eight architectural layers ───
+ │    │
+ │    ├── World Store        (L1)   ← storage substrate (internal)
+ │    ├── Perception Lake    (L2)   ← observation landing (reserved)
+ │    ├── World Graph        (L3) ★ ← typed entity layer — carries hero
+ │    ├── Query Engine       (L4)
+ │    ├── Live Surface       (L5)
+ │    ├── Event Bus          (L6)
+ │    ├── Behavior Engine    (L7)
+ │    └── Algorithm Library  (L8)
+ │
+ └── OZ Cloud              ◇ SIDE  ← managed deployment of the engine
+                             STORY   "The same ArcFlow engine, hosted."
+                                     Backups, encryption, audit log,
+                                     region selection, zero ops.
+                                     Demonstrates OZ's service competence;
+                                     never the hero pitch.
+```
+
+**Reading rules** for anyone writing about ArcFlow:
+
+- **ArcFlow leads.** Every external surface (docs, README, marketing,
+  conference talks, CLI help, error messages) leads with the engine.
+- **World Store is internal substrate.** It has a brand-clean name so the
+  engine's module tree is navigable, but it is *not* a sellable SKU and
+  it is *never* the hero. Phrases like "the World Store product" or
+  "consume the World Store standalone" are anti-pattern.
+- **World Graph is the hero layer.** When a section needs to point at
+  "what ArcFlow is modeling," it points here.
+- **OZ Cloud is a side story.** It is mentioned where deployment context
+  warrants; it is never headlined as the pitch. The cloud is the
+  convenience tier; the engine is the product.
+- **`arcflow-mount` is proof, not pitch.** When described, it is
+  evidence that the engine is loved by agents (bash + find + cat work
+  natively over typed memory) — not a separate brand surface.
+
 ## Domain map
 
-| Layer | Industry analogs | What it is in ArcFlow | Canonical name | Cypher / API surface |
-|---|---|---|---|---|
-| **Persistent graph + indexes** | Neo4j, Memgraph, DuckDB, DuckPGQ, KuzuDB | Property-graph store + composite/spatial/vector/FTS indexes + WAL | **World Store** (the data layer) | `MATCH`, `CREATE`, `MERGE`, indexes, constraints |
-| **Query engine** | Memgraph engine, DuckDB engine, Velox | Cypher / ISO GQL compiler + planner + executor | **Query Engine** | `EXPLAIN`, `PROFILE`, prepared statements |
-| **Live surface** | Materialize, RisingWave, Flink standing queries | Z-set-incremental standing queries + materialised views | **Live Surface** | `CREATE LIVE VIEW`, `LIVE CALL`, `LIVE MATCH`, `db.subscribe()` |
-| **Event bus** | NATS, Inngest (events), Redis Streams | Topics + durable consumers + wildcard subscriptions + sync request-reply | **Event Bus** | `CREATE TOPIC`, `PUBLISH`, `SUBSCRIBE`, `SUBSCRIBE PATTERN`, `bus.request()` |
-| **Behavior engine** | Unreal Engine 5 behavior trees, Unity ML-Agents, Temporal | Behavior-tree ticks, durable workflows, triggers, programs | **Behavior Engine** | `CREATE TRIGGER`, `CREATE PROGRAM`, `CALL behavior.tick()` |
-| **Algorithm library** | Neo4j GDS, cuGraph, NetworkX | 29+ graph + sensor-fusion + spatial algorithms | **Algorithm Library** | `CALL algo.*`, `CALL algo.fusion.*`, `CALL algo.spatial.*` |
-| **Durability lane** | WAL, RocksDB writes-ahead | Async WAL + checkpointing + hot backup | **Durability Lane** | `arcflow_flush_snapshot()`, replication |
-| **Bindings** | C ABI + per-language wrappers | Python (ctypes), Node (napi-rs), C ABI, Rust SDK | **Bindings** | `import arcflow`, `import { open } from 'arcflow'` |
+| # | Layer | Industry analogs | What it is in ArcFlow | Canonical name | Cypher / API surface |
+|---|---|---|---|---|---|
+| 1 | **Storage substrate** *(internal)* | (no consumer-facing analog — internal substrate, not a sellable surface) | Iceberg-shaped manifests + WAL segments + snapshots + content-addressed parquet blocks; addressed by `lake://` URIs | **World Store** | `lake://`, manifest commit, snapshot pin |
+| 2 | **Observation landing** | Bronze tier in medallion architecture; raw-events bucket | Append-only observation rows with observation-time stamps; the immutable "raw input" plane | **Perception Lake** | virtual-label scans, observation-time queries |
+| 3 | **Typed entity layer** *(★ hero layer)* | Neo4j, Memgraph, KuzuDB | Property-graph nodes + edges + indexes; mission tiers (observed / inferred / predicted); HLC provenance; the catalog that binds graph schema to the substrate | **World Graph** | `MATCH`, `CREATE`, `MERGE`, indexes, constraints |
+| 4 | **Query engine** | Memgraph engine, DuckDB engine, Velox | Cypher / ISO GQL compiler + planner + executor | **Query Engine** | `EXPLAIN`, `PROFILE`, prepared statements |
+| 5 | **Live surface** | Materialize, RisingWave, Flink standing queries | Z-set-incremental standing queries + materialised views | **Live Surface** | `CREATE LIVE VIEW`, `LIVE CALL`, `LIVE MATCH`, `db.subscribe()` |
+| 6 | **Event bus** | NATS, Inngest (events), Redis Streams | Topics + durable consumers + wildcard subscriptions + sync request-reply | **Event Bus** | `CREATE TOPIC`, `PUBLISH`, `SUBSCRIBE`, `SUBSCRIBE PATTERN`, `bus.request()` |
+| 7 | **Behavior engine** | Unreal Engine 5 behavior trees, Unity ML-Agents, Temporal | Behavior-tree ticks, durable workflows, triggers, programs | **Behavior Engine** | `CREATE TRIGGER`, `CREATE PROGRAM`, `CALL behavior.tick()` |
+| 8 | **Algorithm library** | Neo4j GDS, cuGraph, NetworkX | 29+ graph + sensor-fusion + spatial algorithms | **Algorithm Library** | `CALL algo.*`, `CALL algo.fusion.*`, `CALL algo.spatial.*` |
+
+**Cross-cutting surfaces** (not architectural layers):
+
+*Cross-cutting surfaces are not numbered layers. They span multiple layers and are governed by their own conventions — PAT-0014 for bindings, the Durability Lane doctrine for fsync ordering.*
+
+| Surface | What it is | Canonical name |
+|---|---|---|
+| WAL + snapshot replay | Async WAL + checkpointing + hot backup; the durability protocol that spans World Store and World Graph | **Durability** |
+| Language wrappers | C ABI + Python (ctypes), Node (napi-rs), Rust SDK | **Bindings** |
 
 The umbrella label for *the whole binary* is **the world-model engine**
 or **the ArcFlow engine** — never just "the graph database" (which
@@ -45,28 +107,37 @@ never just "the event broker" (which under-sells the graph + query
 ## How the layers compose
 
 ```
-                ┌────────────────────────────────────────────┐
-                │                                            │
-                │            ArcFlow Engine                  │
-                │     (one in-process Rust binary)           │
-                │                                            │
-   Cypher /  ──►│  Query Engine ──► World Store              │
-   GQL          │       │             ▲                      │
-                │       ▼             │                      │
-   Subscribe ──►│  Live Surface ─────┘                       │
-                │       │                                    │
-                │       ▼                                    │
-   Publish   ──►│  Event Bus ──► World Store changes         │
-                │       │           emit events              │
-                │       ▼                                    │
-   Tick      ──►│  Behavior Engine ──► World Store mutations │
-                │       │                                    │
-                │       ▼                                    │
-   CALL algo.* ►│  Algorithm Library ──► reads/writes        │
-                │                                            │
-                │  Durability Lane (WAL + snapshots)         │
-                │                                            │
-                └────────────────────────────────────────────┘
+                ┌──────────────────────────────────────────────────┐
+                │                                                  │
+                │                ArcFlow Engine                    │
+                │         (one in-process Rust binary)             │
+                │                                                  │
+   CALL algo.* ►│  8. Algorithm Library  ──► reads/writes          │
+                │              │                                   │
+                │              ▼                                   │
+   Tick      ──►│  7. Behavior Engine    ──► graph mutations       │
+                │              │                                   │
+                │              ▼                                   │
+   Publish   ──►│  6. Event Bus          ──► topics + DLQ          │
+                │              │                                   │
+                │              ▼                                   │
+   Subscribe ──►│  5. Live Surface       ──► standing-query deltas │
+                │              │                                   │
+                │              ▼                                   │
+   Cypher /  ──►│  4. Query Engine                                 │
+   GQL          │              │                                   │
+                │              ▼                                   │
+                │  3. World Graph        ◄── typed entities        │
+                │              │             (view over Store)     │
+                │              ▼                                   │
+                │  2. Perception Lake    ◄── observation landing   │
+                │              │             (Bronze tier)         │
+                │              ▼                                   │
+   lake://   ──►│  1. World Store        ◄── object substrate      │
+                │                            (manifests, WAL,      │
+                │                            snapshots, parquet)   │
+                │                                                  │
+                └──────────────────────────────────────────────────┘
                      ▲
                      │ Bindings (Python / TS / C / Rust)
                      │
@@ -75,6 +146,49 @@ never just "the event broker" (which under-sells the graph + query
 
 Every layer reads and writes the same `GraphStore`. No serialisation
 between modules. No second store to operate.
+
+## URI schemes
+
+Three schemes, three roles, no overlap. Each scheme is parsed by a
+dedicated typed parser; cross-scheme resolution is explicit via the
+catalog.
+
+| Scheme | Role | Scope | Status |
+|---|---|---|---|
+| **`oz://`** | Brand-level URI scheme. Typed entity handles across **all** OZ products. Today addresses ArcFlow's `workspace / snapshot / label / edge / catalog / partition`. | Brand surface (Layer 3+; extensible across future OZ products) | stable |
+| **`lake://`** | Storage-substrate URI scheme. Layer 1 only. Bytes, parquet, manifests, glob templates. Resolves to `s3://` / `file://` / `gs://` underneath. | World Store (Layer 1) | stable |
+| **`world://`** | Individual typed entity URI scheme. Stable-ID addressing for single nodes or edges with mission tier + provenance. | World Graph (Layer 3), entity-level | reserved |
+
+`oz://lake/<path>` is **rejected** — the `oz://` parser does not
+accept `lake` as an authority. `lake://workspace/<id>/...` is
+**rejected** — workspaces are typed handles, not storage paths.
+
+## Naming-coherence rules
+
+Six rules that bind the namespace decisions to code review:
+
+1. **Layer name = customer-facing brand of that layer.** "World
+   Store", "World Graph". Two words, title-case, no jargon.
+2. **Module path = lowercase, underscore-joined, single token where
+   possible.** `worldstore::*`, `worldgraph::*`. The module names
+   are the lowercase form of the layer names — one logical concept
+   per identifier.
+3. **URI scheme = lowercase, brand-scoped or substrate-scoped, no
+   product names.** `oz://` for brand, `lake://` for substrate.
+   Never `arcflow://` (conflates engine identity with substrate
+   identity).
+4. **Cross-product URIs go under `oz://`.** Cross-substrate URIs
+   never. `oz://studio/...` is forward-compatible if OZ ever ships a
+   Studio surface. `lake://studio/...` is not — `lake://` doesn't
+   know what a Studio is.
+5. **Internal Rust module names never carry the product name
+   redundantly.** Inside `arcflow-core`, modules are `worldstore::*`,
+   not `arcflow_worldstore::*`. The crate prefix carries product
+   identity; modules carry layer identity.
+6. **Brand surfaces use full names; module paths use short names.**
+   Docs and marketing say "World Store"; code says `worldstore`.
+   Two-word brand renders as one-word module to keep paths short
+   and the brand distinct from the path.
 
 ## Banned words
 
@@ -93,19 +207,23 @@ that pre-date this convention are grandfathered until they migrate.
 
 When shipping a new feature, name it from its layer:
 
+- A new manifest format, codec, or storage primitive → "**World Store** feature"
+- A new observation-time discipline rule or sensor-ingest path → "**Perception Lake** feature"
+- A new index, type, or constraint on typed entities → "**World Graph** feature"
+- A new planner rewrite, cost model, or executor capability → "**Query Engine** feature"
 - A new aggregator that runs in standing queries → "**Live Surface** feature"
-- A new CALL procedure that does an algorithm → "**Algorithm Library** entry"
 - A new pub/sub primitive (e.g. wildcard subscriptions) → "**Event Bus** feature"
 - A new behavior-tree node → "**Behavior Engine** primitive"
-- A new index, type, or constraint → "**World Store** feature"
+- A new CALL procedure that does an algorithm → "**Algorithm Library** entry"
 
 In commit subjects this looks like:
 
 ```
+feat(core/worldstore): partition-pruning index in the manifest reader
+feat(core/worldgraph): composite index for (label, position_prop)
 feat(core/pubsub): NATS-compatible topic wildcard subscriptions
 feat(core/algo): weighted_centroid fusion CALL procedure
 feat(core/live): EMA aggregator over the Live Surface
-feat(core/store): composite index for (label, position_prop)
 ```
 
 Avoid genericised commits like `feat(core): add stuff` — the layer
