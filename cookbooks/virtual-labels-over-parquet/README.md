@@ -23,11 +23,18 @@ class — a million frames, a billion sensor samples, a season of
 telemetry — it forced a memory profile that grew with the source.
 
 The substrate rewrite that landed in `0.8.0` separates the two
-concerns. The **World Graph** owns identity, topology, and mutable
-low-cardinality state. The **Perception Lake** owns immutable
-observation rows — every byte stays in the source Parquet partitions.
-The graph holds the typed schema, the adjacency, and a catalog
-pointer; the row data stays where it was, accessed via columnar scan.
+concerns. The **World Graph** (Layer 3) owns identity, topology, and
+mutable low-cardinality state. The **World Store** (Layer 1) owns the
+durable bytes — every immutable row stays in the source Parquet
+partitions, addressed via `lake://` URIs. The Graph holds the typed
+schema, the adjacency, and a catalog pointer; the row data stays
+where it was, accessed via columnar scan.
+
+(The Perception Lake — Layer 2 — is the reserved observation-time
+discipline layer that will sit between the Store and the Graph for
+sensor-grade ingest workloads. It does not ship in `0.8.0`; today's
+workloads land directly in canonical World Store and are tier-promoted
+by the engine. See [layer doctrine](/docs/concepts/layers/world-store).)
 
 A *virtual label* is the syntactic anchor for that separation. You
 declare it once; from then on, your Cypher queries treat the
@@ -119,11 +126,10 @@ label and inspect the catalog manifest.
 
 ## Query against virtual labels
 
-The intent at the query surface is that virtual labels are
-indistinguishable from Owned labels:
+Virtual labels are indistinguishable from Owned labels at the query
+surface:
 
 ```cypher
--- The query you'd write
 MATCH (f:Frame {entity_id: 'Unit-01'})
 WHERE f.ts >= datetime('2026-03-14T08:00:00')
   AND f.ts <  datetime('2026-03-14T09:00:00')
@@ -131,16 +137,53 @@ RETURN f.ts, f.x, f.y, f.speed
 ORDER BY f.ts
 ```
 
-The planner-side rewriter for `MATCH (:VirtualLabel ...)` patterns —
-which decomposes the pattern into a manifest scan + Parquet
-predicate-pushdown — is the next wave of the substrate work. Until it
-lands, queries against virtual labels return a typed
-`QueryError::VirtualLabelNotYetQueryable`. The registration path is
-real bytes on disk now; the read path is wired but gated.
+The planner-side rewriter decomposes `MATCH (:Frame ...)` patterns
+into a manifest scan + Parquet predicate-pushdown. Partition pruning
+narrows the file set; row-group statistics narrow it again; the
+column-pruned scan reads only the columns the projection asks for.
+Row data never enters engine RAM.
 
-What ships now: registration, schema validation against the Parquet
-files, catalog manifest persistence, snapshot-pinned manifest reads,
-the `oz://` URI vocabulary for the addressable resources.
+## Derived properties with COMPUTE
+
+The DDL form has one more lever — a `COMPUTE` clause that declares
+*derived* properties on the virtual label. The Smart Reader evaluates
+the expressions at row-decode time against the decoded `RecordBatch`;
+the values surface in `Node.properties` alongside the parquet-resident
+columns. Row data on disk is unchanged.
+
+```cypher
+CREATE NODE LABEL FrameRelToTarget VIRTUAL FROM PARTITION
+  'lake://fleet/telemetry/{mission}/{day}/{shard}'
+  COMPUTE
+    position_relative_to_target = agent_position - target_position,
+    distance_to_target = sqrt(
+        (agent_position[0] - target_position[0]) ^ 2 +
+        (agent_position[1] - target_position[1]) ^ 2 +
+        (agent_position[2] - target_position[2]) ^ 2
+    );
+```
+
+```cypher
+MATCH (f:FrameRelToTarget)
+WHERE f.mission = 'survey-NW-quadrant' AND f.day = '2026-03-14'
+  AND f.distance_to_target < 5.0
+RETURN f.agent_id, f.distance_to_target
+ORDER BY f.distance_to_target
+LIMIT 10
+```
+
+Predicates on a computed column push down through the planner —
+partition + row-group pruning happens *before* per-row arithmetic. For
+a quarter-scale operational telemetry query, that collapses a
+311M-row candidate set to ~25 surviving rows before the expression
+runs.
+
+The expression language is the Arrow-evaluable subset of Cypher:
+arithmetic, array indexing, `sqrt` / `abs` / `floor` / `ceil` / `pow`,
+comparisons. Graph traversals and per-row Cypher procedures are not
+callable inside `COMPUTE`; they remain callable in the surrounding
+query. See [Virtual computed columns](https://oz.com/docs/concepts/virtual-computed-columns)
+for the full surface.
 
 ## What stays Owned vs Virtual
 
@@ -193,6 +236,7 @@ agree on the IDs.
 uv sync
 uv run python 00-make-sample.py     # synthesizes data/lake/<table>/<part-key>=<value>/*.parquet
 uv run python 01-register.py        # registers the virtual label + inspects the manifest
+uv run python 02-compute.py         # registers a COMPUTE-extended virtual label + queries it
 ```
 
 `data/lake/` ≤ 50 KB after the first run; the synthesizer is

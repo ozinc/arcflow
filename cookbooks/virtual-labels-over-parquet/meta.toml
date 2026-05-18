@@ -1,12 +1,13 @@
 slug = "virtual-labels-over-parquet"
 title = "Virtual Labels Over Parquet — Lakehouse Fast-Path"
 audience = ["python", "data-engineer", "ml"]
-tags = ["lakehouse", "parquet", "virtual-labels", "iceberg"]
+tags = ["lakehouse", "parquet", "virtual-labels", "iceberg", "computed-columns"]
 arcflow_apis = [
     "python.ArcFlow.execute",
     "python.ArcFlow.register_virtual_partition",
     "python.ArcFlow.close",
     "worldcypher.CREATE_NODE_LABEL_VIRTUAL",
+    "worldcypher.CREATE_NODE_LABEL_VIRTUAL_COMPUTE",
 ]
 external_deps = [
     "pyarrow >= 16",

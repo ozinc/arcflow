@@ -14,9 +14,9 @@ After this step:
   registration call.
 
 The planner-side rewriter for `MATCH (:TelemetrySample ...)` patterns
-is the next wave of substrate work; until it lands, queries against
-virtual labels return `QueryError::VirtualLabelNotYetQueryable`. The
-registration path itself is real-bytes-on-disk now.
+decomposes the pattern into a manifest-pruned, predicate-pushed
+Parquet scan. `count`, filter, and projection light up natively
+through the substrate; row data never enters engine RAM.
 
 Run:
     uv run python 01-register.py
@@ -88,15 +88,15 @@ def main() -> None:
             f"resolver_kind={entry.get('resolver_kind')!r}"
         )
 
-    # ── What would happen on query (target end-state) ──
+    # ── Query against the virtual label ──
     #
     # `MATCH (t:TelemetrySample) WHERE t.temp_c > 25.0 RETURN count(t)`
-    # — once the planner-side rewriter is wired through, this rewrites
-    # to a manifest-pruned, predicate-pushed Parquet scan. Today it
-    # returns QueryError::VirtualLabelNotYetQueryable; the cookbook
-    # documents the target shape so consumers know what to expect.
-    print("\nnext wave: planner-side rewriter — `MATCH (:TelemetrySample)`")
-    print("           is currently `QueryError::VirtualLabelNotYetQueryable`")
+    # resolves through the planner-side rewriter: partition pruning
+    # narrows the file set, row-group statistics narrow it again, the
+    # column-pruned scan reads only the columns the projection asks
+    # for. Row data never enters engine RAM.
+    print("\nquery surface: `MATCH (:TelemetrySample)` patterns resolve")
+    print("               through the predicate-pushdown rewriter; see 02-compute.py")
 
     db.close()
     print("\nOK")
