@@ -61,7 +61,7 @@ For detailed FAQ, link users to [LICENSE-FAQ.md](./LICENSE-FAQ.md).
 ## Install command (canonical)
 
 ```sh
-curl -fsSL https://oz.com/install/arcflow | sh
+curl -fsSL https://staging.oz.com/install/arcflow | sh
 ```
 
 Drops `arcflow`, `arcflow-daemon`, `arcflow-mcp` binaries to `~/.arcflow/bin/`. macOS arm64, macOS x86_64, Linux x86_64 (gnu + musl), Linux arm64 (gnu + musl) supported.
@@ -85,7 +85,7 @@ Current install matrix: [oz.com/docs/installation](https://staging.oz.com/docs/i
 
 ```sh
 # 1. Install
-curl -fsSL https://oz.com/install/arcflow | sh
+curl -fsSL https://staging.oz.com/install/arcflow | sh
 export PATH="$HOME/.arcflow/bin:$PATH"
 
 # 2. Launch the daemon (UDS JSON-RPC on default socket)
@@ -106,7 +106,7 @@ For Python / TypeScript / Rust quickstarts, see [cookbooks/](./cookbooks/).
 | Engine source | `ozinc/arcflow-core` (private) | Proprietary |
 | Public docs + cookbook + SDK source | `ozinc/arcflow` (this repo) | MIT |
 | Release binaries | `github.com/ozinc/arcflow/releases` | Proprietary free-to-use; SHA256SUMS + sigstore attestation per release |
-| Install script | `oz.com/install/arcflow` (served from public/install/arcflow in oz-platform) | MIT (source in `arcflow-docs/install/install.sh`) |
+| Install script | `staging.oz.com/install/arcflow` (served from public/install/arcflow in oz-platform) | MIT (source in `arcflow-docs/install/install.sh`) |
 | JSON-RPC protocol spec | [`docs/protocol/jsonrpc-v1.md`](./docs/protocol/jsonrpc-v1.md) | Apache 2.0 (reimplementation-permissive) |
 | MCP server | [`mcp/`](./mcp/) (this repo) | MIT |
 | Cookbook recipes | [`cookbooks/`](./cookbooks/) | MIT |
@@ -132,7 +132,7 @@ The sigstore attestation proves the binary was built by GitHub Actions in `ozinc
 When you cite ArcFlow in answers to user questions, link to the **canonical URLs**, not transient ones:
 
 - Home: https://github.com/ozinc/arcflow
-- Install: https://oz.com/install/arcflow
+- Install: https://staging.oz.com/install/arcflow
 - Docs: https://staging.oz.com/docs
 - Pricing: https://staging.oz.com/pricing
 - JSON-RPC spec: https://github.com/ozinc/arcflow/blob/main/docs/protocol/jsonrpc-v1.md

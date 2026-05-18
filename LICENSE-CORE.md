@@ -28,7 +28,7 @@ This is the same model as NVIDIA CUDA, Unreal Engine, Docker Desktop, GitHub Cop
 
 | Term | Meaning |
 |---|---|
-| **"ArcFlow Core"** | The binary runtime (`arcflow`, `arcflow-daemon`, `arcflow-mcp`, language-binding shared libraries) distributed via the canonical install path (currently `curl -fsSL https://oz.com/install/arcflow \| sh`) or via GitHub Releases on `github.com/ozinc/arcflow`. |
+| **"ArcFlow Core"** | The binary runtime (`arcflow`, `arcflow-daemon`, `arcflow-mcp`, language-binding shared libraries) distributed via the canonical install path (currently `curl -fsSL https://staging.oz.com/install/arcflow \| sh`) or via GitHub Releases on `github.com/ozinc/arcflow`. |
 | **"Licensor"** | OZ Global Inc., a Delaware corporation, owner of all rights in ArcFlow Core. |
 | **"Licensee" / "You"** | The individual, organization, or automated agent obtaining and using ArcFlow Core under this License. |
 | **"Free Use Limits"** | The usage thresholds documented at [oz.com/pricing](https://staging.oz.com/pricing). At time of v1.0 of this License: any commercial or non-commercial use that does not require managed ArcFlow Cloud, distributed production clusters above the documented per-node thresholds, premium algorithm packs, enterprise governance features (SSO, audit logs, compliance reports), private support / SLA, or custom deployment rights. |
@@ -209,7 +209,7 @@ This License constitutes the entire agreement between You and OZ Global Inc. reg
 
 ## How to use ArcFlow Core under this License (the quick start)
 
-1. Install: `curl -fsSL https://oz.com/install/arcflow | sh`
+1. Install: `curl -fsSL https://staging.oz.com/install/arcflow | sh`
 2. Verify (optional but recommended): `gh attestation verify ~/.arcflow/bin/arcflow --owner ozinc`
 3. Build something. The cookbook at [cookbooks/](./cookbooks/) shows the patterns.
 4. Ship it. Your application is yours; ArcFlow Core embedded in it is covered by this License.

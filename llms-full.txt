@@ -2,8 +2,27 @@
 
 ArcFlow is the operational world model layer — the persistence tier for actual world state. Neural world models simulate possible futures; ArcFlow records what actually happened. Spatial-temporal, confidence-scored, embedded. Space and time are first-class dimensions (not extensions). Every node carries an observation class (observed/inferred/predicted) and confidence score. Full GQL (ISO/IEC 39075) with Cypher compatibility. Runs in-process: browser (WASM), Node.js, Python, Rust, native CLI. No server, no Docker — the engine is 5MB and runs inside your process.
 
+**Eight engines. One query language. One coherent data model.** Graph storage, query execution, live streaming views, event bus, behavior engine, algorithm library, durability, and language bindings — pre-integrated, designed from scratch for spatial-temporal workloads. One ISO GQL dialect describes the schema, the query, the live view, the trigger, and the algorithm call. Sub-millisecond latency where assembled stacks measure in tens.
+
 This file contains the complete API surface, GQL (WorldCypher) syntax, and all patterns
 needed to integrate ArcFlow into any TypeScript/Node.js application.
+
+## Architecture — eight layers (bottom → top)
+
+ArcFlow's surface decomposes into eight contract-bearing layers. **ArcFlow is the hero pitch** — "the blazing-fast graph engine for modeling the real world." World Store is internal substrate with a brand-clean name; it is **not** a sellable SKU or a customer-facing product. World Graph (Layer 3) is the **hero layer** — where typed real-world entities live.
+
+1. **World Store** — storage substrate (internal). Iceberg-shaped manifests, WAL segments, snapshots, content-addressed parquet blocks. Addressed by `lake://bucket/path/{template}` URIs (substrate addressing, not a customer-facing surface).
+2. **Perception Lake** — append-only observation landing (Bronze tier; reserved — no substrate ships today). Observation-time stamped, immutable. Where inbound sensor / event / IoT data will first touch durable storage when the layer activates.
+3. **World Graph** ★ — typed entity layer (the hero layer). Nodes, edges, indexes, mission tiers (observed / inferred / predicted), HLC provenance, the catalog. A view over the World Store. Addressed by `oz://workspace/...`, `oz://snapshot/<digest>`, `oz://label/<name>`, `oz://edge/<name>`, `oz://catalog`, `oz://partition/<digest>`.
+4. **Query Engine** — Cypher / ISO GQL parser, planner, executor. Predicate pushdown, virtual-label rewriting, join ordering, cost-based plan selection.
+5. **Live Surface** — standing queries + Z-set deltas + materialised views. `CREATE LIVE VIEW`, `db.subscribe()`.
+6. **Event Bus** — in-process pub/sub. Topics, consumer groups, ack/nack, dead-letter handling, WAL-backed durability.
+7. **Behavior Engine** — declarative behaviors, triggers, durable workflows, programs. Subgraphs that *act*.
+8. **Algorithm Library** — built-in `CALL algo.*` and `CALL arcflow.*` primitives — PageRank, BFS, HNSW vector search, R-tree spatial probes, GraphRAG, GPU-accelerated kernels.
+
+The split between Layer 1 (World Store) and Layer 3 (World Graph) is a module boundary, not a process boundary — ArcFlow stays one in-process engine. The boundary lets the engine's storage concerns evolve on their own SLA, and lets the typed entity layer be rebuilt from the substrate on engine start.
+
+Layer reference docs: `docs/concepts/layers/<name>.mdx`.
 
 ## Installation
 
@@ -17,7 +36,7 @@ Currently shipped:
 
 ```bash
 # Native CLI
-curl -fsSL https://oz.com/install/arcflow | sh
+curl -fsSL https://staging.oz.com/install/arcflow | sh
 ```
 
 The Python, Node, and Rust bindings are status: planned (RAM-C2 / 2026-Q3) —
@@ -161,6 +180,40 @@ epoch = db.register_virtual_partition(
 )   # → int (monotonic manifest epoch)
 # Workspace addressing: oz://workspace, oz://snapshot/<digest>,
 # oz://label/<name>, oz://edge/<name>, oz://catalog, oz://partition/<digest>.
+
+# ── Virtual computed columns ──
+# Derived properties declared on a virtual label. The Smart Reader
+# evaluates the expressions at row-decode time against the decoded
+# RecordBatch; values surface in Node.properties alongside
+# parquet-resident columns; predicates push down through the planner.
+# Row data on disk is unchanged — the derived properties exist only as
+# values flowing through the scan.
+db.execute("""
+    CREATE NODE LABEL FrameRelToTarget VIRTUAL FROM PARTITION
+      'lake://fleet/telemetry/{mission}/{day}/{shard}'
+      COMPUTE
+        position_relative_to_target = agent_position - target_position,
+        distance_to_target = sqrt(
+            (agent_position[0] - target_position[0]) ^ 2 +
+            (agent_position[1] - target_position[1]) ^ 2 +
+            (agent_position[2] - target_position[2]) ^ 2
+        )
+""")
+# Predicate on a computed column — pushable when input-column stats
+# are sufficient to prune row groups before evaluation.
+db.execute("""
+    MATCH (f:FrameRelToTarget)
+    WHERE f.mission = 'survey-NW-quadrant' AND f.day = '2026-03-14'
+      AND f.distance_to_target < 5.0
+    RETURN f.agent_id, f.distance_to_target
+    ORDER BY f.distance_to_target LIMIT 10
+""")
+# Expression language: parquet-resident columns + partition-key
+# variables (typed Int/String) + earlier computed columns
+# (topologically ordered). Arrow-evaluable functions only — arithmetic,
+# array indexing, sqrt/abs/floor/ceil/pow, comparisons. Graph
+# traversals + per-row Cypher procedures are not callable from inside
+# COMPUTE; they remain callable in the surrounding query.
 
 # ── Prepared statements ──
 stmt = db.prepare("MATCH (e:Entity {id: $eid}) RETURN e.x, e.y")
@@ -330,6 +383,41 @@ CALL algo.contradictions()
 CALL algo.audienceProjection('Person=0.9,Company=0.5')
 CALL algo.factsByRegime('2024')
 CALL algo.multiModalFusion()
+
+# Causal reasoning — BFS over CAUSED_BY edges with cumulative confidence decay
+CALL arcflow.causalLineage(start_node: id(s), depth: 4)
+CALL arcflow.causalPath(from: id(a), to: id(b), depth: 8)
+
+# Multi-source disagreement (categorical / numeric / spatial Weiszfeld geomedian)
+CALL arcflow.multi_source_disagreement(
+  entity_label: "Charting", group_property: "play_id",
+  source_property: "source", value_property: "run_pass",
+  prior_weight_property: "_confidence",
+  disagreement_kind: "categorical")
+  YIELD source, value, agreement_class, group_consensus, dispute_score
+
+# Trajectory analytics — sports / tracking / autonomous-vehicle telemetry
+CALL arcflow.trajectory.nearestAtFrame(
+  entity_label: "Player", frame_property: "frame",
+  x_property: "x", y_property: "y",
+  frame: 1024, qx: 50.0, qy: 23.5, k: 5)
+CALL arcflow.trajectory.leverageGain(
+  entity_label: "Player",
+  chaser_filter_property: "player_id", chaser_filter_value: 28,
+  target_filter_property: "player_id", target_filter_value: 12)
+CALL arcflow.trajectory.releasePoint(
+  entity_label: "Player",
+  filter_property: "player_id", filter_value: 5)
+CALL arcflow.trajectory.shadowedBy(
+  entity_label: "Player",
+  attacker_filter_property: "player_id", attacker_filter_value: 5,
+  target_filter_property: "player_id", target_filter_value: 12,
+  defender_filter_property: "player_id", defender_filter_value: 28,
+  angle_tol_rad: 0.1)
+
+# Counterfactual branching — fork the World Graph at a WAL seq
+CALL arcflow.counterfactual.branchAt(name: 'rollout-1', seq: 42)
+  YIELD branch, base_seq, status
 ```
 
 ### Indexes and constraints

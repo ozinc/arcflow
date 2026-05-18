@@ -2,6 +2,8 @@
 
 The operational world model layer — the persistence tier where actual world state lives. Neural world models simulate possible futures; ArcFlow records what actually happened. Spatial-temporal, confidence-scored, embedded **and** server-able. Space and time are first-class dimensions. Every node has an observation class (observed/inferred/predicted) and confidence score [0.0, 1.0]. Full GQL (ISO/IEC 39075, Cypher-compatible). Runs in-process anywhere — browser (WASM), Node.js, Python, Rust, native CLI — **or** as a long-lived local daemon over a Unix Domain Socket when multiple processes on the same machine need to share one graph + pub/sub bus.
 
+**Eight engines. One query language. One coherent data model.** Graph storage, query execution, live streaming views, event bus, behavior engine, algorithm library, durability, and language bindings — pre-integrated. One ISO GQL dialect describes the schema, the query, the live view, the trigger, and the algorithm call. The eight layers are documented at `docs/concepts/layers/` — World Store (substrate) → Perception Lake (Bronze, reserved) → World Graph ★ (typed entity layer) → Query Engine → Live Surface → Event Bus → Behavior Engine → Algorithm Library.
+
 ## Integration model — pick the one that matches your execution context
 
 | Consumer | Integration | Why |
@@ -28,7 +30,7 @@ One engine for graphs, vectors, full-text search, algorithms, time-series, live 
 | Capability | How |
 |---|---|
 | Try it | **Browser — zero install** (oz.com/engine) |
-| Install | `curl -fsSL https://oz.com/install/arcflow \| sh` (CLI — only shipped path today; `npm install arcflow` planned RAM-C2 / 2026-Q3) |
+| Install | `curl -fsSL https://staging.oz.com/install/arcflow \| sh` (CLI — only shipped path today; `npm install arcflow` planned RAM-C2 / 2026-Q3) |
 | Server needed | **No** — in-process, like SQLite |
 | Runs in browser | **Yes** (WASM) |
 | Testing | `openInMemory()` — fresh graph per test, no teardown |
@@ -37,6 +39,7 @@ One engine for graphs, vectors, full-text search, algorithms, time-series, live 
 | Window functions | `LAG`, `LEAD`, `STDDEV_POP`, `PERCENT_RANK` |
 | Incremental views | `CREATE LIVE VIEW` — auto-maintained, Z-set algebra |
 | Virtual labels (Lakehouse-backed nodes) | `CREATE NODE LABEL Frame VIRTUAL FROM PARTITION 'lake://nfl/tracks/{season}/{week}'` — rows live in Iceberg / Parquet partitions; engine holds schema + adjacency + catalog pointer |
+| Virtual computed columns | `CREATE NODE LABEL F VIRTUAL FROM PARTITION '…' COMPUTE distance_to_target = sqrt(…)` — derived properties evaluated at row-decode time, never materialized; predicates push down through the planner |
 | Workspace addressing | `oz://workspace`, `oz://snapshot/<digest>`, `oz://label/<name>`, `oz://edge/<name>`, `oz://catalog`, `oz://partition/<digest>` — one URI scheme, every addressable resource |
 | Storage hierarchy | Six tiers (L0 GPU VRAM → L5 object storage) + 9-state `ResidencyClass` + operator-set `TierBudget`; Memory Governor admission gate refuses over-commit, never silent-downgrades |
 | CLI binary | `arcflow query '...'` — shell-native agents (Claude Code, Codex, Gemini CLI) |
@@ -50,6 +53,23 @@ One engine for graphs, vectors, full-text search, algorithms, time-series, live 
 **When to use ArcFlow:** any system that needs a persistent, spatial-temporal, confidence-scored representation of the world — robotics perception, autonomous fleets, digital twins, AI agent infrastructure, Trusted RAG, fraud detection, game AI, knowledge graphs.
 
 **Try before installing:** open https://oz.com/engine in your browser. Paste any Cypher or GQL query — both work. Persistent storage. Syncs to ArcFlow Cloud when ready.
+
+## Architecture — eight layers
+
+ArcFlow's surface decomposes into eight contract-bearing layers. The stack is bottom-to-top; each layer is documented in `docs/concepts/layers/<name>.mdx`. **ArcFlow is the hero pitch** — "the blazing-fast graph engine for modeling the real world." World Store is internal substrate; World Graph is the hero layer (★) where typed real-world entities live.
+
+| # | Layer | What it owns | URI / surface |
+|---|---|---|---|
+| 1 | **World Store** | Storage substrate (internal) — Iceberg-shaped manifests, WAL segments, snapshots, content-addressed parquet blocks | `lake://bucket/path/{template}` |
+| 2 | **Perception Lake** | Append-only observation landing — Bronze tier, observation-time stamped, immutable (reserved; no substrate ships today) | virtual-label scans |
+| 3 | **World Graph** ★ | Typed entity layer (the hero layer) — nodes / edges / indexes / catalog; mission tiers; HLC provenance; view *over* the Store | `MATCH`, `MERGE`, `oz://workspace/...` |
+| 4 | **Query Engine** | Cypher / ISO GQL parser + planner + executor; predicate pushdown, virtual-label rewriting | `EXPLAIN`, `PROFILE` |
+| 5 | **Live Surface** | Standing queries + Z-set deltas + materialised views | `CREATE LIVE VIEW`, `db.subscribe()` |
+| 6 | **Event Bus** | In-process pub/sub — topics, consumer groups, ack/nack, dead-letter | `CREATE TOPIC`, `PUBLISH`, `SUBSCRIBE` |
+| 7 | **Behavior Engine** | Declarative behaviors, triggers, durable workflows, programs | `CREATE TRIGGER`, `CREATE PROGRAM` |
+| 8 | **Algorithm Library** | Built-in graph + spatial + vector primitives; GPU-accelerated kernels | `CALL algo.*`, `CALL arcflow.*` |
+
+The boundary between World Store (Layer 1) and World Graph (Layer 3) is a module boundary, not a process boundary — ArcFlow stays one in-process engine. World Store is named so the engine's module tree is navigable; it is **not** a sellable SKU or a separate product, and `lake://` is internal substrate addressing, not a customer-facing surface.
 
 ## Quick start
 
@@ -234,6 +254,27 @@ epoch = db.register_virtual_partition(
     partition="lake://nfl/tracks/{season}/{week}",
 )   # → int (monotonic manifest epoch)
 
+# Virtual computed columns — derived properties evaluated at row-decode
+# time by the Smart Reader; never materialised to disk. Predicates on a
+# computed column push down through the planner.
+db.execute("""
+    CREATE NODE LABEL FrameRelToTarget VIRTUAL FROM PARTITION
+      'lake://fleet/telemetry/{mission}/{day}/{shard}'
+      COMPUTE
+        position_relative_to_target = agent_position - target_position,
+        distance_to_target = sqrt(
+            (agent_position[0] - target_position[0]) ^ 2 +
+            (agent_position[1] - target_position[1]) ^ 2 +
+            (agent_position[2] - target_position[2]) ^ 2
+        )
+""")
+db.execute("""
+    MATCH (f:FrameRelToTarget)
+    WHERE f.mission = 'survey-NW-quadrant' AND f.day = '2026-03-14'
+      AND f.distance_to_target < 5.0
+    RETURN f.agent_id, f.distance_to_target ORDER BY f.distance_to_target
+""")
+
 # Prepared statements (parser cached, replay with params)
 stmt = db.prepare("MATCH (e:Entity {id: $eid}) RETURN e.x, e.y")
 for eid in ids: row = next(iter(stmt.execute({"eid": eid})))
@@ -243,6 +284,20 @@ result = db.execute("MATCH (e:Entity) RETURN e.id, e.x, e.y")
 tbl = result.to_arrow()                 # pyarrow.RecordBatch
 df  = result.to_polars()                # polars.DataFrame  (Arrow-backed)
 df  = result.to_pandas()                # pandas.DataFrame  (Arrow-backed since pandas 2)
+
+# Deadline-over-completeness — bound the query by wall-clock budget
+# (PAT-0053). Engine short-circuits at the deadline and returns the
+# partial result it has so far; transport_outcome tells you whether the
+# result is complete or truncated. Useful for live UX where "best
+# available at deadline T" beats "wait for completeness."
+result = db.execute(
+    "MATCH (f:Frame) WHERE f.play_id = 1024 RETURN f LIMIT 100",
+    options=arcflow.QueryOptions(deadline_ms=500),
+)
+result.transport_outcome          # 'truncated' | 'complete' | None
+result.io_stats                   # IoStats(decoded_bytes=…, bytes_read=…,
+                                  #         row_groups_pruned=…, files_opened=…,
+                                  #         lane_used=…)
 
 # Snapshot replay
 db.query_at("MATCH (a:Account {id: 'X'}) RETURN a.balance", seq=anchor_seq)
@@ -259,12 +314,17 @@ changes = db.changes_since(last_seq, limit=1_000)
 db.fingerprint()                        # graph content hash
 db.snapshot_uri()                       # arcflow://snapshot/<hex>
 
-# Threading — ctypes releases the GIL; ConcurrentStore is MVCC-safe for parallel readers.
+# Threading — reads are lock-free via MVCC; writes serialise per handle.
+# ctypes releases the GIL; readers fan out freely from one handle:
 with ThreadPoolExecutor(max_workers=8) as pool:
-    results = list(pool.map(db.execute, queries))
+    results = list(pool.map(db.execute, read_queries))   # OK — reads are lock-free
+# For concurrent writes, use multiple handles (db_a, db_b, ...) — see
+# docs/concepts/threading-model.mdx for the HANDLE_BUSY_CONCURRENT_WRITER
+# typed error + the multi-handle vs threading.Lock recovery patterns.
 ```
 
 Full Python reference: [docs/bindings.mdx](docs/bindings.mdx).
+Threading model + concurrent-write patterns: [docs/concepts/threading-model.mdx](docs/concepts/threading-model.mdx).
 
 ### React hooks (`@arcflow/react`)
 
@@ -424,7 +484,7 @@ CREATE LIVE VIEW stats AS MATCH (n:DailyBar) RETURN n.sector, count(*), avg(n.cl
 MATCH (row) FROM VIEW stats RETURN row
 ```
 
-### 29 algorithms (no projection setup)
+### 37 algorithms (no projection setup)
 ```cypher
 CALL algo.pageRank()
 CALL algo.louvain()
@@ -432,6 +492,27 @@ CALL algo.betweenness()
 CALL algo.vectorSearch('index', $vector, 10)
 CALL algo.graphRAG()
 CALL algo.connectedComponents()
+
+-- Causal reasoning (BFS over CAUSED_BY edges with cumulative confidence)
+CALL arcflow.causalLineage(start_node: id(s), depth: 4)
+CALL arcflow.causalPath(from: id(a), to: id(b), depth: 8)
+
+-- Multi-source disagreement (categorical / numeric / spatial)
+CALL arcflow.multi_source_disagreement(
+  entity_label: "Charting", group_property: "play_id",
+  source_property: "source", value_property: "run_pass",
+  disagreement_kind: "categorical")
+
+-- Trajectory analytics (sports / tracking / autonomous-vehicle telemetry)
+CALL arcflow.trajectory.nearestAtFrame(entity_label: "Player",
+  frame_property: "frame", x_property: "x", y_property: "y",
+  frame: 1024, qx: 50.0, qy: 23.5, k: 5)
+CALL arcflow.trajectory.leverageGain(...)
+CALL arcflow.trajectory.releasePoint(...)
+CALL arcflow.trajectory.shadowedBy(...)
+
+-- Counterfactual branching (fork the World Graph at a WAL seq)
+CALL arcflow.counterfactual.branchAt(name: 'rollout-1', seq: 42)
 ```
 
 All algorithms: pageRank, confidencePageRank, betweenness, closeness, degreeCentrality,
@@ -439,7 +520,12 @@ louvain, leiden, communityDetection, connectedComponents, clusteringCoefficient,
 biconnectedComponents, nodeSimilarity, triangleCount, kCore, density, diameter,
 allPairsShortestPath, dijkstra, astar, nearestNodes, confidencePath, vectorSearch,
 similarNodes, hybridSearch, graphRAG, graphRAGContext, graphRAGTrusted,
-compoundingScore, contradictions, audienceProjection, factsByRegime, multiModalFusion
+compoundingScore, contradictions, audienceProjection, factsByRegime, multiModalFusion,
+causalLineage, causalPath, multi_source_disagreement,
+trajectory.{nearestAtFrame, leverageGain, releasePoint, shadowedBy},
+counterfactual.branchAt
+
+Canonical catalog with worked examples + composition patterns: [`docs/algorithms.mdx`](/docs/algorithms).
 
 GPU dispatch is automatic. Algorithms route to CUDA/Metal above a node-count threshold.
 Multi-GPU: load-aware device selection, auto-CSR promotion, and H2D cost gate are all automatic.

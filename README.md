@@ -1,8 +1,10 @@
 # ArcFlow
 
-**The operational world model layer.** Spatial, temporal, confidence-scored, embedded.
+**The blazing-fast graph engine for modeling the real world.** Spatial, temporal, confidence-scored, in-process.
 
-ArcFlow is an in-process database for systems that need to reason about the physical world in real time. It runs inside your application — no server, no round-trip — and unifies graph relationships, geospatial indexes, time-versioned history, vector search, full-text search, and live standing queries behind a single ISO GQL surface.
+**Eight engines. One query language. One coherent data model.** Graph storage, query execution, live streaming views, an event bus, a behavior engine, an algorithm library, durability, and language bindings — pre-integrated, designed from scratch for spatial-temporal workloads. One ISO GQL dialect describes the schema, the query, the live view, the trigger, and the algorithm call.
+
+ArcFlow runs inside your application — no server, no round-trip — and unifies graph relationships, geospatial indexes, time-versioned history, vector search, full-text search, and live standing queries behind a single surface. The operational world model layer of your stack: what neural world models simulate, ArcFlow records.
 
 ```bash
 # CLI — shell-native (the only shipped install today)
@@ -82,19 +84,24 @@ db.subscribe(`
 
 ## Built for AI coding agents
 
-ArcFlow is designed to be addressable by agents — Claude Code, Codex, Cursor, Gemini CLI, Aider, MCP-aware chat UIs. Three agent-native surfaces:
+ArcFlow is designed to be addressable by agents — Claude Code, Codex, Cursor, Gemini CLI, Aider, MCP-aware chat UIs. The agent-native tier ladder (preferred → fallback):
 
 ```bash
-# 1. CLI — shell-native, composable like grep, no protocol overhead
+# 1. CLI + --json fastpath (★ PRIMARY for CLI agents)
 arcflow query "MATCH (e:Entity) RETURN e.name LIMIT 5" --json
 
-# 2. Filesystem projection — write the world model to a directory tree
-arcflow project ./world-model --json
-# → agents grep / cat / rg the directory directly, no Cypher required
+# 2. Filesystem mount — the world model as files; grep / cat / rg over typed memory
+arcflow mount ~/.arcflow/workspace ./world-fs
+find ./world-fs/nodes/Entity -name '*.json' | xargs jq '.confidence'
 
-# 3. MCP server — for cloud chat UIs (Claude.ai, browser agents)
+# 3. napi-rs / PyO3 / FFI (★ PRIMARY for in-process embedded apps)
+#    pip install oz-arcflow / npm install arcflow
+
+# 4. MCP server (cloud chat UIs only — Claude.ai, ChatGPT)
 npx arcflow-mcp
 ```
+
+If an agent has a shell, give it the CLI; MCP is the integration of last resort for chat surfaces that don't. See [Threading Model](docs/concepts/threading-model.mdx) for the many-reader / one-writer concurrency contract that lets agents fan out reads freely.
 
 Every result envelope — CLI JSON, SDK return value, HTTP response, MCP tool envelope — carries a snapshot URI of the form `arcflow://snapshot/<hex>`. Agents can replay any historical query bit-for-bit:
 
@@ -109,7 +116,8 @@ For complete API context, point your agent at:
 | [`AGENTS.md`](AGENTS.md) | Full public API reference — types, GQL extensions, all surfaces |
 | [`llms.txt`](llms.txt) | Compact reference for quick orientation |
 | [`llms-full.txt`](llms-full.txt) | Complete reference with every procedure and WorldCypher extension |
-| [`docs/cli/project.mdx`](docs/cli/project.mdx) | Filesystem projection — the agent-grep workflow |
+| [`docs/guides/filesystem-workspace.mdx`](docs/guides/filesystem-workspace.mdx) | Filesystem mount — the world model as files, browsable with `cat` / `find` / `grep` / `jq` |
+| [`docs/concepts/threading-model.mdx`](docs/concepts/threading-model.mdx) | Concurrency contract — lock-free reads via MVCC; typed-error guard on writes |
 | [`docs/concepts/snapshots.mdx`](docs/concepts/snapshots.mdx) | Snapshot-pinned reads — provenanced, replayable answers |
 
 ---
@@ -182,11 +190,13 @@ Conformance and standards:
 |---|---|
 | **Robotics & perception** | Sensor fusion — observed/predicted tracks, lidar provenance, confidence-filtered spatial queries, emergency-stop standing queries |
 | **Autonomous fleets** | Shared world model across all agents — spatial task assignment, formation coordination, temporal audit |
-| **Sports & motion analytics** | 60 Hz live tracking + auxiliary streams (3D scene reconstruction, biomechanical telemetry, sparse events) reconciled to one canonical timeline |
+| **Sports & motion analytics** | 60 Hz live tracking + auxiliary streams (3D scene reconstruction, biomechanical telemetry, sparse events) reconciled to one canonical timeline; built-in trajectory primitives (`shadowedBy`, `leverageGain`, `releasePoint`, `nearestAtFrame`) compose into per-play coverage descriptors in one Cypher block |
 | **Digital twins** | Live spatial replica of a physical facility — temporal history, anomaly detection, downstream topology |
 | **AI agent infrastructure** | Persistent working memory across sessions — confidence-scored observations, multi-agent coordination, durable workflows |
-| **Trusted RAG** | Confidence-filtered retrieval; detect stale information via temporal queries; provenanced answers via snapshot URIs |
+| **Counterfactual analysis** | Branch the World Graph at any WAL seq (`arcflow.counterfactual.branchAt`); fan out N rollouts; score each in isolation against the canonical timeline; drop or keep based on the score |
+| **Trusted RAG** | Confidence-filtered retrieval; detect stale information via temporal queries; provenanced answers via snapshot URIs; causal-lineage walks justify every inferred fact |
 | **Fraud detection** | Circular transaction patterns, shared identity clusters, confidence-scored entity links — graph patterns SQL can't write |
+| **Multi-source data reconciliation** | Built-in `multi_source_disagreement` TVF resolves contested observations across sources (categorical / numeric / spatial-Weiszfeld-geomedian); pairs with `causalLineage` to trace conflicting claims back to their observations |
 | **Game AI** | NPCs with persistent spatial memory, behavior trees grounded in live world state, formation algorithms |
 
 Working examples for each: [`cookbooks/`](https://github.com/ozinc/arcflow/tree/main/cookbooks).
@@ -237,8 +247,44 @@ CREATE LIVE VIEW trusted_contacts AS
   WHERE e._observation_class = 'observed' AND e._confidence > 0.85
   RETURN e.name, e.x, e.y, e._confidence
 
--- One of 29 built-in graph algorithms — no projection, no catalog
+-- One of 37 built-in graph algorithms — no projection, no catalog
 CALL algo.pageRank() YIELD nodeId, score
+
+-- Causal reasoning: walk CAUSED_BY edges with cumulative confidence decay
+CALL arcflow.causalLineage(start_node: id(s), depth: 4)
+  YIELD node_id, hop, node_label, cumulative_confidence
+
+-- Multi-source disagreement: reconcile contested observations across sources
+CALL arcflow.multi_source_disagreement(
+  entity_label: "Charting", group_property: "play_id",
+  source_property: "source", value_property: "run_pass",
+  disagreement_kind: "categorical")
+  YIELD source, value, agreement_class, group_consensus, dispute_score
+
+-- Trajectory analytics: NFL coverage descriptor in one block
+CALL arcflow.trajectory.shadowedBy(
+  entity_label: "Player",
+  attacker_filter_property: "player_id", attacker_filter_value: 5,
+  target_filter_property: "player_id",   target_filter_value: 12,
+  defender_filter_property: "player_id", defender_filter_value: 28,
+  angle_tol_rad: 0.1) YIELD frame
+
+-- Counterfactual branching: fork the World Graph at a WAL seq for swarm rollouts
+CALL arcflow.counterfactual.branchAt(name: 'rollout-1', seq: 42)
+  YIELD branch, base_seq, status
+```
+
+Bounded latency for live UX — wall-clock deadlines compose naturally with any query:
+
+```python
+# Deadline-over-completeness: the engine returns what it has at the deadline
+# with result.transport_outcome == 'truncated' (vs 'complete' for full result).
+result = db.execute(
+    "MATCH (f:Frame) WHERE f.play_id = 1024 RETURN f LIMIT 100",
+    options=arcflow.QueryOptions(deadline_ms=500),
+)
+result.transport_outcome   # 'truncated' | 'complete' | None
+result.io_stats            # IoStats(decoded_bytes=…, lane_used=…, ...)
 ```
 
 ---
@@ -266,12 +312,17 @@ Pre-built native binaries for macOS (Apple Silicon + Intel), Linux (x86_64 GNU +
 |---|---|
 | [Quickstart](https://staging.oz.com/docs/quickstart) | First world model in minutes |
 | [World Model concept](https://staging.oz.com/docs/concepts/world-model) | What a world model is and why it matters |
+| [Architecture — 8 layers](https://staging.oz.com/docs/architecture) | World Store → Perception Lake → World Graph → Query Engine → Live Surface → Event Bus → Behavior Engine → Algorithm Library |
+| [Smart Reader (World Store · serve)](https://staging.oz.com/docs/concepts/layers/world-store-serve) | Format-aware read planner — footer-only count, row-group skip, column projection, lane-explicit transport |
+| [Threading Model](https://staging.oz.com/docs/concepts/threading-model) | MVCC-snapshot reads (lock-free); per-handle write guard with typed `HANDLE_BUSY_CONCURRENT_WRITER` error |
 | [Snapshot-Pinned Reads](https://staging.oz.com/docs/concepts/snapshots) | Provenanced, replayable query results |
-| [Filesystem Projection](https://staging.oz.com/docs/cli/project) | The agent-grep workflow |
+| [Filesystem Workspace](https://staging.oz.com/docs/guides/filesystem-workspace) | The world model as files — `arcflow mount`, the agent-grep workflow |
 | [Live Queries](https://staging.oz.com/docs/live-queries) | Standing queries, incrementally maintained |
+| [Graph Algorithms](https://staging.oz.com/docs/algorithms) | 37 algorithms — centrality, community, causal reasoning, multi-source disagreement, trajectory, counterfactual branching |
+| [Execution Options](https://staging.oz.com/docs/worldcypher/execution-options) | `QueryOptions(deadline_ms=…)`, `result.transport_outcome`, `result.io_stats` |
 | [WorldCypher reference](https://staging.oz.com/docs/worldcypher) | Query language (ISO/IEC 39075, Cypher-compatible) |
 | [GQL Conformance](https://staging.oz.com/docs/reference/gql-conformance) | Standards lineage, TCK results, full ISO GQL V2 details |
-| [Use cases](https://staging.oz.com/docs/use-cases) | Robotics, fleets, digital twins, RAG, fraud, agents, more |
+| [Cookbooks (13 recipes)](https://staging.oz.com/docs/cookbooks-index) | Runnable end-to-end recipes — knowledge graph, fraud, RAG, trajectory analytics, deadline-aware queries, more |
 
 ---
 

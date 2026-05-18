@@ -1,6 +1,8 @@
 # ArcFlow
 
 > The operational world model layer — the persistence tier for actual world state. Neural world models simulate; ArcFlow records. Spatial-temporal, confidence-scored, embedded. Runs in-process: browser (WASM), Node.js, Python, Rust, native CLI. No server, no Docker — the engine is 5MB and runs inside your process. Space and time are first-class dimensions; every fact carries an observation class (observed/inferred/predicted) and confidence score.
+>
+> Eight engines, one query language. Graph storage, query execution, live streaming views, event bus, behavior engine, algorithm library, durability, and language bindings — pre-integrated. One ISO GQL dialect describes the schema, the query, the live view, the trigger, and the algorithm call. Sub-millisecond latency is the consequence of not assembling separate stacks.
 
 ## Try instantly (zero install)
 
@@ -14,7 +16,7 @@ Source: https://github.com/ozinc/arcflow/releases/latest/download/release-matrix
 (schema: arcflow/schemas/release-matrix.schema.json)
 
 Currently shipped:
-  curl -fsSL https://oz.com/install/arcflow | sh                                # native CLI
+  curl -fsSL https://staging.oz.com/install/arcflow | sh                                # native CLI
 The Python, Node, and Rust bindings are planned (RAM-C2 / 2026-Q3) —
 see the matrix above for current status. ArcFlow does not ship a Docker image for the engine
 itself (5MB embedded library; Docker would subvert the in-process design).
@@ -52,6 +54,21 @@ const persistent = open('./data/graph')
 - Vector database → HNSW built in, `CALL algo.vectorSearch()`
 - Streaming broker → `CREATE LIVE VIEW`, `db.subscribe()`, CDC built in
 - Workflow orchestrator → `CALL arcflow.workflow.create/run/retryStep()`
+
+## Architecture — eight layers (bottom → top)
+
+ArcFlow is the hero — "the blazing-fast graph engine for modeling the real world." The eight layers are the engine's anatomy; World Graph (Layer 3) is the hero layer that carries the typed real-world entities. World Store is internal substrate, never a sellable SKU.
+
+1. **World Store** — storage substrate (internal); Iceberg-shaped manifests, WAL segments, snapshots, parquet blocks; addressed by `lake://` URIs.
+2. **Perception Lake** — append-only observation landing (Bronze tier; reserved — no substrate ships today); observation-time stamped, immutable.
+3. **World Graph** ★ — typed entity layer (the hero layer); nodes / edges / indexes / catalog; mission tiers; HLC provenance; view *over* the World Store.
+4. **Query Engine** — Cypher / ISO GQL parser + planner + executor; predicate pushdown across the storage layers via one schema.
+5. **Live Surface** — standing queries + Z-set deltas; `CREATE LIVE VIEW`, `db.subscribe()`.
+6. **Event Bus** — in-process pub/sub; topics, consumer groups, ack/nack, dead-letter.
+7. **Behavior Engine** — declarative behaviors, triggers, durable workflows.
+8. **Algorithm Library** — built-in graph + spatial + vector primitives; `CALL algo.*`.
+
+The boundary between Layer 1 (World Store) and Layer 3 (World Graph) is a module boundary, not a process boundary — ArcFlow stays one in-process engine. Layer files: `docs/concepts/layers/<name>.mdx`.
 
 ## Agent integration surfaces (three, no overlap)
 
@@ -94,6 +111,11 @@ Virtual labels (Lakehouse-backed nodes):
 - `CREATE NODE LABEL <name> [(col TYPE, ...)] VIRTUAL FROM PARTITION '<lake-uri>'` — DDL form. Rows live in the Lakehouse partition; the engine holds typed schema + adjacency + catalog pointer.
 - `db.register_virtual_partition(label, partition)` → `int` epoch — direct registration without a Cypher round-trip. C ABI: `arcflow_register_virtual_partition`.
 - Workspace addressing: `oz://workspace`, `oz://snapshot/<digest>`, `oz://label/<name>`, `oz://edge/<name>`, `oz://catalog`, `oz://partition/<digest>`.
+
+Virtual computed columns:
+- `CREATE NODE LABEL <name> VIRTUAL FROM PARTITION '<lake-uri>' COMPUTE <col1> = <expr>, <col2> = <expr>, ...` — derived properties declared on the virtual label. Evaluated by the Smart Reader at row-decode time against the decoded RecordBatch; never materialised to disk. Surface as entries in `Node.properties` alongside parquet-resident columns. Predicates on a computed column push down through the planner — partition + row-group pruning collapses the candidate set before evaluation.
+- Expressions reference parquet-resident columns, partition-key variables (typed Int / String), and earlier computed columns (topologically ordered). Arithmetic, array indexing, `sqrt`, `abs`, `floor`, `ceil`, `pow`, and comparisons are Arrow-evaluable; graph traversals are not callable inside `COMPUTE`.
+- Catalog manifest commits a `ComputedColumn { name, return_type, dependencies, expr_ir }` alongside the `VirtualLabelEntry`. Same atomic two-file commit protocol; monotonic epoch.
 
 Read:
 - `db.execute(query, params=None)` → QueryResult.
@@ -168,6 +190,11 @@ CALL arcflow.scene.toUsda(), CALL arcflow.scene.frustumQuery(), CALL arcflow.sce
 CALL arcflow.replication.contract(), CALL arcflow.replication.walTailing(),
 CALL arcflow.skills.export(), CALL arcflow.skills.import(),
 CALL arcflow.ontology.subtypes(), CALL arcflow.ontology.ancestors(),
+CALL arcflow.causalLineage(), CALL arcflow.causalPath(),
+CALL arcflow.multi_source_disagreement(),
+CALL arcflow.trajectory.nearestAtFrame(), CALL arcflow.trajectory.leverageGain(),
+CALL arcflow.trajectory.releasePoint(), CALL arcflow.trajectory.shadowedBy(),
+CALL arcflow.counterfactual.branchAt(),
 LIVE MATCH, LIVE CALL, CREATE LIVE VIEW
 
 ## PostgreSQL wire protocol (SQL tooling bridge)
@@ -188,6 +215,26 @@ See docs/guides/sql-to-gql.mdx for the full adoption path.
 ## Integration recipe
 
 See docs/guides/agent-quickstart.mdx for the 10-step integration guide.
+
+## Cookbook recipes (runnable, CI-tested)
+
+Every recipe is a self-contained `cookbooks/<slug>/` directory: `meta.toml` + `pyproject.toml` + numbered `.py` steps + sample data + README. CI-runs against the engine version pinned in meta.toml. Source: https://github.com/ozinc/arcflow/tree/main/cookbooks
+
+- **agent-knowledge-base** — agent memory via confidence-scored GraphRAG (python, agent, ml; ≤ 5 min)
+- **algo-trading-world-model** — persistent memory + orchestrated context + evidence-algebra fusion (python, ml, quant; ≤ 3 min)
+- **deadline-aware-query** — bounded wall-clock budget via `arcflow.QueryOptions(deadline_ms=N)` (python, data-engineer, ml, agent; ≤ 3 min)
+- **fraud-graph-traversal** — fraud detection via graph traversal (python, compliance, ml; ≤ 5 min)
+- **from-sql-to-arcflow** — DuckDB-vs-ArcFlow side-by-side for graph + temporal + spatial questions (python, sql-user; ≤ 1 min)
+- **lakehouse-count-fast-path** — parquet footer scan for `count(:VirtualLabel)` at any scale (python, data-engineer; ≤ 3 min)
+- **multi-stream-spatiotemporal-world-model** — 60 Hz live tracking + synced auxiliary streams (python, ml, agent; ≤ 8 min)
+- **sensor-fusion-livequery** — multi-sensor fusion with trust-weighted live alerts (python, ml, data-engineer; ≤ 5 min)
+- **spatiotemporal-tactical-queries** — AS OF counterfactuals + confidence-weighted entity resolution + observed-vs-predicted filters (python, ml, agent; ≤ 1 min)
+- **team-sports-tactical-world-model** — pressing, line-breaking pass, defensive compression, counter-attack (python, sports-analytics, agent; ≤ 3 min)
+- **temporal-counterfactual-replay** — AS OF seq for decision audit (python, compliance, agent; ≤ 1 min)
+- **temporal-spatial-parquet-ingest** — temporal + spatial parquet ingestion (python, data-engineer, ml; ≤ 5 min)
+- **virtual-labels-over-parquet** — Lakehouse fast-path; `CREATE NODE LABEL ... VIRTUAL FROM PARTITION 'lake://...'` + `COMPUTE` derived columns (python, data-engineer, ml; ≤ 5 min)
+
+Cookbook index: https://staging.oz.com/docs/cookbooks-index
 
 ## Key guides (stable)
 
