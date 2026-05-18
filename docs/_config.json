@@ -1,4 +1,5 @@
 {
+  "schema_version": "v2",
   "sections": [
     {
       "id": "start",
@@ -29,6 +30,11 @@
           "slug": "get-started",
           "title": "Get Started",
           "order": 5
+        },
+        {
+          "slug": "cookbooks-index",
+          "title": "Cookbook",
+          "order": 6
         }
       ]
     },
@@ -129,41 +135,66 @@
           "order": 15,
           "children": [
             {
-              "slug": "concepts/layers/perception-lake",
-              "title": "1. Perception Lake",
+              "slug": "concepts/layers/world-store",
+              "title": "1. World Store",
               "order": 1
             },
             {
-              "slug": "concepts/layers/world-graph",
-              "title": "2. World Graph",
+              "slug": "concepts/layers/world-store-serve",
+              "title": "1a. World Store · Smart Reader",
               "order": 2
             },
             {
-              "slug": "concepts/layers/query-engine",
-              "title": "3. Query Engine",
+              "slug": "concepts/layers/perception-lake",
+              "title": "2. Perception Lake",
               "order": 3
             },
             {
-              "slug": "concepts/layers/live-surface",
-              "title": "4. Live Surface",
+              "slug": "concepts/layers/world-graph",
+              "title": "3. World Graph",
               "order": 4
             },
             {
-              "slug": "concepts/layers/event-bus",
-              "title": "5. Event Bus",
+              "slug": "concepts/layers/query-engine",
+              "title": "4. Query Engine",
               "order": 5
             },
             {
-              "slug": "concepts/layers/behavior-engine",
-              "title": "6. Behavior Engine",
+              "slug": "concepts/layers/live-surface",
+              "title": "5. Live Surface",
               "order": 6
             },
             {
-              "slug": "concepts/layers/algorithm-library",
-              "title": "7. Algorithm Library",
+              "slug": "concepts/layers/event-bus",
+              "title": "6. Event Bus",
               "order": 7
+            },
+            {
+              "slug": "concepts/layers/behavior-engine",
+              "title": "7. Behavior Engine",
+              "order": 8
+            },
+            {
+              "slug": "concepts/layers/algorithm-library",
+              "title": "8. Algorithm Library",
+              "order": 9
             }
           ]
+        },
+        {
+          "slug": "concepts/virtual-computed-columns",
+          "title": "Virtual Computed Columns",
+          "order": 16
+        },
+        {
+          "slug": "concepts/threading-model",
+          "title": "Threading Model",
+          "order": 17
+        },
+        {
+          "slug": "concepts/typed-id-contract",
+          "title": "Typed ID Contract",
+          "order": 18
         }
       ]
     },
@@ -176,6 +207,11 @@
           "slug": "worldcypher",
           "title": "Overview",
           "order": 1
+        },
+        {
+          "slug": "worldcypher/execution-options",
+          "title": "Execution Options",
+          "order": 1.5
         },
         {
           "title": "Statements",
@@ -316,21 +352,21 @@
           "title": "Temporal Queries",
           "order": 6,
           "canonical": "temporal",
-          "note": "facet \u2014 canonical lives in Capabilities/Temporal"
+          "note": "facet — canonical lives in Capabilities/Temporal"
         },
         {
           "slug": "worldcypher/spatial",
           "title": "Spatial Queries",
           "order": 7,
           "canonical": "spatial-knowledge",
-          "note": "facet \u2014 canonical lives in Capabilities/Spatial Knowledge"
+          "note": "facet — canonical lives in Capabilities/Spatial Knowledge"
         },
         {
           "slug": "worldcypher/algorithms",
           "title": "Algorithms",
           "order": 8,
           "canonical": "algorithms",
-          "note": "facet \u2014 canonical lives in Capabilities/Graph Algorithms"
+          "note": "facet — canonical lives in Capabilities/Graph Algorithms"
         },
         {
           "slug": "worldcypher/triggers",
@@ -707,9 +743,19 @@
           "order": 5,
           "children": [
             {
+              "slug": "deployment/modes",
+              "title": "Deployment Modes",
+              "order": 1
+            },
+            {
               "slug": "deployment/daemon",
               "title": "Daemon (UDS)",
-              "order": 1
+              "order": 2
+            },
+            {
+              "slug": "deployment/docker",
+              "title": "Why not Docker",
+              "order": 3
             }
           ]
         },

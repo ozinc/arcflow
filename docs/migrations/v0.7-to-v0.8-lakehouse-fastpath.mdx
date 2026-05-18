@@ -138,9 +138,9 @@ RETURN f.ts, f.x, f.y, f.speed
 ORDER BY f.ts;
 ```
 
-The planner-side rewriter for `MATCH (:VirtualLabel ...)` patterns — which decomposes the pattern into a manifest-pruned, predicate-pushed Parquet scan — is the next wave of substrate work. Until it lands, queries against virtual labels return a typed `QueryError::VirtualLabelNotYetQueryable`. The registration path described above is real bytes on disk now; the read path is wired but gated.
+The planner-side rewriter for `MATCH (:VirtualLabel ...)` patterns decomposes the pattern into a manifest-pruned, predicate-pushed Parquet scan. `count(:Frame)` resolves to a parquet footer scan; `WHERE f.x > 50 RETURN f` resolves to a column-pruned predicate-pushed scan; `COMPUTE`-declared derived properties evaluate at row-decode time with predicates pushable through the planner.
 
-Plan for the rollout accordingly: the migration produces correct catalog state today, and the queries that depend on it light up when the rewriter ships. Until then, downstream reads against Virtual rows go through the Parquet files directly (the partitions remain Lakehouse-shaped; any Arrow / Parquet / Iceberg tool can read them in parallel with the migration).
+Downstream consumers can also read the partitions directly through any Arrow / Parquet / Iceberg tool — the partitions remain Lakehouse-shaped and the catalog metadata is open.
 
 ## A note on overlay tables — correcting a Virtual row
 
