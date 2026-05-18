@@ -1,7 +1,6 @@
 ---
 title: "Triggers"
 description: "ArcFlow extension beyond ISO/IEC 39075 GQL — Triggers."
-section: "extensions-reference"
 status: "stable"
 generated: true
 ---
@@ -17,7 +16,7 @@ generated: true
 CREATE TRIGGER auto_tag ON :Article WHEN CREATED RUN SKILL tag_skill
 ```
 
-**GQL compatibility:** No GQL equivalent.
+**GQL compatibility:** No GQL equivalent.  
 **Semantics:** Event-driven skill execution on CDC events. Skills fire when graph conditions match.
 
 ## Standards relationship
