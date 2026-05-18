@@ -1,7 +1,7 @@
 This project uses **ArcFlow** — an embedded graph database. No server needed.
 
 Install:
-  - CLI (shipped today): `curl -fsSL https://oz.com/install/arcflow | sh`
+  - CLI (shipped today): `curl -fsSL https://staging.oz.com/install/arcflow | sh`
   - npm SDK (`npm install arcflow`): planned RAM-C2 / 2026-Q3
 Docs: https://github.com/ozinc/arcflow
 MCP: `npx arcflow-mcp` (cloud chat UIs only — ChatGPT, Claude.ai, Gemini web)
