@@ -1,7 +1,7 @@
 ---
 title: "Graph Algorithms"
 kind: capability
-description: "29 graph algorithms operating over a confidence-scored, temporally-versioned world model — from entity resolution to contradiction detection, 6 running incrementally as standing queries"
+description: "37 graph algorithms operating over a confidence-scored, temporally-versioned world model — from entity resolution to contradiction detection to causal lineage walks to substrate-level multi-source disagreement resolution to trajectory analytics, 6 running incrementally as standing queries"
 status: "stable"
 playground:
   seed: world
@@ -12,7 +12,7 @@ playground:
 
 *Canonical surface for the [Algorithm Library](/docs/concepts/layers/algorithm-library) layer.*
 
-29 graph algorithms built into the world model — no projection lifecycle, no separate analytics service, no plugin installation. Every algorithm operates over the same confidence-scored, temporally-versioned graph that your queries run against. Centrality rankings respect observation class. Community detection propagates across fact confidence. Contradiction detection surfaces conflicting beliefs in the world model. Six algorithms run incrementally via `LIVE CALL`, maintaining results as standing queries that update with every mutation.
+37 graph algorithms built into the world model — no projection lifecycle, no separate analytics service, no plugin installation. Every algorithm operates over the same confidence-scored, temporally-versioned graph that your queries run against. Centrality rankings respect observation class. Community detection propagates across fact confidence. Contradiction detection surfaces conflicting beliefs in the world model. Causal lineage walks `CAUSED_BY` provenance edges with cumulative confidence decay. Multi-source disagreement reconciles contested observations at the substrate level — the first such primitive in any graph engine. Trajectory analytics compose nearest-at-frame, leverage-gain, release-point, and shadow detection in a single Cypher block for sports / tracking / autonomous-vehicle workloads. Six algorithms run incrementally via `LIVE CALL`, maintaining results as standing queries that update with every mutation.
 
 GPU acceleration is automatic when hardware is available: same query, same syntax — **ArcFlow Adaptive Dispatch** routes to the fastest backend at runtime (see [GPU Acceleration](/gpu)).
 
@@ -533,6 +533,146 @@ Find and score near-duplicate nodes using embedding similarity.
 CALL algo.semanticDedup()
 ```
 
+## Multi-Source Disagreement
+
+A substrate-level cross-source resolution primitive: given the same logical entity reported by multiple sources, return a typed verdict about whether they agree, disagree, or stand alone. Three modes cover the common shapes of real-world observation disagreement; the algorithm is **deterministic** with lexicographic tie-break, weights each source's claim by a per-source prior (typically `_confidence`), and surfaces both a per-source assignment and a per-group consensus.
+
+The TVF is the natural composition partner for [Causal Reasoning](#causal-reasoning) — once disagreement is detected, causalLineage walks back to the observations that produced each conflicting claim.
+
+```cypher
+CALL arcflow.multi_source_disagreement(
+  entity_label:          "Charting",       -- the typed entity carrying source-reported values
+  group_property:        "play_id",        -- groups rows that should agree
+  source_property:       "source",         -- distinguishes reporters
+  value_property:        "run_pass",       -- the column being resolved
+  prior_weight_property: "_confidence",    -- per-source trust weight
+  disagreement_kind:     "categorical",    -- "categorical" | "numeric" | "spatial"
+  agreement_threshold:   1.0               -- mode-specific (see below)
+)
+YIELD source, value, agreement_class, group_consensus, dispute_score
+RETURN group_consensus, dispute_score, source, value, agreement_class
+```
+
+### Three modes
+
+| Mode | Algorithm | `dispute_score` semantics |
+|---|---|---|
+| **`categorical`** | Weighted-majority over distinct values; Shannon entropy of the weighted distribution, normalized to `[0, 1]` | `0.0` when all sources agree; `1.0` at maximum disagreement (entropy ≈ log₂(n_sources)) |
+| **`numeric`** | Weighted median across reported values; max pairwise delta among reported values | `clamp(max_pairwise_delta / agreement_threshold, 0.0, 1.0)` |
+| **`spatial`** | Weiszfeld geometric median (iterative; converges on the L1-optimal 3D point); max pairwise Euclidean distance | Same clamped-delta shape as numeric, against the 3D distance |
+
+### Output rows
+
+Each row carries:
+
+| Column | What it is |
+|---|---|
+| `source` | The reporter this row is about (or `null` for the group-level consensus row). |
+| `value` | The value this source reported (categorical: the value; numeric: the float; spatial: the 3D point as WKT). |
+| `agreement_class` | One of `consensus` (all sources agree within threshold), `outlier` (this source disagrees with the majority), `disputed` (no clear majority), `single_source` (only one source reported). |
+| `group_consensus` | The resolved value for the group — the weighted-majority winner (categorical), the weighted median (numeric), or the geometric median (spatial). |
+| `dispute_score` | `[0.0, 1.0]` per the mode-specific formula above. |
+
+### Worked example — NFL play-call resolution
+
+Four vendors charted the same play; three say "run", one says "pass":
+
+```cypher
+CALL arcflow.multi_source_disagreement(
+  entity_label: "Charting",
+  group_property: "play_id",
+  source_property: "source",
+  value_property: "run_pass",
+  prior_weight_property: "_confidence",
+  disagreement_kind: "categorical"
+) YIELD source, value, agreement_class, group_consensus, dispute_score
+WHERE source IS NOT NULL
+RETURN source, value, agreement_class, dispute_score
+ORDER BY dispute_score DESC
+```
+
+Output (illustrative):
+
+```json
+[
+  {"source": "ngs",       "value": "run",  "agreement_class": "consensus", "dispute_score": 0.0},
+  {"source": "pff",       "value": "run",  "agreement_class": "consensus", "dispute_score": 0.0},
+  {"source": "pro_fb",    "value": "run",  "agreement_class": "consensus", "dispute_score": 0.0},
+  {"source": "xos",       "value": "pass", "agreement_class": "outlier",   "dispute_score": 0.8}
+]
+```
+
+The `group_consensus` row reports `value: "run", dispute_score: 0.4` (a single dissenter pulls the entropy up but not to the disputed threshold).
+
+### Why this matters
+
+Most cross-source resolution in industry is either bespoke per-pipeline or built on top of a row-level conflict-resolution toolkit (LWW, FWW, vector clocks). Multi-source disagreement is **substrate-level** — the graph engine itself knows how to reconcile contested observations, with the resolution carrying back through `arcflow.causalLineage` to the typed entities that produced the conflict. The output rows can be written back as `:Charting` nodes with `agreement_class` and `dispute_score` properties, becoming queryable themselves.
+
+The three modes cover most observation shapes: discrete labels (play type, classification), continuous values (sensor readings, scores), and 3D positions (tracking coordinates, sensor locations). For other shapes, the same framing extends through additional `disagreement_kind` values as the substrate grows.
+
+## Causal Reasoning
+
+Two algorithms walk `CAUSED_BY` provenance edges to answer "why did this fact land in the graph?" — the question every audit, every counterfactual, and every explanation needs. They compose with the World Graph's mission tiers (`observed` / `inferred` / `predicted`) and confidence scoring to produce **cumulative-confidence-decayed** lineages rather than flat parent lists.
+
+The `CAUSED_BY` edge is a first-class provenance primitive. Every inferred or predicted fact in the graph can declare which observations or earlier inferences justified it; the engine's optional `CAUSED_BY` mandatory edge constraint enforces "every write must be justified" at the schema level.
+
+### Causal Lineage
+
+BFS over `CAUSED_BY` edges from a starting node, emitting every node visited with its hop distance, parent pointer, and cumulative confidence (the product of per-node `_confidence` along the path).
+
+```cypher
+MATCH (s:Sack {play_id: 'X-vs-Y-q2-3:47'})
+CALL arcflow.causalLineage(start_node: id(s), depth: 4)
+YIELD node_id, hop, parent_id, node_label, node_confidence,
+      cumulative_confidence, direction
+RETURN hop, node_label, cumulative_confidence
+ORDER BY hop, cumulative_confidence DESC
+```
+
+**Parameters:**
+
+| Parameter | Default | What it does |
+|---|---|---|
+| `start_node` | required | Node ID to walk from. |
+| `depth` | required | Maximum BFS depth in hops. |
+| `direction` | `"upstream"` (alias: `"causes"`) | Walk outgoing `CAUSED_BY` edges (toward causes) or incoming (toward consequences). Aliases: `"downstream"` / `"caused"` / `"consequences"`. |
+
+**Returns:** one row per visited node with the visit metadata.
+
+**Use cases:**
+- Audit trail for any inferred or predicted fact ("show me what justified this Sack designation, four hops back").
+- Confidence floor for derived facts (the cumulative-confidence column shows how much trust survives the inference chain).
+- Counterfactual base — pair with `AS OF` to ask "what would have been justified at time T?"
+
+### Causal Path
+
+Shortest `CAUSED_BY` chain between two specific nodes via BFS + parent-pointer backtrack. Returns one row per hop in the discovered path, or a single `path_found="false"` row if no chain exists within the depth bound.
+
+```cypher
+MATCH (sack:Sack), (snap:Snap)
+WHERE sack.id = $sack_id AND snap.id = $snap_id
+CALL arcflow.causalPath(from: id(sack), to: id(snap), depth: 8)
+YIELD hop, node_id, node_label, path_found
+RETURN hop, node_label
+ORDER BY hop
+```
+
+**Parameters:**
+
+| Parameter | Default | What it does |
+|---|---|---|
+| `from` | required | Source node ID. |
+| `to` | required | Target node ID. |
+| `depth` | required | Maximum BFS depth in hops. |
+| `direction` | `"upstream"` | Same direction semantics as `causalLineage`. |
+
+**Returns:** the discovered path as `(hop, node_id, node_label, path_found)` rows, or `path_found="false"` when no chain exists.
+
+**Use cases:**
+- Targeted "why does X depend on Y?" queries when you have specific endpoints.
+- Disambiguating between multiple plausible causal chains by picking the shortest.
+- Failure-mode diagnostics — `causalPath` from a low-confidence fact back to a known-bad source.
+
 ## GraphRAG Pipeline
 
 ### GraphRAG
@@ -610,6 +750,121 @@ row = db.execute(
 The pure-function algebra (`weighted_centroid_2d`, `weighted_centroid_3d`,
 `weighted_centroid_nd`) is also exposed on the Rust crate as
 `arcflow_core::algo_fusion`.
+
+## Trajectory Analytics
+
+A family of Cypher CALL surfaces over the `arcflow-runtime::trajectory` kernel primitives — designed for sports analytics, tracking, autonomous-vehicle telemetry, and any workload where entities sweep through 2D space across frames. Each procedure is a thin graph→`Sample2 { frame, x, y }` wrapper around a pure-function kernel (PAT-0049 humble-object shape); the kernels themselves are tested independently and reachable from Rust as `arcflow_core::trajectory::*`.
+
+The four primitives compose: a single play's coverage analysis can chain `releasePoint` → `nearestAtFrame` → `shadowedBy` → `leverageGain` in one Cypher block, no SKILL ceremony, no Python round-trip.
+
+### Nearest at Frame
+
+Top-k entities by 2D distance from a query point at a specific frame. The single-frame slice of a "who was closest when" question.
+
+```cypher
+CALL arcflow.trajectory.nearestAtFrame(
+  entity_label: "Player",
+  frame_property: "frame",
+  x_property: "x",
+  y_property: "y",
+  frame: 1024,
+  qx: 50.0, qy: 23.5,
+  k: 5
+) YIELD other_node_id, other_label, distance, frame
+```
+
+Returned columns: `other_node_id`, `other_label`, `distance`, `frame`. Rows are ordered by ascending `distance` with deterministic tie-break by `other_node_id`. Entities missing the frame, x, or y properties at the requested frame are silently skipped.
+
+### Leverage Gain
+
+Per-frame closing-or-falling-behind delta between a chaser and a target trajectory. Positive `delta` means the chaser is closing the distance; negative means falling behind. Frames where either side is missing get dropped (not zeroed).
+
+```cypher
+CALL arcflow.trajectory.leverageGain(
+  entity_label: "Player",
+  chaser_filter_property: "player_id", chaser_filter_value: 28,
+  target_filter_property: "player_id", target_filter_value: 12
+) YIELD frame, delta
+```
+
+Returned columns: `frame`, `delta` (one row per frame that exists in both trajectories, ordered ascending). `N-1` rows for a span of `N` matched frames — the first frame has no delta-from-previous to report.
+
+### Release Point
+
+Single-row event detection: the frame at which forward x-velocity peaks. A throw-release heuristic for quarterbacks; generalises to any "fastest forward motion" event over a 2D trajectory.
+
+```cypher
+CALL arcflow.trajectory.releasePoint(
+  entity_label: "Player",
+  filter_property: "player_id", filter_value: 5
+) YIELD frame
+```
+
+Returned columns: `frame` (one row, or zero if the entity has fewer than 2 frame samples). Ties take the earliest frame. Unsorted frame input is handled by the kernel — no caller-side ordering required.
+
+### Shadowed By
+
+Three-trajectory geometric primitive: which frames have the defender obstructing the attacker→target line of sight, within an angular tolerance? The "is the receiver covered?" question for any pursuit-shadow scenario.
+
+```cypher
+CALL arcflow.trajectory.shadowedBy(
+  entity_label: "Player",
+  attacker_filter_property: "player_id", attacker_filter_value: 5,
+  target_filter_property: "player_id",   target_filter_value: 12,
+  defender_filter_property: "player_id", defender_filter_value: 28,
+  angle_tol_rad: 0.1
+) YIELD frame
+```
+
+Returned columns: `frame` (one row per frame where the defender is "shadowing" — between the attacker and target within the angular tolerance, and not past the target). Frames where any of the three entities is missing get dropped.
+
+### NFL coverage descriptor — composing all four
+
+A single Cypher block computes a complete per-play coverage descriptor: release frame, nearest defender at snap, line-of-sight shadow, and closing speed:
+
+```cypher
+// 1. Find QB's nearest defender at snap (frame 1024)
+CALL arcflow.trajectory.nearestAtFrame(
+  entity_label: "Player", frame_property: "frame",
+  x_property: "x", y_property: "y",
+  frame: 1024, qx: 30.0, qy: 22.0, k: 3
+) YIELD other_node_id AS defender_id, distance
+
+// 2. Compute the throw release frame for the QB
+CALL arcflow.trajectory.releasePoint(
+  entity_label: "Player",
+  filter_property: "player_id", filter_value: 5
+) YIELD frame AS release_frame
+
+// 3. Check if CB28 shadowed the throw line to WR12
+CALL arcflow.trajectory.shadowedBy(
+  entity_label: "Player",
+  attacker_filter_property: "player_id", attacker_filter_value: 5,
+  target_filter_property: "player_id",   target_filter_value: 12,
+  defender_filter_property: "player_id", defender_filter_value: 28,
+  angle_tol_rad: 0.1
+) YIELD frame AS shadow_frame
+
+// 4. Closing speed between CB28 + WR12 over the same window
+CALL arcflow.trajectory.leverageGain(
+  entity_label: "Player",
+  chaser_filter_property: "player_id", chaser_filter_value: 28,
+  target_filter_property: "player_id",   target_filter_value: 12
+) YIELD frame, delta AS closing
+```
+
+Four composable signals for a single play, each a single CALL. The kernels operate on the in-memory dense trajectory arrays the engine already maintains; the graph layer's only contribution is selecting which entities to feed in.
+
+### Why a separate procedure family
+
+Trajectory analytics has different shape from generic graph algorithms:
+
+- **Inputs are dense per-entity trajectories**, not graph adjacency. The kernels operate on `Sample2[frame, x, y]` arrays; the graph layer's job is selecting which entities' arrays to feed in via label + property filters.
+- **Output is per-frame or per-event**, not per-node. Most return one row per matched frame; `releasePoint` returns at most one row total.
+- **DenseStore-aware**: reads go through the same `store.effective_property` path that bulk-create-from-Arrow ingestion writes to, so vectorised ingestion and trajectory analytics share the same column layouts.
+- **Typed errors** for the predictable failure modes: missing `entity_label`, missing `filter_property`, missing `filter_value` all return validation errors with recovery suggestions, never silent zero-row results.
+
+For workloads beyond sports analytics — robotics tracking, autonomous-vehicle telemetry, drone formation analysis, animal motion studies — the same four primitives extend without modification. The "Player" / "QB" / "CB" semantics are entirely customer-side; the kernels only see `Sample2` arrays.
 
 ## Streaming functions
 
