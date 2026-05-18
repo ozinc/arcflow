@@ -326,7 +326,6 @@ def render_dashboard(conformance: dict, state: dict, extensions: list[ExtensionE
         f"| openCypher TCK | **{state['tck_pass_rate']}** | release 2024.3, full suite |",
         f"| ISO GQL features | **{supported}/{total}** supported | {unsupported} unsupported (vendor choice) |",
         f"| ArcFlow extensions | **{len(extensions)} documented** | beyond-standard surface |",
-        f"| Engine version | `{conformance['version']}` | as of {conformance['date']} |",
         "",
         "## Vendor choices",
         "",

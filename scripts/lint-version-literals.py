@@ -78,14 +78,10 @@ ALLOWLIST_FILES = {
     "docs/reference/data/arcflow-extensions-catalog.md",  # extensions catalog document version
     # "Since" feature-introduction column — TODO(tech-debt): align with no-version-temporal memory rule
     "docs/worldcypher/functions/procedures.mdx",
-    # Conformance dashboard — engine version row.
-    # SoT: upstream arcflow-core/docs/conformance/gql-conformance.json (synced
-    # by scripts/sync-conformance-data.sh) and rendered by generate-reference.py.
-    # TODO(refactor): source from release-matrix.json at render time so the
-    # literal disappears. Tracked via federation request DOC-AF-versioning-ssot.
-    "docs/reference/data/gql-conformance.json",
-    "docs/reference/gql-conformance.mdx",
-    "docs/reference/conformance/overview.mdx",
+    # Conformance dashboard entries DROPPED 2026-05-16 — AF-DOC-2026-05-16-003-ssot-closure
+    # shipped the temporal-noise strip upstream (commit 8421be0b); engine version + date
+    # fields no longer appear in gql-conformance.json or its rendered MDX. Lint-version-
+    # literals.py no longer needs an exception for these three files.
 }
 
 ALLOWLIST_PATTERNS = [
