@@ -1144,10 +1144,22 @@ cg.createLiveView('auth_symbols', "MATCH (f:Function) WHERE f.file_path = 'src/a
 const status = cg.liveViewStatus('auth_symbols')  // { name, frontier, rowCount, queryText }
 ```
 
-MCP tools for code intelligence (no Rust SDK required):
-- `ingest_nodes` — push GraphDelta over stdio JSON-RPC, returns DeltaStats
+MCP tools for code intelligence (no Rust SDK required) — the `arcflow-mcp` native binary exposes these over stdio JSON-RPC:
+
+- `get_schema` — labels, rel types, properties, indexes, constraints
+- `get_capabilities` — algorithms, procedures, functions, observation classes
+- `read_query` — safe read-only Cypher (rejects mutations)
+- `write_query` — mutating Cypher (explicit opt-in)
+- `graph_rag` — trusted GraphRAG pipeline
+- `ingest_nodes` — push GraphDelta over JSON-RPC, returns DeltaStats
 - `create_live_view` — register a standing query by name + WorldCypher
 - `live_view_status` — poll frontier and row_count for a named view
+- `live_view_explain` — EXPLAIN report for a registered view (plan summary, partial-state estimate, writeback / spatial-predicate flags)
+- `live_view_lane_decision` — show the lane the planner chose for a view
+- `live_view_replay` — replay a view's deltas from a given frontier
+- `register_projection_lane` — bind a projection lane for downstream consumers
+
+The TypeScript `npx arcflow-mcp` package exposes the first five (`get_schema`, `get_capabilities`, `read_query`, `write_query`, `graph_rag`) for cloud chat UIs that don't have a local shell to execute the native binary.
 
 See `docs/guides/code-intelligence.mdx` for the full guide.
 

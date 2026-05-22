@@ -288,7 +288,7 @@ Most graph databases stop at nodes and edges. ArcFlow makes the following first-
 | **`LIVE VIEW`** | Standing queries with incremental maintenance. Your agent gets `{added, removed, updated}` deltas every time the world changes — no polling loop. |
 | **`SKILL` + `TRIGGER` + `PROGRAM`** | Capability manifests as language primitives. Skills are bundle-exportable JSON; programs declare hardware requirements; triggers wire skills to graph events (per-property granularity available) with zero glue code. |
 | **LLM Node (BYOK)** | `arcflow keys add <provider>` plus a `MODEL '<row>'` clause on `CREATE SKILL` routes LLM calls through a supervised sidecar. Keys in the OS keychain. Per-provider daily-USD cap enforced by `BudgetMeter`. Providers: `openai/*` (any OpenAI-shape HTTPS), `cli/*` (local CLI subprocess), `oz/*` (first-party catalog). |
-| **MCP server** | `npx @ozinc/arcflow-mcp` exposes ArcFlow as a Model Context Protocol server for chat UIs. CLI agents get the faster CLI fastpath instead. |
+| **MCP server** | `arcflow-mcp` (native binary, installed alongside `arcflow`) exposes the engine as a Model Context Protocol server for cloud chat UIs. CLI agents get the faster CLI fastpath instead. |
 | **Lake (`lake://`)** | Read Parquet/Iceberg directly via `CREATE NODE LABEL ... VIRTUAL FROM PARTITION`. Footer-only count fast-path. Hive-style partition keys land as queryable bare properties; partition pruning happens before any file is opened. No ETL. |
 | **Hybrid search** | `algo.hybridSearch` and `algo.graphRAGTrusted` combine vector similarity with graph traversal in one call — the retrieval primitive for retrieval-augmented generation over a typed graph, not over a flat vector store. |
 | **Query hints** | `CALL algo.X(...) HINT lane=<gpu.cuda\|cpu\|...>` overrides the planner's lane choice; actual lane used is reported back on `result.transport_outcome.lane`. Detect silent fallbacks in tests. |
@@ -377,7 +377,8 @@ find ./world-fs/nodes/Entity -name '*.json' | xargs jq '.confidence'
 #    pip install oz-arcflow   /   npm install @ozinc/arcflow
 
 # 4. MCP server (cloud chat UIs only — Claude.ai, ChatGPT)
-npx @ozinc/arcflow-mcp
+arcflow-mcp                                   # native binary, ships with the curl install
+arcflow-mcp --data-dir ./mydb                 # persistent variant
 ```
 
 If an agent has a shell, give it the CLI; MCP is the integration of last resort for chat surfaces that don't.
