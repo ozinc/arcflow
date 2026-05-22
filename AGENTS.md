@@ -825,6 +825,19 @@ CALL arcflow.skills.import(json)               YIELD name, version, skill_count
 
 The `MODEL` clause routes the LLM call to a specific catalog row instead of the default `oz/deepseek-v3`. Combined with the CLI-provider substrate, this makes `cli/claude-code`, `cli/codex`, `cli/gemini` reachable from customer Cypher.
 
+### Account login (optional — for hosted features)
+```bash
+# Browser-based login — opens oz.com/world/login and listens on a local
+# callback port. Credentials are written to ~/.arcflow/credentials.json
+# (chmod 0600 on Unix).
+arcflow login
+arcflow login --token <TOKEN>     # headless / CI mode — no browser
+arcflow whoami                    # prints email + tier; --json for envelope
+arcflow logout                    # clears credentials
+```
+
+Local-only use does not require login. Login unlocks first-party hosted features (the `oz/*` LLM provider catalog, hosted skill packs, account-tier limits). Everything else — graph storage, queries, live views, BYOK LLM providers — works fully offline.
+
 ### LLM Node — provider keys, sidecar, budgets
 ```bash
 # Provider API key management — keys live in the OS keychain (macOS Keychain,
@@ -1100,7 +1113,7 @@ docs/                                  # MDX docs — full reference
 examples/                              # Runnable examples
 fixtures/                              # Sample datasets
 install/                               # Install script
-REPO-SPLIT.md                          # What lives here vs arcflow/ engine repo
+LICENSE                                # MIT (this repo's contents)
 ```
 
 ## Extended reference

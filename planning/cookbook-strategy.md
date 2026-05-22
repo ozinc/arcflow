@@ -45,7 +45,7 @@ This repo is the cookbook's home because:
 
 - It is public MIT — recipes need to be MIT for customers and agents to copy
   freely.
-- Cookbook recipes are *content*, which is this repo's domain (per `REPO-SPLIT.md`).
+- Cookbook recipes are *content*, which is this repo's domain.
 - This repo already houses the SDK source and developer-facing examples; the
   cookbook joins them as a peer surface.
 

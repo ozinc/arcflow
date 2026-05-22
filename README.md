@@ -4,7 +4,8 @@
 
 ```bash
 curl -fsSL https://staging.oz.com/install/arcflow | sh
-arcflow open ./mydb
+arcflow workspace init                 # creates ./.arcflow/ workspace
+arcflow query "MATCH (n) RETURN count(*)"
 ```
 
 That's it. 5MB binary, no server, no Docker, no cloud account, no API key, no signup, no telemetry. **Free.** Try it in the browser without installing: [staging.oz.com/engine](https://staging.oz.com/engine).
@@ -102,7 +103,7 @@ arcflow/
 └── LICENSE-CORE.md      Proprietary terms for the engine binary
 ```
 
-The repository split mirrors **NVIDIA CUDA**: this repo is the open developer surface, the engine is the proprietary runtime distributed as a small binary. See [`REPO-SPLIT.md`](REPO-SPLIT.md) for the full boundary contract.
+Same shape as **NVIDIA CUDA**: an open MIT developer surface (this repo) plus a proprietary engine binary you download from GitHub Releases. You don't need the engine source to build on ArcFlow — everything you'd ever import is right here.
 
 ---
 
@@ -275,7 +276,7 @@ Centrality, community, causal reasoning, multi-source disagreement, trajectory a
 
 ---
 
-## The hidden game-changers
+## Built-in primitives
 
 Most graph databases stop at nodes and edges. ArcFlow makes the following first-class primitives, addressable from a single statement:
 
@@ -293,10 +294,10 @@ Most graph databases stop at nodes and edges. ArcFlow makes the following first-
 | **`COUNTERFACTUAL BRANCH`** | Fork the entire World Graph at a WAL seq, fan out N rollouts, score each, discard or merge. Swarm planning becomes one Cypher block. |
 | **Snapshot URIs** | Every result envelope carries `arcflow://snapshot/<hex>`. Replay any historical query bit-for-bit. Provenance is the schema, not a logging convention. |
 | **Confidence + observation class** | `_confidence` and `_observation_class` on every fact. Confidence-weighted algorithms, observed-vs-predicted filtering, trust-aware retrieval — all built in. |
-| **Filesystem projection** | `arcflow mount ~/.arcflow/workspace ./world-fs` — the world model as a typed filesystem. Browse with `cat` / `find` / `grep` / `jq`. The agent-grep workflow. |
+| **Filesystem projection** | `arcflow project ./world-fs` — write the current snapshot to a typed directory tree; `--watch` keeps it in sync. Browse with `cat` / `find` / `grep` / `jq`. The agent-grep workflow. |
 | **PostgreSQL wire protocol** | Existing SQL tools see ArcFlow as Postgres for the read-only SQL surface. Bring your BI tool, your dashboard, your old Python script. |
 
-These are not 10 product features. They are **ten reasons that a 7-component stack collapses into one binary**.
+Each row is something a typical multi-service stack solves with a separate component. ArcFlow holds them all in one in-process binary, behind one query language, with one snapshot-pinned read model.
 
 ---
 
@@ -364,8 +365,9 @@ ArcFlow is designed to be addressable by agents — Claude Code, Codex, Cursor, 
 # 1. CLI + --json fastpath (★ PRIMARY for CLI agents)
 arcflow query "MATCH (e:Entity) RETURN e.name LIMIT 5" --json
 
-# 2. Filesystem mount — the world model as files; grep / cat / rg over typed memory
-arcflow mount ~/.arcflow/workspace ./world-fs
+# 2. Filesystem projection — the world model as files; grep / cat / rg over typed memory
+arcflow project ./world-fs                    # one-shot snapshot of the current state
+arcflow project ./world-fs --watch            # keep ./world-fs in sync as the graph mutates
 find ./world-fs/nodes/Entity -name '*.json' | xargs jq '.confidence'
 
 # 3. napi-rs / PyO3 / FFI (★ PRIMARY for in-process embedded apps)

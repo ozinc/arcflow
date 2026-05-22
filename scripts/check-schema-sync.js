@@ -164,7 +164,7 @@ function main() {
   console.log()
   if (failed) {
     console.error('FAIL: Schema mismatch detected.')
-    console.error('      See REPO-SPLIT.md → Schema Sync section for the update protocol.')
+    console.error('      Schema constants are mirrored from the engine; update both in the same PR cycle.')
     console.error('      Summary: schema.rs (engine) → schema-snapshot.json → code-intelligence.ts')
     process.exit(1)
   } else {

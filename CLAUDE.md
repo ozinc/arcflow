@@ -6,14 +6,13 @@ library; Docker would subvert the in-process design — see
 [docs/deployment/docker.mdx](docs/deployment/docker.mdx)).
 
 See [AGENTS.md](AGENTS.md) for the full public API and WorldCypher reference.
-See [REPO-SPLIT.md](REPO-SPLIT.md) for the governing boundary contract between this repo and the engine.
 
 ---
 
 ## Repository Boundary
 
-This repo (`arcflow-docs/`) owns the **developer surface**: SDK, docs, examples, and the
-machine-readable API context for coding agents. Full governance: **`REPO-SPLIT.md`**.
+This repo (`arcflow/`) owns the **developer surface**: SDK, docs, examples, and the
+machine-readable API context for coding agents.
 
 | Belongs here | Belongs in arcflow-core (engine repo) |
 |---|---|
@@ -62,7 +61,6 @@ Every new coding agent session on this repo should run through this first:
 ```
 [ ] Read CLAUDE.md (this file) — boundary rules and conventions
 [ ] Read AGENTS.md — the public API surface this repo documents
-[ ] Read REPO-SPLIT.md — full boundary contract with the engine repo
 [ ] Run: grep -r "FIXME:" . --include="*.ts" --include="*.mdx" | head -20
 [ ] Run: grep -r "NOTE(invariant):" . --include="*.ts" --include="*.mdx"
 [ ] Run: grep -r "TODO(wave-A):" . — features gated on unshipped engine SDK waves

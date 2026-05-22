@@ -170,7 +170,7 @@ To improve a generated page, you have three options:
 
 This repo is the **developer surface** — docs, TypeScript SDK, MCP package,
 React hooks. The Rust engine lives in a separate repo (`arcflow/`). Full
-governance is in [`REPO-SPLIT.md`](../REPO-SPLIT.md).
+governance is in [`CLAUDE.md`](../CLAUDE.md).
 
 If you find yourself wanting to write Rust source, edit a `crates/` directory,
 or document an unreleased feature: stop. That work belongs in the engine repo.

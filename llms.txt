@@ -128,6 +128,10 @@ Hybrid index registration:
 Query hints (explicit lane selection):
 - `CALL algo.X(...) HINT lane=<ident> YIELD ...` — overrides the planner's automatic lane choice. Lanes: `cpu_scalar | cpu_simd | gpu_cuda | gpu_metal | auto`. The chosen lane is reported back as `result.transport_outcome.lane`. If the requested lane isn't available on the host, the engine falls back silently to the next-best lane and records the actual lane used — use the field to detect silent fallbacks in tests.
 
+Account login (optional, for hosted features only):
+- `arcflow login` — browser-based; opens `oz.com/world/login` and listens on a local callback port. `arcflow login --token <TOKEN>` for headless/CI mode. Credentials at `~/.arcflow/credentials.json` (0600 on Unix). `arcflow whoami` prints email + tier. `arcflow logout` clears.
+- Local-only use does not require login. Login unlocks first-party hosted features (`oz/*` LLM provider catalog, hosted skill packs). Everything else — graph, queries, live views, BYOK LLM providers — works fully offline.
+
 LLM Node (provider-pluggable, BYOK):
 - CLI: `arcflow keys add <provider> [--from-stdin | --key SECRET]`, `arcflow keys list`, `arcflow keys rm <provider>`, `arcflow keys set-daily-cap <provider> <USD>`. Keys live in the OS keychain (macOS Keychain, Linux Secret Service, Windows Credential Manager) — never written to disk.
 - Skill grammar: `CREATE SKILL name FROM PROMPT '...' [ALLOWED ON [Label, ...]] [TIER LLM] [MODEL '<catalog-row>']`. `MODEL` routes the LLM call to a specific catalog row instead of the default `oz/deepseek-v3`.

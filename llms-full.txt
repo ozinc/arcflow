@@ -629,6 +629,16 @@ The `MODEL` clause routes the LLM call to a specific catalog row instead of the 
 
 LLM-tier skills (`TIER LLM`) route through an `arcflow-llm` sidecar process supervised by the runtime. Provider state is isolated; sidecar crashes are restarted by the supervisor without taking down the engine. BudgetMeter intercepts every call and rejects on cap-exceeded with a typed error.
 
+**Account login** (optional — only required for hosted first-party features):
+```bash
+arcflow login                                  # browser-based; opens oz.com/world/login
+arcflow login --token "$TOKEN"                 # headless / CI mode
+arcflow whoami                                 # email, tier; --json for envelope
+arcflow logout                                 # clears ~/.arcflow/credentials.json
+```
+
+Local-only use does not require login. Login unlocks `oz/*` provider catalog access, hosted skill packs, and account-tier limits. Graph storage, queries, live views, BYOK LLM providers all work fully offline without it.
+
 **Provider key management** (CLI — keys live in the OS keychain, never on disk):
 ```bash
 arcflow keys add openai                        # interactive
