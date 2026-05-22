@@ -25,5 +25,5 @@ See [INTENT-SOURCE-TERM-SHEET.md](INTENT-SOURCE-TERM-SHEET.md) for full terms.
 ## Links
 
 - Full term sheet: [INTENT-SOURCE-TERM-SHEET.md](INTENT-SOURCE-TERM-SHEET.md)
-- Engine LICENSE: https://github.com/ozinc/arcflow-core/blob/main/LICENSE
+- Engine LICENSE: [`LICENSE-CORE.md`](../LICENSE-CORE.md)
 - OZ Global: https://oz.global/legal/oisl

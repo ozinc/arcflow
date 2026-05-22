@@ -4,18 +4,15 @@ User-facing summary of ArcFlow releases. Each entry corresponds to a tag on this
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning: [SemVer](https://semver.org/).
 
-For an engine-internal commit-grade changelog (wave numbering, dossier links), see the private `arcflow-core` repo. This file is the curated public-facing version.
+Curated public-facing release notes — what changed for developers, not commit-grade wave numbering.
 
 ---
 
 ## [0.8.0] — 2026-05-15
 
-**Minor — World Graph substrate cut.** The eighteen-initiative
-worldgraph::io v0.8 batch (I-INIT-0132..0149) closed in arcflow-core
-commit `c0a7181f` (Phase-D atomic cut). Additive — no breaking changes
-for v0.7.x consumers.
+**Minor — World Graph substrate cut.** The eighteen-initiative `worldgraph::io` v0.8 batch closed as one atomic phase-D commit. Additive — no breaking changes for v0.7.x consumers.
 
-### Mirrored from arcflow-core v0.8.0
+### v0.8.0
 
 - **`arcflow.worldgraph` is the public substrate layer.** The
   doctrinal rename "World Store" → "World Graph" lands here. The
@@ -102,9 +99,9 @@ for v0.7.x consumers.
 
 ### Release content
 
-GitHub Release v0.8.0 ships from `arcflow-core` tag
-[`v0.8.0`](https://github.com/ozinc/arcflow-core/releases/tag/v0.8.0).
-`cargo add arcflow-core@0.8` is available once the release workflow
+GitHub Release v0.8.0 ships against the corresponding engine tag
+`v0.8.0`.
+`cargo add arcflow@0.8` is available once the release workflow
 lands green and crates.io publish flows through.
 
 `install.sh` end-to-end resolves to v0.8.0. `arcflow upgrade`
@@ -117,7 +114,7 @@ paths continue to work via the canonical re-export shims.
 
 **Patch wheel.** Post-v0.7.1 batch. Capability surface unchanged; bug fixes and substrate additions only.
 
-### Mirrored from arcflow-core v0.7.2
+### v0.7.2
 
 - **MRL-AF-021 resolved** — Tier-1 residual from MRL-AF-013. Column-projection leak of `d.position` (Frame Point3d) to traversed-to `(:Player).position` string role in cross-MATCH RETURN clauses. Two compound causes fixed in `typed.rs` partial-scoped Expand mode + `eval_typed.rs` CartesianProduct re-prefixing. Preemptive sister-bug fix in `optional_expand_typed_rows`. 4 MRL regression tests + 1560 runtime tests green. project-merlin's PLAY_KNN_QUERY can now collapse to the natural TRACKED-edge form.
 - **Wave K substrate** — aggregate-lowering decision substrate + EXPLAIN wire-up (PS-08).
@@ -126,7 +123,7 @@ paths continue to work via the canonical re-export shims.
 
 ### Release-publication fixes (workflow-only; applied as side-commits at the v0.7.2 tag)
 
-- **Windows daemon matrix** — drop `arcflow-daemon` from Windows build steps (UDS-only crate doesn't compile on Windows). Windows ships `arcflow` + `arcflow-mcp` only. Same fix as v0.7.1's side-commit; arcflow-core main awaiting cherry-pick.
+- **Windows daemon matrix** — drop `arcflow-daemon` from Windows build steps (UDS-only crate doesn't compile on Windows). Windows ships `arcflow` + `arcflow-mcp` only. Same fix as v0.7.1's side-commit.
 - **Musl `libarcflow.so` packaging** — Rust drops `cdylib` for static-musl targets (no dynamic-library output). Package step now skips libarcflow for `*-musl` platforms; linux-`*-gnu`, darwin, windows still ship the cdylib.
 
 ### Documentation alignment
@@ -160,8 +157,8 @@ shipped under `1.x` is present in this release. The convention reversal
 makes the alpha boundary unambiguous; `v1.0.0` is now reserved for the
 first production-ready release. See
 [`docs/reference/versioning`](./docs/reference/versioning.mdx) for the
-full bump-rule policy and [`VERSIONING.md`](https://github.com/ozinc/arcflow-core/blob/main/VERSIONING.md)
-in arcflow-core for the canonical source.
+full bump-rule policy and `VERSIONING.md`
+in this repo for the canonical source.
 
 ### Why 1.x → 0.x
 
@@ -174,9 +171,9 @@ criteria are met. No capability has been removed; the engine surface
 is unchanged from the `v1.6.88` line. The bump-rules (patch / minor /
 major / `-rc.N`) carry over verbatim and apply to the `0.x` series.
 
-### Mirrored from arcflow-core v0.7.1
+### v0.7.1
 
-The arcflow-core release accompanying this docs cut includes (per the
+The release accompanying this docs cut includes (per the
 upstream CHANGELOG):
 
 - **MRL-AF-013** parser symmetrization — comma-MATCH parser fix in
@@ -205,7 +202,7 @@ upstream CHANGELOG):
 - `scripts/lint-version-literals.py` extended to also catch `0.7.x`
   literals outside SoT-bearing files.
 
-### Deferrals (durable, dossier-tracked in arcflow-core)
+### Deferrals (tracked internally)
 
 - ANE in-engine model inference (out of scope per ANTI-0020; AMX
   covers the in-engine matmul case).
@@ -224,7 +221,7 @@ version-line labelling has changed.
 ## [Unreleased — pre-revision, superseded by 0.7.1]
 
 Originally tracked as `v1.6.27`; superseded by the alpha-state version
-line. The capability listed below shipped in arcflow-core under the
+line. The capability listed below shipped under the
 `1.6.x` series and is present in `0.7.1`.
 
 ### Added
@@ -258,13 +255,13 @@ line. The capability listed below shipped in arcflow-core under the
 
 ### Added
 
-- Initial public GitHub Release on this repo. Linux x86_64 tarball attached. Prior internal releases tracked in `arcflow-core` (private) only.
+- Initial public GitHub Release on this repo. Linux x86_64 tarball attached. Prior internal releases not published.
 
 ---
 
 ## Earlier internal releases (curated)
 
-These were tracked privately in `arcflow-core/CHANGELOG.md` (commit-level wave numbering) but did not produce public release artifacts. Summarized here for context:
+These were internal-only milestones — no public release artifacts. Summarized here for context:
 
 ### GPU acceleration milestone (2026-03)
 

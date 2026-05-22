@@ -93,15 +93,8 @@ Rust trajectory module (`crates/arcflow-runtime/src/trajectory.rs`)
 holds the canonical implementation; the Python copy mirrors it for
 portability.
 
-## Public benchmark
+## Shape, not speed
 
-The engine repo includes a side-by-side benchmark against DuckDB on
-multi-entity tracking data. The point of the comparison is shape: a
-typical analytics question on tracking data isn't a single column
-aggregate — it's a graph traversal anchored on a spatial predicate
-across a temporal window with a confidence filter. ArcFlow runs the
-whole question in one loop; the SQL counterpart needs joins for the
-graph shape, an extension for the spatial predicate, a windowed CTE for
-the temporal axis, and the result still doesn't carry confidence.
-See the engine repo's `benchmarks/` directory for the exact query
-shapes.
+The point of comparing ArcFlow against a row-oriented SQL engine on this kind of workload is *shape*, not throughput. A typical analytics question on tracking data isn't a single-column aggregate — it's a graph traversal anchored on a spatial predicate across a temporal window with a confidence filter. ArcFlow runs the whole question in one loop. The SQL counterpart needs joins for the graph shape, an extension for the spatial predicate, a windowed CTE for the temporal axis, and the result still doesn't carry confidence.
+
+Reproducible benchmark recipes live in [`examples/from-sql-to-arcflow/`](https://github.com/ozinc/arcflow/tree/main/examples/from-sql-to-arcflow).

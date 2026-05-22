@@ -1,6 +1,6 @@
 # ArcFlow Roadmap
 
-Public roadmap — curated 2-3 quarter view. Internal engine wave-by-wave detail lives in the private `arcflow-core` repo; this file is the dev-facing intent surface.
+Public roadmap — curated 2-3 quarter view. This is the dev-facing intent surface; wave-by-wave engine detail is internal.
 
 **Last updated:** 2026-05-13. Refreshed roughly monthly.
 

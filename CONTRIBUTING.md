@@ -16,7 +16,7 @@ npm test
 
 - Node.js 18+
 - npm 9+
-- A pre-built `arcflow-core` native binary (or `ARCFLOW_METAL_FORCE_UNAVAILABLE=true` for testing)
+- A pre-built ArcFlow native binary (installed via `install/install.sh`, or `ARCFLOW_METAL_FORCE_UNAVAILABLE=true` for testing)
 
 ## Project structure
 

@@ -74,7 +74,7 @@ receive N responses in the same order.
 ```
 
 The full method catalog lives in the daemon's source — `dispatch` in
-[`crates/arcflow-daemon/src/lib.rs`](https://github.com/ozinc/arcflow-core/blob/main/crates/arcflow-daemon/src/lib.rs)
+`crates/arcflow-daemon/src/lib.rs`
 — but the surface is small: pub/sub (`topic.*`), pull-style consumers
 (`consumer.*`), queue groups (`group.*`), plus a `ping`.
 
@@ -828,7 +828,7 @@ Use **in-process** instead when:
 
 ## Reference
 
-- Source: [`crates/arcflow-daemon/`](https://github.com/ozinc/arcflow-core/tree/main/crates/arcflow-daemon)
+- Source: `crates/arcflow-daemon/`
 - Method catalog: `dispatch` function in `lib.rs`
 - HTTP routes: `handle_http_connection` in `http.rs`
 - WAL replay: `init_store_with_wal` in `main.rs`

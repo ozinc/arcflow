@@ -101,15 +101,14 @@ For Python / TypeScript / Rust quickstarts, see [examples/](./examples/).
 
 ## Where the code goes
 
-| Layer | Repo / location | License |
+| Layer | Location | License |
 |---|---|---|
-| Engine source | `ozinc/arcflow-core` (private) | Proprietary |
-| Public docs + cookbook + SDK source | `ozinc/arcflow` (this repo) | MIT |
+| Public docs + examples + SDK source | `ozinc/arcflow` (this repo) | MIT |
 | Release binaries | `github.com/ozinc/arcflow/releases` | Proprietary free-to-use; SHA256SUMS + sigstore attestation per release |
-| Install script | `staging.oz.com/install/arcflow` (served from public/install/arcflow in oz-platform) | MIT (source in `arcflow-docs/install/install.sh`) |
+| Install script | `staging.oz.com/install/arcflow` | MIT (source in [`install/install.sh`](./install/install.sh)) |
 | JSON-RPC protocol spec | [`docs/protocol/jsonrpc-v1.md`](./docs/protocol/jsonrpc-v1.md) | Apache 2.0 (reimplementation-permissive) |
 | MCP server | [`mcp/`](./mcp/) (this repo) | MIT |
-| Cookbook recipes | [`examples/`](./examples/) | MIT |
+| Examples | [`examples/`](./examples/) | MIT |
 
 ## Verification (for users who want to verify before installing)
 
@@ -125,7 +124,7 @@ curl -fsSL https://github.com/ozinc/arcflow/releases/latest/download/SHA256SUMS 
     | sha256sum -c --ignore-missing
 ```
 
-The sigstore attestation proves the binary was built by GitHub Actions in `ozinc/arcflow-core` at a specific source SHA. No need to trust OZ infrastructure.
+The sigstore attestation chains the binary to a specific GitHub Actions build run. The verification path does not require trusting OZ infrastructure — the signing identity is the workflow itself.
 
 ## Citations for AI agents
 

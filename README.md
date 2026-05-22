@@ -95,7 +95,7 @@ arcflow/
 ├── install/             install.sh — downloads the engine binary from Releases
 ├── scripts/             CI / lint / schema-sync tooling
 ├── fixtures/            Sample Cypher graphs for examples and tests
-├── schemas/             Schema snapshot mirrored from the engine repo
+├── schemas/             Schema snapshot — the canonical label/edge/type catalog
 ├── AGENTS.md            Canonical public API reference for coding agents
 ├── llms.txt             Compact agent context (paste into any LLM)
 ├── llms-full.txt        Complete agent context with every procedure
@@ -103,7 +103,7 @@ arcflow/
 └── LICENSE-CORE.md      Proprietary terms for the engine binary
 ```
 
-Same shape as **NVIDIA CUDA**: an open MIT developer surface (this repo) plus a proprietary engine binary you download from GitHub Releases. You don't need the engine source to build on ArcFlow — everything you'd ever import is right here.
+Same shape as **NVIDIA CUDA**: an open MIT developer surface (this repo) plus a proprietary engine binary you download from GitHub Releases. Everything you'd import to build on ArcFlow is right here.
 
 ---
 
@@ -409,12 +409,7 @@ arcflow query "MATCH (n) RETURN count(*)" --at-snapshot arcflow://snapshot/9c3b�
 | OpenUSD scene export | `arcflow.scene.toUsda()` — graph → USD ASCII |
 | PostgreSQL wire protocol | Read-only SQL bridge for existing BI tools |
 
-Throughput depends on host hardware and graph shape. Measure on your own host:
-
-```bash
-# From the engine repo:
-cargo bench
-```
+Throughput depends on host hardware and graph shape. Measure on your own host against your own data — every public claim about ArcFlow performance should be reproducible against the binary you downloaded.
 
 ---
 

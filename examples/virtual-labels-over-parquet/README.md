@@ -250,10 +250,10 @@ Parquet tree to test against real data — the partition pattern in
   [`<InstallMatrix />`](https://oz.com/docs/installation) — do not
   hand-roll.
 - `oz-arcflow` is currently planned for PyPI (RAM-C2 / 2026-Q3). The
-  cookbook pin describes the target end-state; running `uv sync` will
-  fail until the wheel ships. Use the engine repo's `cargo` or
-  `cargo install arcflow-core@0.8` (once the release workflow lands
-  green) for the path that works today.
+  example pin describes the target end-state; running `uv sync` will
+  fail until the wheel ships. Use the `arcflow` CLI installed via
+  `install.sh` and address the engine through the JSON-over-stdin
+  transport for the path that works today.
 
 ## See also
 

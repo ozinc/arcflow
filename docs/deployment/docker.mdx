@@ -12,7 +12,7 @@ ArcFlow runs **in-process** — same address space as your application, no netwo
 - **Browsers** via WebAssembly
 - **Node.js** via napi-rs native addon
 - **Python** via PyO3 / ctypes
-- **Rust** via the `arcflow-core` crate
+- **Rust** via the `arcflow` crate
 - **Native CLI** via the `arcflow` binary
 
 Wrapping the engine in a Docker image would put a network boundary between your application and the database — exactly what the in-process design exists to eliminate.

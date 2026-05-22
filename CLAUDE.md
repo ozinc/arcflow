@@ -14,7 +14,7 @@ See [AGENTS.md](AGENTS.md) for the full public API and WorldCypher reference.
 This repo (`arcflow/`) owns the **developer surface**: SDK, docs, examples, and the
 machine-readable API context for coding agents.
 
-| Belongs here | Belongs in arcflow-core (engine repo) |
+| Belongs here | Belongs in the engine (internal) |
 |---|---|
 | TypeScript SDK (`sdk/src/`) | Rust engine source (`crates/`) |
 | Schema constants mirror (`sdk/src/code-intelligence.ts`) | Schema constants source of truth (`sdk/code-intelligence/src/schema.rs`) |
@@ -36,7 +36,7 @@ Never write Rust source, edit crates, or touch WAL/GPU code in this repo.
 All engine changes go in `arcflow/`.
 
 **RULE 3 — Schema Sync (critical):**
-`sdk/src/code-intelligence.ts` mirrors `arcflow-core/sdk/code-intelligence/src/schema.rs`.
+`sdk/src/code-intelligence.ts` mirrors the engine's schema source of truth.
 The Rust file is the **source of truth**. The TypeScript file is the **mirror**.
 Any PR that touches `code-intelligence.ts` here **must** coordinate with a corresponding
 change to `schema.rs` in the engine repo (or vice versa).

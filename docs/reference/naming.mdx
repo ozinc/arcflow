@@ -182,7 +182,7 @@ Six rules that bind the namespace decisions to code review:
    Studio surface. `lake://studio/...` is not — `lake://` doesn't
    know what a Studio is.
 5. **Internal Rust module names never carry the product name
-   redundantly.** Inside `arcflow-core`, modules are `worldstore::*`,
+   redundantly.** Internally, modules are `worldstore::*`,
    not `arcflow_worldstore::*`. The crate prefix carries product
    identity; modules carry layer identity.
 6. **Brand surfaces use full names; module paths use short names.**
@@ -198,7 +198,7 @@ that pre-date this convention are grandfathered until they migrate.
 
 | Banned | Why | Use instead |
 |---|---|---|
-| **reactive** (as in "reactive system" / "reactive view") | Carries a negative connotation — sounds like firefighting rather than dataflow. PAT-0038 in arcflow-core. | **live** (for materialised / standing things), **event-driven** (for fire-on-event), **trigger** (for the binding itself), **event bus** (for pub/sub) |
+| **reactive** (as in "reactive system" / "reactive view") | Carries a negative connotation — sounds like firefighting rather than dataflow. | **live** (for materialised / standing things), **event-driven** (for fire-on-event), **trigger** (for the binding itself), **event bus** (for pub/sub) |
 | **legacy** in user-facing copy | Implies neglect or shame. | **prior**, **pre-vN.M.K**, or just drop the qualifier |
 | **broker** (when talking about ArcFlow's bus) | Implies a separate process you'd run alongside. ArcFlow's bus is in-process. | **event bus**, **in-process bus**, **bus** |
 | **"reactive systems"** in the tagline | Same as **reactive**. | **live systems** or **event-driven systems** or **agent systems** |

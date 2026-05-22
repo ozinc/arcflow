@@ -128,8 +128,7 @@ Three layers:
    ```sh
    gh attestation verify arcflow-0.8.0-linux-x86_64-musl.tar.gz --owner ozinc
    ```
-   This proves the binary was built by GitHub Actions in `ozinc/arcflow-core` at a specific source SHA. You don't need to trust OZ infrastructure — the proof is in the sigstore transparency log.
-3. **Reproducible builds** — for the most paranoid case, rebuild from source yourself per [`docs/reproducible-build.md`](./docs/reproducible-build.md) and verify the SHA256 matches what we shipped.
+   This chains the binary to a specific GitHub Actions build run via sigstore. The signing identity is the workflow itself; the proof lives in sigstore's public transparency log, so you don't need to trust OZ infrastructure.
 
 ## Where does ArcFlow tie in with my data sovereignty / GDPR / SOC 2 posture?
 

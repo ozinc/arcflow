@@ -60,69 +60,21 @@ ArcFlow moved from `1.x` to `0.x` versioning per an explicit operator directive 
 
 ## Using ArcFlow from Python or Node today
 
-If your project's `pyproject.toml` or `package.json` depends on `oz-arcflow` / `arcflow` and `pip install` / `npm install` returns *"No matching distribution found"*, the cause is the publish gap above — the SDK wheels are not yet on public registries. Until they ship (RAM-C2 / 2026-Q3), two recovery paths work today:
+If your project's `pyproject.toml` or `package.json` depends on `oz-arcflow` / `@ozinc/arcflow` and `pip install` / `npm install` returns *"No matching distribution found"*, the cause is the publish gap shown in the matrix above — the SDK wheels are not yet on the public registries.
 
-### Path 1 — Editable install against the engine repo (recommended for dev)
-
-The Python wheel can be built and installed editable from the engine source:
+Until they ship, the **CLI is the complete answer for most workflows.** Install it with the curl one-liner at the top of this page and address ArcFlow through the JSON-over-stdin transport:
 
 ```bash
-git clone https://github.com/ozinc/arcflow
-cd arcflow
-cargo build --release -p arcflow-ffi
-pip install -e python/   # editable install, picks up the local libarcflow
+arcflow query "MATCH (n) RETURN count(*)" --json
 ```
 
-Then in your project, replace the version pin with the local path:
-
-```toml
-# Your project's pyproject.toml
-[project]
-dependencies = [
-    # "oz-arcflow>=0.8"   ← swap this line out until public publish
-]
-```
-
-…and install your project against the local engine repo:
-
-```bash
-pip install -e ~/code/arcflow --force-reinstall --no-deps
-pip install -e .[dev] --no-deps   # your project, deps already satisfied
-```
-
-The `--no-deps` flag stops pip from re-trying public PyPI for `oz-arcflow`; you've already installed it from source.
-
-### Path 2 — Vendored wheel + `find-links`
-
-For workflows that need a reproducible wheel (CI, multi-developer projects, harnesses that test against a frozen engine commit), build the wheel into a vendored `wheels/` directory and pin via `find-links`:
-
-```bash
-~/code/arcflow/python/build_wheel.sh           # produce the wheel
-mkdir -p ./wheels
-cp ~/code/arcflow/python/dist/oz_arcflow-*.whl ./wheels/
-```
-
-```toml
-# Your project's pyproject.toml
-[project]
-dependencies = ["oz-arcflow"]
-
-[tool.uv]
-find-links = ["./wheels"]
-```
-
-Commit the vendored wheel alongside the tests that depend on it; refresh it whenever you bump the engine version.
-
-### What about the CLI?
-
-Path 1 and Path 2 both apply to the **Python / npm SDK** path. The **CLI binary** (`arcflow`, `arcflow-daemon`, `arcflow-mcp`) ships today via the curl install at the top of this page — no source build required. If your workflow only needs the CLI, the curl install is the complete answer. The SDK paths above only apply when your code calls ArcFlow as an in-process library.
+The JSON-over-stdin transport is identical in shape to what the SDK wraps; everything you would call through the SDK is reachable from the CLI today. When the SDK wheels publish, switching from CLI shell-out to in-process calls is mechanical — the result envelopes are byte-identical.
 
 ## How this page stays accurate
 
 The matrix above is rendered from
 [`release-matrix.json`](https://github.com/ozinc/arcflow/releases/latest/download/release-matrix.json),
-published by the engine repo on every release. CI in the engine repo asserts
-on every commit that:
+published on every release. CI asserts on every commit that:
 
 - A `status: shipped` artifact's registry returns HTTP 200.
 - A `status: planned` artifact's registry returns HTTP 4xx (no false advertising).
@@ -170,62 +122,11 @@ above shows you the install command for whichever path is currently shipped.
 - No native build tools required — pre-built binaries are bundled in the
   installable artifacts.
 
-## Dev-track install (preview / unreleased builds)
+## Pre-release / nightly builds
 
-Working against an unreleased ArcFlow change — testing a fix the engine
-team just merged, or building against `main` ahead of a release —
-means building from source. There is no separate staging registry: the
-canonical release path is the GitHub Release on `ozinc/arcflow` (created
-by the engine repo's `release-binaries.yml` on tag push). Per-commit
-pre-release artifacts are not published.
+Per-commit pre-release artifacts are not published. The canonical release path is the GitHub Release on `ozinc/arcflow` — pin to a published tag for reproducibility.
 
-### Local build
-
-To test an unreleased engine change, build the wheel locally and install
-it from a path:
-
-```bash
-git clone https://github.com/ozinc/arcflow
-cd arcflow
-cargo build --release -p arcflow-ffi
-pip install -e python/  # editable install, picks up the local libarcflow
-```
-
-```python
-import os
-# Point at the locally built shared library:
-os.environ["ARCFLOW_NATIVE_DIR"] = "/abs/path/to/arcflow/target/release"
-from arcflow import ArcFlow
-```
-
-### When to vendor wheels
-
-Two workflows are valid; the distinction is whether the wheel under
-test is published or in-progress.
-
-**Customer projects** consume ArcFlow as a published dependency. Pin
-`oz-arcflow==X.Y.Z` in `pyproject.toml` against PyPI. Don't vendor
-wheels — they go stale on every release, and the next teammate who
-clones the repo gets a binary that doesn't match the docs they're
-reading.
-
-**Engine-team stress harnesses** (e.g. `project-merlin`) test against
-an in-progress wheel built from `arcflow-core` HEAD. Vendor the wheel
-into `wheels/` and pin via `--find-links ./wheels`:
-
-```bash
-arcflow-core/python/build_wheel.sh    # produce the wheel
-cp arcflow-core/python/dist/oz_arcflow-*.whl <harness>/wheels/
-```
-
-```toml
-# Harness pyproject.toml
-[project]
-dependencies = ["oz-arcflow"]
-
-[tool.uv]
-find-links = ["./wheels"]
-```
+For customer projects: pin `oz-arcflow==X.Y.Z` (Python) or `@ozinc/arcflow@^X.Y.Z` (npm) against the public registry. Don't vendor wheels — they go stale on every release, and the next teammate who clones the repo gets a binary that doesn't match the docs they're reading.
 
 The vendored wheel rebuilds whenever the engine code changes; commit
 it alongside the test that depends on it for reproducible audit across
