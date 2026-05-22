@@ -60,12 +60,11 @@ RETURN e.name, e.position
 
 ```cypher
 -- Entities within a camera frustum (6-plane containment, index-narrowed)
-CALL algo.objectsInFrustum($frustum)
+CALL arcflow.scene.frustumQuery(ox, oy, oz, dx, dy, dz, fovDeg, nearZ, farZ)
   YIELD node, distance
   RETURN node.name, distance
 
 -- Nearest entity visible to any of N cameras
-CALL algo.nearestVisible($position, 'Camera', 10)
   YIELD node, distance
   RETURN node.name, distance
 
@@ -154,7 +153,6 @@ CALL arcflow.spatial.dispatch_stats()
 For live geofence trigger metrics:
 
 ```cypher
-CALL arcflow.spatial.trigger_stats()
   YIELD query_name, node_id, predicate_type, evaluation_us, fired
 ```
 

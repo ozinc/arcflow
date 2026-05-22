@@ -121,9 +121,8 @@ Partition-key column exposure:
 - Hive-style partition keys in lakehouse URIs (`lake://prod/trades/year=2026/region=eu/`) surface as plain typed properties on every virtual-label node. `MATCH (t:Trade) WHERE t.year = 2026 AND t.region = 'eu' RETURN count(*)` walks only the matching subtree; other partitions are pruned before any parquet file is opened.
 - `result.io_stats.partitions_pruned` reports how many partition directories were skipped; `partitions_scanned` reports how many were walked.
 
-Hybrid index registration:
-- `CALL arcflow.index.hybrid.register({name, vector_index, fulltext_index, weight: {vector, fulltext}})` — bind a vector index to a fulltext or property filter; `algo.vectorSearch(<hybrid_name>, $vec, k)` then consults both and merges candidates by the declared weight.
-- `CALL arcflow.index.hybrid.list()` / `.describe(name)` / `.drop(name)`.
+Hybrid search:
+- `algo.hybridSearch($queryVec, label, k)` and `algo.graphRAGTrusted(...)` combine vector similarity with graph traversal in one call. `algo.vectorSearch(<index>, $vec, k)` is the pure-vector form.
 
 Query hints (explicit lane selection):
 - `CALL algo.X(...) HINT lane=<ident> YIELD ...` — overrides the planner's automatic lane choice. Lanes: `cpu_scalar | cpu_simd | gpu_cuda | gpu_metal | auto`. The chosen lane is reported back as `result.transport_outcome.lane`. If the requested lane isn't available on the host, the engine falls back silently to the next-best lane and records the actual lane used — use the field to detect silent fallbacks in tests.
@@ -136,7 +135,7 @@ LLM Node (provider-pluggable, BYOK):
 - CLI: `arcflow keys add <provider> [--from-stdin | --key SECRET]`, `arcflow keys list`, `arcflow keys rm <provider>`, `arcflow keys set-daily-cap <provider> <USD>`. Keys live in the OS keychain (macOS Keychain, Linux Secret Service, Windows Credential Manager) — never written to disk.
 - Skill grammar: `CREATE SKILL name FROM PROMPT '...' [ALLOWED ON [Label, ...]] [TIER LLM] [MODEL '<catalog-row>']`. `MODEL` routes the LLM call to a specific catalog row instead of the default `oz/deepseek-v3`.
 - Providers: `openai/*` (OpenAI-compatible HTTPS — OpenAI, Together, Groq, Anyscale, any same-shape API), `cli/*` (SubprocessCli — `cli/claude-code`, `cli/codex`, `cli/gemini`; zero network egress), `oz/*` (first-party catalog at `llm.oz.com`).
-- Catalog + budget: `CALL arcflow.llm.catalog() YIELD model, provider, context_window, input_usd_per_million, output_usd_per_million`. `CALL arcflow.llm.budget() YIELD provider, day, spent_usd, cap_usd, remaining_usd`. BudgetMeter intercepts every call and rejects on cap-exceeded with a typed error.
+- Catalog + budget: `arcflow keys list` shows provider, masked_key, daily_cap_usd, and spent_today_usd. BudgetMeter intercepts every LLM call and rejects on cap-exceeded with a typed error.
 - Architecture: LLM calls route through an `arcflow-llm` sidecar process supervised by the runtime — provider state isolated, crash-restarted by the supervisor, failures sandboxed from the engine.
 
 Read:
@@ -199,7 +198,7 @@ IS LABELED :Label, ELEMENT_ID(n),
 RETURN * NEXT WHEN/THEN/ELSE/END,
 START TRANSACTION [READ ONLY | READ WRITE], COMMIT, ROLLBACK,
 CALL algo.pageRank(), CALL algo.louvain(), CALL algo.vectorSearch(),
-CALL algo.nearestNodes(), CALL algo.objectsInFrustum(), CALL spatial.raycast(),
+CALL algo.nearestNodes(), CALL arcflow.scene.frustumQuery(), CALL spatial.raycast(),
 CALL db.stats(), CALL db.schema(), CALL db.help(), CALL db.spatialMetadata(),
 CALL db.gpuStatus(), CALL dbms.gpuThresholds(),
 CALL db.storageMode(), CALL db.warmCsr(), CALL db.csrStats(), CALL db.denseStore(),

@@ -501,25 +501,15 @@ CREATE FULLTEXT INDEX name FOR (n:Label) ON (n.prop)
 CREATE INDEX ON :Label(prop)
 ```
 
-### Hybrid index registration
+### Hybrid search
 
-A hybrid index is a typed configuration that lets `algo.vectorSearch` consult a vector index *plus* a fulltext or property filter in one call — the planner combines the candidate sets before scoring.
+`algo.hybridSearch` combines a vector-similarity scan with a graph-traversal step in one call — useful for retrieval-augmented generation over a typed graph, where you want the planner to merge embedding similarity with structural neighbourhood before scoring. `algo.vectorSearch` is the pure-vector counterpart.
 
 ```cypher
--- Register a hybrid policy: combine vector similarity with fulltext score
-CALL arcflow.index.hybrid.register({
-    name: 'doc_search',
-    vector_index: 'doc_embed',
-    fulltext_index: 'doc_body',
-    weight: { vector: 0.7, fulltext: 0.3 }
-}) YIELD name, created_at
-
-CALL arcflow.index.hybrid.list()                YIELD name, vector_index, fulltext_index, weight
-CALL arcflow.index.hybrid.describe('doc_search') YIELD name, config
-CALL arcflow.index.hybrid.drop('doc_search')    YIELD removed
+CALL algo.hybridSearch($queryVec, 'Doc', 10)
+  YIELD node, score
+RETURN node.title, score
 ```
-
-Once registered, `algo.vectorSearch('doc_search', $vector, 10)` consults both indexes and merges results by the declared weight.
 
 ### Partition-key column exposure
 
@@ -816,7 +806,7 @@ CREATE SKILL coach_summary
     FROM PROMPT 'Analyze {{name}}'
     ALLOWED ON [Player]
     TIER LLM
-    MODEL 'cli/claude-code'        -- catalog row, see arcflow.llm.catalog()
+    MODEL 'cli/claude-code'        -- catalog row from the LLM provider table
 
 -- Bundle export / import (skill packs are portable JSON blobs)
 CALL arcflow.skills.export('my-pack', '1.0.0') YIELD json
@@ -849,12 +839,9 @@ arcflow keys rm openai
 arcflow keys set-daily-cap openai 25.00
 ```
 
-```cypher
--- Discover available models (oz first-party + your BYOK providers)
-CALL arcflow.llm.catalog() YIELD model, provider, context_window, input_usd_per_million, output_usd_per_million
-
--- Inspect BudgetMeter state (per-key daily-cap enforcement)
-CALL arcflow.llm.budget() YIELD provider, day, spent_usd, cap_usd, remaining_usd
+```bash
+# Inspect available models and current BudgetMeter state via the CLI
+arcflow keys list                    # provider, masked_key, daily_cap_usd, spent_today_usd
 ```
 
 **Architecture:** an LLM call from Cypher (`TIER LLM` skill) routes through an `arcflow-llm` sidecar process, which the runtime supervises. The sidecar holds provider state and isolates LLM call failures from the engine. The supervisor restarts the sidecar on crash. BudgetMeter intercepts every call and rejects on cap-exceeded with a typed error.
@@ -909,7 +896,6 @@ CALL arcflow.programs.describe('yolo_v11')           YIELD input_schema, output_
 CALL arcflow.programs.validate('yolo_v11')           YIELD passed, details
 CALL arcflow.programs.health('yolo_v11')             YIELD status, last_heartbeat_ms
 CALL arcflow.programs.find_by_capability('ball_3d')  YIELD name
-CALL arcflow.programs.install($manifest)             YIELD name, installed_at
 CALL arcflow.programs.remove('yolo_v11')             YIELD removed
 ```
 
@@ -941,7 +927,7 @@ WHERE e.position.x >= 0 AND e.position.x <= 100
 RETURN e.name
 
 -- Frustum / visibility (6-plane containment, index-narrowed)
-CALL algo.objectsInFrustum($frustum) YIELD node, distance RETURN node.name, distance
+CALL arcflow.scene.frustumQuery(ox, oy, oz, dx, dy, dz, fovDeg, nearZ, farZ) YIELD node, distance RETURN node.name, distance
 
 -- Raycast (line-of-sight)
 CALL spatial.raycast(point({x: 0, y: 0, z: 2}), point({x: 1, y: 0, z: 0}), 100.0)
@@ -972,7 +958,6 @@ CALL arcflow.spatial.dispatch_stats()
         prefilter_us, rtree_us, gpu_transfer_us, kernel_us, total_us
 
 -- Live trigger metrics
-CALL arcflow.spatial.trigger_stats()
   YIELD query_name, node_id, predicate_type, evaluation_us, fired
 ```
 

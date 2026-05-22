@@ -250,7 +250,6 @@ YIELD status, last_heartbeat_ms, executor_address
 RETURN *
 
 -- Programmatic install (alternative to CREATE PROGRAM DDL)
-CALL arcflow.programs.install($manifest)
 YIELD name, installed_at
 RETURN *
 

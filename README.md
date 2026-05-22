@@ -204,7 +204,7 @@ CREATE SKILL coach_summary
     FROM PROMPT 'Analyze {{name}}'
     ALLOWED ON [Player]
     TIER LLM
-    MODEL 'cli/claude-code'         -- catalog row from arcflow.llm.catalog()
+    MODEL 'cli/claude-code'         -- catalog row, see `arcflow keys list`
 
 -- A TRIGGER binds a SKILL to a graph event — no glue code, no consumer loop
 -- Per-property granularity: ON :Label.property restricts to writes that
@@ -238,7 +238,7 @@ CALL arcflow.skills.import(json) YIELD name, version, skill_count
 
 A skill pack is a JSON bundle. Hand one to another agent, import it, and the receiving agent inherits the capability. This is **what people are trying to build with chains of language-model glue code — but as a first-class language primitive instead of a framework**.
 
-**LLM Node — provider-pluggable BYOK**. LLM-tier skills route through a supervised sidecar process. Provider keys live in the OS keychain (`arcflow keys add openai`, never on disk). Per-provider daily-USD budget caps are enforced by an interception meter (`arcflow keys set-daily-cap openai 25.00`). Three provider families ship: `openai/*` (any OpenAI-compatible HTTPS endpoint — OpenAI, Together, Groq, Anyscale), `cli/*` (subprocess to a locally-installed CLI agent — `cli/claude-code`, `cli/codex`, `cli/gemini`; zero network egress), and `oz/*` (first-party hosted catalog). Inspect from Cypher: `CALL arcflow.llm.catalog()`, `CALL arcflow.llm.budget()`.
+**LLM Node — provider-pluggable BYOK**. LLM-tier skills route through a supervised sidecar process. Provider keys live in the OS keychain (`arcflow keys add openai`, never on disk). Per-provider daily-USD budget caps are enforced by an interception meter (`arcflow keys set-daily-cap openai 25.00`). Three provider families ship: `openai/*` (any OpenAI-compatible HTTPS endpoint — OpenAI, Together, Groq, Anyscale), `cli/*` (subprocess to a locally-installed CLI agent — `cli/claude-code`, `cli/codex`, `cli/gemini`; zero network egress), and `oz/*` (first-party hosted catalog). Inspect with `arcflow keys list`.
 
 ### Layer 8 — Algorithm Library — 40+ built-in primitives
 
@@ -259,17 +259,20 @@ CALL arcflow.multi_source_disagreement(
   disagreement_kind: "categorical")
   YIELD source, value, agreement_class, group_consensus, dispute_score
 
--- Spatial autocorrelation (Moran's I + Getis-Ord G*) with confidence weights
-CALL arcflow.spatial.autocorrelation('Sensor', 'reading', confidence_weight: true)
-  YIELD i, z_score, p_value, clusters
+-- Spatial autocorrelation — global Moran's I, optionally confidence-weighted
+CALL arcflow.moransI('Sensor', 'reading', {confidence_weight: true})
+  YIELD i, z_score, p_value
+
+-- Hot-spot detection — Getis-Ord G* per-node
+CALL arcflow.getisOrdGStar('Sensor', 'reading') YIELD node_id, g_star, z_score
 
 -- Counterfactual branching — fork the World Graph at any WAL seq
 CALL arcflow.counterfactual.branchAt(name: 'rollout-1', seq: 42)
   YIELD branch, base_seq, status
 
--- Anomaly detection (LOF)
-CALL arcflow.algo.lof('Trade', features: ['notional', 'velocity'])
-  YIELD node_id, score, is_anomaly
+-- Density-based anomaly detection (Local Outlier Factor)
+CALL arcflow.localOutlierFactor('Trade', features: ['notional', 'velocity'])
+  YIELD node_id, score, is_outlier
 ```
 
 Centrality, community, causal reasoning, multi-source disagreement, trajectory analytics, spatial autocorrelation, Ripley's K, anomaly detection, counterfactual branching, bias detection — every one of these is a one-line `CALL` against the live graph.
@@ -287,7 +290,7 @@ Most graph databases stop at nodes and edges. ArcFlow makes the following first-
 | **LLM Node (BYOK)** | `arcflow keys add <provider>` plus a `MODEL '<row>'` clause on `CREATE SKILL` routes LLM calls through a supervised sidecar. Keys in the OS keychain. Per-provider daily-USD cap enforced by `BudgetMeter`. Providers: `openai/*` (any OpenAI-shape HTTPS), `cli/*` (local CLI subprocess), `oz/*` (first-party catalog). |
 | **MCP server** | `npx @ozinc/arcflow-mcp` exposes ArcFlow as a Model Context Protocol server for chat UIs. CLI agents get the faster CLI fastpath instead. |
 | **Lake (`lake://`)** | Read Parquet/Iceberg directly via `CREATE NODE LABEL ... VIRTUAL FROM PARTITION`. Footer-only count fast-path. Hive-style partition keys land as queryable bare properties; partition pruning happens before any file is opened. No ETL. |
-| **Hybrid index** | `arcflow.index.hybrid.register({vector, fulltext, weight})` lets one `algo.vectorSearch` consult vector + fulltext + property filters in a single call, with declared weight merging. The retrieval primitive for retrieval-augmented generation over a typed graph. |
+| **Hybrid search** | `algo.hybridSearch` and `algo.graphRAGTrusted` combine vector similarity with graph traversal in one call — the retrieval primitive for retrieval-augmented generation over a typed graph, not over a flat vector store. |
 | **Query hints** | `CALL algo.X(...) HINT lane=<gpu_cuda\|cpu_simd\|...>` overrides the planner's lane choice; actual lane used is reported back on `result.transport_outcome.lane`. Detect silent fallbacks in tests. |
 | **IoStats telemetry** | Every result envelope carries `partitions_pruned`, `row_groups_pruned`, `pruning_efficiency`, `decoded_bytes`, `lane_used`. Tune lakehouse layouts and verify pushdown by reading the envelope. |
 | **`AS OF` time-travel** | Query any past state with the *same* execution path as a current-state query. Decision audit. Counterfactual replay. No separate temporal index. |

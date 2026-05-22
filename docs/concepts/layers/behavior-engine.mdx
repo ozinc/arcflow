@@ -74,12 +74,7 @@ arcflow keys list                        # masked
 arcflow keys set-daily-cap openai 25.00  # USD per provider per day
 ```
 
-**BudgetMeter.** Every LLM call is intercepted before dispatch; calls that would exceed the daily cap fail with a typed error. Inspect from Cypher:
-
-```cypher
-CALL arcflow.llm.budget()
-  YIELD provider, day, spent_usd, cap_usd, remaining_usd
-```
+**BudgetMeter.** Every LLM call is intercepted before dispatch; calls that would exceed the daily cap fail with a typed error. Inspect with `arcflow keys list` (shows `daily_cap_usd` and `spent_today_usd` per provider).
 
 **Provider catalogs:**
 
@@ -89,10 +84,7 @@ CALL arcflow.llm.budget()
 | `cli/*` | SubprocessCli | Routes to a locally-installed CLI agent (`cli/claude-code`, `cli/codex`, `cli/gemini`); zero network egress from the engine; the local CLI authenticates with its own provider |
 | `oz/*` | OZ first-party | Hosted catalog at `llm.oz.com`; default `oz/deepseek-v3` |
 
-```cypher
-CALL arcflow.llm.catalog()
-  YIELD model, provider, context_window, input_usd_per_million, output_usd_per_million
-```
+Models are discovered through the active provider's own catalog — `oz/*` from `llm.oz.com`, `openai/*` from `/models` on the configured base URL, `cli/*` from the local CLI tool's `--list-models` (where supported).
 
 Per-skill `MODEL` routing means an agent can declare *which* model handles a given skill — and change it later without rewriting the prompt. Combined with the CLI provider family, this lets a workflow run entirely on locally-installed LLM CLIs (no network) for one skill, and on a hosted endpoint for another.
 

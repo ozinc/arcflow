@@ -616,7 +616,7 @@ CREATE SKILL coach_summary
     FROM PROMPT 'Analyze {{name}}'
     ALLOWED ON [Player]
     TIER LLM
-    MODEL 'cli/claude-code'         -- catalog row, see arcflow.llm.catalog()
+    MODEL 'cli/claude-code'         -- catalog row, see `arcflow keys list`
 
 -- Bundle export / import — skill packs are portable JSON
 CALL arcflow.skills.export('my-pack', '1.0.0')  YIELD json
@@ -657,13 +657,9 @@ arcflow keys set-daily-cap openai 25.00        # enforces a hard daily USD cap p
 | `cli/*` | SubprocessCli | Routes to a locally-installed CLI agent (`cli/claude-code`, `cli/codex`, `cli/gemini`); zero network egress; the local CLI authenticates with its own provider |
 | `oz/*` | OZ first-party | Hosted at `llm.oz.com`; default catalog row `oz/deepseek-v3` |
 
-**Catalog + budget procedures:**
-```cypher
-CALL arcflow.llm.catalog()
-  YIELD model, provider, context_window, input_usd_per_million, output_usd_per_million
-
-CALL arcflow.llm.budget()
-  YIELD provider, day, spent_usd, cap_usd, remaining_usd
+**Catalog + budget inspection** (via the CLI today; Cypher CALL surface lands later):
+```bash
+arcflow keys list      # provider, masked_key, daily_cap_usd, spent_today_usd, set_at
 ```
 
 ### Triggers — event-driven skill firing, per-property granularity
@@ -685,24 +681,20 @@ CALL db.triggers() YIELD name, label, property, event, skill, created_at
 
 The optional `.property` after the label restricts the trigger to writes that actually mutate that property — avoids spurious fires for unrelated columns updated on the same node.
 
-### Hybrid index registration
+### Hybrid search
+
 ```cypher
--- Bind a vector index to a fulltext index; algo.vectorSearch consults both
-CALL arcflow.index.hybrid.register({
-    name: 'doc_search',
-    vector_index: 'doc_embed',
-    fulltext_index: 'doc_body',
-    weight: { vector: 0.7, fulltext: 0.3 }
-}) YIELD name, created_at
-
-CALL arcflow.index.hybrid.list()                 YIELD name, vector_index, fulltext_index, weight
-CALL arcflow.index.hybrid.describe('doc_search') YIELD name, config
-CALL arcflow.index.hybrid.drop('doc_search')     YIELD removed
-
--- Use the hybrid policy in a search
-CALL algo.vectorSearch('doc_search', $query_vector, 10)
+-- One-call hybrid: vector similarity composed with graph traversal
+CALL algo.hybridSearch($query_vector, 'Doc', 10)
   YIELD node, score
+RETURN node.title, score
+
+-- Confidence + graph-shape RAG against a typed neighbourhood
+CALL algo.graphRAGTrusted($query_vector, 'Doc', 10, {min_confidence: 0.85})
+  YIELD node, score, hops
 ```
+
+`algo.vectorSearch(<index>, $vec, k)` is the pure-vector form. Hybrid procs above are useful when retrieval needs to combine embedding similarity with graph structure (typed edges, label filters, confidence weighting) before scoring — typical for retrieval-augmented generation over a typed graph rather than a flat vector store.
 
 Hybrid search merges candidate sets from both indexes before scoring; the declared weights determine final ranking. Useful for retrieval-augmented generation where lexical recall (fulltext) and semantic recall (embedding) catch different document types.
 
@@ -792,8 +784,7 @@ WHERE e.position.x >= 0 AND e.position.x <= 100
 RETURN e.name
 
 -- Frustum / visibility (< 2ms for 50 entities, 10 frusta)
-CALL algo.objectsInFrustum($frustum) YIELD node, distance RETURN node.name
-CALL algo.nearestVisible($position, 'Camera', 10) YIELD node, distance RETURN node.name
+CALL arcflow.scene.frustumQuery(ox, oy, oz, dx, dy, dz, fovDeg, nearZ, farZ) YIELD node, distance RETURN node.name
 CALL spatial.raycast(point({x: 0, y: 0, z: 2}), point({x: 1, y: 0, z: 0}), 100.0)
   YIELD hit, distance RETURN hit.name, distance
 
@@ -822,7 +813,6 @@ CALL arcflow.spatial.dispatch_stats()
         prefilter_us, rtree_us, gpu_transfer_us, kernel_us, total_us
 
 -- Live trigger metrics
-CALL arcflow.spatial.trigger_stats()
   YIELD query_name, node_id, predicate_type, evaluation_us, fired
 ```
 

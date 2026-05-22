@@ -97,13 +97,12 @@ Objects within a camera or sensor frustum use 6-plane containment:
 
 ```cypher
 -- Entities visible from a camera frustum
-CALL algo.objectsInFrustum($frustum)
+CALL arcflow.scene.frustumQuery(ox, oy, oz, dx, dy, dz, fovDeg, nearZ, farZ)
   YIELD node, distance
   RETURN node.name, distance
 ORDER BY distance
 
 -- Nearest object visible to any of N cameras
-CALL algo.nearestVisible($position, 'Camera', 10)
   YIELD node, distance
   RETURN node.name, distance
 
@@ -308,7 +307,6 @@ CALL arcflow.spatial.dispatch_stats()
 For live spatial trigger metrics:
 
 ```cypher
-CALL arcflow.spatial.trigger_stats()
   YIELD query_name, node_id, predicate_type, evaluation_us, fired
 ```
 

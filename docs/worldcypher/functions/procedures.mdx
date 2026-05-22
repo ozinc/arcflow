@@ -143,8 +143,7 @@ Returns the path as "id1 -> id2 -> id3", total cost, and hop count.
 | `CALL algo.similarNodes()` | `nodeId`, `score` | Nodes similar to the first vector-bearing node (cosine similarity) |
 | `CALL algo.pairSimilarity(sourceIds, targetIds)` | `node1`, `node2`, `score` | Jaccard similarity for explicit node pairs (variadic — accept paired or interleaved args) |
 | `CALL algo.nearestNodes(point, label, k)` | `node`, `distance` | K nearest nodes by exact spatial distance (ArcFlow Spatial Index) |
-| `CALL algo.objectsInFrustum($frustum)` | `node`, `distance` | Entities within a camera frustum (6-plane containment) |
-| `CALL algo.nearestVisible($pos, label, k)` | `node`, `distance` | Nearest entities with direct line-of-sight from a point |
+| `CALL arcflow.scene.frustumQuery(ox,oy,oz, dx,dy,dz, fovDeg, nearZ, farZ)` | `node`, `distance` | Entities within a camera frustum (6-plane containment) |
 | `CALL spatial.raycast(origin, direction, maxDist)` | `hit`, `distance` | First node along a ray within max distance |
 
 ### Vector Search and RAG (7)
@@ -356,7 +355,6 @@ Coordinate frame management and spatial query observability.
 |---|---|---|
 | `CALL db.spatialMetadata()` | `crs`, `meters_per_unit`, `up_axis`, `handedness`, `calibration_version` | Current coordinate frame settings. Hard error raised on mismatch at ingest. |
 | `CALL arcflow.spatial.dispatch_stats()` | `lane_chosen`, `estimated_candidates`, `actual_candidates`, `prefilter_us`, `rtree_us`, `gpu_transfer_us`, `kernel_us`, `total_us` | Last spatial query execution metrics. `lane_chosen`: CpuLive, CpuBatch, GpuLocal, GpuMulti. |
-| `CALL arcflow.spatial.trigger_stats()` | `query_name`, `node_id`, `predicate_type`, `evaluation_us`, `fired` | Live geofence trigger metrics — one row per predicate evaluation since last reset. |
 
 ```cypher
 -- Inspect current coordinate frame
