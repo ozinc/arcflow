@@ -66,23 +66,26 @@ ArcFlow pruning works at three levels:
 
 ### 1. Confidence Decay Policies
 
-Attach a decay policy to any node label. Confidence decreases automatically as facts age, and nodes below the threshold are pruned from live view results:
+Define a decay policy with a half-life in days, then attach it to a label. Confidence decreases automatically as facts age, and nodes below the floor confidence are pruned from live view results:
 
 ```cypher
--- Facts about prices lose confidence after 24 hours, expire after 7 days
+-- Facts about prices: confidence halves every day, drop below 0.05 → pruned
 CREATE DECAY POLICY price_freshness
-  ON :Price
-  HALF_LIFE 86400000       -- confidence halves every 24h
-  EXPIRE_AFTER 604800000   -- hard-delete after 7 days
+  HALF_LIFE 1 DAYS
+  FLOOR_CONFIDENCE 0.05
 
--- Sensor readings: 1-hour half-life
+-- Attach to a node label
+ALTER LABEL Price SET DECAY POLICY price_freshness
+
+-- Sensor readings: 1-day half-life, prune anything under 0.10
 CREATE DECAY POLICY sensor_decay
-  ON :SensorReading
-  HALF_LIFE 3600000
-  EXPIRE_AFTER 86400000
+  HALF_LIFE 1 DAYS
+  FLOOR_CONFIDENCE 0.10
+
+ALTER LABEL SensorReading SET DECAY POLICY sensor_decay
 ```
 
-After policy creation, every live view that touches `:Price` or `:SensorReading` automatically excludes expired facts and downweights decayed ones — no ETL job, no cron, no deletion script.
+After the policy is attached, every live view that touches `:Price` or `:SensorReading` automatically excludes facts below the floor and downweights decayed ones — no ETL job, no cron, no deletion script.
 
 ### 2. Explicit Prune in Pipeline Runs
 

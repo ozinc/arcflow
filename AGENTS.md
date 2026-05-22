@@ -855,6 +855,8 @@ CALL arcflow.workflow.cancelPolicy()  YIELD rule, description
 CALL arcflow.workflow.cronPolicy()    YIELD field, value, description
 CALL arcflow.workflow.delayPolicy()   YIELD field, value, description
 CALL arcflow.workflow.sleepPolicy()   YIELD field, value, description
+CALL arcflow.workflow.recoveryPolicy() YIELD field, value, description
+CALL arcflow.workflow.deadLetters(wf_id) YIELD step, attempt, error, last_seen_at
 ```
 
 ### OpenUSD scene procedures
