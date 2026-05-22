@@ -64,7 +64,7 @@ or a plain manifest file on local disk are all readable.
 Virtual labels are registered against a *partition pattern*:
 
 ```text
-lake://<mount>/<table>/{var}=<glob>[/{var}=<glob>]…/<file-glob>.parquet
+lake://<mount>/<table>/{var}[/{var}]…/<file-glob>.parquet
 ```
 
 | Element | Meaning |
@@ -72,8 +72,10 @@ lake://<mount>/<table>/{var}=<glob>[/{var}=<glob>]…/<file-glob>.parquet
 | `lake://` | The Lakehouse URI scheme. Resolves through the workspace's catalog mount config. |
 | `<mount>` | A named mount point — typically the dataset's logical name. Configured at workspace open time. |
 | `<table>` | The table directory under the mount. |
-| `{var}=<glob>` | A Hive-partitioned column. The brace-delimited variable name binds at registration; the glob narrows the partitions in scope. |
+| `{var}` | A bare brace-delimited placeholder — binds to a partition column at registration. The planner discovers actual key/value pairs at scan time from the directory layout. |
 | `<file-glob>.parquet` | The file shape. Often `*.parquet` to match every file in a partition. |
+
+Combining `{placeholder}` with a literal `=value` in the registration pattern (e.g. `{season}=2024`) is rejected at DDL time — that mixes registration syntax with filter syntax. Use a bare placeholder for the registration; filter at query time with `WHERE t.season = 2024`.
 
 Template variables matter. The registration `lake://nfl/tracks/{season}/{week}` admits any `season=*` / `week=*` partition under `tracks/` and gives the engine variables it can use for partition pruning at query time.
 

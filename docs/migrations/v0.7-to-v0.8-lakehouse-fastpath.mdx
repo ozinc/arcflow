@@ -48,11 +48,13 @@ If a class produces an ambiguous classification — *mutable AND high-cardinalit
 
 ## Step 2 — Author the `lake://` mount config
 
-The substrate addresses Lake partitions through the `lake://` URI scheme. A registration takes the form:
+The substrate addresses Lake partitions through the `lake://` URI scheme. A registration uses bare brace-delimited placeholders (one per partition column):
 
 ```text
-lake://<mount>/<table>/{var}=<glob>[/{var}=<glob>]…/<file-glob>.parquet
+lake://<mount>/<table>/{var}[/{var}]…/<file-glob>.parquet
 ```
+
+The brace-delimited placeholder binds to a partition column at registration; the planner discovers the actual key/value pairs at scan time from the directory layout. Combining placeholders with literal `key=value` segments in the registration pattern (e.g. `{season}=2024`) is rejected at DDL time — that mixes registration syntax with filter syntax.
 
 For the worked-example schema above:
 
