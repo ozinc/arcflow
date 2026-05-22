@@ -237,7 +237,6 @@ See docs/guides/sql-to-gql.mdx for the full adoption path.
 
 - `EXPECTED_KEYWORD` → query syntax wrong, check MATCH/CREATE/MERGE
 - `UNKNOWN_PROCEDURE` → run `CALL db.procedures()` to see available
-- `DB_CLOSED` → called query after db.close()
 
 ## Integration recipe
 

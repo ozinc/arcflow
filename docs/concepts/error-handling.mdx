@@ -35,10 +35,10 @@ try {
 
 | Category | When | Example Codes |
 |---|---|---|
-| `parse` | Query syntax is invalid | `EXPECTED_KEYWORD`, `UNEXPECTED_TOKEN`, `INVALID_SYNTAX` |
-| `validation` | Query is syntactically valid but semantically wrong | `UNKNOWN_FUNCTION`, `TYPE_MISMATCH`, `UNKNOWN_PROCEDURE` |
+| `parse` | Query syntax is invalid | `EXPECTED_KEYWORD`, `UNEXPECTED_TOKEN`, `PARSE_ERROR` |
+| `validation` | Query is syntactically valid but semantically wrong | `UNKNOWN_PROCEDURE`, `TYPE_MISMATCH`, `INVALID_ARGUMENT` |
 | `execution` | Runtime error during query execution | `UNKNOWN`, general execution failures |
-| `integration` | Infrastructure or lifecycle error | `LOCK_POISONED`, `WAL_ERROR`, `DB_CLOSED` |
+| `integration` | Infrastructure or lifecycle error | `LOCK_POISONED`, `HANDLE_BUSY_CONCURRENT_WRITER` |
 
 ## Error code reference
 
@@ -46,16 +46,16 @@ try {
 |---|---|---|---|
 | `EXPECTED_KEYWORD` | parse | Query syntax wrong | Check MATCH/CREATE/MERGE syntax |
 | `UNEXPECTED_TOKEN` | parse | Unexpected token in query | Run `CALL db.help()` |
-| `UNKNOWN_FUNCTION` | validation | Function doesn't exist | Run `CALL db.help()` |
+| `PARSE_ERROR` | parse | General parser failure | Verify the GQL/Cypher form against `docs/worldcypher` |
 | `UNKNOWN_PROCEDURE` | validation | Procedure doesn't exist | Run `CALL db.procedures()` |
+| `INVALID_ARGUMENT` | validation | Procedure called with wrong-shape arg | Check the procedure's `recovery_suggestion` |
 | `WORKFLOW_NOT_FOUND` | validation | Workflow name doesn't exist | Run `CALL arcflow.workflow.list` |
 | `STEP_NOT_FOUND` | validation | Step name not in workflow | Check step name spelling |
 | `EXECUTION_CONTEXT_MISMATCH` | integration | Context guard failed | `CALL db.setExecutionContext(...)` first |
 | `UNKNOWN_EXECUTION_CONTEXT` | validation | Invalid context string | Use `local_cpu`, `local_gpu`, or `distributed` |
 | `TEMPORAL_WAL_NOT_WIRED` | integration | AS OF seq used without WAL context | Open the store with WAL enabled (`open()` or `openInMemory()` with sync options) |
 | `LOCK_POISONED` | integration | Internal mutex poisoned | Restart the process |
-| `WAL_ERROR` | integration | Write-ahead log I/O error | Check disk space and file permissions |
-| `DB_CLOSED` | integration | Called after `db.close()` | Don't use db after closing |
+| `HANDLE_BUSY_CONCURRENT_WRITER` | integration | Another writer holds the handle | Retry after the writer commits, or use a session-bound handle |
 
 ## Common errors and fixes
 
@@ -83,7 +83,7 @@ db.query("MATCH (n:Person) RETURN n.name")
 
 ```typescript
 db.close()
-db.query("RETURN 1")  // ArcflowError: code=DB_CLOSED, category=integration
+db.query("RETURN 1")  // throws — the handle is invalid after close()
 ```
 
 ## Programmatic error handling

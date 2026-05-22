@@ -37,12 +37,10 @@ TypedError {
 |---|---|---|---|
 | `EXPECTED_KEYWORD` | parse | Query syntax error | Check MATCH / CREATE / MERGE syntax |
 | `UNEXPECTED_TOKEN` | parse | Unexpected token in query | Check clause order and punctuation |
-| `UNKNOWN_FUNCTION` | validation | Function name not recognised | Run `CALL db.help()` for full list |
 | `UNKNOWN_PROCEDURE` | validation | CALL target not found | Run `CALL db.procedures()` |
 | `UNKNOWN_LABEL` | validation | Label doesn't exist in schema | Check `CALL db.schema()` |
 | `INVALID_PARAMETER` | validation | Parameter type mismatch | Ensure param types match `QueryParams` |
 | `MISSING_PARAMETER` | validation | `$param` used but not supplied | Pass all parameters in the params object |
-| `DB_CLOSED` | integration | Query after `db.close()` | Don't query a closed database |
 | `LOCK_POISONED` | integration | Write lock poisoned by panic | Restart the database process |
 | `COMPILE_ERR` | parse | Query failed to compile | Check query against GQL reference |
 | `VECTOR_DIM_MISMATCH` | validation | Query vector ≠ index dimensions | Match vector length to `OPTIONS {dimensions}` |

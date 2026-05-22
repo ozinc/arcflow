@@ -214,7 +214,7 @@ interface LiveQuery {
 }
 
 class ArcflowError extends Error {
-  code: string           // "EXPECTED_KEYWORD", "LOCK_POISONED", "DB_CLOSED"
+  code: string           // "EXPECTED_KEYWORD", "LOCK_POISONED", "UNKNOWN_PROCEDURE"
   category: 'parse' | 'validation' | 'execution' | 'integration'
   suggestion?: string    // Recovery hint for the agent
 }
@@ -1103,12 +1103,15 @@ assert(db.query("MATCH (n:Test) RETURN n.x").rows[0].get('x') === 1)
 | Code | Category | Fix |
 |---|---|---|
 | `EXPECTED_KEYWORD` | parse | Check MATCH/CREATE/MERGE syntax |
-| `UNKNOWN_FUNCTION` | validation | Run `CALL db.help()` |
+| `UNEXPECTED_TOKEN` | parse | Run `CALL db.help()` |
+| `PARSE_ERROR` | parse | Verify the GQL/Cypher form |
 | `UNKNOWN_PROCEDURE` | validation | Run `CALL db.procedures()` |
-| `DB_CLOSED` | integration | Don't query after `db.close()` |
+| `INVALID_ARGUMENT` | validation | Check the proc's `recovery_suggestion` |
 | `WORKFLOW_NOT_FOUND` | validation | Run `CALL arcflow.workflow.list` |
 | `STEP_NOT_FOUND` | validation | Check step name in workflow |
 | `EXECUTION_CONTEXT_MISMATCH` | integration | Run `CALL db.setExecutionContext(...)` first |
+| `HANDLE_BUSY_CONCURRENT_WRITER` | integration | Another writer holds the handle; retry after commit |
+| `LOCK_POISONED` | integration | Internal mutex poisoned; restart the process |
 
 ## Step-by-step integration
 

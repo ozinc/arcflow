@@ -196,17 +196,14 @@ Error codes you'll encounter:
 | Code | Category | Meaning | Fix |
 |---|---|---|---|
 | `EXPECTED_KEYWORD` | parse | Query syntax wrong | Check MATCH/CREATE/MERGE spelling |
-| `UNKNOWN_FUNCTION` | validation | Function doesn't exist | Run `CALL db.help()` to see available |
 | `UNKNOWN_PROCEDURE` | validation | Procedure doesn't exist | Run `CALL db.procedures` |
 | `WORKFLOW_NOT_FOUND` | validation | Workflow name not found | Run `CALL arcflow.workflow.list` |
 | `EXECUTION_CONTEXT_MISMATCH` | integration | Context guard failed | Run `CALL db.setExecutionContext(...)` first |
-| `DB_CLOSED` | integration | Called after `db.close()` | Don't use db after closing |
 
 ## Step 10: Close
 
 ```typescript
 db.close()
-// After this, all operations throw ArcflowError with code 'DB_CLOSED'
 ```
 
 ## Complete example
@@ -332,7 +329,6 @@ app.listen(3000)
 
 ## Failure modes
 
-- **DB_CLOSED after early `db.close()`**: calling `db.close()` in a middleware or cleanup function before all in-flight requests have resolved will cause subsequent `db.query()` calls to throw `ArcflowError` with code `DB_CLOSED`. The error is structured and catchable, but the root cause is lifecycle management, not a query problem.
 - **Injection via string interpolation**: copying the pattern `db.query("MATCH (n {id: '" + id + "'}) RETURN n")` from examples that do not use `$params` exposes the query to injection. Every call with dynamic values must use the parameterised form `db.query(cypher, { id })`.
 - **`result.rows[0]` on empty result**: if a query returns zero rows (e.g., the entity does not exist), accessing `result.rows[0].get('e.id')` throws a runtime error. The page's examples do not show this guard; callers must check `result.rowCount > 0` before indexing.
 - **Algorithm output column name mismatch**: `CALL algo.pageRank()` returns columns named `name` and `rank` in the examples, but the actual column names depend on the algorithm variant and engine version. If `row.get('rank')` returns `undefined`, run `CALL db.help()` to inspect the current output schema. <!-- DRAFT: confirm canonical column names for pageRank, louvain, betweenness outputs -->

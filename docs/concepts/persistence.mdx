@@ -92,7 +92,7 @@ Call `close()` for a clean shutdown that flushes the WAL:
 db.close()
 ```
 
-After closing, all operations will throw an `ArcflowError` with code `DB_CLOSED`.
+After closing, all operations will throw — the handle is invalid.
 
 ---
 
