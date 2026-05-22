@@ -69,7 +69,7 @@ install:
 
 # Clean build artifacts
 clean:
-    rm -rf typescript/dist typescript/node_modules
+    rm -rf sdk/dist sdk/node_modules
 
 # Full check (build + typecheck + lint + test)
 check: build typecheck lint test

@@ -49,10 +49,10 @@ ALLOWLIST_FILES = {
     "scripts/lint-version-literals.py",  # self-referent: this lint regex IS the pattern
     # Build-time consumers (one literal per release; bumped on tag)
     "create-arcflow/templates/python/pyproject.toml",
-    "cookbooks/_template/meta.toml",
-    "cookbooks/_template/pyproject.toml",
-    "cookbooks/run-ci.sh",
-    "cookbooks/CONTRIBUTING.md",
+    "examples/_template/meta.toml",
+    "examples/_template/pyproject.toml",
+    "examples/run-ci.sh",
+    "examples/CONTRIBUTING.md",
     ".github/workflows/cookbook-test.yml",
     "install/install.sh",
     # Versioning doc itself (cites version literals as examples — that's its job)
@@ -86,10 +86,10 @@ ALLOWLIST_FILES = {
 
 ALLOWLIST_PATTERNS = [
     # Cookbook pyproject + meta files — each cookbook owns its pin
-    re.compile(r"^cookbooks/[^/]+/(pyproject\.toml|meta\.toml)$"),
+    re.compile(r"^examples/[^/]+/(pyproject\.toml|meta\.toml)$"),
     # Cookbook README "Pins:" header line — currently bumped by hand each release
     # TODO(refactor): replace with manifest-render at MDX render time on oz-platform side.
-    re.compile(r"^cookbooks/[^/]+/README\.md$"),
+    re.compile(r"^examples/[^/]+/README\.md$"),
     # Federation receipts — immutable audit trail
     re.compile(r"^kanban/federation/"),
     # Historical CHANGELOG

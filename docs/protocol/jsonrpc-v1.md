@@ -10,7 +10,7 @@ Companion files:
 
 - [`LICENSE-FAQ.md`](../../LICENSE-FAQ.md) — licensing model + Q&A
 - [`reproducible-build.md`](../reproducible-build.md) — verify the daemon binary matches its source
-- [`../../cookbooks/`](../../cookbooks/) — example client code in TypeScript, Python, Rust, shell
+- [`../../examples/`](../../examples/) — example client code in TypeScript, Python, Rust, shell
 
 ---
 
@@ -645,7 +645,7 @@ This document specifies `v1` of the protocol.
 The protocol described in this document is **open** under the Apache 2.0 license (see end of file). Anyone may implement a daemon serving this protocol. We do not assert proprietary rights over the wire format itself.
 
 Client SDKs talking this protocol are in this repo:
-- TypeScript: [`typescript/`](../../typescript/)
+- TypeScript: [`sdk/`](../../sdk/)
 - Python: planned RAM-C2 / 2026-Q3 (public PyPI publish pending)
 - Shell: `arcflow rpc --socket /path '{"method":"...","params":{...}}'`
 - Rust crate: planned 2026-Q4

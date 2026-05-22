@@ -38,7 +38,7 @@ Three bounded contexts, one shared kernel.
 | Bounded context | Repo | Role |
 |---|---|---|
 | Engine domain | `arcflow/` (closed) | Authors PAT-0044, owns the manifest, runs the cross-probe |
-| Documentation domain | `arcflow-docs/` (this repo, public MIT) | Hosts `cookbooks/`, runs recipe CI, owns recipe authoring |
+| Documentation domain | `arcflow-docs/` (this repo, public MIT) | Hosts `examples/`, runs recipe CI, owns recipe authoring |
 | Marketing/web domain | `oz-platform/apps/cloud/website/` | Auto-generated cookbook index page; deep-links to source |
 
 This repo is the cookbook's home because:
@@ -59,13 +59,13 @@ in the engine domain.
 
 | Surface | Description |
 |---|---|
-| `cookbooks/` (new) | Root of all recipes |
-| `cookbooks/README.md` | Index of recipes, audience tags, runtime estimates |
-| `cookbooks/_template/` | Copy-paste recipe skeleton |
-| `cookbooks/CONTRIBUTING.md` | Authoring rules from PAT-0044 |
-| `cookbooks/<slug>/` | Individual recipe directory per PAT-0044 layout |
-| `cookbooks/_demos/` | Recipes that cannot meet the CI runtime contract (GPU-required, sensor-stream-required, etc.) |
-| `cookbooks/_archive/<engine-version>/` | Recipes archived when their target engine major is no longer supported |
+| `examples/` (new) | Root of all recipes |
+| `examples/README.md` | Index of recipes, audience tags, runtime estimates |
+| `examples/_template/` | Copy-paste recipe skeleton |
+| `examples/CONTRIBUTING.md` | Authoring rules from PAT-0044 |
+| `examples/<slug>/` | Individual recipe directory per PAT-0044 layout |
+| `examples/_demos/` | Recipes that cannot meet the CI runtime contract (GPU-required, sensor-stream-required, etc.) |
+| `examples/_archive/<engine-version>/` | Recipes archived when their target engine major is no longer supported |
 | `docs/cookbooks-index.mdx` | Auto-generated MDX index that the marketing site links to |
 | `pnpm cookbook:test` | Recipe CI runner |
 | `scripts/validate-meta-toml.ts` | Schema validator for recipe `meta.toml` |
@@ -80,19 +80,19 @@ in the engine domain.
 - Recipe authoring decisions for engine-internal capabilities the engine
   team has not yet promoted to public APIs — those are gate-locked at the
   manifest, not at this repo.
-- The marketing-site cookbook landing page (`oz-platform/.../arcflow/cookbooks/`)
+- The marketing-site cookbook landing page (`oz-platform/.../arcflow/examples/`)
   — owned by the marketing repo, but it auto-generates from this repo's
-  `cookbooks/*/meta.toml`, so changes here propagate there without a
+  `examples/*/meta.toml`, so changes here propagate there without a
   marketing-side PR.
 
 ---
 
 ## Recipe Layout (PAT-0044)
 
-Every recipe under `cookbooks/<slug>/` has:
+Every recipe under `examples/<slug>/` has:
 
 ```
-cookbooks/<slug>/
+examples/<slug>/
 ├── README.md               # ≤ 200 words: "what you'll build" + run command
 ├── 01-<step>.{md,py,ts}    # numbered, ordered steps
 ├── 02-<step>.{md,py,ts}
@@ -112,7 +112,7 @@ See PAT-0044 in arcflow for the authoritative governance rules.
 ## Seed Recipe — Already Specified
 
 The first recipe is delivered in I-INIT-0116 wave RAM-A4:
-`cookbooks/temporal-spatial-parquet-ingest/`. It is the customer-unblock
+`examples/temporal-spatial-parquet-ingest/`. It is the customer-unblock
 recipe for the football-transformer NGS use case (12 Parquet files, NFL
 player tracking, temporal + spatial). It also seeds the structural template
 that all subsequent recipes follow.
@@ -127,7 +127,7 @@ knowledge base) to validate the structure under load.
 
 `pnpm cookbook:test` in this repo:
 
-1. Walks `cookbooks/<slug>/` and skips `_template/`, `_demos/`, `_archive/`.
+1. Walks `examples/<slug>/` and skips `_template/`, `_demos/`, `_archive/`.
 2. For each recipe:
    - Validates `meta.toml` against the schema.
    - Fetches `release-matrix.json` (engine-published; pinned to
@@ -140,7 +140,7 @@ knowledge base) to validate the structure under load.
 3. Fails closed on any error. No retries, no warn-only mode.
 
 When the engine repo's release CI runs the cross-probe (I-INIT-0117 CB-0003),
-it reads `cookbooks/*/meta.toml` from this repo as data. There is no
+it reads `examples/*/meta.toml` from this repo as data. There is no
 cooperative protocol; the probe is one-way. This repo is a pure read target
 for the engine's release gate.
 
@@ -151,13 +151,13 @@ for the engine's release gate.
 After CB-0001:
 
 ```text
-required in cookbooks/<slug>/:
+required in examples/<slug>/:
   meta.toml             must exist and validate
   README.md             must exist and be ≤ 200 words for "what you'll build"
   pyproject.toml OR package.json   must declare arcflow as a dep
   01-*.{md,py,ts}       must exist (at least one numbered step)
 
-forbidden in cookbooks/<slug>/:
+forbidden in examples/<slug>/:
   curl/wget downloads in any step (sample data must be in-tree)
   references to APIs absent from the manifest at meta.toml.manifest_pin
   hand-rolled `pip install arcflow` commands (use the `<InstallMatrix />` link)
@@ -172,7 +172,7 @@ forbidden in cookbooks/<slug>/:
 - **`docs/guides/`** — Multi-step tutorials that don't fit the recipe shape.
   Stays as is.
 - **`examples/`** — Pre-existing examples directory (if any). Cookbook is
-  the *governed* successor. Existing examples migrate into `cookbooks/` per
+  the *governed* successor. Existing examples migrate into `examples/` per
   PAT-0044 or get deleted; greenfield rule applies — no parallel example
   trees.
 - **`fixtures/`, `schemas/`** — Cookbook recipes may reference these but do
@@ -184,9 +184,9 @@ forbidden in cookbooks/<slug>/:
 
 | Repo | What it does | Reads | Writes |
 |---|---|---|---|
-| arcflow (engine) | Author PAT-0044, run cross-probe in release CI | this repo's `cookbooks/*/meta.toml` | nothing in this repo |
-| arcflow-docs (this repo) | Author recipes, run recipe CI | engine's `release-matrix.json` | `cookbooks/` |
-| oz-platform (web) | Surface auto-generated index | this repo's `cookbooks/*/meta.toml` | nothing in this repo |
+| arcflow (engine) | Author PAT-0044, run cross-probe in release CI | this repo's `examples/*/meta.toml` | nothing in this repo |
+| arcflow-docs (this repo) | Author recipes, run recipe CI | engine's `release-matrix.json` | `examples/` |
+| oz-platform (web) | Surface auto-generated index | this repo's `examples/*/meta.toml` | nothing in this repo |
 
 One-way reads only. No cooperative protocol between repos. Manifest is the
 shared kernel; recipes are the consumed artifact downstream.

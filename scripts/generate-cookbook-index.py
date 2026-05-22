@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate docs/cookbooks-index.mdx from cookbooks/*/meta.toml.
+"""Generate docs/cookbooks-index.mdx from examples/*/meta.toml.
 
 The cookbook index is data-driven: the recipe list on the index page is
 regenerated from each recipe's meta.toml, never hand-edited.
@@ -33,7 +33,7 @@ section: "recipes"
 status: "stable"
 ---
 
-{/* AUTO-GENERATED FROM cookbooks/<recipe>/meta.toml — DO NOT EDIT BY HAND.
+{/* AUTO-GENERATED FROM examples/<recipe>/meta.toml — DO NOT EDIT BY HAND.
     Regenerate with: python3 scripts/generate-cookbook-index.py */}
 
 # Cookbook
@@ -42,7 +42,7 @@ Runnable, end-to-end ArcFlow recipes. Every recipe ships its data, runs
 in CI on every commit, and uses only `status: shipped` APIs from
 [`release-matrix.json`](https://github.com/ozinc/arcflow/releases/latest/download/release-matrix.json).
 
-The recipes live in [`cookbooks/`](https://github.com/ozinc/arcflow/tree/main/cookbooks)
+The recipes live in [`examples/`](https://github.com/ozinc/arcflow/tree/main/cookbooks)
 in this repository. Each recipe is a self-contained directory with its own
 `README.md`, numbered steps, sample data, and `meta.toml`.
 
@@ -56,7 +56,7 @@ FOOTER = """\
 
 ```bash
 git clone https://github.com/ozinc/arcflow
-cd arcflow/cookbooks/<recipe-slug>
+cd arcflow/examples/<recipe-slug>
 uv sync                       # installs deps, including arcflow
 uv run python 00-make-sample.py
 uv run python 02-*.py
@@ -70,7 +70,7 @@ recipe references the same source of truth, so installation never drifts.
 
 Each recipe ships with a `meta.toml` declaring its engine version pin,
 runtime budget, audience tags, and verification expectations. See
-[`cookbooks/CONTRIBUTING.md`](https://github.com/ozinc/arcflow/blob/main/cookbooks/CONTRIBUTING.md)
+[`examples/CONTRIBUTING.md`](https://github.com/ozinc/arcflow/blob/main/examples/CONTRIBUTING.md)
 for the operational summary. Key rules:
 
 - Each recipe demonstrates one ArcFlow capability end-to-end.
@@ -133,7 +133,7 @@ def render_table(recipes: list[dict]) -> str:
     ]
     for r in recipes:
         slug = r["slug"]
-        link = f"[{r['title']}](https://github.com/ozinc/arcflow/tree/main/cookbooks/{slug})"
+        link = f"[{r['title']}](https://github.com/ozinc/arcflow/tree/main/examples/{slug})"
         audience = ", ".join(r["audience"]) if r["audience"] else "—"
         runtime = f"≤ {r['runtime_minutes']} min" if r["runtime_minutes"] else "—"
         gpu = "yes" if r["gpu_required"] else "no"

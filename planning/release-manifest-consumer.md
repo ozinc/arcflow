@@ -57,7 +57,7 @@ It does not override or extend manifest entries locally.
 | `install/install.sh` | Canonical installer source — owns the asset | Unchanged content; `Usage:` header URL updated to `/install/arcflow` |
 | `llms.txt` | Hand-written agent context | Build-time generated from manifest template |
 | `llms-full.txt` | Hand-written full agent context | Build-time generated from manifest template |
-| `typescript/package.json` | Local SDK source for `arcflow` npm package | Unchanged authoring; `version` flips with engine release; manifest `node` entry tracks publish status |
+| `sdk/package.json` | Local SDK source for `arcflow` npm package | Unchanged authoring; `version` flips with engine release; manifest `node` entry tracks publish status |
 
 The `<InstallMatrix />` component is the only allowed renderer of install
 commands. Wiring lands in RAM-B3 (engine I-INIT-0116).

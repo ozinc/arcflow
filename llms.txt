@@ -218,7 +218,7 @@ See docs/guides/agent-quickstart.mdx for the 10-step integration guide.
 
 ## Cookbook recipes (runnable, CI-tested)
 
-Every recipe is a self-contained `cookbooks/<slug>/` directory: `meta.toml` + `pyproject.toml` + numbered `.py` steps + sample data + README. CI-runs against the engine version pinned in meta.toml. Source: https://github.com/ozinc/arcflow/tree/main/cookbooks
+Every recipe is a self-contained `examples/<slug>/` directory: `meta.toml` + `pyproject.toml` + numbered `.py` steps + sample data + README. CI-runs against the engine version pinned in meta.toml. Source: https://github.com/ozinc/arcflow/tree/main/examples
 
 - **agent-knowledge-base** — agent memory via confidence-scored GraphRAG (python, agent, ml; ≤ 5 min)
 - **algo-trading-world-model** — persistent memory + orchestrated context + evidence-algebra fusion (python, ml, quant; ≤ 3 min)

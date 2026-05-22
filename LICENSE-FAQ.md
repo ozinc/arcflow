@@ -28,7 +28,7 @@ This is the LGPL/MIT-cookbook pattern. The same way using SQLite, Postgres clien
 
 ## Are the examples and cookbook MIT-licensed?
 
-**Yes.** Everything in this repository — `cookbooks/`, `examples/` (under `cookbooks/`), `typescript/` (SDK source), `mcp/` (MCP server reference), `react/` (React bindings), `install/`, `docs/`, `schemas/` — is MIT-licensed unless individually marked otherwise.
+**Yes.** Everything in this repository — `examples/`, `examples/` (under `examples/`), `sdk/` (SDK source), `mcp/` (MCP server reference), `react/` (React bindings), `install/`, `docs/`, `schemas/` — is MIT-licensed unless individually marked otherwise.
 
 You can copy any cookbook recipe wholesale into your project, modify it freely, redistribute it, and ship it without attribution beyond the MIT requirement (include the license text or a notice).
 

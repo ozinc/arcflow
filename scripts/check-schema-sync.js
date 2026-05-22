@@ -3,7 +3,7 @@
  * check-schema-sync.js
  *
  * Validates that the TypeScript schema constants in
- *   typescript/src/code-intelligence.ts
+ *   sdk/src/code-intelligence.ts
  * mirror the snapshot committed at
  *   schemas/schema-snapshot.json
  *
@@ -68,7 +68,7 @@ function parseRustSchema(schemaPath) {
   return { labels, edges }
 }
 
-// ─── Parse typescript/src/code-intelligence.ts ───────────────────────────────
+// ─── Parse sdk/src/code-intelligence.ts ───────────────────────────────
 
 function parseTypescriptSchema() {
   const p = resolve(root, 'typescript', 'src', 'code-intelligence.ts')
@@ -139,7 +139,7 @@ function main() {
 
   console.log('\nSchema sync check — arcflow-docs')
   console.log(`  Snapshot:   schemas/schema-snapshot.json`)
-  console.log(`  TypeScript: typescript/src/code-intelligence.ts`)
+  console.log(`  TypeScript: sdk/src/code-intelligence.ts`)
   if (rustSchemaArg) console.log(`  Rust:       ${rustSchemaArg}`)
   console.log()
 

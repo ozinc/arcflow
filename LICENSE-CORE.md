@@ -211,7 +211,7 @@ This License constitutes the entire agreement between You and OZ Global Inc. reg
 
 1. Install: `curl -fsSL https://staging.oz.com/install/arcflow | sh`
 2. Verify (optional but recommended): `gh attestation verify ~/.arcflow/bin/arcflow --owner ozinc`
-3. Build something. The cookbook at [cookbooks/](./cookbooks/) shows the patterns.
+3. Build something. The cookbook at [examples/](./examples/) shows the patterns.
 4. Ship it. Your application is yours; ArcFlow Core embedded in it is covered by this License.
 
 If You hit anything that feels like it might require a paid plan, email **gudjon@oz.com** with a one-paragraph description of Your use case. We commit to a definitive answer within five business days.

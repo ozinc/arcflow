@@ -15,10 +15,10 @@ See [REPO-SPLIT.md](REPO-SPLIT.md) for the governing boundary contract between t
 This repo (`arcflow-docs/`) owns the **developer surface**: SDK, docs, examples, and the
 machine-readable API context for coding agents. Full governance: **`REPO-SPLIT.md`**.
 
-| Belongs here | Belongs in arcflow (engine repo) |
+| Belongs here | Belongs in arcflow-core (engine repo) |
 |---|---|
-| TypeScript SDK (`typescript/src/`) | Rust engine source (`crates/`) |
-| Schema constants mirror (`typescript/src/code-intelligence.ts`) | Schema constants source of truth (`sdk/code-intelligence/src/schema.rs`) |
+| TypeScript SDK (`sdk/src/`) | Rust engine source (`crates/`) |
+| Schema constants mirror (`sdk/src/code-intelligence.ts`) | Schema constants source of truth (`sdk/code-intelligence/src/schema.rs`) |
 | MCP npm package (`mcp/`) | MCP binary (`crates/wc-mcp/`) |
 | React hooks (`react/`) | GPU kernels, WAL, MVCC |
 | MDX documentation (`docs/`) | Roadmap + waves (`kanban/`) |
@@ -37,7 +37,7 @@ Never write Rust source, edit crates, or touch WAL/GPU code in this repo.
 All engine changes go in `arcflow/`.
 
 **RULE 3 — Schema Sync (critical):**
-`typescript/src/code-intelligence.ts` mirrors `arcflow/sdk/code-intelligence/src/schema.rs`.
+`sdk/src/code-intelligence.ts` mirrors `arcflow-core/sdk/code-intelligence/src/schema.rs`.
 The Rust file is the **source of truth**. The TypeScript file is the **mirror**.
 Any PR that touches `code-intelligence.ts` here **must** coordinate with a corresponding
 change to `schema.rs` in the engine repo (or vice versa).
@@ -71,7 +71,7 @@ Every new coding agent session on this repo should run through this first:
 **Before editing `AGENTS.md` or `llms.txt`:** confirm the engine feature is actually shipped
 (not just planned). Documenting unshipped features as live breaks developer trust.
 
-**Before editing `typescript/src/code-intelligence.ts`:** check whether `schema.rs` in the
+**Before editing `sdk/src/code-intelligence.ts`:** check whether `schema.rs` in the
 engine repo needs a matching change, and open the PR there first.
 
 ---
@@ -174,7 +174,7 @@ Three tiers, three rules:
   ```
 
 - **Static text** (`llms.txt`, `llms-full.txt`, `README.md`, `AGENTS.md`,
-  `cookbooks/*/README.md`): production URLs canonical. No exceptions.
+  `examples/*/README.md`): production URLs canonical. No exceptions.
   Cookbook `pyproject.toml`s pin `oz-arcflow==0.8.0` against public
   PyPI, even though the wheel itself is not yet published; that pin is
   target end-state (see RAM-C2 / 2026-Q3 on the roadmap).

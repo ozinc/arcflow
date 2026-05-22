@@ -19,7 +19,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      # Validates that typescript/src/code-intelligence.ts mirrors
+      # Validates that sdk/src/code-intelligence.ts mirrors
       # schemas/schema-snapshot.json (which is the committed cross-repo contract
       # derived from arcflow/sdk/code-intelligence/src/schema.rs).
       # When schema.rs changes in the engine repo, both schema-snapshot.json
@@ -62,7 +62,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: dist
-          path: typescript/dist/
+          path: sdk/dist/
 
   test:
     name: Test (Node ${{ matrix.node-version }})

@@ -33,7 +33,7 @@ for v0.7.x consumers.
   avoid the legacy bulk-ingest memory profile — that fast-path is
   what the substrate rewrite was opened to enable. See the
   Lakehouse-over-Parquet cookbook
-  (`cookbooks/virtual-labels-over-parquet/`) for the full recipe.
+  (`examples/virtual-labels-over-parquet/`) for the full recipe.
 - **Virtual labels.** New DDL: `CREATE NODE LABEL <name> [(col TYPE,
   ...)] VIRTUAL FROM PARTITION '<lake-uri>'`. Rows live in a
   Lakehouse partition; the engine holds the typed schema, the catalog

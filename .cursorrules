@@ -1,3 +1,6 @@
-ArcFlow is an embedded graph database. Runs in browser (WASM), Node.js, Python, Rust, Docker. No server needed. Try it: https://oz.com/engine
+ArcFlow is an embedded graph database. Runs in-process — browser (WASM), Node.js, Python, Rust, native CLI. 5MB binary, no server. Try it: https://oz.com/engine
 
-See AGENTS.md for full API and WorldCypher reference.
+This repo (ozinc/arcflow) is the open-source MIT developer surface: SDK source (sdk/), React hooks (react/), MCP server (mcp/), examples (examples/), docs (docs/), install scripts (install/). The Core engine binary is closed source and fetched from GitHub Releases.
+
+See AGENTS.md for the full public API and WorldCypher (ISO GQL) reference.
+See CLAUDE.md for repo conventions and boundary rules.

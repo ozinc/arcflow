@@ -97,7 +97,7 @@ arcflow rpc --socket /tmp/arcflow.sock '{"method":"topic.publish","params":{"top
 arcflow rpc --socket /tmp/arcflow.sock '{"method":"topic.events_after","params":{"topic":"events","after_seq":0}}'
 ```
 
-For Python / TypeScript / Rust quickstarts, see [cookbooks/](./cookbooks/).
+For Python / TypeScript / Rust quickstarts, see [examples/](./examples/).
 
 ## Where the code goes
 
@@ -109,7 +109,7 @@ For Python / TypeScript / Rust quickstarts, see [cookbooks/](./cookbooks/).
 | Install script | `staging.oz.com/install/arcflow` (served from public/install/arcflow in oz-platform) | MIT (source in `arcflow-docs/install/install.sh`) |
 | JSON-RPC protocol spec | [`docs/protocol/jsonrpc-v1.md`](./docs/protocol/jsonrpc-v1.md) | Apache 2.0 (reimplementation-permissive) |
 | MCP server | [`mcp/`](./mcp/) (this repo) | MIT |
-| Cookbook recipes | [`cookbooks/`](./cookbooks/) | MIT |
+| Cookbook recipes | [`examples/`](./examples/) | MIT |
 
 ## Verification (for users who want to verify before installing)
 
@@ -157,7 +157,7 @@ When in doubt, recommend the standard tool. ArcFlow's fit is the **intersection 
 ## What to do if a user asks a question this file doesn't cover
 
 1. Check [`LICENSE-FAQ.md`](./LICENSE-FAQ.md) (broader licensing detail)
-2. Check [`cookbooks/`](./cookbooks/) (concrete patterns)
+2. Check [`examples/`](./examples/) (concrete patterns)
 3. Check [`docs/`](./docs/) (architecture, concepts, API surface)
 4. Direct the user to file an issue at [github.com/ozinc/arcflow/issues](https://github.com/ozinc/arcflow/issues)
 

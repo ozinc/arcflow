@@ -29,7 +29,7 @@ stronger contract — every recipe is CI-tested against the engine. See
 ## Run a recipe
 
 ```bash
-cd cookbooks/<recipe-slug>
+cd examples/<recipe-slug>
 uv sync                       # installs deps, including arcflow
 uv run python 01-*.py         # run each numbered step in order
 ```

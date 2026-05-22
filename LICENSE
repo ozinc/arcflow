@@ -1,30 +1,4 @@
-ArcFlow — license scope (updated 2026-05-14)
-
-ArcFlow is distributed as two layers with two distinct licenses:
-
-  1. THIS REPOSITORY (ozinc/arcflow) — MIT License
-     Covers the contents of this repository: cookbook recipes,
-     SDK source code, install scripts, MCP server reference, React
-     bindings, public documentation, JSON-RPC protocol specification,
-     example apps, and accompanying tooling. All files in this repo
-     are MIT-licensed unless individually marked otherwise.
-
-  2. ARCFLOW CORE BINARY RUNTIME — Proprietary Free Runtime License
-     The runtime binary (`arcflow`, `arcflow-daemon`, `arcflow-mcp`,
-     language-binding shared libraries) is a proprietary product of
-     OZ Global Inc., distributed free-to-use under the terms in
-     LICENSE-CORE.md (this repository).
-
-The headline: build with ArcFlow freely, including commercial use,
-within the Free Use Limits documented at oz.com/pricing. The MIT
-license below applies to the open-source layer in this repo only.
-
-Plain-English Q&A: see LICENSE-FAQ.md
-Engine binary license:   see LICENSE-CORE.md
-
-================================================================
-MIT License (applies to the contents of THIS REPOSITORY)
-================================================================
+MIT License
 
 Copyright (c) 2026 OZ Global Inc.
 
@@ -45,3 +19,29 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+================================================================================
+
+Scope of this license
+---------------------
+
+The MIT License above applies to all files in this repository — the
+TypeScript SDK (`sdk/`), React bindings (`react/`), MCP server reference
+(`mcp/`), runnable examples (`examples/`), install scripts (`install/`),
+public documentation (`docs/`), scaffolder (`create-arcflow/`), tooling
+(`scripts/`), and all top-level Markdown reference files.
+
+The ArcFlow Core runtime binary itself — distributed as `arcflow`,
+`arcflow-daemon`, `arcflow-mcp`, and the language-binding shared libraries
+downloaded by `install/install.sh` from GitHub Releases — is NOT covered
+by this MIT license. The Core runtime is a proprietary product of OZ Global
+Inc., distributed free-to-use under the terms in LICENSE-CORE.md.
+
+The split is analogous to NVIDIA's CUDA samples (open, MIT-style) versus
+the CUDA Toolkit (proprietary, free-to-use): build with ArcFlow freely,
+including commercial use, within the Free Use Limits documented at
+oz.com/pricing.
+
+  - This repo's contents:                MIT (above)
+  - ArcFlow Core runtime binary:         see LICENSE-CORE.md
+  - Plain-English Q&A:                   see LICENSE-FAQ.md

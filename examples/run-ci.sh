@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Cookbook CI runner — PAT-0044 enforcement.
 #
-# Walks every cookbooks/<slug>/ (skipping _template/, _demos/, _archive/),
+# Walks every examples/<slug>/ (skipping _template/, _demos/, _archive/),
 # validates meta.toml, ensures a venv, installs deps, runs each numbered
 # step in order. Fails closed on any error.
 #
@@ -19,7 +19,7 @@ if [ ! -f "${WHEEL}" ]; then
     exit 1
 fi
 
-# PAT-0044 — ensure docs/cookbooks-index.mdx is in sync with cookbooks/*/meta.toml.
+# PAT-0044 — ensure docs/cookbooks-index.mdx is in sync with examples/*/meta.toml.
 INDEX_GEN="${ROOT}/../scripts/generate-cookbook-index.py"
 INDEX_OUT="${ROOT}/../docs/cookbooks-index.mdx"
 if [ -f "${INDEX_GEN}" ]; then

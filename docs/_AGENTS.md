@@ -34,7 +34,7 @@ Cross-repo SSoT map: `oz-platform/apps/cloud/website/kanban/CROSS-REPO-MAP.md`.
 
 ## Sibling surfaces (NOT in `/docs/*`)
 
-- `/arcflow/cookbooks` — runnable recipes (oz.com marketing surface, sources from `cookbooks/<slug>/`)
+- `/arcflow/cookbooks` — runnable recipes (oz.com marketing surface, sources from `examples/<slug>/`)
 - `/engine` — interactive REPL (pinned in docs sidebar header)
 - `/install/arcflow` — install script (curl-pipe-sh; text/plain)
 

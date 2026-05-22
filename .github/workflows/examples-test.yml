@@ -1,6 +1,6 @@
-# PAT-0044 — Cookbook CI runner.
+# PAT-0044 — Examples CI runner.
 #
-# On every push and PR: walks cookbooks/<slug>/, validates meta.toml,
+# On every push and PR: walks examples/<slug>/, validates meta.toml,
 # installs deps via uv (or pip), runs every numbered step in order.
 # Fails closed if any recipe step fails or any meta.toml schema check
 # rejects the recipe.
@@ -9,18 +9,18 @@
 # it from the engine repo via a setup step (or downloads from the engine's
 # release-matrix.json verify URL once status: shipped).
 
-name: cookbook-test
+name: examples-test
 
 on:
   push:
     branches: [main]
     paths:
-      - "cookbooks/**"
-      - ".github/workflows/cookbook-test.yml"
+      - "examples/**"
+      - ".github/workflows/examples-test.yml"
   pull_request:
     paths:
-      - "cookbooks/**"
-      - ".github/workflows/cookbook-test.yml"
+      - "examples/**"
+      - ".github/workflows/examples-test.yml"
   workflow_dispatch:
 
 permissions:
@@ -53,7 +53,7 @@ jobs:
           token: ${{ secrets.ARCFLOW_ENGINE_RO_PAT }}
           # Operator must provision ARCFLOW_ENGINE_RO_PAT (a read-only PAT
           # for the closed engine repo). Until then this job will fail at
-          # this step — flip cookbook-test to "off" or remove the matrix
+          # this step — flip examples-test to "off" or remove the matrix
           # entry until the PAT is available.
 
       - name: Build ArcFlow wheel
@@ -64,7 +64,7 @@ jobs:
           python -m pip install --upgrade pip build
           bash build_wheel.sh
 
-      - name: Run cookbook CI
+      - name: Run examples CI
         run: |
           export ARCFLOW_WHEEL="$(pwd)/arcflow-engine/python/dist/oz_arcflow-0.8.0-py3-none-any.whl"
-          bash cookbooks/run-ci.sh
+          bash examples/run-ci.sh

@@ -5,7 +5,7 @@ This file is the operational summary for adding or updating a recipe.
 ## Folder layout (every recipe)
 
 ```
-cookbooks/<slug>/
+examples/<slug>/
 ├── README.md               # ≤ 200 words: "what you'll build" + run command
 ├── 01-<step>.{md,py,ts}    # numbered, ordered steps
 ├── 02-<step>.{md,py,ts}
@@ -59,10 +59,10 @@ data_provenance = "synthesized"     # in {synthesized, anonymized, public}
 ## Adding a new recipe
 
 ```bash
-cp -r cookbooks/_template cookbooks/<your-slug>
+cp -r examples/_template examples/<your-slug>
 # ... fill in steps and meta.toml
 # Run locally:
-cd cookbooks/<your-slug>
+cd examples/<your-slug>
 uv sync
 uv run python 01-*.py
 # ... etc.
@@ -71,7 +71,7 @@ uv run python 01-*.py
 
 ## CI contract
 
-`pnpm cookbook:test` walks every `cookbooks/<slug>/` (skipping `_template/`,
+`pnpm cookbook:test` walks every `examples/<slug>/` (skipping `_template/`,
 `_demos/`, `_archive/`) and:
 
 1. Validates `meta.toml` against the schema.

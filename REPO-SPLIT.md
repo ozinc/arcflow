@@ -13,12 +13,12 @@ This file is **identical** in both repos and is the governing contract for all a
 ## The Wall
 
 ```
-arcflow/  (CLOSED SOURCE)               arcflow-docs/  (OPEN SOURCE)
+arcflow-core/  (CLOSED SOURCE)          arcflow/  (OPEN SOURCE — MIT)
 ────────────────────────────            ────────────────────────────
 Everything that compiles into           Everything a developer or agent
 libarcflow.{so,dylib,wasm}              needs to BUILD ON top of ArcFlow
 
-  crates/    sdk/code-intelligence/       typescript/   mcp/   react/
+  crates/    sdk/code-intelligence/       sdk/          mcp/   react/
   kanban/    docs/ (engine-internal)      docs/         examples/
   tools/     bindings/                    AGENTS.md     llms.txt
                 │                                │
@@ -72,8 +72,8 @@ arcflow-docs never pushes source back into the engine.
 
 | What | Where |
 |---|---|
-| TypeScript SDK (`arcflow` npm package) | `typescript/src/` |
-| Schema constants — TypeScript mirror | `typescript/src/code-intelligence.ts` |
+| TypeScript SDK (`@ozinc/arcflow` npm package) | `sdk/src/` |
+| Schema constants — TypeScript mirror | `sdk/src/code-intelligence.ts` |
 | MCP npm package (`arcflow-mcp`) | `mcp/` |
 | React hooks library | `react/src/` |
 | MDX documentation | `docs/` |
@@ -110,10 +110,10 @@ Delivery: GitHub Release artifacts, downloaded by arcflow-docs install scripts
 
 **② Schema constants (manually synced, CI-checked)**
 ```
-arcflow/sdk/code-intelligence/src/schema.rs  →  (PR sync)
-→  arcflow-docs/typescript/src/code-intelligence.ts
-Protocol: any PR that changes schema.rs must include a matching PR in arcflow-docs
-CI: arcflow-docs/.github/workflows/ci.yml runs scripts/check-schema-sync.js
+arcflow-core/sdk/code-intelligence/src/schema.rs  →  (PR sync)
+→  arcflow/sdk/src/code-intelligence.ts
+Protocol: any PR that changes schema.rs must include a matching PR in arcflow (public)
+CI: .github/workflows/ci.yml runs scripts/check-schema-sync.js
 ```
 
 **③ Rust SDK docs**
@@ -131,8 +131,8 @@ Nothing else crosses. No TypeScript source in arcflow. No MDX docs in arcflow.
 **Schema constants are the ONLY shared artifact.**
 
 The code intelligence label/edge strings (`"Function"`, `"CALLS"`, etc.) must match:
-- `arcflow/sdk/code-intelligence/src/schema.rs` ← **source of truth**
-- `arcflow-docs/typescript/src/code-intelligence.ts` ← mirror
+- `arcflow-core/sdk/code-intelligence/src/schema.rs` ← **source of truth**
+- `arcflow/sdk/src/code-intelligence.ts` ← mirror
 
 Rules:
 1. Any PR in arcflow that changes `schema.rs` **must** have a matching PR in arcflow-docs.
@@ -188,7 +188,7 @@ RULE 2 (Docs Boundary):
 
 RULE 3 (Schema Sync):
   Schema constants are defined in Rust (arcflow/sdk/code-intelligence/src/schema.rs).
-  The TypeScript mirror (arcflow-docs/typescript/src/code-intelligence.ts) must match.
+  The TypeScript mirror (arcflow/sdk/src/code-intelligence.ts) must match.
   When one changes, both must change in the same release cycle.
 
 RULE 4 (Artifact Crossing):
@@ -209,4 +209,4 @@ RULE 5 (No Duplication):
 This file lives in both repos at their root. Both copies must be identical.
 When updating this file, update both repos in the same PR cycle.
 
-Last updated: 2026-04-16 — post-cleanup, arcflow/sdk/ reduced to code-intelligence/ only.
+Last updated: 2026-05-22 — public repo top-level renamed (typescript/ → sdk/, cookbooks/ → examples/).

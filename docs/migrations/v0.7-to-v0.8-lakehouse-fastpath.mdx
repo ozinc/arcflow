@@ -63,7 +63,7 @@ For the worked-example schema above:
 
 The mount (`nfl`, `sensors`) is configured at workspace open time and binds the URI's authority to a backing storage location (a local directory, an S3 bucket, a GCS bucket, an Iceberg catalog endpoint). Template variables in braces are recognised as Hive-partitioned columns and used by the engine for partition pruning at query time.
 
-The full [Virtual Labels Over Parquet cookbook](https://github.com/ozinc/arcflow/tree/main/cookbooks/virtual-labels-over-parquet) walks through a runnable example end-to-end.
+The full [Virtual Labels Over Parquet cookbook](https://github.com/ozinc/arcflow/tree/main/examples/virtual-labels-over-parquet) walks through a runnable example end-to-end.
 
 ## Step 3 — Register the virtual label
 
@@ -175,7 +175,7 @@ If you are migrating a similar shape — high-cardinality observation rows on th
 
 ## See also
 
-- [Virtual Labels Over Parquet](https://github.com/ozinc/arcflow/tree/main/cookbooks/virtual-labels-over-parquet) — the runnable cookbook recipe.
+- [Virtual Labels Over Parquet](https://github.com/ozinc/arcflow/tree/main/examples/virtual-labels-over-parquet) — the runnable cookbook recipe.
 - [World Graph](/docs/concepts/layers/world-graph) — the conceptual layer and R1–R3 boundary.
 - [Perception Lake](/docs/concepts/layers/perception-lake) — the sibling immutable-observation layer.
 - [World Graph Substrate](/docs/architecture/worldgraph) — the engine-architecture deep-dive.

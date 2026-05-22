@@ -965,10 +965,10 @@ See `docs/guides/code-intelligence.mdx` for the full guide.
 ## Repo structure
 
 ```
-typescript/src/                        # SDK source
+sdk/src/                        # SDK source
   index.ts, types.ts, errors.ts        # Core API
   code-intelligence.ts                 # Code graph layer (CodeGraph, Labels, Edges)
-typescript/tests/                      # SDK tests (Vitest)
+sdk/tests/                      # SDK tests (Vitest)
 mcp/                                   # MCP server (npx arcflow-mcp)
 docs/                                  # MDX docs — full reference
   concepts/world-model.mdx             # World Model concept: spatial-temporal, observed/inferred/predicted

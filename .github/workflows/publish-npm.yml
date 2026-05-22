@@ -2,10 +2,10 @@
 #
 # This workflow lives in ozinc/arcflow (public) for supply-chain audit
 # transparency. The TypeScript package source lives in this repo
-# (typescript/). The napi-rs Rust binding source is checked out from
+# (sdk/). The napi-rs Rust binding source is checked out from
 # ozinc/arcflow-core (private) via ARCFLOW_CORE_RO_PAT during the run.
 #
-# npm package name:  @ozinc/arcflow  (scoped, set in typescript/package.json)
+# npm package name:  @ozinc/arcflow  (scoped, set in sdk/package.json)
 #
 # Operator setup (one-time):
 #   1. npm Trusted Publisher: register at npmjs.com → account settings →
@@ -119,14 +119,14 @@ jobs:
       - name: Upgrade npm to a version with OIDC support
         run: npm install -g npm@latest
 
-      - name: Stage native artifacts under typescript/npm/
+      - name: Stage native artifacts under sdk/npm/
         run: |
-          cd typescript
+          cd sdk
           mkdir -p npm
           ls ../natives/
 
       - name: Publish to npm
-        working-directory: typescript
+        working-directory: sdk
         run: |
           npm install
           npm run build

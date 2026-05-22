@@ -52,7 +52,7 @@ SCAN_PATHS = [
 # Files where references to the forbidden patterns are intentional and
 # allowed:
 #   - planning/   architectural docs that describe the rule itself
-#   - cookbooks/  recipe meta.toml may reference api strings; pyproject.toml
+#   - examples/  recipe meta.toml may reference api strings; pyproject.toml
 #                 may reference local wheel paths (not registry installs)
 #   - this script
 #   - schemas/release-matrix.schema.json (descriptive examples)

@@ -21,7 +21,7 @@ npm test
 ## Project structure
 
 ```
-typescript/
+sdk/
 ├── src/
 │   ├── index.ts      # SDK entry point (open, openInMemory, ArcflowDB)
 │   ├── types.ts      # TypeScript interfaces
