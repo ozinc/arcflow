@@ -443,6 +443,38 @@ MATCH (n:Person) WITH n WHERE n.age > 25 RETURN n.name
 MATCH (n:Person) AS OF seq 42 RETURN n.name
 ```
 
+### Scalar functions
+```cypher
+-- Type / id / label
+RETURN id(n), type(r), labels(n), properties(n), keys(n)
+RETURN ELEMENT_ID(n)                          -- GQL V2 stable element id
+
+-- Conversions
+RETURN toInteger($v), toFloat($v), toString($v)
+
+-- Lists + sizing
+RETURN size($list), head($list), tail($list), length(path)
+
+-- Path / pattern
+RETURN nodes(path), relationships(path)
+MATCH (n:Person) WHERE EXISTS { MATCH (n)-[:KNOWS]->(:Person) } RETURN n
+RETURN coalesce(n.nickname, n.name, 'anonymous')
+
+-- Spatial
+RETURN point({x: 1.0, y: 2.0})
+RETURN point({x: 1.0, y: 2.0, z: 3.0})                          -- 3D
+RETURN distance(a.position, point({x: 0, y: 0}))                -- Euclidean
+```
+
+### Aggregate functions
+```cypher
+MATCH (n:Person)
+RETURN count(*), count(n.age),                                  -- count, count-non-null
+       sum(n.score), avg(n.score),
+       min(n.age), max(n.age),
+       stddev(n.score), stddev_pop(n.score)                     -- sample + population
+```
+
 ### Window functions
 ```cypher
 lag(n.close, 1) OVER (PARTITION BY n.symbol ORDER BY n.date) AS prev_close
