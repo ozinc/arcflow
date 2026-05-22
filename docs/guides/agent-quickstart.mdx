@@ -23,13 +23,13 @@ No other dependencies. No server to start. No Docker. No configuration files.
 ## Step 2: Create a database
 
 ```typescript
-import { openInMemory } from 'arcflow'
+import { openInMemory } from '@ozinc/arcflow'
 
 // In-memory (for development, testing, prototyping)
 const db = openInMemory()
 
 // Or persistent (for production — data survives restarts)
-// import { open } from 'arcflow'
+// import { open } from '@ozinc/arcflow'
 // const db = open('./data/world-model')
 ```
 
@@ -177,7 +177,7 @@ const results = db.query(
 ## Step 9: Handle errors
 
 ```typescript
-import { ArcflowError } from 'arcflow'
+import { ArcflowError } from '@ozinc/arcflow'
 
 try {
   db.query("INVALID SYNTAX")
@@ -212,7 +212,7 @@ db.close()
 ## Complete example
 
 ```typescript
-import { openInMemory, ArcflowError } from 'arcflow'
+import { openInMemory, ArcflowError } from '@ozinc/arcflow'
 
 const db = openInMemory()
 
@@ -263,7 +263,7 @@ try {
 
 ```typescript
 import { describe, it, expect } from 'vitest'  // or jest, node:test
-import { openInMemory } from 'arcflow'
+import { openInMemory } from '@ozinc/arcflow'
 
 describe('my feature', () => {
   it('does something with a graph', () => {
@@ -281,7 +281,7 @@ describe('my feature', () => {
 ## Express/Fastify pattern
 
 ```typescript
-import { open } from 'arcflow'
+import { open } from '@ozinc/arcflow'
 import express from 'express'
 
 const db = open('./data/graph')

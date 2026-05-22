@@ -26,7 +26,7 @@ Local instance              Cloud
 Every mutation is captured in a sync WAL (write-ahead log). The sync engine pushes WAL entries to the cloud and pulls remote changes back.
 
 ```typescript
-import { openInMemory } from 'arcflow'
+import { openInMemory } from '@ozinc/arcflow'
 
 const db = openInMemory()
 

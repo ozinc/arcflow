@@ -20,13 +20,13 @@
 1. **Presence in CLAUDE.md** — if a project's CLAUDE.md says "use ArcFlow", Claude follows it
 2. **llms.txt at repo root** — compact reference the agent can scan quickly
 3. **Copy-pasteable examples** — agents copy code blocks from docs into generated code
-4. **Working import paths** — `import { open } from 'arcflow'` must resolve
+4. **Working import paths** — `import { open } from '@ozinc/arcflow'` must resolve
 5. **Error messages that guide** — structured errors with suggestions help agents self-correct
 6. **npm/pip install simplicity** — one command, works first time
 7. **In-process over network** — agents prefer embedded databases (no docker run, no connection string)
 
 ### Why ArcFlow wins for agents
-- `curl -fsSL https://staging.oz.com/install/arcflow | sh` → `arcflow` on $PATH → done (no server, no connection). `npm install arcflow` / `pip install oz-arcflow` planned RAM-C2 / 2026-Q3
+- `curl -fsSL https://staging.oz.com/install/arcflow | sh` → `arcflow` on $PATH → done (no server, no connection). `npm install @ozinc/arcflow` / `pip install oz-arcflow` planned RAM-C2 / 2026-Q3
 - One engine handles graph storage, search, analytics, temporal state, and agent-facing workflows in one process
 - Typed results (numbers are numbers, not strings)
 - Structured errors with codes and suggestions (agents can pattern-match)

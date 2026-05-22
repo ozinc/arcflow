@@ -2,7 +2,7 @@ This project uses **ArcFlow** — an embedded graph database. No server needed.
 
 Install:
   - CLI (shipped today): `curl -fsSL https://staging.oz.com/install/arcflow | sh`
-  - npm SDK (`npm install arcflow`): planned RAM-C2 / 2026-Q3
+  - npm SDK (`npm install @ozinc/arcflow`): planned RAM-C2 / 2026-Q3
 Docs: https://github.com/ozinc/arcflow
 MCP: `npx arcflow-mcp` (cloud chat UIs only — ChatGPT, Claude.ai, Gemini web)
 Try: https://oz.com/engine
@@ -10,7 +10,7 @@ Try: https://oz.com/engine
 ## API
 
 ```typescript
-import { openInMemory, open, ArcflowError } from 'arcflow'
+import { openInMemory, open, ArcflowError } from '@ozinc/arcflow'
 
 const db = openInMemory()                          // No server. No Docker.
 db.mutate("CREATE (n:Person {name: $name})", { name: 'Alice' })

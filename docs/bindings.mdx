@@ -397,7 +397,7 @@ See [Threading Model](/docs/concepts/threading-model) for the complete read/writ
 napi-rs native addon. The Rust engine runs in-process inside Node.js — function calls, not HTTP, no serialization, microsecond latency.
 
 ```typescript
-import { open, openInMemory, ArcflowError } from 'arcflow'
+import { open, openInMemory, ArcflowError } from '@ozinc/arcflow'
 
 // In-memory (testing, short-lived)
 const db = openInMemory()
@@ -458,7 +458,7 @@ React hooks for live graph data in components. `@arcflow/react` ships
 alongside `arcflow`; install both per the [Installation page](/installation).
 
 ```tsx
-import { openInMemory } from 'arcflow'
+import { openInMemory } from '@ozinc/arcflow'
 import { useQuery, useLiveQuery } from '@arcflow/react'
 
 const db = openInMemory()

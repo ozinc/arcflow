@@ -25,7 +25,7 @@ See https://oz.com/docs/deployment/docker for the rationale.
 ## 5 essential patterns
 
 ```typescript
-import { open, openInMemory, ArcflowError } from 'arcflow'
+import { open, openInMemory, ArcflowError } from '@ozinc/arcflow'
 
 // 1. World model entity — spatial position, observation class, confidence
 const db = openInMemory()

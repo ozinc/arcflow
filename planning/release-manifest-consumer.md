@@ -114,7 +114,7 @@ After RAM-B3:
 ```text
 forbidden in docs/, install/, *.txt (outside <InstallMatrix /> output):
   /pip install arcflow/
-  /npm install arcflow/
+  /npm install @ozinc\/arcflow/
   /cargo add arcflow/
   /cargo install arcflow/
   /ghcr\.io\/[^\/]+\/arcflow/

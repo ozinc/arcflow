@@ -11,7 +11,7 @@ npm run dev        # Watch mode
 ## Database
 
 ```typescript
-import { openInMemory, open } from 'arcflow'
+import { openInMemory, open } from '@ozinc/arcflow'
 
 const db = openInMemory()                         // In-memory (dev/test)
 const db = open('./data')                          // Persistent (production)

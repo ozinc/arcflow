@@ -36,7 +36,7 @@ db.close()  // gone, no cleanup
 An agent analyzing a codebase can model dependencies as a graph:
 
 ```typescript
-import { openInMemory } from 'arcflow'
+import { openInMemory } from '@ozinc/arcflow'
 
 const db = openInMemory()
 
@@ -91,7 +91,7 @@ db.close()
 An agent writing tests can create graph fixtures inline:
 
 ```typescript
-import { openInMemory } from 'arcflow'
+import { openInMemory } from '@ozinc/arcflow'
 
 describe('social features', () => {
   it('finds mutual friends', () => {

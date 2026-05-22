@@ -86,7 +86,7 @@ page never ships an install command that the registry can't actually serve.
 ## Verify installation
 
 ```typescript
-import { openInMemory } from 'arcflow'
+import { openInMemory } from '@ozinc/arcflow'
 
 const db = openInMemory()
 db.mutate("CREATE (n:Hello {message: 'It works!'})")

@@ -30,7 +30,7 @@ One engine for graphs, vectors, full-text search, algorithms, time-series, live 
 | Capability | How |
 |---|---|
 | Try it | **Browser — zero install** (oz.com/engine) |
-| Install | `curl -fsSL https://staging.oz.com/install/arcflow \| sh` (CLI — only shipped path today; `npm install arcflow` planned RAM-C2 / 2026-Q3) |
+| Install | `curl -fsSL https://staging.oz.com/install/arcflow \| sh` (CLI — only shipped path today; `npm install @ozinc/arcflow` planned RAM-C2 / 2026-Q3) |
 | Server needed | **No** — in-process, like SQLite |
 | Runs in browser | **Yes** (WASM) |
 | Testing | `openInMemory()` — fresh graph per test, no teardown |
@@ -74,7 +74,7 @@ The boundary between World Store (Layer 1) and World Graph (Layer 3) is a module
 ## Quick start
 
 ```typescript
-import { open, openInMemory } from 'arcflow'
+import { open, openInMemory } from '@ozinc/arcflow'
 
 const db = openInMemory()  // No server. No setup. Just works.
 
@@ -128,7 +128,7 @@ cursor.close()
 const persistent = open('./data/graph')
 
 // Error handling — structured, not stack traces
-import { ArcflowError } from 'arcflow'
+import { ArcflowError } from '@ozinc/arcflow'
 try { db.query("INVALID") } catch (e) {
   if (e instanceof ArcflowError) console.log(e.code, e.category, e.suggestion)
 }
@@ -1085,7 +1085,7 @@ db.execute("CALL arcflow.workflow.retryStep(42, 'transform')")
 
 ### Testing
 ```typescript
-import { openInMemory } from 'arcflow'
+import { openInMemory } from '@ozinc/arcflow'
 const db = openInMemory()  // Fresh graph, no cleanup, no Docker
 db.mutate("CREATE (n:Test {x: 1})")
 assert(db.query("MATCH (n:Test) RETURN n.x").rows[0].get('x') === 1)
@@ -1117,7 +1117,7 @@ See `docs/guides/agent-quickstart.mdx` for the complete 10-step recipe with ever
 ## Code Intelligence API
 
 ```typescript
-import { CodeGraph, Labels, Edges } from 'arcflow'
+import { CodeGraph, Labels, Edges } from '@ozinc/arcflow'
 
 const cg = new CodeGraph(db)
 

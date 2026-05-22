@@ -50,7 +50,7 @@ live release manifest.
 ## Complete API
 
 ```typescript
-import { open, openInMemory, ArcflowError } from 'arcflow'
+import { open, openInMemory, ArcflowError } from '@ozinc/arcflow'
 import { useQuery, useLiveQuery } from '@arcflow/react'
 
 // ── Lifecycle ──
@@ -926,7 +926,7 @@ for (const row of results.rows) {
 
 ### Testing
 ```typescript
-import { openInMemory, ArcflowError } from 'arcflow'
+import { openInMemory, ArcflowError } from '@ozinc/arcflow'
 const db = openInMemory()  // Fresh graph per test, no cleanup
 db.mutate("CREATE (n:Test {x: 1})")
 const r = db.query("MATCH (n:Test) RETURN n.x")

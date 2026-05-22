@@ -115,7 +115,7 @@ RETURN e.track_id, e.class, e.x, e.y, e._observation_class, e._confidence
 ## Live safety systems
 
 ```typescript
-import { open } from 'arcflow'
+import { open } from '@ozinc/arcflow'
 
 const db = open('./data/robot-world-model')
 
@@ -203,7 +203,7 @@ DETACH DELETE e
 
 ```typescript
 // Subscribe to ROS detection messages, write to world model
-import { open } from 'arcflow'
+import { open } from '@ozinc/arcflow'
 import * as rclnodejs from 'rclnodejs'
 
 const db = open('./data/robot-world-model')

@@ -73,7 +73,7 @@ Alternative installs (all planned — not yet on public registries):
 # pip install oz-arcflow
 
 # Node (napi-rs — planned RAM-C2 / 2026-Q3)
-# npm install arcflow
+# npm install @ozinc/arcflow
 
 # Rust (crate — planned RAM-C3 / 2026-Q4)
 # cargo add arcflow
