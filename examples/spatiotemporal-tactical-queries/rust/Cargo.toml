@@ -5,7 +5,7 @@ edition = "2021"
 description = "ArcFlow Rust SDK example mirroring the spatiotemporal-tactical-queries Python recipe — AS OF counterfactual replay, confidence-weighted ER, observed-vs-predicted fusion, plus register_skill on ER mutations and provenance_chain walks."
 
 [dependencies]
-arcflow-sdk = { git = "https://github.com/ozinc/arcflow-core", branch = "main" }
+arcflow = "0.8"  # planned RAM-C3 / 2026-Q4 on crates.io
 rand = "0.8"
 rand_chacha = "0.3"
 anyhow = "1"

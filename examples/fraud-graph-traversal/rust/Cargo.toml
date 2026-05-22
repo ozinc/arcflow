@@ -5,7 +5,7 @@ edition = "2021"
 description = "ArcFlow Rust SDK example mirroring the fraud-graph-traversal Python recipe — fan-out / fan-in / chain detection plus the Rust-only surface: register_skill for live alerts and LIVE CALL algo.connectedComponents for incremental mule-cluster detection."
 
 [dependencies]
-arcflow-sdk = { git = "https://github.com/ozinc/arcflow-core", branch = "main" }
+arcflow = "0.8"  # planned RAM-C3 / 2026-Q4 on crates.io
 arrow = "53"
 parquet = "53"
 anyhow = "1"

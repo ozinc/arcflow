@@ -5,7 +5,7 @@ edition = "2021"
 description = "ArcFlow Rust SDK example mirroring the agent-knowledge-base Python recipe — confidence-scored GraphRAG with multi-hop entity traversal, plus the Rust-only surface: CALL db.provenance() and register_live_proof on the retrieval view."
 
 [dependencies]
-arcflow-sdk = { git = "https://github.com/ozinc/arcflow-core", branch = "main" }
+arcflow = "0.8"  # planned RAM-C3 / 2026-Q4 on crates.io
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 anyhow = "1"

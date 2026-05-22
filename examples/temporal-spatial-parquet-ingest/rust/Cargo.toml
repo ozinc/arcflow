@@ -5,7 +5,7 @@ edition = "2021"
 description = "ArcFlow Rust SDK example mirroring the temporal-spatial-parquet-ingest Python recipe — Parquet → ArcFlow via the bulk-create path, plus cross-validation against DuckDB on the same input."
 
 [dependencies]
-arcflow-sdk = { git = "https://github.com/ozinc/arcflow-core", branch = "main" }
+arcflow = "0.8"  # planned RAM-C3 / 2026-Q4 on crates.io
 arrow = "53"
 parquet = "53"
 duckdb = { version = "1", features = ["bundled"] }

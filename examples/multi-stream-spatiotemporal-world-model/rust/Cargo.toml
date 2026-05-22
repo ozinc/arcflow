@@ -5,7 +5,7 @@ edition = "2021"
 description = "ArcFlow Rust SDK example mirroring the multi-stream-spatiotemporal-world-model Python recipe — high-leverage steps in Rust including the LIVE-views + register_skill surfaces Python can't reach today."
 
 [dependencies]
-arcflow-sdk = { git = "https://github.com/ozinc/arcflow-core", branch = "main" }
+arcflow = "0.8"  # planned RAM-C3 / 2026-Q4 on crates.io
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }
 rand = "0.8"
 rand_chacha = "0.3"

@@ -9,7 +9,7 @@
 **Runtime:** ~3 minutes (synthesised sample); the real-world dataset
 this pattern was first proven on is 311M frames (NFL 2025 tracking
 data).
-**Pins:** `oz-arcflow==0.8.8`
+**Pins:** `oz-arcflow==0.8.0`
 
 The cookbook for one of the load-bearing ArcFlow promises: counting
 high-cardinality immutable rows in a Lakehouse partition without

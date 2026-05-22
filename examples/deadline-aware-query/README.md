@@ -10,7 +10,7 @@
 
 **Audience:** python · data-engineer · ml · agent
 **Runtime:** ~3 minutes (synthesised sample)
-**Pins:** `oz-arcflow==0.8.8`
+**Pins:** `oz-arcflow==0.8.0`
 
 The cookbook for any system that values **freshness over completeness**:
 frame-clock replay (a 30 FPS replay can't wait 200 ms for the engine

@@ -5,7 +5,7 @@ edition = "2021"
 description = "ArcFlow Rust SDK example mirroring the from-sql-to-arcflow Python recipe — same three side-by-side comparisons (shared coworkers, confidence-tiered query, multi-hop industry) running DuckDB and ArcFlow in one process for hybrid workloads."
 
 [dependencies]
-arcflow-sdk = { git = "https://github.com/ozinc/arcflow-core", branch = "main" }
+arcflow = "0.8"  # planned RAM-C3 / 2026-Q4 on crates.io
 duckdb = { version = "1", features = ["bundled"] }
 anyhow = "1"
 

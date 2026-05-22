@@ -15,7 +15,7 @@ WHEEL="${ARCFLOW_WHEEL:-/Users/gudjon/code/arcflow/python/dist/oz_arcflow-0.8.0-
 
 if [ ! -f "${WHEEL}" ]; then
     echo "FATAL: arcflow wheel not found at ${WHEEL}" >&2
-    echo "Build it: cd /Users/gudjon/code/arcflow/python && bash build_wheel.sh" >&2
+    echo "Set ARCFLOW_WHEEL=<path-to-oz_arcflow-wheel> (the wheel is planned for RAM-C2 on PyPI; until then customers can run individual recipe steps with a published binary)" >&2
     exit 1
 fi
 

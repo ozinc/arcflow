@@ -5,7 +5,7 @@ edition = "2021"
 description = "ArcFlow Rust SDK example mirroring the temporal-counterfactual-replay Python recipe — AS OF seq across fraud / robotics / IoT domains, plus provenance_chain walks for the audit trail."
 
 [dependencies]
-arcflow-sdk = { git = "https://github.com/ozinc/arcflow-core", branch = "main" }
+arcflow = "0.8"  # planned RAM-C3 / 2026-Q4 on crates.io
 anyhow = "1"
 tempfile = "3"
 
