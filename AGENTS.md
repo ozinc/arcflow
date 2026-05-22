@@ -511,6 +511,55 @@ CALL algo.hybridSearch($queryVec, 'Doc', 10)
 RETURN node.title, score
 ```
 
+A registered hybrid-index configuration binds a vector property to an optional text property + embedder so `algo.vectorSearch` can consult both legs automatically:
+
+```cypher
+-- Register a hybrid index policy
+CALL arcflow.hybridIndex.register(
+    name: 'doc_search',
+    label: 'Doc',
+    vector_property: 'embedding',
+    text_property: 'body',
+    embedder: 'sentence-transformers/all-MiniLM-L6-v2'
+) YIELD name, created_at
+
+-- Discover what's registered
+CALL arcflow.hybridIndex.list() YIELD name, label, vector_property, text_property, embedder
+
+-- Make a registered policy the default that algo.vectorSearch consults
+CALL arcflow.hybridIndex.setDefault('doc_search') YIELD name
+
+-- Drop a registered policy
+CALL arcflow.hybridIndex.drop('doc_search') YIELD removed
+```
+
+### Geofences (live spatial triggers)
+
+A geofence is a named circular region attached to a node-property key. Once registered, the engine fires standing-query deltas every time a node enters or leaves the region:
+
+```cypher
+-- CALL arcflow.geofence.register(name, property_key, cx, cy, radius)
+CALL arcflow.geofence.register('exit_zone_a', 'position', 12.4, 8.7, 5.0)
+  YIELD name
+
+CALL arcflow.geofence.list() YIELD name
+CALL arcflow.geofence.drop('exit_zone_a') YIELD removed
+```
+
+### k-Hop neighborhood maintenance
+
+For workloads that need the k-hop neighborhood of every node materialised — recommendation, similarity, graph-attention features — `arcflow.k_hop.*` precomputes and maintains the index incrementally as the graph mutates:
+
+```cypher
+-- Register and compute a 3-hop neighborhood index for (:Person)-[:KNOWS]-
+CALL arcflow.k_hop.compute('Person', 'KNOWS', 3)
+  YIELD source, neighbor, distance
+
+-- Inspect or drop registered maintenances
+CALL arcflow.k_hop.list() YIELD id, source_label, rel_type, k, last_refreshed
+CALL arcflow.k_hop.drop(id) YIELD removed
+```
+
 ### Partition-key column exposure
 
 Hive-style partition keys in lakehouse paths (`lake://prod/trades/year=2026/region=eu/`) are exposed as plain properties on virtual-label nodes — queryable directly, and the planner pushes partition predicates down to the directory walk:
@@ -572,19 +621,31 @@ CALL arcflow.trajectory.nearestAtFrame(entity_label: "Player",
 CALL arcflow.trajectory.leverageGain(...)
 CALL arcflow.trajectory.releasePoint(...)
 CALL arcflow.trajectory.shadowedBy(...)
+CALL arcflow.trajectory.firstFrameWithin(...)    -- first frame the trajectory enters a radius
+CALL arcflow.trajectory.minDistanceToPoint(...)  -- catch-radius heuristic; min distance over the trajectory
 
 -- Counterfactual branching (fork the World Graph at a WAL seq)
 CALL arcflow.counterfactual.branchAt(name: 'rollout-1', seq: 42)
 ```
 
-All algorithms: pageRank, confidencePageRank, betweenness, closeness, degreeCentrality,
-louvain, leiden, communityDetection, connectedComponents, clusteringCoefficient,
-biconnectedComponents, nodeSimilarity, triangleCount, kCore, density, diameter,
-allPairsShortestPath, dijkstra, astar, nearestNodes, confidencePath, vectorSearch,
-similarNodes, hybridSearch, graphRAG, graphRAGContext, graphRAGTrusted,
-compoundingScore, contradictions, audienceProjection, factsByRegime, multiModalFusion,
-causalLineage, causalPath, multi_source_disagreement,
-trajectory.{nearestAtFrame, leverageGain, releasePoint, shadowedBy},
+All algorithms: pageRank, confidencePageRank, confidencePageRankByLabel,
+betweenness, closeness, degree, degreeCentrality,
+louvain, leiden, communityDetection, labelPropagation, cAndSLabelPropagation,
+connectedComponents, clusteringCoefficient, biconnectedComponents,
+nodeSimilarity, pairSimilarity, similarNodes, similarThenTraverse,
+triangleCount, kCore, density, diameter, maxFlow,
+shortestPath, allShortestPaths, allPairsShortestPath,
+nearestNodes, confidencePath, embeddingProperties, entityFreshness, entityResolution,
+vectorSearch, hybridSearch, graphRAG, graphRAGContext, graphRAGMultiModel, graphRAGTrusted,
+compoundingScore, contradictions, audienceProjection, factsByRegime,
+multiModalFusion, fusion.weightedCentroid, predictionDrift, staleEmbeddings,
+classify, confidenceCalibration, factContradiction, relationshipStrength,
+node2vec, graphSAGE, struc2vec, temporalDecay,
+causalLineage, causalPath, causalAncestry, causalDelta, causalFanout, causalRoot,
+multi_source_disagreement, biasDetection, chiSquare,
+moransI, localMoransI, getisOrdGStar, ripleysK, localOutlierFactor,
+spatial.{nearest, cone_intersection, dbscan, kth_nearest_with_velocity, occlusion_area},
+trajectory.{nearestAtFrame, leverageGain, releasePoint, shadowedBy, firstFrameWithin, minDistanceToPoint},
 counterfactual.branchAt
 
 Canonical catalog with worked examples + composition patterns: [`docs/algorithms.mdx`](/docs/algorithms).

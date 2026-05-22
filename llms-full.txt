@@ -696,6 +696,50 @@ CALL algo.graphRAGTrusted($query_vector, 'Doc', 10, {min_confidence: 0.85})
 
 `algo.vectorSearch(<index>, $vec, k)` is the pure-vector form. Hybrid procs above are useful when retrieval needs to combine embedding similarity with graph structure (typed edges, label filters, confidence weighting) before scoring — typical for retrieval-augmented generation over a typed graph rather than a flat vector store.
 
+### Hybrid index registry
+
+A registered hybrid-index configuration binds a vector property to an optional text property + embedder so `algo.vectorSearch` consults both legs automatically:
+
+```cypher
+-- Register a hybrid index policy
+CALL arcflow.hybridIndex.register(
+    name: 'doc_search',
+    label: 'Doc',
+    vector_property: 'embedding',
+    text_property: 'body',
+    embedder: 'sentence-transformers/all-MiniLM-L6-v2'
+) YIELD name, created_at
+
+CALL arcflow.hybridIndex.list()       YIELD name, label, vector_property, text_property, embedder
+CALL arcflow.hybridIndex.setDefault('doc_search') YIELD name
+CALL arcflow.hybridIndex.drop('doc_search')       YIELD removed
+```
+
+### Geofences
+
+A named circular region attached to a node-property key. The engine emits standing-query deltas every time a node enters or leaves the region:
+
+```cypher
+-- Args: (name, property_key, cx, cy, radius)
+CALL arcflow.geofence.register('exit_zone_a', 'position', 12.4, 8.7, 5.0)
+  YIELD name
+
+CALL arcflow.geofence.list() YIELD name
+CALL arcflow.geofence.drop('exit_zone_a') YIELD removed
+```
+
+### k-Hop neighborhood maintenance
+
+Precompute and incrementally maintain the k-hop neighborhood of every node — useful for recommendation, similarity, and graph-attention feature pipelines:
+
+```cypher
+CALL arcflow.k_hop.compute('Person', 'KNOWS', 3)
+  YIELD source, neighbor, distance
+
+CALL arcflow.k_hop.list() YIELD id, source_label, rel_type, k, last_refreshed
+CALL arcflow.k_hop.drop(id) YIELD removed
+```
+
 Hybrid search merges candidate sets from both indexes before scoring; the declared weights determine final ranking. Useful for retrieval-augmented generation where lexical recall (fulltext) and semantic recall (embedding) catch different document types.
 
 ### Partition-key column exposure (lakehouse virtual labels)
