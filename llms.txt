@@ -132,7 +132,7 @@ k-Hop neighborhood maintenance:
 - `CALL arcflow.k_hop.compute(source_label, rel_type, k) YIELD source, neighbor, distance` precomputes and maintains the k-hop neighborhood index incrementally as the graph mutates. `arcflow.k_hop.list()` / `.drop(id)` round out the surface. Useful for recommendation, similarity, and graph-attention feature pipelines.
 
 Query hints (explicit lane selection):
-- `CALL algo.X(...) HINT lane=<ident> YIELD ...` — overrides the planner's automatic lane choice. Lanes: `cpu_scalar | cpu_simd | gpu_cuda | gpu_metal | auto`. The chosen lane is reported back as `result.transport_outcome.lane`. If the requested lane isn't available on the host, the engine falls back silently to the next-best lane and records the actual lane used — use the field to detect silent fallbacks in tests.
+- `CALL algo.X(...) HINT lane=<ident> YIELD ...` — overrides the planner's automatic lane choice. Supported lanes: `auto | cpu | cuda | metal | gpu.cuda | gpu.metal`. The chosen lane is reported back as `result.transport_outcome.lane`. If the requested lane isn't available on the host, the engine falls back silently to the next-best lane and records the actual lane used — use the field to detect silent fallbacks in tests.
 
 Account login (optional, for hosted features only):
 - `arcflow login` — browser-based; opens `oz.com/world/login` and listens on a local callback port. `arcflow login --token <TOKEN>` for headless/CI mode. Credentials at `~/.arcflow/credentials.json` (0600 on Unix). `arcflow whoami` prints email + tier. `arcflow logout` clears.

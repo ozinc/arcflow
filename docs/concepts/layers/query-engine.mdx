@@ -50,14 +50,14 @@ ArcFlow targets the ratified ISO/IEC 39075 **GQL** standard while keeping openCy
 
 ## Query hints — explicit lane selection
 
-The planner picks a compute lane automatically for each algorithm call — `cpu_scalar`, `cpu_simd`, `gpu_cuda`, `gpu_metal`, or `auto`. A `HINT` clause overrides that choice:
+The planner picks a compute lane automatically for each algorithm call. A `HINT` clause overrides that choice. Supported lanes: `auto`, `cpu`, `cuda`, `metal`, `gpu.cuda`, `gpu.metal`.
 
 ```cypher
-CALL algo.pageRank() HINT lane=gpu_cuda YIELD nodeId, score
-CALL algo.triangleCount() HINT lane=cpu_simd YIELD count
+CALL algo.pageRank() HINT lane=gpu.cuda YIELD nodeId, score
+CALL algo.triangleCount() HINT lane=cpu YIELD count
 ```
 
-If the requested lane is unavailable on the host (e.g. `gpu_cuda` on Apple Silicon), the engine falls back silently to the next-best lane and records the actual lane used. The chosen lane comes back on the result envelope as `result.transport_outcome.lane` — use it to detect silent fallbacks in tests, or to log which path each query actually took.
+If the requested lane is unavailable on the host (e.g. `gpu.cuda` on Apple Silicon), the engine falls back silently to the next-best lane and records the actual lane used. The chosen lane comes back on the result envelope as `result.transport_outcome.lane` — use it to detect silent fallbacks in tests, or to log which path each query actually took.
 
 ## Telemetry — `result.io_stats`
 

@@ -295,7 +295,7 @@ result = db.execute(
     options=arcflow.QueryOptions(deadline_ms=500),
 )
 result.transport_outcome          # 'truncated' | 'complete' | None
-result.transport_outcome.lane     # 'cpu_scalar' | 'cpu_simd' | 'gpu_cuda' | 'gpu_metal'
+result.transport_outcome.lane     # 'cpu' | 'cpu' | 'gpu.cuda' | 'gpu.metal'
 result.io_stats                   # IoStats: pruning + I/O telemetry, see below
 
 # Snapshot replay
@@ -580,14 +580,14 @@ RETURN count(*)
 `HINT lane=<ident>` after a `CALL` clause overrides the planner's automatic lane selection. The chosen lane is reported back on the result envelope as `result.transport_outcome.lane`.
 
 ```cypher
-CALL algo.pageRank() HINT lane=gpu_cuda YIELD nodeId, score
--- result.transport_outcome.lane → "gpu_cuda" if dispatched, or a
+CALL algo.pageRank() HINT lane=gpu.cuda YIELD nodeId, score
+-- result.transport_outcome.lane → "gpu.cuda" if dispatched, or a
 -- fallback lane if the hint couldn't be honored
 
--- Lanes: 'cpu_scalar' | 'cpu_simd' | 'gpu_cuda' | 'gpu_metal' | 'auto'
+-- Supported lanes: 'auto' | 'cpu' | 'cuda' | 'metal' | 'gpu.cuda' | 'gpu.metal'
 ```
 
-If the requested lane isn't available on the host (e.g., `gpu_cuda` on Apple Silicon), the engine falls back silently to the next-best lane and records the actual lane used in `transport_outcome.lane`. Use the lane field to detect silent fallbacks in tests.
+If the requested lane isn't available on the host (e.g., `gpu.cuda` on Apple Silicon), the engine falls back silently to the next-best lane and records the actual lane used in `transport_outcome.lane`. Use the lane field to detect silent fallbacks in tests.
 
 ### Live views (incremental computation)
 ```cypher
@@ -869,10 +869,22 @@ CREATE SKILL coach_summary
     TIER LLM
     MODEL 'cli/claude-code'        -- catalog row from the LLM provider table
 
+-- Embedding-backed skill — invoked when a vector property matches a query
+-- vector above the THRESHOLD similarity. NEURAL tier; no LLM round-trip.
+CREATE SKILL match_similar
+    FROM EMBEDDING embedding
+    THRESHOLD 0.85
+    ALLOWED ON [Doc]
+    TIER NEURAL
+
 -- Bundle export / import (skill packs are portable JSON blobs)
 CALL arcflow.skills.export('my-pack', '1.0.0') YIELD json
 CALL arcflow.skills.import(json)               YIELD name, version, skill_count
 ```
+
+Skill kinds:
+- `FROM PROMPT '<template>'` — text-templated; `TIER LLM` for hosted/local model dispatch.
+- `FROM EMBEDDING <prop>` — vector-similarity-triggered; `TIER NEURAL`; threshold-gated.
 
 The `MODEL` clause routes the LLM call to a specific catalog row instead of the default `oz/deepseek-v3`. Combined with the CLI-provider substrate, this makes `cli/claude-code`, `cli/codex`, `cli/gemini` reachable from customer Cypher.
 

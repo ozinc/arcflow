@@ -762,17 +762,18 @@ Partition pruning happens *before* any parquet file is opened — the planner tr
 
 ### Query hints — explicit lane selection
 ```cypher
-CALL algo.pageRank() HINT lane=gpu_cuda YIELD nodeId, score
-CALL algo.triangleCount() HINT lane=cpu_simd YIELD count
+CALL algo.pageRank() HINT lane=gpu.cuda YIELD nodeId, score
+CALL algo.triangleCount() HINT lane=cpu YIELD count
 ```
 
 | Lane | Meaning |
 |---|---|
-| `cpu_scalar` | Sequential CPU implementation |
-| `cpu_simd` | SIMD-vectorized CPU implementation (AVX2/NEON) |
-| `gpu_cuda` | NVIDIA CUDA kernel |
-| `gpu_metal` | Apple Metal compute kernel |
 | `auto` | Planner picks based on host capability + graph shape (default) |
+| `cpu` | CPU implementation (scalar or SIMD selected automatically based on host) |
+| `cuda` | NVIDIA CUDA kernel — short form |
+| `metal` | Apple Metal compute kernel — short form |
+| `gpu.cuda` | NVIDIA CUDA kernel — namespaced form (identical to `cuda`) |
+| `gpu.metal` | Apple Metal compute kernel — namespaced form (identical to `metal`) |
 
 The chosen lane is reported back as `result.transport_outcome.lane`. If the requested lane is unavailable on the host, the engine falls back silently and records the actual lane used. Use the field to detect silent fallbacks in tests.
 

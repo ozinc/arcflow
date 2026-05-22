@@ -291,7 +291,7 @@ Most graph databases stop at nodes and edges. ArcFlow makes the following first-
 | **MCP server** | `npx @ozinc/arcflow-mcp` exposes ArcFlow as a Model Context Protocol server for chat UIs. CLI agents get the faster CLI fastpath instead. |
 | **Lake (`lake://`)** | Read Parquet/Iceberg directly via `CREATE NODE LABEL ... VIRTUAL FROM PARTITION`. Footer-only count fast-path. Hive-style partition keys land as queryable bare properties; partition pruning happens before any file is opened. No ETL. |
 | **Hybrid search** | `algo.hybridSearch` and `algo.graphRAGTrusted` combine vector similarity with graph traversal in one call — the retrieval primitive for retrieval-augmented generation over a typed graph, not over a flat vector store. |
-| **Query hints** | `CALL algo.X(...) HINT lane=<gpu_cuda\|cpu_simd\|...>` overrides the planner's lane choice; actual lane used is reported back on `result.transport_outcome.lane`. Detect silent fallbacks in tests. |
+| **Query hints** | `CALL algo.X(...) HINT lane=<gpu.cuda\|cpu\|...>` overrides the planner's lane choice; actual lane used is reported back on `result.transport_outcome.lane`. Detect silent fallbacks in tests. |
 | **IoStats telemetry** | Every result envelope carries `partitions_pruned`, `row_groups_pruned`, `pruning_efficiency`, `decoded_bytes`, `lane_used`. Tune lakehouse layouts and verify pushdown by reading the envelope. |
 | **`AS OF` time-travel** | Query any past state with the *same* execution path as a current-state query. Decision audit. Counterfactual replay. No separate temporal index. |
 | **`COUNTERFACTUAL BRANCH`** | Fork the entire World Graph at a WAL seq, fan out N rollouts, score each, discard or merge. Swarm planning becomes one Cypher block. |
