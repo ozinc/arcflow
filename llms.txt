@@ -117,6 +117,24 @@ Virtual computed columns:
 - Expressions reference parquet-resident columns, partition-key variables (typed Int / String), and earlier computed columns (topologically ordered). Arithmetic, array indexing, `sqrt`, `abs`, `floor`, `ceil`, `pow`, and comparisons are Arrow-evaluable; graph traversals are not callable inside `COMPUTE`.
 - Catalog manifest commits a `ComputedColumn { name, return_type, dependencies, expr_ir }` alongside the `VirtualLabelEntry`. Same atomic two-file commit protocol; monotonic epoch.
 
+Partition-key column exposure:
+- Hive-style partition keys in lakehouse URIs (`lake://prod/trades/year=2026/region=eu/`) surface as plain typed properties on every virtual-label node. `MATCH (t:Trade) WHERE t.year = 2026 AND t.region = 'eu' RETURN count(*)` walks only the matching subtree; other partitions are pruned before any parquet file is opened.
+- `result.io_stats.partitions_pruned` reports how many partition directories were skipped; `partitions_scanned` reports how many were walked.
+
+Hybrid index registration:
+- `CALL arcflow.index.hybrid.register({name, vector_index, fulltext_index, weight: {vector, fulltext}})` — bind a vector index to a fulltext or property filter; `algo.vectorSearch(<hybrid_name>, $vec, k)` then consults both and merges candidates by the declared weight.
+- `CALL arcflow.index.hybrid.list()` / `.describe(name)` / `.drop(name)`.
+
+Query hints (explicit lane selection):
+- `CALL algo.X(...) HINT lane=<ident> YIELD ...` — overrides the planner's automatic lane choice. Lanes: `cpu_scalar | cpu_simd | gpu_cuda | gpu_metal | auto`. The chosen lane is reported back as `result.transport_outcome.lane`. If the requested lane isn't available on the host, the engine falls back silently to the next-best lane and records the actual lane used — use the field to detect silent fallbacks in tests.
+
+LLM Node (provider-pluggable, BYOK):
+- CLI: `arcflow keys add <provider> [--from-stdin | --key SECRET]`, `arcflow keys list`, `arcflow keys rm <provider>`, `arcflow keys set-daily-cap <provider> <USD>`. Keys live in the OS keychain (macOS Keychain, Linux Secret Service, Windows Credential Manager) — never written to disk.
+- Skill grammar: `CREATE SKILL name FROM PROMPT '...' [ALLOWED ON [Label, ...]] [TIER LLM] [MODEL '<catalog-row>']`. `MODEL` routes the LLM call to a specific catalog row instead of the default `oz/deepseek-v3`.
+- Providers: `openai/*` (OpenAI-compatible HTTPS — OpenAI, Together, Groq, Anyscale, any same-shape API), `cli/*` (SubprocessCli — `cli/claude-code`, `cli/codex`, `cli/gemini`; zero network egress), `oz/*` (first-party catalog at `llm.oz.com`).
+- Catalog + budget: `CALL arcflow.llm.catalog() YIELD model, provider, context_window, input_usd_per_million, output_usd_per_million`. `CALL arcflow.llm.budget() YIELD provider, day, spent_usd, cap_usd, remaining_usd`. BudgetMeter intercepts every call and rejects on cap-exceeded with a typed error.
+- Architecture: LLM calls route through an `arcflow-llm` sidecar process supervised by the runtime — provider state isolated, crash-restarted by the supervisor, failures sandboxed from the engine.
+
 Read:
 - `db.execute(query, params=None)` → QueryResult.
 - `db.prepare(query)` → PreparedStatement (parser cached; `.execute(params)` for replays).
@@ -131,8 +149,8 @@ Result handoff:
 Concurrency:
 - ctypes releases the GIL on every native call; `ConcurrentStore` is MVCC-safe. `concurrent.futures.ThreadPoolExecutor` works out of the box.
 
-Event bus (in-process pub/sub + request-reply; NATS-equivalent semantics):
-- `arcflow.bus.Bus(db)` — topics, durable consumers, NATS-style `*` / `>` wildcard subscriptions, synchronous request-reply.
+Event bus (in-process pub/sub + request-reply):
+- `arcflow.bus.Bus(db)` — topics, durable consumers, hierarchical wildcard subscriptions (`*` matches one token, `>` matches the tail), synchronous request-reply.
 - `bus.publish(topic, data, headers=None)` / `bus.events_after(topic, after_seq=0)`.
 - `bus.register_consumer(name, topic, start=START_FROM_BEGINNING)` + `bus.pending(...)` + `bus.ack(...)`.
 - `bus.register_pattern_consumer(name, "all_tracks.*")` — wildcards; future matching topics auto-attach at LatestOnly.

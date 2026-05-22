@@ -52,6 +52,50 @@ For agents, the Behavior Engine is what turns the database from a record-keeper 
 
 The agent does not poll. The agent does not glue services together. The agent declares the behavior once; the engine fires it whenever the graph changes in a matching way.
 
+## LLM-tier skills (the LLM Node)
+
+A skill declared with `TIER LLM` and an optional `MODEL '<catalog-row>'` clause routes its execution to a language model instead of an inline prompt evaluator or compiled program:
+
+```gql
+CREATE SKILL coach_summary
+    FROM PROMPT 'Analyze {{name}}'
+    ALLOWED ON [Player]
+    TIER LLM
+    MODEL 'cli/claude-code'
+```
+
+LLM calls do not run inside the engine process. They route through an `arcflow-llm` **sidecar process** supervised by the runtime — provider state isolated, sidecar crash restarted by the supervisor without taking down the engine, failures sandboxed.
+
+**Provider key management.** Keys live in the OS keychain (macOS Keychain, Linux Secret Service, Windows Credential Manager) and are never written to disk:
+
+```bash
+arcflow keys add openai                  # interactive entry, piped, or --key
+arcflow keys list                        # masked
+arcflow keys set-daily-cap openai 25.00  # USD per provider per day
+```
+
+**BudgetMeter.** Every LLM call is intercepted before dispatch; calls that would exceed the daily cap fail with a typed error. Inspect from Cypher:
+
+```cypher
+CALL arcflow.llm.budget()
+  YIELD provider, day, spent_usd, cap_usd, remaining_usd
+```
+
+**Provider catalogs:**
+
+| Prefix | Provider | Notes |
+|---|---|---|
+| `openai/*` | OpenAI-compatible HTTPS | Works for any vendor that exposes the same API shape — OpenAI, Together, Groq, Anyscale |
+| `cli/*` | SubprocessCli | Routes to a locally-installed CLI agent (`cli/claude-code`, `cli/codex`, `cli/gemini`); zero network egress from the engine; the local CLI authenticates with its own provider |
+| `oz/*` | OZ first-party | Hosted catalog at `llm.oz.com`; default `oz/deepseek-v3` |
+
+```cypher
+CALL arcflow.llm.catalog()
+  YIELD model, provider, context_window, input_usd_per_million, output_usd_per_million
+```
+
+Per-skill `MODEL` routing means an agent can declare *which* model handles a given skill — and change it later without rewriting the prompt. Combined with the CLI provider family, this lets a workflow run entirely on locally-installed LLM CLIs (no network) for one skill, and on a hosted endpoint for another.
+
 ## See also
 
 - [Behavior Graphs](/docs/behavior-graph) — the canonical surface reference + worked examples.

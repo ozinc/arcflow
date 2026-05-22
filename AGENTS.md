@@ -295,9 +295,8 @@ result = db.execute(
     options=arcflow.QueryOptions(deadline_ms=500),
 )
 result.transport_outcome          # 'truncated' | 'complete' | None
-result.io_stats                   # IoStats(decoded_bytes=…, bytes_read=…,
-                                  #         row_groups_pruned=…, files_opened=…,
-                                  #         lane_used=…)
+result.transport_outcome.lane     # 'cpu_scalar' | 'cpu_simd' | 'gpu_cuda' | 'gpu_metal'
+result.io_stats                   # IoStats: pruning + I/O telemetry, see below
 
 # Snapshot replay
 db.query_at("MATCH (a:Account {id: 'X'}) RETURN a.balance", seq=anchor_seq)
@@ -366,6 +365,30 @@ arcflow rerun --snapshot arcflow://snapshot/9c3b… --query "MATCH (n) RETURN co
 Use case: every customer-facing answer carries the snapshot URI it observed. Surprising
 result? Re-run against the same URI and either reproduce the answer (data is fixed) or
 diff the URIs (data has moved).
+
+### IoStats — pruning + I/O telemetry on every result
+
+The `result.io_stats` envelope tells you what the engine actually read versus what it pruned. Use it to tune lakehouse layouts and verify predicate pushdown is firing.
+
+| Field | Meaning |
+|---|---|
+| `bytes_read` | Total bytes read from storage for this query |
+| `decoded_bytes` | Bytes after decompression — distinguishes I/O cost from CPU decode cost |
+| `files_opened` | Number of parquet files actually opened |
+| `partitions_pruned` | Partition directories skipped before opening any file (Hive-style pruning) |
+| `partitions_scanned` | Partition directories that were walked |
+| `row_groups_pruned` | Row groups skipped via parquet stats (min/max bounds) |
+| `row_groups_read` | Row groups actually decoded |
+| `pages_skipped` | Page-level skips via parquet page index |
+| `pruning_efficiency` | `row_groups_pruned / (row_groups_pruned + row_groups_read)` — higher is better |
+| `lane_used` | Compute lane that ran the query (same as `transport_outcome.lane`) |
+
+```python
+result = db.execute("MATCH (t:Trade) WHERE t.year = 2026 AND t.region = 'eu' RETURN count(*)")
+result.io_stats.partitions_pruned     # 47 — other year/region combos skipped entirely
+result.io_stats.row_groups_pruned     # 9201 — within scanned partitions, parquet stats skipped most
+result.io_stats.pruning_efficiency    # 0.96
+```
 
 ## Filesystem Projection — `arcflow project`
 
@@ -477,6 +500,55 @@ CREATE FULLTEXT INDEX name FOR (n:Label) ON (n.prop)
 -- Composite (range) index
 CREATE INDEX ON :Label(prop)
 ```
+
+### Hybrid index registration
+
+A hybrid index is a typed configuration that lets `algo.vectorSearch` consult a vector index *plus* a fulltext or property filter in one call — the planner combines the candidate sets before scoring.
+
+```cypher
+-- Register a hybrid policy: combine vector similarity with fulltext score
+CALL arcflow.index.hybrid.register({
+    name: 'doc_search',
+    vector_index: 'doc_embed',
+    fulltext_index: 'doc_body',
+    weight: { vector: 0.7, fulltext: 0.3 }
+}) YIELD name, created_at
+
+CALL arcflow.index.hybrid.list()                YIELD name, vector_index, fulltext_index, weight
+CALL arcflow.index.hybrid.describe('doc_search') YIELD name, config
+CALL arcflow.index.hybrid.drop('doc_search')    YIELD removed
+```
+
+Once registered, `algo.vectorSearch('doc_search', $vector, 10)` consults both indexes and merges results by the declared weight.
+
+### Partition-key column exposure
+
+Hive-style partition keys in lakehouse paths (`lake://prod/trades/year=2026/region=eu/`) are exposed as plain properties on virtual-label nodes — queryable directly, and the planner pushes partition predicates down to the directory walk:
+
+```cypher
+CREATE NODE LABEL Trade VIRTUAL FROM PARTITION 'lake://prod/trades/'
+-- year and region land as bare properties on every Trade node
+
+MATCH (t:Trade)
+WHERE t.year = 2026 AND t.region = 'eu'
+RETURN count(*)
+-- Engine walks only the year=2026/region=eu/ subtree; other partitions are
+-- pruned before any parquet file is opened. See result.io_stats.partitions_pruned.
+```
+
+### Query hints — explicit lane selection
+
+`HINT lane=<ident>` after a `CALL` clause overrides the planner's automatic lane selection. The chosen lane is reported back on the result envelope as `result.transport_outcome.lane`.
+
+```cypher
+CALL algo.pageRank() HINT lane=gpu_cuda YIELD nodeId, score
+-- result.transport_outcome.lane → "gpu_cuda" if dispatched, or a
+-- fallback lane if the hint couldn't be honored
+
+-- Lanes: 'cpu_scalar' | 'cpu_simd' | 'gpu_cuda' | 'gpu_metal' | 'auto'
+```
+
+If the requested lane isn't available on the host (e.g., `gpu_cuda` on Apple Silicon), the engine falls back silently to the next-best lane and records the actual lane used in `transport_outcome.lane`. Use the lane field to detect silent fallbacks in tests.
 
 ### Live views (incremental computation)
 ```cypher
@@ -734,13 +806,52 @@ CALL arcflow.claw.latencyPolicy()    YIELD tier, max_latency_ms, description, ho
 CALL arcflow.claw.workerModel()      YIELD mode, description, latency_class, isolation
 ```
 
-### Skills (bundle export/import)
-```cypher
+### Skills (named, callable units)
+```gql
+-- Prompt-backed skill — text in, text out
+CREATE SKILL summarize FROM PROMPT 'Summarize the following: {{input}}'
+
+-- LLM-tier skill with explicit per-skill model routing
+CREATE SKILL coach_summary
+    FROM PROMPT 'Analyze {{name}}'
+    ALLOWED ON [Player]
+    TIER LLM
+    MODEL 'cli/claude-code'        -- catalog row, see arcflow.llm.catalog()
+
+-- Bundle export / import (skill packs are portable JSON blobs)
 CALL arcflow.skills.export('my-pack', '1.0.0') YIELD json
 CALL arcflow.skills.import(json)               YIELD name, version, skill_count
 ```
 
-### Triggers (fire-once event bindings)
+The `MODEL` clause routes the LLM call to a specific catalog row instead of the default `oz/deepseek-v3`. Combined with the CLI-provider substrate, this makes `cli/claude-code`, `cli/codex`, `cli/gemini` reachable from customer Cypher.
+
+### LLM Node — provider keys, sidecar, budgets
+```bash
+# Provider API key management — keys live in the OS keychain (macOS Keychain,
+# Linux Secret Service, Windows Credential Manager). Never written to disk.
+arcflow keys add openai     # interactive, or:
+arcflow keys add openai --from-stdin
+arcflow keys list           # provider, masked_key, daily_cap_usd, set_at
+arcflow keys rm openai
+arcflow keys set-daily-cap openai 25.00
+```
+
+```cypher
+-- Discover available models (oz first-party + your BYOK providers)
+CALL arcflow.llm.catalog() YIELD model, provider, context_window, input_usd_per_million, output_usd_per_million
+
+-- Inspect BudgetMeter state (per-key daily-cap enforcement)
+CALL arcflow.llm.budget() YIELD provider, day, spent_usd, cap_usd, remaining_usd
+```
+
+**Architecture:** an LLM call from Cypher (`TIER LLM` skill) routes through an `arcflow-llm` sidecar process, which the runtime supervises. The sidecar holds provider state and isolates LLM call failures from the engine. The supervisor restarts the sidecar on crash. BudgetMeter intercepts every call and rejects on cap-exceeded with a typed error.
+
+**Providers:**
+- **`openai/*`** — OpenAI-compatible HTTPS provider; works for OpenAI, Together, Groq, Anyscale, any vendor that exposes the same API shape
+- **`cli/*`** — SubprocessCli provider; routes to a locally-installed CLI agent (`claude-code`, `codex`, `gemini`); zero network egress
+- **`oz/*`** — first-party catalog hosted at `llm.oz.com` (BYO-token or hosted billing)
+
+### Triggers (event-driven skill firing)
 ```gql
 -- Bind a skill to a graph event
 CREATE TRIGGER detect_on_frame
@@ -750,9 +861,16 @@ CREATE TRIGGER detect_on_frame
 -- WHEN CREATED | MODIFIED | DELETED
 DROP TRIGGER detect_on_frame
 
+-- Per-property granularity — only fire on writes that change `bbox`
+CREATE TRIGGER bbox_changed
+    ON :Detection.bbox WHEN MODIFIED
+    RUN SKILL recompute_overlap
+
 -- Inspect registered triggers
-CALL db.triggers() YIELD name, label, event, skill, created_at
+CALL db.triggers() YIELD name, label, property, event, skill, created_at
 ```
+
+The optional `.property` after the label restricts the trigger to writes that actually change that property — useful when many properties change per node but only one downstream computation cares about a specific field.
 
 ### Programs (installable capability manifests)
 ```gql

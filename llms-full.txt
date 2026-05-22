@@ -608,9 +608,144 @@ CALL arcflow.claw.workerModel()      YIELD mode, description, latency_class, iso
 
 ### Skills
 ```cypher
+-- Prompt-backed skill
+CREATE SKILL summarize FROM PROMPT 'Summarize the following: {{input}}'
+
+-- LLM-tier skill with explicit per-skill model routing
+CREATE SKILL coach_summary
+    FROM PROMPT 'Analyze {{name}}'
+    ALLOWED ON [Player]
+    TIER LLM
+    MODEL 'cli/claude-code'         -- catalog row, see arcflow.llm.catalog()
+
+-- Bundle export / import — skill packs are portable JSON
 CALL arcflow.skills.export('my-pack', '1.0.0')  YIELD json
 CALL arcflow.skills.import(json)                YIELD name, version, skill_count
 ```
+
+The `MODEL` clause routes the LLM call to a specific catalog row instead of the default `oz/deepseek-v3`. Combined with the CLI-provider substrate, this makes `cli/claude-code`, `cli/codex`, `cli/gemini` reachable from customer Cypher.
+
+### LLM Node — providers, keys, budget meter
+
+LLM-tier skills (`TIER LLM`) route through an `arcflow-llm` sidecar process supervised by the runtime. Provider state is isolated; sidecar crashes are restarted by the supervisor without taking down the engine. BudgetMeter intercepts every call and rejects on cap-exceeded with a typed error.
+
+**Provider key management** (CLI — keys live in the OS keychain, never on disk):
+```bash
+arcflow keys add openai                        # interactive
+arcflow keys add openai --from-stdin           # piped
+arcflow keys add openai --key "$KEY"           # arg form
+arcflow keys list                              # → provider, masked_key, daily_cap_usd, set_at
+arcflow keys rm openai
+arcflow keys set-daily-cap openai 25.00        # enforces a hard daily USD cap per provider
+```
+
+**Provider catalogs:**
+
+| Prefix | Provider | Notes |
+|---|---|---|
+| `openai/*` | OpenAI-compatible HTTPS | Works for OpenAI, Together, Groq, Anyscale, any vendor exposing the same API shape |
+| `cli/*` | SubprocessCli | Routes to a locally-installed CLI agent (`cli/claude-code`, `cli/codex`, `cli/gemini`); zero network egress; the local CLI authenticates with its own provider |
+| `oz/*` | OZ first-party | Hosted at `llm.oz.com`; default catalog row `oz/deepseek-v3` |
+
+**Catalog + budget procedures:**
+```cypher
+CALL arcflow.llm.catalog()
+  YIELD model, provider, context_window, input_usd_per_million, output_usd_per_million
+
+CALL arcflow.llm.budget()
+  YIELD provider, day, spent_usd, cap_usd, remaining_usd
+```
+
+### Triggers — event-driven skill firing, per-property granularity
+```gql
+-- Whole-node trigger
+CREATE TRIGGER detect_on_frame
+    ON :ImageFrame WHEN CREATED
+    RUN SKILL detect_objects
+
+-- Per-property trigger — only fires when this specific property changes
+CREATE TRIGGER bbox_changed
+    ON :Detection.bbox WHEN MODIFIED
+    RUN SKILL recompute_overlap
+
+DROP TRIGGER bbox_changed
+
+CALL db.triggers() YIELD name, label, property, event, skill, created_at
+```
+
+The optional `.property` after the label restricts the trigger to writes that actually mutate that property — avoids spurious fires for unrelated columns updated on the same node.
+
+### Hybrid index registration
+```cypher
+-- Bind a vector index to a fulltext index; algo.vectorSearch consults both
+CALL arcflow.index.hybrid.register({
+    name: 'doc_search',
+    vector_index: 'doc_embed',
+    fulltext_index: 'doc_body',
+    weight: { vector: 0.7, fulltext: 0.3 }
+}) YIELD name, created_at
+
+CALL arcflow.index.hybrid.list()                 YIELD name, vector_index, fulltext_index, weight
+CALL arcflow.index.hybrid.describe('doc_search') YIELD name, config
+CALL arcflow.index.hybrid.drop('doc_search')     YIELD removed
+
+-- Use the hybrid policy in a search
+CALL algo.vectorSearch('doc_search', $query_vector, 10)
+  YIELD node, score
+```
+
+Hybrid search merges candidate sets from both indexes before scoring; the declared weights determine final ranking. Useful for retrieval-augmented generation where lexical recall (fulltext) and semantic recall (embedding) catch different document types.
+
+### Partition-key column exposure (lakehouse virtual labels)
+
+Hive-style partition keys in lakehouse URIs land as bare typed properties on every virtual-label node:
+
+```cypher
+CREATE NODE LABEL Trade VIRTUAL FROM PARTITION 'lake://prod/trades/'
+-- Path layout: lake://prod/trades/year=2026/region=eu/file.parquet
+-- year (Int) and region (String) become queryable properties
+
+MATCH (t:Trade)
+WHERE t.year = 2026 AND t.region = 'eu'
+RETURN count(*)
+-- Engine walks only the year=2026/region=eu/ subtree.
+-- result.io_stats.partitions_pruned reports the count of skipped directories.
+```
+
+Partition pruning happens *before* any parquet file is opened — the planner translates the `WHERE` clause into a directory predicate and intersects with the manifest. Inside scanned partitions, parquet row-group statistics provide a second pruning pass (`row_groups_pruned`).
+
+### Query hints — explicit lane selection
+```cypher
+CALL algo.pageRank() HINT lane=gpu_cuda YIELD nodeId, score
+CALL algo.triangleCount() HINT lane=cpu_simd YIELD count
+```
+
+| Lane | Meaning |
+|---|---|
+| `cpu_scalar` | Sequential CPU implementation |
+| `cpu_simd` | SIMD-vectorized CPU implementation (AVX2/NEON) |
+| `gpu_cuda` | NVIDIA CUDA kernel |
+| `gpu_metal` | Apple Metal compute kernel |
+| `auto` | Planner picks based on host capability + graph shape (default) |
+
+The chosen lane is reported back as `result.transport_outcome.lane`. If the requested lane is unavailable on the host, the engine falls back silently and records the actual lane used. Use the field to detect silent fallbacks in tests.
+
+### IoStats — result.io_stats telemetry
+
+Every result envelope carries pruning and I/O telemetry:
+
+| Field | Meaning |
+|---|---|
+| `bytes_read` | Total bytes read from storage |
+| `decoded_bytes` | Bytes after decompression — distinguishes I/O cost from CPU decode cost |
+| `files_opened` | Parquet files actually opened |
+| `partitions_pruned` | Partition directories skipped before opening any file |
+| `partitions_scanned` | Partition directories walked |
+| `row_groups_pruned` | Row groups skipped via parquet stats |
+| `row_groups_read` | Row groups actually decoded |
+| `pages_skipped` | Page-level skips via parquet page index |
+| `pruning_efficiency` | `row_groups_pruned / (row_groups_pruned + row_groups_read)` — higher is better |
+| `lane_used` | Compute lane that ran the query |
 
 ### Ontology (IS_A hierarchy)
 ```cypher

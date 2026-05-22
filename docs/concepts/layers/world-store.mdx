@@ -123,6 +123,30 @@ An agent that needs to ship a heavy analytical scan — "every detection in zone
 
 The agent writes one Cypher pattern. The engine decides which layer of itself answers which part of it.
 
+## Partition-key column exposure
+
+Hive-style partition keys in `lake://` URIs are exposed as plain typed properties on every virtual-label node. The path layout *is* the schema for those columns:
+
+```
+lake://prod/trades/year=2026/region=eu/file.parquet
+                   └──┬──┘   └──┬───┘
+                      │         │
+                      │         └─→  Trade.region (String)
+                      └───────────→  Trade.year   (Int)
+```
+
+```cypher
+CREATE NODE LABEL Trade VIRTUAL FROM PARTITION 'lake://prod/trades/'
+
+MATCH (t:Trade)
+WHERE t.year = 2026 AND t.region = 'eu'
+RETURN count(*)
+```
+
+The planner translates the `WHERE` clause into a directory predicate and intersects it with the manifest *before opening any file*. Other partitions are pruned at the directory walk — never read, never decoded. Inside the partitions that survive, parquet row-group statistics drive a second pruning pass. Both passes report through `result.io_stats.partitions_pruned` and `result.io_stats.row_groups_pruned`.
+
+The Store does not require an explicit `PARTITION KEY` declaration; the engine infers partition columns from the path on first scan and records them in the catalog. Subsequent DDL operations against the same virtual label reuse the inferred schema.
+
 ## See also
 
 - [World Graph](/docs/concepts/layers/world-graph) — the typed entity layer that sits on top of the Store.
