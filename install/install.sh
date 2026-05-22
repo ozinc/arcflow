@@ -11,7 +11,7 @@
 #
 # Release source: GitHub Releases on the public ozinc/arcflow repo.
 # Binaries, SHA256SUMS, and release-matrix.json are all attached as
-# release assets — see release-binaries.yml in arcflow-core.
+# release assets.
 #
 # Naming convention:
 #   arcflow-{VERSION}-{OS}-{ARCH}[-{LIBC}].tar.gz

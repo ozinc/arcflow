@@ -5,8 +5,8 @@ Rule: version literals matching the current `0.x` alpha-state line (e.g.
 "0.7.1"), the pre-revision `1.6.x` line (e.g. "1.6.86"), or the legacy engine
 FFI literal ("5.1.0") must NOT appear in prose docs, MDX, illustrative
 examples, or cookbook narrative outside an explicit allow-list of SoT-bearing
-files. The SoT is the manifest at release-matrix.json (rendered from the git
-tag of arcflow-core); everything else either reads from the manifest at
+files. The SoT is the manifest at release-matrix.json (attached to each
+GitHub Release); everything else either reads from the manifest at
 render/runtime or is explicitly listed in the allow-list below as a
 SoT-bearing file (e.g. cookbook pyproject.toml pins, install.sh env-var
 example).

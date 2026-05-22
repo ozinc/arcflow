@@ -1,6 +1,4 @@
 {
-  "_comment": "Sync receipt for docs/reference/data/. Captures the source-of-truth read at last sync. The engine-version field that used to live here was retired 2026-05-16 (AF-DOC-2026-05-16-003-ssot-closure) — gql-conformance.json no longer carries a version pin, the dashboard no longer renders one, and lint-version-literals.py no longer allowlists this file. See docs/reference/versioning for the full version chain.",
-  "synced_at": "2026-05-16T08:04:04Z",
-  "source": "local:/Users/gudjon/code/arcflow-core",
-  "source_commit": "78b18cabebeeab26a45c89eb7b5367c7f07309db"
+  "_comment": "Sync receipt for docs/reference/data/. Captures the source-of-truth read at last sync. The engine-version field that used to live here was retired 2026-05-16 — gql-conformance.json no longer carries a version pin, the dashboard no longer renders one, and lint-version-literals.py no longer allowlists this file. See docs/reference/versioning for the full version chain.",
+  "synced_at": "2026-05-16T08:04:04Z"
 }
