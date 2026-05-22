@@ -7,15 +7,13 @@ curl -fsSL https://staging.oz.com/install/arcflow | sh
 arcflow open ./mydb
 ```
 
-That's it. 5MB binary, no server, no Docker, no cloud account, no API key, no signup, no usage limits, no telemetry. **Free forever** for commercial production use within the [Free Use Limits](LICENSE-CORE.md). Try it in the browser without installing: [staging.oz.com/engine](https://staging.oz.com/engine).
+That's it. 5MB binary, no server, no Docker, no cloud account, no API key, no signup, no telemetry. **Free.** Try it in the browser without installing: [staging.oz.com/engine](https://staging.oz.com/engine).
 
 ---
 
-**Free. Forever. 5 megabytes. One process. One query language. Eight engines.**
+**Free. 5 megabytes. One process. One query language. Eight engines.**
 
 ArcFlow is an embedded graph database that runs *inside* your application — like SQLite, but built from scratch for AI agents, world models, and real-time analytics. It speaks the **ISO/IEC 39075 GQL standard** (with 100% openCypher TCK conformance — 3,881 / 3,881), but bundles seven more engines behind that one query language: a temporal versioned store, a spatial index, a vector index, a full-text index, a live-query subscription surface, a graph-native event bus, a behavior engine, and a 40+ algorithm library.
-
-The reference class is **NVIDIA CUDA · Unreal Engine · GitHub Copilot · Cloudflare Workers · SQLite · Postgres** — proprietary core engine, MIT-licensed developer surface, free baseline, paid only for scale. Paid plans only exist for hosted infrastructure, premium algorithm packs, and enterprise support. The full Q&A is in [LICENSE-FAQ.md](LICENSE-FAQ.md).
 
 ---
 
@@ -401,14 +399,11 @@ cargo bench
 
 ## License
 
-| Component | License |
-|---|---|
-| This repository's contents (SDK, examples, docs, install scripts, MCP, React) | [MIT](LICENSE) |
-| ArcFlow Core runtime binary | [Proprietary Free Runtime License](LICENSE-CORE.md) |
+Everything in this repository is [MIT](LICENSE) — SDK source, examples, docs, install scripts, MCP, React hooks. Use it freely, fork it, embed it.
 
-Everything in this repo is MIT-licensed. The Core runtime binary — fetched by `install/install.sh` from GitHub Releases — is proprietary but free-to-use within the Free Use Limits in [`LICENSE-CORE.md`](LICENSE-CORE.md). Plain-English Q&A: [`LICENSE-FAQ.md`](LICENSE-FAQ.md).
+The ArcFlow Core runtime binary (fetched by `install/install.sh` from GitHub Releases) is a separate, proprietary artifact distributed under the [Proprietary Free Runtime License](LICENSE-CORE.md). Same model as **NVIDIA CUDA · Unreal Engine · GitHub Copilot · SQLite · Postgres** — proprietary core, open developer surface.
 
-**The headline:** build with ArcFlow freely, including commercial use, embed it inside your app, redistribute the binary unmodified. Paid plans exist only for hosted infrastructure, premium algorithm packs, enterprise SSO/audit/compliance, and private support. The split is the same model as **NVIDIA CUDA** — proprietary core, open developer surface, free baseline, paid for scale.
+<sub>For details on hosted infrastructure, enterprise governance, premium algorithm packs, and the rest of the commercial offering, see [oz.com/pricing](https://oz.com/pricing). Plain-English Q&A on the license split: [`LICENSE-FAQ.md`](LICENSE-FAQ.md).</sub>
 
 ---
 
