@@ -41,7 +41,6 @@ manifest:
 
 - **Live page**: <https://oz.com/docs/installation>
 - **Manifest source**: <https://github.com/ozinc/arcflow/releases/latest/download/release-matrix.json>
-- **Schema**: `arcflow/schemas/release-matrix.schema.json` (`schema_version: 1`)
 
 Every binding's install command — current shipping status, target quarter
 for planned bindings, supported platforms — comes from a single source of

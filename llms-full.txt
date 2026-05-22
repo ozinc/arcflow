@@ -30,7 +30,6 @@ The current shipping install matrix is at:
 https://oz.com/docs/installation
 Source manifest:
 https://github.com/ozinc/arcflow/releases/latest/download/release-matrix.json
-(schema: arcflow/schemas/release-matrix.schema.json — schema_version: 1)
 
 Currently shipped:
 

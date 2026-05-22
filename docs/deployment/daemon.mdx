@@ -382,6 +382,31 @@ double-counting under contention) and released by an RAII guard
 when the handler thread exits — so even a panicking handler
 returns the slot rather than leaking it.
 
+### Wire framing — `--frame`
+
+The UDS request/response stream defaults to **newline-delimited JSON-RPC** (`--frame=newline`) for backwards compatibility — every request is one `\n`-terminated line, every response is one `\n`-terminated line. Operators handling large payloads or binary blobs can opt in to length-prefix framing:
+
+```bash
+arcflow-daemon --socket /var/run/arcflow.sock --frame length-prefix-u32-le
+```
+
+Length-prefix framing prepends each frame with a little-endian `u32` byte count — useful when payloads contain literal newlines or when the parser cost of newline scanning becomes a bottleneck. Both framings carry the same JSON envelope; only the transport delimitation changes.
+
+### Filesystem introspection — `--status-dir`
+
+Operators debugging via `cat` / `stat` / `tail` over SSH (rather than systemd's `journalctl` or a `/livez` probe) can opt into a filesystem-as-introspection surface:
+
+```bash
+arcflow-daemon --socket /var/run/arcflow.sock --status-dir /var/lib/arcflow/status/
+```
+
+This drops three files into the directory:
+- `status.json` — atomic snapshot of daemon state, refreshed ~1 Hz (request rates, pending requests, active subscriptions, WAL lag)
+- `health.txt` — zero-byte mtime marker, refreshed ~500 ms (use `stat -c %Y` to detect liveness without parsing JSON)
+- `events.jsonl` — append-only lifecycle journal (consumer registration / drop / nack / checkpoint events; one JSON object per line)
+
+Omit `--status-dir` to disable the surface entirely. Systemd / k8s deployments that already have HTTP `/livez` won't need it; SSH-and-grep debugging workflows will.
+
 ### Snapshot for backup — `topic.checkpoint`
 
 Materialize the daemon's current pub/sub state as a compacted

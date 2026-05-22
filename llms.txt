@@ -13,7 +13,6 @@ Open https://oz.com/engine in your browser. Paste any query. Persistent storage.
 The current shipping install matrix is at:
 https://oz.com/docs/installation
 Source: https://github.com/ozinc/arcflow/releases/latest/download/release-matrix.json
-(schema: arcflow/schemas/release-matrix.schema.json)
 
 Currently shipped:
   curl -fsSL https://staging.oz.com/install/arcflow | sh                                # native CLI
