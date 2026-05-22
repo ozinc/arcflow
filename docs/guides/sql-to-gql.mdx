@@ -51,7 +51,7 @@ ORDER BY u2.followers DESC
 LIMIT 10;
 ```
 
-Tested clients: psql, pgAdmin, Grafana, DBeaver, Python psycopg2, Go pgx, Node.js node-postgres, Rust sqlx, PgBouncer. Any client that speaks PG wire protocol v3 works.
+Wire-protocol conformance is exercised by an end-to-end raw-socket test on every build (handshake, ParameterStatus, simple Query, ErrorResponse, Terminate). Any PostgreSQL-compatible client that speaks protocol v3 should connect — psql is the smoke-test path; ecosystem clients (pgAdmin, Grafana, DBeaver, psycopg2, pgx, node-postgres, sqlx, PgBouncer) use the same wire and should work for the documented surface, but each client's idiosyncrasies aren't in CI.
 
 ## How it works
 

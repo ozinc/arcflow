@@ -950,7 +950,7 @@ Queries sent over the wire are WorldCypher (GQL) — not SQL. SQL `SELECT` state
 
 SQL shims (acknowledged silently): `SET`, `BEGIN/COMMIT/ROLLBACK`, `SHOW SERVER_VERSION`, `SELECT VERSION()`, `DISCARD ALL`, `pg_catalog` queries.
 
-Tested clients: psql, pgAdmin, Grafana, DBeaver, Python psycopg2, Go pgx, Node.js node-postgres, Rust sqlx, PgBouncer.
+Wire-protocol conformance (handshake, ParameterStatus, ReadyForQuery, simple Query, ErrorResponse, Terminate) is exercised by an end-to-end raw-socket test on every build. Any PostgreSQL-compatible client that speaks protocol v3 should connect — psql is the smoke-test path; ecosystem clients (pgAdmin, Grafana, DBeaver, psycopg2, pgx, node-postgres, sqlx, PgBouncer) all use the same wire and should work for the documented SQL-shim + WorldCypher surface, but each client's idiosyncrasies aren't in CI.
 
 The PG wire protocol is an adoption on-ramp. When ready, switch to `open()` / `openInMemory()` for in-process execution with no network overhead and access to LIVE queries, graph algorithms, and full GQL features.
 
