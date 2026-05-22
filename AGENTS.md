@@ -46,7 +46,7 @@ One engine for graphs, vectors, full-text search, algorithms, time-series, live 
 | MCP server | `npx arcflow-mcp` — cloud chat UIs only (Claude.ai and similar, no local shell) |
 | Typed results | Numbers are numbers, not strings |
 | openCypher conformance | **100%** (3881/3881 TCK) |
-| ISO GQL | **V2 native** |
+| ISO GQL | **39075:2024 (Edition 1) + accepted V2 proposals** |
 | Workflow engine | **Built-in** (graph-native durable workflows) |
 | Replication | **ArcFlow WAL Stream** — SWMR (single-writer, multi-reader) WAL tailing |
 
@@ -418,7 +418,7 @@ projections is a true graph-state diff.
 
 ## GQL / WorldCypher — ArcFlow's ISO GQL dialect
 
-**Conformance:** 100% openCypher TCK (3881/3881 scenarios). Full ISO GQL V2.
+**Conformance:** 100% openCypher TCK (3881/3881 scenarios). Implements ISO/IEC 39075:2024 (GQL Edition 1) plus accepted V2 proposals.
 
 ### CRUD
 ```cypher

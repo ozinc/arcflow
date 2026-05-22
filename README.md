@@ -148,7 +148,7 @@ RETURN c.name, r.sensor, r._confidence ORDER BY r._confidence ASC
 
 ### Layer 4 — Query Engine — ISO/IEC 39075 GQL (WorldCypher)
 
-**The international standard for graph query languages**, published 2024. ArcFlow implements GQL V2 natively. 100% openCypher Technology Compatibility Kit. If you know Cypher, you already know it. The extensions are additive:
+**The international standard for graph query languages**, published 2024. ArcFlow implements ISO/IEC 39075:2024 (GQL Edition 1) plus accepted forward-looking GQL V2 proposals. 100% openCypher Technology Compatibility Kit. If you know Cypher, you already know it. The extensions are additive:
 
 ```cypher
 -- Time-travel: query any past state. Same execution path as current-state query.
@@ -408,7 +408,7 @@ arcflow query "MATCH (n) RETURN count(*)" --at-snapshot arcflow://snapshot/9c3b�
 | | |
 |---|---|
 | openCypher TCK | 100% (3,881 / 3,881) |
-| ISO/IEC 39075 GQL | V2 native |
+| ISO/IEC 39075:2024 (GQL Edition 1) | Full, plus accepted V2 proposals |
 | Temporal `AS OF` query | Same execution path as current-state query — no separate index |
 | OpenUSD scene export | `arcflow.scene.toUsda()` — graph → USD ASCII |
 | PostgreSQL wire protocol | Read-only SQL bridge for existing BI tools |
