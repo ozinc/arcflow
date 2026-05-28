@@ -720,6 +720,16 @@
               "slug": "cli/project",
               "title": "Filesystem Projection",
               "order": 3
+            },
+            {
+              "slug": "cli/plugin",
+              "title": "Plugin Management",
+              "order": 4
+            },
+            {
+              "slug": "cli/governance",
+              "title": "Agent Governance",
+              "order": 5
             }
           ]
         },
