@@ -526,8 +526,10 @@ def update_config_managed_sections(out_root: Path, conformance: dict, extensions
         else:
             new_sections.append(managed[mid])
 
-    new_cfg = {"sections": new_sections}
-    new_text = json.dumps(new_cfg, indent=2) + "\n"
+    # Preserve sibling top-level keys (schema_version, lint, pinned_links, …);
+    # only the `sections` array is generator-managed.
+    cfg["sections"] = new_sections
+    new_text = json.dumps(cfg, indent=2) + "\n"
     if config_path.read_text() == new_text:
         return False
     config_path.write_text(new_text)
