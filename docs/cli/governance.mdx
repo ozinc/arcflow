@@ -1,0 +1,155 @@
+---
+title: "Agent Governance"
+kind: capability
+description: "Agent verification state machine, tamper-evident receipts, and enforcement hooks — track whether an agent's changes are ingested, impact-analyzed, and verified."
+status: "stable"
+---
+
+# Agent Governance
+
+ArcFlow tracks agent verification state through a deterministic state machine. The receipt system seals that state into a tamper-evident artifact for CI and review gates. Hooks integrate the state machine with agent frameworks (Claude Code, Codex, or any tool-use framework with hook support).
+
+## State machine
+
+Six states, forward-only with invalidation on edit:
+
+```
+CLEAN → DIRTY_UNANALYZED → GRAPH_FRESH → IMPACT_KNOWN → TEST_PLAN_KNOWN → VERIFIED
+```
+
+| Transition | Event |
+|---|---|
+| `CLEAN → DIRTY_UNANALYZED` | File edit |
+| `DIRTY_UNANALYZED → DIRTY_UNANALYZED` | File edit (self-loop, multi-edit) |
+| `DIRTY_UNANALYZED → GRAPH_FRESH` | `arc ingest` succeeds |
+| `GRAPH_FRESH → IMPACT_KNOWN` | `arc impact` succeeds |
+| `IMPACT_KNOWN → TEST_PLAN_KNOWN` | `arc tests affected` succeeds |
+| `TEST_PLAN_KNOWN → VERIFIED` | `arc verify patch` succeeds |
+| `GRAPH_FRESH`+ → `DIRTY_UNANALYZED` | File edit (invalidation) |
+| Any → `CLEAN` | Reset |
+
+When a file edit occurs from `GRAPH_FRESH` or beyond, the state resets to `DIRTY_UNANALYZED` and all reports and the receipt are cleared. The agent must re-run the full verification pipeline.
+
+State is persisted at `.arcflow/agent/session-state.json` relative to the workspace root (the nearest parent directory containing `.git/`).
+
+## Hooks
+
+Three hook subcommands integrate the state machine with agent tool-use frameworks.
+
+### pre-tool
+
+```bash
+arcflow hook pre-tool <TOOL_NAME>
+```
+
+Called before each tool invocation. In v1, this is a no-op (always exits 0, never blocks). A future governance wave will validate the tool against the current state.
+
+### post-edit
+
+```bash
+arcflow hook post-edit
+```
+
+Applies the `FileEdit` event to the state machine. If the current state is `GRAPH_FRESH` or beyond, resets to `DIRTY_UNANALYZED` and emits:
+
+```
+ArcFlow: state reset to DIRTY_UNANALYZED after file edit (was IMPACT_KNOWN).
+Re-run `arc ingest` + `arc impact` + `arc tests affected` + `arc verify patch` before completing.
+```
+
+Exit 0 on success, exit 1 on state transition error or filesystem failure.
+
+### stop-check
+
+```bash
+arcflow hook stop-check
+```
+
+The enforcement gate. Wired into an agent framework's Stop hook, it prevents an agent from completing a session with unverified changes.
+
+- Exit 0 — state is `VERIFIED`, agent may stop.
+- Exit 1 — state is not `VERIFIED`, agent should not stop.
+
+```
+ArcFlow: patch not verified (state = IMPACT_KNOWN).
+Run `arc verify patch` before completing.
+```
+
+## Receipts
+
+Receipts are tamper-evident artifacts that bind a verification state to a specific `git diff`. They can be verified in CI, in code review, or by other agents.
+
+### Generate
+
+```bash
+arcflow receipt generate --base main --head feature/auth-fix
+```
+
+Produces a sealed receipt at `.arcflow/agent/receipt.json`. The receipt contains:
+
+- `receipt_id` — `arc_rcpt_<16-hex-chars>` (derived from the integrity hash)
+- `schema` — always `arcflow.agent_receipt.v1`
+- `repository` — repo name, base/head refs, `diff_hash` (SHA-256 of `git diff base..head`)
+- `graph_state` — freshness timestamp, node/edge counts, last ingest commit
+- `verification` — status (`pass`/`fail`/`incomplete`), state reached, proof obligations
+- `integrity` — SHA-256 receipt hash, signed by `arcflow-cli/<version>`
+
+### Verify
+
+```bash
+arcflow receipt verify
+arcflow receipt verify --base main --head feature/auth-fix
+```
+
+Four verification layers, checked in order:
+
+| Layer | What it checks | Failure message |
+|---|---|---|
+| 1. Schema | `schema` == `arcflow.agent_receipt.v1` | `schema mismatch` |
+| 2. Integrity | Recomputed SHA-256 matches `integrity.receipt_hash` | `integrity hash MISMATCH — receipt has been tampered with` |
+| 3. State | `verification.state_reached` == `VERIFIED` | `state_reached is '<state>', not VERIFIED` |
+| 4. Diff-hash | Recomputed `git diff` hash matches `repository.diff_hash` | `diff_hash STALE` |
+
+Layer 4 only runs when `--base` and `--head` are supplied. Layers 1-3 always run.
+
+```
+ok: receipt verifies
+  receipt_id: arc_rcpt_a1b2c3d4e5f67890
+  state_reached: VERIFIED
+  signed_by: arcflow-cli/0.10.26
+```
+
+### Show
+
+```bash
+arcflow receipt show
+```
+
+Pretty-prints the current receipt JSON to stdout.
+
+### List
+
+```bash
+arcflow receipt list
+```
+
+Enumerates all receipts in `.arcflow/agent/receipt-history/`, one line per receipt:
+
+```
+receipt-2026-05-27T03:20:00Z.json  arc_rcpt_a1b2c3d4e5f67890  state=VERIFIED  signed_by=arcflow-cli/0.10.26
+```
+
+## Filesystem layout
+
+All paths are relative to the workspace root (directory containing `.git/`):
+
+| Path | Purpose |
+|---|---|
+| `.arcflow/agent/session-state.json` | Current state machine state |
+| `.arcflow/agent/receipt.json` | Most recent sealed receipt |
+| `.arcflow/agent/receipt-history/*.json` | Historical receipts |
+
+## See also
+
+- [Skills](/docs/skills) — the computation units that the verification pipeline validates
+- [Programs](/docs/programs) — installable capability manifests with executor wiring

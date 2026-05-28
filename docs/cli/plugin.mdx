@@ -1,0 +1,125 @@
+---
+title: "Plugin Management"
+kind: capability
+description: "Install, verify, and manage ArcFlow plugins — external inference backends, model formats, and provider integrations."
+status: "stable"
+---
+
+# Plugin Management
+
+Plugins extend ArcFlow's runtime with external inference backends, custom model formats, and provider integrations. Each plugin is a self-contained directory with a `manifest.toml` that declares its artifacts, engine compatibility range, and license.
+
+Plugins live in `~/.arcflow/plugins/`. The `ARCFLOW_HOME` environment variable overrides the root.
+
+## Install
+
+```bash
+arcflow plugin install <NAME>
+arcflow plugin install <NAME> --from ./path/to/plugin.tar.gz
+```
+
+Without `--from`, the CLI downloads from GitHub Releases at the canonical URL for the current engine version and platform. With `--from`, it uses a local tarball — no network access required (air-gapped environments).
+
+Install is atomic: a file-level lock prevents concurrent installs of the same plugin. After extraction, the engine verifies artifact integrity (SHA-256 checksums against the manifest) and engine compatibility (SemVer range in the manifest). If either check fails, the plugin directory is cleaned up — no partial installs.
+
+Plugin names are validated slugs: `[a-z][a-z0-9_-]{0,63}`.
+
+```
+ok: plugin `llm-local` installed at /Users/you/.arcflow/plugins/llm-local
+  version: 0.10.26
+  license: Apache-2.0
+  artifacts: 3
+```
+
+## Uninstall
+
+```bash
+arcflow plugin uninstall <NAME>
+```
+
+Idempotent — prints a message and exits cleanly if the plugin is not installed. No error, no non-zero exit code.
+
+## List
+
+```bash
+arcflow plugin list
+arcflow plugin list --json
+```
+
+Table output shows NAME, VERSION, LICENSE, DESCRIPTION. When no plugins are installed, prints `(no plugins installed in <path>)`.
+
+JSON output emits a structured array:
+
+```json
+[{
+  "name": "llm-local",
+  "version": "0.10.26",
+  "license": "Apache-2.0",
+  "description": "Local LLM inference via GGUF + MLX backends",
+  "requires_key": false,
+  "engine_compat_min": "0.9.0",
+  "engine_compat_max": null,
+  "root_dir": "/Users/you/.arcflow/plugins/llm-local"
+}]
+```
+
+## Verify
+
+```bash
+arcflow plugin verify <NAME>
+```
+
+Recomputes SHA-256 checksums for every artifact in the plugin directory and compares against the manifest. Exit 0 on success, exit 1 on integrity mismatch or missing plugin.
+
+```
+ok: plugin `llm-local` integrity verified
+  artifacts checked: 3
+```
+
+## Python SDK
+
+The `arcflow.plugins` module wraps the CLI via `subprocess` — it works even when the Rust engine is not loaded.
+
+```python
+from arcflow.plugins import (
+    install, uninstall, list_plugins, verify, status, info,
+    PluginInfo, PluginError,
+)
+
+install("llm-local")                              # from GitHub Releases
+install("llm-local", from_path="./pkg.tar.gz")    # air-gapped
+uninstall("llm-local")                            # idempotent
+
+plugins = list_plugins()                          # -> List[PluginInfo]
+ok = verify("llm-local")                          # -> bool (True = passes)
+s = status("llm-local")                           # -> "installed" | "not_installed"
+p = info("llm-local")                             # -> Optional[PluginInfo]
+```
+
+`PluginInfo` is a frozen dataclass:
+
+| Field | Type | Description |
+|---|---|---|
+| `name` | `str` | Plugin slug |
+| `version` | `str` | SemVer version |
+| `license` | `str` | SPDX identifier |
+| `description` | `str` | One-line summary |
+| `requires_key` | `bool` | Whether the plugin needs an API key via `arcflow keys` |
+| `engine_compat_min` | `str` | Minimum compatible engine version |
+| `engine_compat_max` | `Optional[str]` | Maximum compatible version (`None` = no upper bound) |
+| `root_dir` | `str` | Absolute path to the plugin directory |
+
+`PluginError` (extends `RuntimeError`) is raised on CLI failures, missing binary, or JSON parse errors. `verify()` returns `False` on integrity mismatch instead of raising — a mismatch is a data signal, not an exception.
+
+## Exit codes
+
+| Code | Meaning |
+|---|---|
+| 0 | Success (or plugin not installed, for `uninstall`) |
+| 1 | Runtime error (download failed, integrity mismatch, filesystem error) |
+| 2 | Usage error (missing argument, invalid plugin name) |
+
+## See also
+
+- [LLM Node — provider keys, sidecar, budgets](/docs/cli/index) — the LLM sidecar that plugins extend
+- [Programs](/docs/programs) — bundle skills, triggers, and executors into installable manifests

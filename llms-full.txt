@@ -458,6 +458,9 @@ ROLLBACK
 ### Database procedures
 ```cypher
 CALL db.stats()
+  YIELD nodes, relationships, skills, labels, indexes, constraints, properties,
+        dense_store_enabled, dense_store_nodes, dense_store_tables,
+        dense_store_memory_bytes, csr_cache
 CALL db.schema()
 CALL db.labels()
 CALL db.types()
@@ -504,8 +507,9 @@ CALL db.storageMode() YIELD mode, node_count, csr_warm, csr_auto_threshold,
 -- mode: "HashMap" | "DenseStore" | "HashMap+CSR" | "DenseStore+CSR"
 
 -- Parallel execution config
-CALL db.parallelConfig() YIELD morsel_size, rayon_threads,
-                               dense_store_coverage, csr_status, csr_delta_pending
+CALL db.parallelConfig() YIELD morsel_size, rayon_threads, rayon_nodescan_threshold,
+                               dense_store_enabled, dense_store_coverage,
+                               csr_status, csr_delta_pending
 ```
 
 ### GPU procedures
@@ -520,11 +524,14 @@ CALL dbms.gpuThresholds() YIELD algorithm, min_input_size, bytes_per_element,
 
 -- Full GPU stack info
 CALL db.gpuStack()
+  YIELD cuda, thrust, cusparse, cugraph, cuvs,
+        gpu_device, compute_capability, cugraph_algorithms, cuvs_algorithms
 ```
 
 ### Execution context
 ```cypher
-CALL db.executionContext()              YIELD context
+CALL db.executionContext()
+  YIELD context, fallback_disabled, backends_available, gpu_available, distributed_available
 -- context: "local_cpu" | "local_gpu" | "distributed"
 CALL db.setExecutionContext('local_gpu')   YIELD context, status
 CALL db.requireExecutionContext('local_gpu') YIELD context, status
@@ -555,6 +562,7 @@ CALL arcflow.replication.contract()         YIELD mode, writes_enabled, replicat
 CALL arcflow.replication.walTailing()       YIELD field, value, description
 CALL arcflow.replication.objectStoreFanout() YIELD field, value, description
 CALL db.replicationStatus()
+  YIELD mode, replica_count, writes_enabled, last_replicated_seq, primary_endpoint
 ```
 
 ### Sessions (named resumable)
@@ -615,11 +623,33 @@ CREATE SKILL coach_summary
     FROM PROMPT 'Analyze {{name}}'
     ALLOWED ON [Player]
     TIER LLM
-    MODEL 'cli/claude-code'         -- catalog row, see `arcflow keys list`
+    MODEL 'cli/claude-code'
+
+-- Embedding-backed skill — vector-similarity-triggered, no LLM round-trip
+CREATE SKILL match_similar
+    FROM EMBEDDING embedding
+    THRESHOLD 0.85
+    ALLOWED ON [Doc]
+    TIER NEURAL
+
+DROP SKILL summarize
+DROP REACTIVE SKILL match_similar
+
+-- Query-time skill invocation
+PROCESS NODE (n:Document)
+PROCESS NODE (n:Player) WHERE n.team = 'KC'
+
+-- Introspection
+CALL arcflow.skills()
+  YIELD name, tier, allowed_on, threshold, active, version
 
 -- Bundle export / import — skill packs are portable JSON
 CALL arcflow.skills.export('my-pack', '1.0.0')  YIELD json
 CALL arcflow.skills.import(json)                YIELD name, version, skill_count
+
+-- Provenance chain walk
+CALL db.provenance(42)
+  YIELD nodeId, label, name, confidence, depth
 ```
 
 The `MODEL` clause routes the LLM call to a specific catalog row instead of the default `oz/deepseek-v3`. Combined with the CLI-provider substrate, this makes `cli/claude-code`, `cli/codex`, `cli/gemini` reachable from customer Cypher.
@@ -675,7 +705,7 @@ CREATE TRIGGER bbox_changed
 
 DROP TRIGGER bbox_changed
 
-CALL db.triggers() YIELD name, label, property, event, skill, created_at
+CALL db.triggers() YIELD name, skill, trigger, max_cascade_depth
 ```
 
 The optional `.property` after the label restricts the trigger to writes that actually mutate that property — avoids spurious fires for unrelated columns updated on the same node.
@@ -683,10 +713,20 @@ The optional `.property` after the label restricts the trigger to writes that ac
 ### Hybrid search
 
 ```cypher
--- One-call hybrid: vector similarity composed with graph traversal
+-- Vector-based hybrid: vector similarity composed with graph traversal
 CALL algo.hybridSearch($query_vector, 'Doc', 10)
   YIELD node, score
 RETURN node.title, score
+
+-- Node-based hybrid: explicit source node (graph-traversal + vector similarity)
+CALL algo.hybridSearch(42)
+  YIELD nodeId, score, hops
+
+-- Node-based similarity (explicit source + k override)
+CALL algo.similarNodes()               -- auto-pick source, k=10
+CALL algo.similarNodes(42)             -- explicit source, k=10
+CALL algo.similarNodes(42, 20)         -- explicit source, k=20
+  YIELD nodeId, score
 
 -- Confidence + graph-shape RAG against a typed neighbourhood
 CALL algo.graphRAGTrusted($query_vector, 'Doc', 10, {min_confidence: 0.85})
@@ -877,10 +917,58 @@ USE PARTITION 'workspace-42'
 SET SESSION ACTOR 'user-1' ROLE 'admin'
 ```
 
-### Skills
+### Plugin system
+```bash
+arcflow plugin install <NAME>                     # from GitHub Releases
+arcflow plugin install <NAME> --from ./pkg.tar.gz # air-gapped
+arcflow plugin uninstall <NAME>                   # idempotent
+arcflow plugin list                               # table output
+arcflow plugin list --json                        # structured JSON
+arcflow plugin verify <NAME>                      # SHA-256 integrity check
+```
+
+Python SDK:
+```python
+from arcflow.plugins import install, uninstall, list_plugins, verify, status, info
+install("llm-local")
+plugins = list_plugins()   # -> List[PluginInfo]
+ok = verify("llm-local")  # -> bool
+```
+
+### Agent governance — receipts, hooks, state machine
+
+Agent state machine: `CLEAN → DIRTY_UNANALYZED → GRAPH_FRESH → IMPACT_KNOWN → TEST_PLAN_KNOWN → VERIFIED`. File edits from `GRAPH_FRESH` or beyond reset to `DIRTY_UNANALYZED`.
+
+```bash
+arcflow hook pre-tool <TOOL_NAME>   # pre-tool gate (no-op in v1)
+arcflow hook post-edit              # applies FileEdit event; invalidates if past DIRTY_UNANALYZED
+arcflow hook stop-check             # blocks stop unless VERIFIED (exit 1 = block)
+
+arcflow receipt generate --base main --head feature/fix
+arcflow receipt verify                                    # 3 layers: schema + hash + state
+arcflow receipt verify --base main --head feature/fix     # + Layer 4 diff-hash freshness
+arcflow receipt show                                      # pretty-print receipt JSON
+arcflow receipt list                                      # receipt history
+```
+
+Receipt IDs: `arc_rcpt_<16-hex-chars>`. Schema: `arcflow.agent_receipt.v1`. SHA-256 integrity hash.
+
+### Prediction drift and flywheel tuning
 ```cypher
-CREATE SKILL summarize FROM PROMPT 'Summarize the following: {{input}}'
-PROCESS NODE (n:Document)
+CALL algo.predictionDrift('entity-01', 1000)
+  YIELD entity_id, horizon_ms,
+        predicted_x, observed_x, delta_x,
+        predicted_y, observed_y, delta_y,
+        delta_magnitude, prediction_source,
+        observation_seq, predicted_seq
+
+CALL algo.confidenceCalibration('entity-01', '1h')
+  YIELD ece_score, sample_count, calibration_curve, calibration_status
+
+CALL arcflow.flywheel.tune(
+  'MATCH (p:Player) WHERE p.name = $name RETURN p',
+  'CALL algo.pageRank()'
+) YIELD action, rationale, bounded
 ```
 
 ## Common Patterns

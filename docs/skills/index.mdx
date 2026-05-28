@@ -19,6 +19,29 @@ Describe a relationship rule in natural language. ArcFlow compiles it once — u
 | [PROCESS NODE](/skills/process-node) | Never | Execute compiled skills against nodes |
 | [REPROCESS EDGES](/skills/reprocess-edges) | Never | Re-run compiled patterns against updated data |
 
+## Introspection
+
+```cypher
+-- List all registered skills
+CALL arcflow.skills()
+  YIELD name, tier, allowed_on, threshold, active, version
+
+-- Provenance chain walk — trace a node's derivation back through skills
+CALL db.provenance(42)
+  YIELD nodeId, label, name, confidence, depth
+
+-- Bundle export / import
+CALL arcflow.skills.export('my-pack', '1.0.0') YIELD json
+CALL arcflow.skills.import(json)               YIELD name, version, skill_count
+```
+
+## Lifecycle
+
+```cypher
+DROP SKILL summarize
+DROP REACTIVE SKILL match_similar
+```
+
 ---
 
 ## See Also
@@ -28,4 +51,5 @@ Describe a relationship rule in natural language. ArcFlow compiles it once — u
 - [Triggers](/worldcypher/triggers) — `CREATE TRIGGER` to run a skill automatically when a graph event fires
 - [Observations & Evidence](/concepts/observations) — the observation model that skills write to
 - [Confidence & Provenance](/concepts/confidence-and-provenance) — how skill edges carry confidence scores
+- [Agent Governance](/docs/cli/governance) — verification state machine and receipts
 - [Use Case: Knowledge Management](/docs/use-cases/knowledge-management) — skills in an entity extraction pipeline

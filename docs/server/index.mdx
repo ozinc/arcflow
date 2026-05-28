@@ -94,7 +94,7 @@ Full PostgreSQL wire protocol v3 implementation:
 
 - **Startup handshake**: SSL rejection, protocol negotiation, authentication, parameter status, backend key data
 - **Simple Query protocol**: RowDescription + DataRow + CommandComplete
-- **Extended Query protocol**: Parse/Bind/Describe/Execute/Sync/Close
+- **Extended Query protocol**: Parse/Bind/Describe/Execute/Sync/Close (parameter placeholders `$1`/`$2` are parsed but not yet substituted — use the Simple Query protocol with inline values or the SDK's `params` argument instead)
 - **Error mapping**: ArcFlow TypedError maps to PG ErrorResponse with SQLSTATE codes (42000 syntax, 40001 serialization, 57014 timeout, etc.)
 - **Type inference**: columns auto-typed as bool/int8/float8/text based on data sampling
 

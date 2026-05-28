@@ -121,7 +121,7 @@ Partition-key column exposure:
 - `result.io_stats.partitions_pruned` reports how many partition directories were skipped; `partitions_scanned` reports how many were walked.
 
 Hybrid search:
-- `algo.hybridSearch($queryVec, label, k)` and `algo.graphRAGTrusted(...)` combine vector similarity with graph traversal in one call. `algo.vectorSearch(<index>, $vec, k)` is the pure-vector form.
+- `algo.hybridSearch($queryVec, label, k)` and `algo.graphRAGTrusted(...)` combine vector similarity with graph traversal in one call. `algo.vectorSearch(<index>, $vec, k)` is the pure-vector form. Node-based overloads: `algo.hybridSearch(source_node_id)` YIELD nodeId, score, hops; `algo.similarNodes(source_node_id, k)` YIELD nodeId, score (k defaults to 10, source auto-picked if omitted).
 - `CALL arcflow.hybridIndex.register(name, label, vector_property[, text_property, embedder]) YIELD name` registers a hybrid-index policy; once a default is set with `arcflow.hybridIndex.setDefault(name)`, `algo.vectorSearch` consults both legs automatically. `arcflow.hybridIndex.list()` / `.drop(name)` round out the surface.
 
 Geofences (live spatial triggers):
@@ -143,6 +143,20 @@ LLM Node (provider-pluggable, BYOK):
 - Providers: `openai/*` (OpenAI-compatible HTTPS — OpenAI, Together, Groq, Anyscale, any same-shape API), `cli/*` (SubprocessCli — `cli/claude-code`, `cli/codex`, `cli/gemini`; zero network egress), `oz/*` (first-party catalog at `llm.oz.com`).
 - Catalog + budget: `arcflow keys list` shows provider, masked_key, daily_cap_usd, and spent_today_usd. BudgetMeter intercepts every LLM call and rejects on cap-exceeded with a typed error.
 - Architecture: LLM calls route through an `arcflow-llm` sidecar process supervised by the runtime — provider state isolated, crash-restarted by the supervisor, failures sandboxed from the engine.
+
+Plugin system:
+- CLI: `arcflow plugin install <NAME> [--from <tarball>]`, `uninstall <NAME>`, `list [--json]`, `verify <NAME>`. Plugins stored in `~/.arcflow/plugins/`. Install validates slug, downloads from GitHub Releases (or local tarball), verifies SHA-256 integrity and engine compatibility.
+- Python: `from arcflow.plugins import install, uninstall, list_plugins, verify, status, info`. Pure CLI wrapper; works even without the Rust engine loaded.
+
+Agent governance (receipts + hooks + state machine):
+- State machine: `CLEAN → DIRTY_UNANALYZED → GRAPH_FRESH → IMPACT_KNOWN → TEST_PLAN_KNOWN → VERIFIED`. File edits from `GRAPH_FRESH` or beyond reset to `DIRTY_UNANALYZED`.
+- Hooks: `arcflow hook pre-tool <TOOL_NAME>` (no-op in v1), `arcflow hook post-edit` (invalidates state on edit), `arcflow hook stop-check` (blocks agent stop unless `VERIFIED`).
+- Receipts: `arcflow receipt generate --base <ref> --head <ref>`, `verify [--base --head]`, `show`, `list`. Sealed receipt with SHA-256 integrity hash; four verification layers (schema, hash, state, diff-hash freshness). Receipt IDs: `arc_rcpt_<16-hex>`.
+
+Prediction drift and flywheel tuning:
+- `CALL algo.predictionDrift(entity_id, horizon_ms)` — spatial drift between predicted and observed positions. 12 YIELD columns including delta_magnitude (Euclidean distance). `horizon_ms` defaults to 1000.
+- `CALL algo.confidenceCalibration(entity_id, window)` — Expected Calibration Error (ECE). YIELD: ece_score, sample_count, calibration_curve, calibration_status. Window: `"1h"`, `"30m"`, `"24h"`.
+- `CALL arcflow.flywheel.tune(query1, query2, ...)` — dry-run query analysis; YIELD action, rationale, bounded. Three passes: missing indexes, cache pressure, failure remediation.
 
 Read:
 - `db.execute(query, params=None)` → QueryResult.

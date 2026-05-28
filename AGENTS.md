@@ -538,9 +538,20 @@ CREATE INDEX ON :Label(prop)
 `algo.hybridSearch` combines a vector-similarity scan with a graph-traversal step in one call — useful for retrieval-augmented generation over a typed graph, where you want the planner to merge embedding similarity with structural neighbourhood before scoring. `algo.vectorSearch` is the pure-vector counterpart.
 
 ```cypher
+-- Vector-based hybrid search
 CALL algo.hybridSearch($queryVec, 'Doc', 10)
   YIELD node, score
 RETURN node.title, score
+
+-- Node-based hybrid search (explicit source node, graph-traversal + vector similarity)
+CALL algo.hybridSearch(42)             -- source_node_id; max_hops=3, k=10 (engine defaults)
+  YIELD nodeId, score, hops
+
+-- Node-based similarity (explicit source + k override)
+CALL algo.similarNodes()               -- auto-pick source, k=10
+CALL algo.similarNodes(42)             -- explicit source, k=10
+CALL algo.similarNodes(42, 20)         -- explicit source, k=20
+  YIELD nodeId, score
 ```
 
 A registered hybrid-index configuration binds a vector property to an optional text property + embedder so `algo.vectorSearch` can consult both legs automatically:
@@ -630,6 +641,9 @@ MATCH (row) FROM VIEW stats RETURN row
 ### 37 algorithms (no projection setup)
 ```cypher
 CALL algo.pageRank()
+  YIELD nodeId, name, labels, rank
+CALL algo.pageRank(50, 0.85)       -- max_iterations (default 20), damping (default 0.85)
+
 CALL algo.louvain()
 CALL algo.betweenness()
 CALL algo.vectorSearch('index', $vector, 10)
@@ -694,8 +708,11 @@ dispatch is per-host. See [`docs/gpu.mdx`](/docs/gpu) §"Per-family kernel selec
 
 ### Database procedures
 ```cypher
-CALL db.stats()          -- node/rel/index counts + DenseStore/CSR stats
-CALL db.schema()         -- labels, properties, relationships
+CALL db.stats()
+  YIELD nodes, relationships, skills, labels, indexes, constraints, properties,
+        dense_store_enabled, dense_store_nodes, dense_store_tables,
+        dense_store_memory_bytes, csr_cache
+CALL db.schema()         -- labels, properties, relationships (includes skill metadata)
 CALL db.help()           -- full procedure guide
 CALL db.procedures()     -- list all procedures
 CALL db.demo()           -- load sample graph
@@ -738,7 +755,8 @@ CALL db.storageMode()
 
 -- Parallel execution config
 CALL db.parallelConfig()
-  YIELD morsel_size, rayon_threads, dense_store_coverage, csr_status, csr_delta_pending
+  YIELD morsel_size, rayon_threads, rayon_nodescan_threshold,
+        dense_store_enabled, dense_store_coverage, csr_status, csr_delta_pending
 ```
 
 ### GPU procedures
@@ -754,12 +772,15 @@ CALL db.capabilities()
 
 -- Full GPU stack info
 CALL db.gpuStack()
+  YIELD cuda, thrust, cusparse, cugraph, cuvs,
+        gpu_device, compute_capability, cugraph_algorithms, cuvs_algorithms
 ```
 
 ### Execution context
 ```cypher
 -- Read current context
-CALL db.executionContext() YIELD context
+CALL db.executionContext()
+  YIELD context, fallback_disabled, backends_available, gpu_available, distributed_available
 -- context values: "local_cpu" | "local_gpu" | "distributed"
 
 -- Set context
@@ -804,6 +825,7 @@ CALL arcflow.replication.objectStoreFanout()
 
 -- Current replication status
 CALL db.replicationStatus()
+  YIELD mode, replica_count, writes_enabled, last_replicated_seq, primary_endpoint
 ```
 
 ### Sessions (named resumable)
@@ -892,6 +914,11 @@ CALL arcflow.claw.workerModel()      YIELD mode, description, latency_class, iso
 ```
 
 ### Skills (named, callable units)
+
+Skills are the named computation units in ArcFlow's behavior engine. A skill encapsulates a
+repeatable transformation — text generation, vector similarity, symbolic pattern matching —
+and exposes it as a first-class graph citizen that triggers, programs, and queries can invoke.
+
 ```gql
 -- Prompt-backed skill — text in, text out
 CREATE SKILL summarize FROM PROMPT 'Summarize the following: {{input}}'
@@ -901,19 +928,17 @@ CREATE SKILL coach_summary
     FROM PROMPT 'Analyze {{name}}'
     ALLOWED ON [Player]
     TIER LLM
-    MODEL 'cli/claude-code'        -- catalog row from the LLM provider table
+    MODEL 'cli/claude-code'
 
--- Embedding-backed skill — invoked when a vector property matches a query
--- vector above the THRESHOLD similarity. NEURAL tier; no LLM round-trip.
+-- Embedding-backed skill — vector-similarity-triggered, no LLM round-trip
 CREATE SKILL match_similar
     FROM EMBEDDING embedding
     THRESHOLD 0.85
     ALLOWED ON [Doc]
     TIER NEURAL
 
--- Bundle export / import (skill packs are portable JSON blobs)
-CALL arcflow.skills.export('my-pack', '1.0.0') YIELD json
-CALL arcflow.skills.import(json)               YIELD name, version, skill_count
+DROP SKILL summarize
+DROP REACTIVE SKILL match_similar
 ```
 
 Skill kinds:
@@ -921,6 +946,28 @@ Skill kinds:
 - `FROM EMBEDDING <prop>` — vector-similarity-triggered; `TIER NEURAL`; threshold-gated.
 
 The `MODEL` clause routes the LLM call to a specific catalog row instead of the default `oz/deepseek-v3`. Combined with the CLI-provider substrate, this makes `cli/claude-code`, `cli/codex`, `cli/gemini` reachable from customer Cypher.
+
+**Query-time skill invocation:**
+```gql
+-- PROCESS NODE applies a skill to matching nodes on demand
+PROCESS NODE (n:Document)
+PROCESS NODE (n:Player) WHERE n.team = 'KC'
+```
+
+**Skill introspection:**
+```gql
+-- List all registered skills
+CALL arcflow.skills()
+  YIELD name, tier, allowed_on, threshold, active, version
+
+-- Bundle export / import (skill packs are portable JSON blobs)
+CALL arcflow.skills.export('my-pack', '1.0.0') YIELD json
+CALL arcflow.skills.import(json)               YIELD name, version, skill_count
+
+-- Provenance chain walk — trace a node's derivation back through skills
+CALL db.provenance(42)
+  YIELD nodeId, label, name, confidence, depth
+```
 
 ### Account login (optional — for hosted features)
 ```bash
@@ -974,7 +1021,7 @@ CREATE TRIGGER bbox_changed
     RUN SKILL recompute_overlap
 
 -- Inspect registered triggers
-CALL db.triggers() YIELD name, label, property, event, skill, created_at
+CALL db.triggers() YIELD name, skill, trigger, max_cascade_depth
 ```
 
 The optional `.property` after the label restricts the trigger to writes that actually change that property — useful when many properties change per node but only one downstream computation cares about a specific field.
@@ -1005,6 +1052,162 @@ CALL arcflow.programs.health('yolo_v11')             YIELD status, last_heartbea
 CALL arcflow.programs.find_by_capability('ball_3d')  YIELD name
 CALL arcflow.programs.remove('yolo_v11')             YIELD removed
 ```
+
+### Plugin system
+
+Plugins extend ArcFlow's runtime with external inference backends, custom model formats,
+and provider integrations. Each plugin is a self-contained directory under `~/.arcflow/plugins/`
+with a `manifest.toml` that declares its artifacts, engine compatibility range, and license.
+
+```bash
+# Install a plugin from GitHub Releases (default) or a local tarball (air-gapped)
+arcflow plugin install <NAME>
+arcflow plugin install <NAME> --from ./path/to/plugin.tar.gz
+
+# Remove a plugin (idempotent — no error if not installed)
+arcflow plugin uninstall <NAME>
+
+# List installed plugins
+arcflow plugin list             # table: NAME, VERSION, LICENSE, DESCRIPTION
+arcflow plugin list --json      # structured JSON array
+
+# Verify artifact integrity (recomputes SHA-256s against manifest)
+arcflow plugin verify <NAME>
+```
+
+Plugin names are validated slugs: `[a-z][a-z0-9_-]{0,63}`. Install acquires a file-level
+lock to prevent concurrent installs of the same plugin. Post-extract verification runs
+automatically — integrity check and engine-compatibility check both must pass or the
+plugin directory is cleaned up.
+
+**JSON output shape** (`arcflow plugin list --json`):
+```json
+[{
+  "name": "llm-local",
+  "version": "0.10.26",
+  "license": "Apache-2.0",
+  "description": "Local LLM inference via GGUF + MLX backends",
+  "requires_key": false,
+  "engine_compat_min": "0.9.0",
+  "engine_compat_max": null,
+  "root_dir": "/Users/you/.arcflow/plugins/llm-local"
+}]
+```
+
+**Python SDK:**
+```python
+from arcflow.plugins import install, uninstall, list_plugins, verify, status, info
+
+install("llm-local")                          # from GitHub Releases
+install("llm-local", from_path="./pkg.tar.gz")  # air-gapped
+uninstall("llm-local")                        # idempotent
+plugins = list_plugins()                      # -> List[PluginInfo]
+ok = verify("llm-local")                      # -> bool (True = integrity passes)
+s = status("llm-local")                       # -> "installed" | "not_installed"
+p = info("llm-local")                         # -> Optional[PluginInfo]
+```
+
+### Agent governance — receipts, hooks, state machine
+
+ArcFlow tracks agent verification state through a deterministic state machine
+that records whether an agent's changes have been ingested, impact-analyzed,
+test-planned, and verified. The receipt system seals this state into a
+tamper-evident artifact for CI and review gates.
+
+**Agent state machine** — six states, forward-only with invalidation on edit:
+```
+CLEAN → DIRTY_UNANALYZED → GRAPH_FRESH → IMPACT_KNOWN → TEST_PLAN_KNOWN → VERIFIED
+```
+
+Any file edit from `GRAPH_FRESH` or beyond resets to `DIRTY_UNANALYZED` (reports and
+receipt cleared). The state machine is persisted at `.arcflow/agent/session-state.json`.
+
+**Hooks** — integrate with Claude Code (or any agent framework with hook support):
+```bash
+# pre-tool: called before each tool invocation (no-op in v1; G5 will add validation)
+arcflow hook pre-tool <TOOL_NAME>
+
+# post-edit: applies FileEdit event to the state machine; invalidates if past DIRTY_UNANALYZED
+arcflow hook post-edit
+
+# stop-check: blocks agent stop unless state == VERIFIED (exit 1 = block, exit 0 = allow)
+arcflow hook stop-check
+```
+
+`post-edit` is the invalidation gate — if an agent edits a file after reaching `GRAPH_FRESH`,
+`IMPACT_KNOWN`, or `TEST_PLAN_KNOWN`, the state resets and the agent must re-run the
+verification pipeline (`arc ingest` → `arc impact` → `arc tests affected` → `arc verify patch`).
+
+`stop-check` is the enforcement gate — wired into Claude Code's Stop hook, it prevents an
+agent from completing a session with unverified changes.
+
+**Receipts** — tamper-evident verification artifacts:
+```bash
+# Generate a sealed receipt for the current branch diff
+arcflow receipt generate --base main --head feature/auth-fix
+
+# Verify a receipt (four layers: schema, integrity hash, state, diff-hash freshness)
+arcflow receipt verify
+arcflow receipt verify --base main --head feature/auth-fix  # adds Layer 4 diff-hash check
+
+# Inspect the current receipt
+arcflow receipt show
+
+# List receipt history
+arcflow receipt list
+```
+
+Each receipt carries a `receipt_id` (`arc_rcpt_<16-hex-chars>`), a SHA-256 integrity hash,
+the verification state reached, and a `diff_hash` binding the receipt to a specific `git diff`.
+Schema: `arcflow.agent_receipt.v1`. Signed by `arcflow-cli/<version>`.
+
+Verification layers:
+1. **Schema** — `schema` field must equal `arcflow.agent_receipt.v1`
+2. **Integrity hash** — recomputed SHA-256 must match `integrity.receipt_hash`
+3. **State** — `verification.state_reached` must be `VERIFIED`
+4. **Diff-hash freshness** (optional, with `--base`/`--head`) — recomputed `git diff` hash must match `repository.diff_hash`
+
+### Prediction drift and flywheel tuning
+
+Two procedures for prediction-quality monitoring and query-performance self-tuning.
+
+```cypher
+-- Spatial prediction drift: compare predicted vs observed positions within a time horizon
+CALL algo.predictionDrift('entity-01', 1000)
+  YIELD entity_id, horizon_ms,
+        predicted_x, observed_x, delta_x,
+        predicted_y, observed_y, delta_y,
+        delta_magnitude, prediction_source,
+        observation_seq, predicted_seq
+```
+
+`algo.predictionDrift(entity_id, horizon_ms)` scans `:Prediction` nodes linked to the
+named `:Entity`, filters by `_timestamp_ms >= (now - horizon_ms)`, and computes the
+Euclidean distance between each prediction's `(x, y)` and the entity's current observed
+position. One row per matching prediction. `horizon_ms` defaults to `1000` (1 second).
+
+```cypher
+-- Confidence calibration: Expected Calibration Error (ECE) for an entity's predictions
+CALL algo.confidenceCalibration('entity-01', '1h')
+  YIELD ece_score, sample_count, calibration_curve, calibration_status
+```
+
+`calibration_status` values: `insufficient-data`, `well-calibrated` (ECE < 0.05),
+`overconfident`, `underconfident`. Agreement tolerance: 1.0 meter; 10 confidence buckets.
+
+```cypher
+-- Flywheel tuning: dry-run query analysis with actionable remediation proposals
+CALL arcflow.flywheel.tune(
+  'MATCH (p:Player) WHERE p.name = $name RETURN p',
+  'CALL algo.pageRank()'
+) YIELD action, rationale, bounded
+```
+
+`arcflow.flywheel.tune` accepts variadic Cypher query strings. It compiles and executes
+each against an ephemeral graph, recording pass/fail and timing. Three analysis passes
+produce proposals: missing-index detection (proposes `CREATE INDEX`), cache-pressure
+detection (proposes `CALL db.warmCache()` when p99/p50 ratio exceeds 10x), and failure
+remediation (maps error strings to concrete fixes).
 
 ### Ontology (IS_A hierarchy)
 ```cypher
