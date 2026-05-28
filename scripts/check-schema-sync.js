@@ -71,7 +71,7 @@ function parseRustSchema(schemaPath) {
 // ─── Parse sdk/src/code-intelligence.ts ───────────────────────────────
 
 function parseTypescriptSchema() {
-  const p = resolve(root, 'typescript', 'src', 'code-intelligence.ts')
+  const p = resolve(root, 'sdk', 'src', 'code-intelligence.ts')
   let src
   try {
     src = readFileSync(p, 'utf8')
