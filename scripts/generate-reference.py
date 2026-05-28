@@ -472,53 +472,66 @@ def update_config_managed_sections(out_root: Path, conformance: dict, extensions
     cfg = json.loads(config_path.read_text())
     sections = cfg["sections"]
 
-    managed = {
-        "gql-conformance": {
-            "id": "gql-conformance",
-            "title": "GQL Conformance",
-            "managed": "scripts/generate-reference.py",
-            "items": [
-                {"slug": "reference/gql-conformance", "title": "Conformance Dashboard", "order": 1},
-                {"slug": "reference/tck", "title": "openCypher TCK Results", "order": 2},
-                {"slug": "reference/extensions-regressions", "title": "Extension Regressions", "order": 3},
-            ],
-        },
-        "gql-features": {
-            "id": "gql-features",
-            "title": "GQL Features",
-            "managed": "scripts/generate-reference.py",
-            "items": [
-                {
-                    "slug": f"reference/gql/{slugify_key(key)}",
-                    "title": humanize_key(key),
-                    "order": i + 1,
-                }
-                for i, key in enumerate(conformance["features"].keys())
-            ],
-        },
-        "arcflow-extensions": {
-            "id": "arcflow-extensions",
-            "title": "ArcFlow Extensions",
-            "managed": "scripts/generate-reference.py",
-            "items": [
-                {
-                    "slug": f"reference/extensions/{ext.slug}",
-                    "title": ext.name,
-                    "order": i + 1,
-                }
-                for i, ext in enumerate(extensions)
-            ],
-        },
+    # One top-level "GQL Reference" section with three drill-down child groups.
+    # The query-language reference is one user intent; nesting it keeps the
+    # top-level nav routed by intent rather than by generation source
+    # (the three groups used to be three separate top-level sections).
+    gql_reference = {
+        "id": "gql-reference",
+        "title": "GQL Reference",
+        "managed": "scripts/generate-reference.py",
+        "items": [
+            {
+                "title": "Conformance",
+                "order": 1,
+                "children": [
+                    {"slug": "reference/gql-conformance", "title": "Conformance Dashboard", "order": 1},
+                    {"slug": "reference/tck", "title": "openCypher TCK Results", "order": 2},
+                    {"slug": "reference/extensions-regressions", "title": "Extension Regressions", "order": 3},
+                ],
+            },
+            {
+                "title": "Features",
+                "order": 2,
+                "children": [
+                    {
+                        "slug": f"reference/gql/{slugify_key(key)}",
+                        "title": humanize_key(key),
+                        "order": i + 1,
+                    }
+                    for i, key in enumerate(conformance["features"].keys())
+                ],
+            },
+            {
+                "title": "ArcFlow Extensions",
+                "order": 3,
+                "children": [
+                    {
+                        "slug": f"reference/extensions/{ext.slug}",
+                        "title": ext.name,
+                        "order": i + 1,
+                    }
+                    for i, ext in enumerate(extensions)
+                ],
+            },
+        ],
     }
 
-    # Replace managed sections in place; otherwise append in defined order.
-    by_id = {s.get("id"): i for i, s in enumerate(sections)}
-    new_sections = list(sections)
-    for mid in ["gql-conformance", "gql-features", "arcflow-extensions"]:
-        if mid in by_id:
-            new_sections[by_id[mid]] = managed[mid]
-        else:
-            new_sections.append(managed[mid])
+    # Remove the legacy top-level managed sections and any prior gql-reference,
+    # then place the single nested section (preserving its slot if present).
+    legacy_ids = {"gql-conformance", "gql-features", "arcflow-extensions"}
+    new_sections = []
+    inserted = False
+    for s in sections:
+        sid = s.get("id")
+        if sid in legacy_ids or sid == "gql-reference":
+            if not inserted:
+                new_sections.append(gql_reference)
+                inserted = True
+            continue
+        new_sections.append(s)
+    if not inserted:
+        new_sections.append(gql_reference)
 
     # Preserve sibling top-level keys (schema_version, lint, pinned_links, …);
     # only the `sections` array is generator-managed.
