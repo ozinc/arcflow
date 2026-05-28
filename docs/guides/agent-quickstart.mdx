@@ -331,7 +331,7 @@ app.listen(3000)
 
 - **Injection via string interpolation**: copying the pattern `db.query("MATCH (n {id: '" + id + "'}) RETURN n")` from examples that do not use `$params` exposes the query to injection. Every call with dynamic values must use the parameterised form `db.query(cypher, { id })`.
 - **`result.rows[0]` on empty result**: if a query returns zero rows (e.g., the entity does not exist), accessing `result.rows[0].get('e.id')` throws a runtime error. The page's examples do not show this guard; callers must check `result.rowCount > 0` before indexing.
-- **Algorithm output column name mismatch**: `CALL algo.pageRank()` returns columns named `name` and `rank` in the examples, but the actual column names depend on the algorithm variant and engine version. If `row.get('rank')` returns `undefined`, run `CALL db.help()` to inspect the current output schema. <!-- DRAFT: confirm canonical column names for pageRank, louvain, betweenness outputs -->
+- **Algorithm output column name mismatch**: `CALL algo.pageRank()` returns columns `nodeId`, `name`, `labels`, `rank`. If `row.get('rank')` returns `undefined`, run `CALL db.help()` to inspect the current output schema.
 - **Vector index created after data inserted**: creating a `VECTOR INDEX` after nodes with `embedding` properties already exist does not automatically index the existing nodes in all configurations. New nodes are indexed; pre-existing ones may be missed depending on whether a backfill was triggered. <!-- DRAFT: confirm vector index backfill behaviour on existing nodes -->
 
 ## See Also
@@ -340,3 +340,5 @@ app.listen(3000)
 - [ArcFlow for Coding Agents](/docs/guides/agent-quickstart) — CLI patterns, structured errors, and checkpointing
 - [Swarm & Multi-Agent](/guides/swarm-agents) — coordinating multiple agents on a shared world model
 - [TypeScript API Reference](/reference/api) — full method signatures and types
+- [Agent Governance](/docs/cli/governance) — verification state machine, receipts, and enforcement hooks
+- [Plugin Management](/docs/cli/plugin) — extend the runtime with `arcflow plugin install`
