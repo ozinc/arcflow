@@ -49,7 +49,7 @@ One engine for graphs, vectors, full-text search, algorithms, time-series, live 
 | ISO GQL | **39075:2024 (Edition 1) + accepted V2 proposals** |
 | Workflow engine | **Built-in** (graph-native durable workflows) |
 | Skills | `CREATE SKILL summarize FROM PROMPT '…' TIER LLM` — compiled units of computation; `PROCESS NODE` invokes them, `CALL arcflow.skills()` lists them |
-| Programs | `CREATE PROGRAM yolo_v11 …` — installable capability manifests bundling skills + triggers + executor wiring + hardware requirements |
+| Programs (preview) | `CREATE PROGRAM yolo_v11 …` — installable capability manifests: WAL-durable declaration + registry + GPU SM-gate live; executor dispatch is target-state |
 | Plugins | `arcflow plugin install <NAME>` — extend the runtime with external inference backends and provider integrations; SHA-256 integrity verified |
 | Agent governance | `arcflow receipt generate` / `arcflow hook stop-check` — tamper-evident verification receipts and a 6-state agent verification machine (`CLEAN → … → VERIFIED`) |
 | Prediction monitoring | `CALL algo.predictionDrift(…)` + `algo.confidenceCalibration(…)` — spatial drift and ECE against observed ground truth |
@@ -1057,6 +1057,8 @@ CALL arcflow.programs.health('yolo_v11')             YIELD status, last_heartbea
 CALL arcflow.programs.find_by_capability('ball_3d')  YIELD name
 CALL arcflow.programs.remove('yolo_v11')             YIELD removed
 ```
+
+**Manifest layer vs executor layer.** The declaration + registry layer is wired: `CREATE PROGRAM` / `DROP PROGRAM` parse all clauses into a WAL-durable manifest, `REQUIRES GPU` enforces the SM compute-capability gate at install, and `list` / `describe` / `validate` / `find_by_capability` read it back. The executor layer is target-state — the engine records the `EXECUTOR` endpoint and `HEARTBEAT` but does not yet open the connection, dispatch inputs, or ingest results; `arcflow.programs.health` and the VRAM floor in `REQUIRES GPU` are part of the contract but not yet enforced. A Program is a validated, queryable deployment contract, not yet a running pipeline.
 
 ### Plugin system
 

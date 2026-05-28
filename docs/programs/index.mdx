@@ -2,7 +2,7 @@
 title: "Programs"
 kind: capability
 description: "Declarative capability bundles — install a YOLO detector, a player tracker, or a PTZ controller as a single manifest. Hardware validation at install time, not at 2am."
-status: "planned"
+status: "preview"
 ---
 
 # Programs
@@ -31,7 +31,13 @@ CREATE PROGRAM yolo_v11 VERSION '1.0' (
 )
 ```
 
-This is a complete deployment unit. The engine validates the GPU, connects to the executor, registers the skills and triggers, and records the output schema — all before any data arrives.
+This is a complete deployment unit. The engine validates the GPU, registers the skills and triggers, and records the output schema — all before any data arrives.
+
+## What the manifest layer does today
+
+The declaration and registry layer is live: `CREATE PROGRAM` / `DROP PROGRAM` parse every clause into a durable manifest (WAL-journaled, replayed on recovery), `REQUIRES GPU` enforces the SM compute-capability gate at install time, and the registry procedures (`arcflow.programs.list`, `describe`, `validate`, `find_by_capability`) read it back.
+
+The **executor dispatch layer is target-state**: the manifest records the `EXECUTOR` endpoint, heartbeat interval, and VRAM floor, but the engine does not yet open the executor connection, send heartbeats, or ingest executor results. `arcflow.programs.health` and the VRAM portion of `REQUIRES GPU` are surfaced for the manifest contract but are not yet enforced. Treat a Program as a validated, queryable deployment contract — not yet a running pipeline.
 
 ---
 
