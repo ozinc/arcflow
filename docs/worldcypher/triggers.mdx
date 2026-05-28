@@ -162,28 +162,16 @@ Standalone `CREATE TRIGGER` is for cases where the trigger is not part of a prog
 ```gql
 -- List all registered triggers
 CALL db.triggers()
-YIELD name, label, event, skill, created_at
+YIELD name, skill, trigger, max_cascade_depth
 RETURN *
 ```
 
 ```
-| name                   | label      | event   | skill            | created_at  |
-|---
-------
-------
-------
----|---
-------
----|---
-------|---
-------
-------
----|---
-------
-----|
-| detect_on_frame        | ImageFrame | CREATED | detect_objects   | 1744600000  |
-| enrich_person          | Person     | CREATED | extract_rels     | 1744600100  |
-| rescore_on_update      | Detection  | MODIFIED | score_and_link  | 1744600200  |
+| name                   | skill            | trigger                          | max_cascade_depth |
+|------------------------|------------------|----------------------------------|-------------------|
+| detect_on_frame        | detect_objects   | OnCreate(:ImageFrame)            | 3                 |
+| enrich_person          | extract_rels     | OnCreate(:Person)                | 3                 |
+| rescore_on_update      | score_and_link   | OnModify(:Detection.bbox)        | 3                 |
 ```
 
 ---

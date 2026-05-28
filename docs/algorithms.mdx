@@ -1070,6 +1070,60 @@ The parallel execution itself runs through the **ArcFlow Graph Kernel** — a si
 
 Six algorithms also support `LIVE CALL` for incremental maintenance -- see the Incremental Algorithms section above.
 
+## Prediction Quality
+
+Two procedures for monitoring prediction accuracy against observed ground truth.
+
+### Prediction Drift
+
+Compares predicted positions against observed entity positions within a time horizon. One row per matching `:Prediction` node.
+
+```cypher
+CALL algo.predictionDrift('robot-01', 2000)
+  YIELD entity_id, horizon_ms,
+        predicted_x, observed_x, delta_x,
+        predicted_y, observed_y, delta_y,
+        delta_magnitude, prediction_source,
+        observation_seq, predicted_seq
+```
+
+`delta_magnitude` is the Euclidean distance between predicted and observed `(x, y)`. `horizon_ms` defaults to 1000 (1 second) — only `:Prediction` nodes with `_timestamp_ms >= (now - horizon_ms)` are included.
+
+### Confidence Calibration
+
+Expected Calibration Error (ECE) for an entity's predictions. Measures whether predicted confidence scores match observed accuracy.
+
+```cypher
+CALL algo.confidenceCalibration('robot-01', '1h')
+  YIELD ece_score, sample_count, calibration_curve, calibration_status
+```
+
+| `calibration_status` | Meaning |
+|---|---|
+| `insufficient-data` | Not enough predictions for a reliable ECE score |
+| `well-calibrated` | ECE < 0.05 — predictions are trustworthy |
+| `overconfident` | Model assigns higher confidence than observed accuracy justifies |
+| `underconfident` | Model assigns lower confidence than observed accuracy justifies |
+
+`window` accepts duration strings: `"1h"`, `"30m"`, `"24h"`. Agreement tolerance: 1.0 meter. 10 confidence buckets.
+
+## Flywheel Tuning
+
+Dry-run query analysis with actionable remediation proposals. Accepts variadic Cypher query strings, compiles and executes each against an ephemeral graph, and produces optimization proposals.
+
+```cypher
+CALL arcflow.flywheel.tune(
+  'MATCH (p:Player) WHERE p.name = $name RETURN p',
+  'CALL algo.pageRank()',
+  'MATCH (e:Entity)-[:TRACKED]->(f:Frame) RETURN e, f'
+) YIELD action, rationale, bounded
+```
+
+Three analysis passes:
+1. **Missing indexes** — identifies label+property pairs without indexes in slow or failed queries. Proposes `CREATE INDEX`.
+2. **Cache pressure** — detects high latency variance (p99/p50 ratio > 10x). Proposes `CALL db.warmCache()`.
+3. **Failure remediation** — maps error strings to fixes: unknown labels → `db.labels()`, constraint violations → `MERGE`, syntax errors → `db.help()`.
+
 ## See Also
 
 - [Vector Search](/vector-search) — vector similarity search, hybrid search, and embedding management
@@ -1077,3 +1131,4 @@ Six algorithms also support `LIVE CALL` for incremental maintenance -- see the I
 - [GPU Acceleration](/gpu) — automatic CUDA/Metal dispatch, multi-GPU routing
 - [Spatial Queries](/worldcypher/spatial) — `algo.nearestNodes()`, frustum queries, ArcFlow Spatial Index
 - [Trusted RAG](/trusted-rag) — `algo.graphRAG()`, `algo.graphRAGTrusted()` in pipeline context
+- [Agent Governance](/docs/cli/governance) — receipts, hooks, and verification state machine

@@ -33,7 +33,7 @@ Core procedures for inspecting database state, schema, and metadata.
 | `CALL db.keys()` | `key` | All property keys in use |
 | `CALL db.version()` | `name`, `version`, `crates`, `waves` | Engine version and build info |
 | `CALL db.capabilities()` | `capability`, `value` | Engine version, GPU backend status, compute capabilities, index counts, memory footprint, and algorithm availability |
-| `CALL db.stats()` | `nodes`, `relationships`, `skills` | Database statistics summary |
+| `CALL db.stats()` | `nodes`, `relationships`, `skills`, `labels`, `indexes`, `constraints`, `properties`, `dense_store_enabled`, `dense_store_nodes`, `dense_store_tables`, `dense_store_memory_bytes`, `csr_cache` | Database statistics including storage engine state |
 | `CALL db.stats.json()` | `json` | All metadata as single JSON object |
 | `CALL db.schema()` | `label`, `properties`, `count` | Schema overview: labels, property keys per label, counts, and relationship patterns |
 | `CALL db.indexes()` | `label`, `property` | All indexes with target label and property |
@@ -50,6 +50,12 @@ Core procedures for inspecting database state, schema, and metadata.
 | `CALL db.import.csv('<csv>', '<Label>')` | `imported` | Import CSV rows as nodes with given label (mutating) |
 | `CALL db.clear()` | `status`, `nodes_removed`, `rels_removed` | Delete all nodes, relationships, and indexes (mutating) |
 | `CALL db.demo()` | _(demo graph)_ | Load sample social network graph with example queries (mutating) |
+| `CALL db.provenance(nodeId)` | `nodeId`, `label`, `name`, `confidence`, `depth` | Trace a node's derivation back through skills — provenance chain walk |
+| `CALL db.triggers()` | `name`, `skill`, `trigger`, `max_cascade_depth` | List all registered triggers with skill bindings |
+| `CALL arcflow.skills()` | `name`, `tier`, `allowed_on`, `threshold`, `active`, `version` | List all registered skills |
+| `CALL arcflow.skills.export(name, version)` | `json` | Export a skill pack as a portable JSON blob |
+| `CALL arcflow.skills.import(json)` | `name`, `version`, `skill_count` | Import a skill pack from JSON |
+| `CALL arcflow.flywheel.tune(query1, query2, ...)` | `action`, `rationale`, `bounded` | Dry-run query analysis with actionable remediation proposals (missing indexes, cache pressure, failure fixes) |
 
 ```cypher
 -- Get a schema overview
@@ -71,7 +77,7 @@ Returns rows for each check (node_count, relationship_integrity, index_consisten
 
 | Procedure | Return Columns | Description |
 |---|---|---|
-| `CALL algo.pageRank()` | `nodeId`, `name`, `rank` | PageRank (20 iterations, damping 0.85). GPU-accelerated when available. |
+| `CALL algo.pageRank([maxIterations], [damping])` | `nodeId`, `name`, `labels`, `rank` | PageRank (default 20 iterations, 0.85 damping). GPU-accelerated when available. |
 | `CALL algo.confidencePageRank()` | `nodeId`, `name`, `confidence`, `rank` | PageRank weighted by node confidence scores |
 | `CALL algo.betweenness()` | `nodeId`, `name`, `betweenness` | Betweenness centrality scores |
 | `CALL algo.closeness()` | `nodeId`, `name`, `closeness` | Closeness centrality scores |
@@ -140,7 +146,7 @@ Returns the path as "id1 -> id2 -> id3", total cost, and hop count.
 | Procedure | Return Columns | Description |
 |---|---|---|
 | `CALL algo.nodeSimilarity()` | `node1`, `node2`, `similarity` | Pairs of nodes with Jaccard similarity scores (top 20) |
-| `CALL algo.similarNodes()` | `nodeId`, `score` | Nodes similar to the first vector-bearing node (cosine similarity) |
+| `CALL algo.similarNodes([sourceNodeId], [k])` | `nodeId`, `score` | Nodes similar to a source node (cosine similarity); auto-picks first vector-bearing node if source omitted, k defaults to 10 |
 | `CALL algo.pairSimilarity(sourceIds, targetIds)` | `node1`, `node2`, `score` | Jaccard similarity for explicit node pairs (variadic — accept paired or interleaved args) |
 | `CALL algo.nearestNodes(point, label, k)` | `node`, `distance` | K nearest nodes by exact spatial distance (ArcFlow Spatial Index) |
 | `CALL arcflow.scene.frustumQuery(ox,oy,oz, dx,dy,dz, fovDeg, nearZ, farZ)` | `node`, `distance` | Entities within a camera frustum (6-plane containment) |
@@ -151,7 +157,7 @@ Returns the path as "id1 -> id2 -> id3", total cost, and hop count.
 | Procedure | Return Columns | Description |
 |---|---|---|
 | `CALL algo.vectorSearch()` | `nodeId`, `score`, `labels` | Vector similarity search over vector index. Accepts optional query vector argument. GPU-accelerated when available. |
-| `CALL algo.hybridSearch()` | `nodeId`, `score`, `hops` | Combined vector + graph traversal search |
+| `CALL algo.hybridSearch([sourceNodeId])` | `nodeId`, `score`, `hops` | Combined vector + graph traversal search; accepts optional explicit source node |
 | `CALL algo.graphRAG()` | `nodeId`, `score`, `hops`, `labels` | Graph-augmented retrieval for RAG pipelines. Accepts optional query vector argument. |
 | `CALL algo.graphRAGContext()` | `context`, `node_count`, `tokens_approx` | Formatted LLM context from graph retrieval. Accepts optional query vector and max_tokens arguments. |
 | `CALL algo.graphRAGTrusted()` | `nodeId`, `trusted_score`, `hops`, `observation` | Trusted RAG with confidence-filtered context, ranked by observation class |
@@ -314,10 +320,10 @@ Procedures for backend management, validation, observability, and storage intern
 | `CALL db.backends()` | `id`, `available`, `message` | Available compute backends (CPU, CUDA, Metal) with status |
 | `CALL db.storageInfo()` | `format`, `nodes` | Storage backend details (format, generation, node/rel counts, mutation sequence) |
 | `CALL db.storageMode()` | `mode`, `node_count`, `csr_warm`, `csr_auto_threshold`, `dense_store_enabled`, `dense_store_nodes` | Active storage mode (HashMap, DenseStore, CSR, or hybrid) with thresholds |
-| `CALL db.csrStats()` | `status`, `vertices`, `edges` | CSR (Compressed Sparse Row) cache statistics — warm/stale status, vertex / edge counts, pending delta size |
+| `CALL db.csrStats()` | `status`, `vertices`, `edges`, `rel_types`, `edge_type_distribution`, `memory_bytes`, `delta_added`, `delta_removed` | CSR (Compressed Sparse Row) cache statistics — warm/stale status, vertex / edge counts, memory footprint, pending delta size |
 | `CALL db.denseStore()` | `enabled`, `nodes`, `tables`, `memory_bytes`, `coverage` | DenseStore status with node and table counts, memory footprint, coverage percentage |
 | `CALL db.warmCsr()` | `status` | Warm the CSR cache; returns `warm` or `rebuilt` |
-| `CALL db.parallelConfig()` | `morsel_size`, `rayon_threads`, `dense_store_coverage`, `csr_status` | Morsel scheduler and parallelism configuration including thread count |
+| `CALL db.parallelConfig()` | `morsel_size`, `rayon_threads`, `rayon_nodescan_threshold`, `dense_store_enabled`, `dense_store_coverage`, `csr_status`, `csr_delta_pending` | Morsel scheduler, parallelism configuration, and CSR delta queue depth |
 | `CALL db.validateQuery()` | `valid`, `warnings` | Parse and validate a query without executing |
 | `CALL db.vectorIndexes()` | `name`, `label`, `property`, `dimensions`, `similarity` | All vector indexes with configuration |
 | `CALL db.observationClasses()` | `class`, `count` | Observation class counts (observed, inferred, predicted) |
@@ -328,7 +334,7 @@ Procedures for backend management, validation, observability, and storage intern
 | `CALL db.nodesByPlane.scene()` | `_id`, `_labels`, `_authority_plane` | Nodes in the scene authority plane |
 | `CALL db.proofGates()` | `gate`, `status`, `evidence` | Proof gate definitions and their validation status |
 | `CALL db.proofArtifacts()` | `artifact`, `type`, `detail` | Generated proof artifacts |
-| `CALL db.executionContext()` | `context`, `fallback_disabled`, `backends_available` | Current execution context (backend, GPU availability) |
+| `CALL db.executionContext()` | `context`, `fallback_disabled`, `backends_available`, `gpu_available`, `distributed_available` | Current execution context (backend, GPU availability, distributed availability) |
 | `CALL db.requireExecutionContext('local_cpu' \| 'local_gpu' \| 'distributed')` | `context`, `status` | Enforces a required execution context; raises a hard error on mismatch |
 | `CALL db.syncConflicts()` | `id`, `local_op`, `remote_op`, `local_clock`, `remote_clock`, `resolution`, `timestamp` | Replication conflict log with operations, vector clocks, and resolution per conflict |
 | `CALL db.affordances()` | `from`, `to`, `confidence` | All AFFORDS relationships in the graph |
@@ -393,7 +399,7 @@ OpenTelemetry policy controls. Span recording is off by default; enable lite or 
 
 | Procedure | Return Columns | Description |
 |---|---|---|
-| `CALL db.replicationStatus()` | `mode`, `replica_count`, `writes_enabled` | Replication mode, replica count, and write status |
+| `CALL db.replicationStatus()` | `mode`, `replica_count`, `writes_enabled`, `last_replicated_seq`, `primary_endpoint` | Replication mode, replica count, write status, and primary endpoint |
 | `CALL db.checkpointMeta()` | `generation`, `nodes` | Last checkpoint generation, node/rel counts, mutation sequence |
 | `CALL db.schemaRegistry()` | `label`, `property`, `type` | Registered schema versions with property types |
 
