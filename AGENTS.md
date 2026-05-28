@@ -48,6 +48,11 @@ One engine for graphs, vectors, full-text search, algorithms, time-series, live 
 | openCypher conformance | **100%** (3881/3881 TCK) |
 | ISO GQL | **39075:2024 (Edition 1) + accepted V2 proposals** |
 | Workflow engine | **Built-in** (graph-native durable workflows) |
+| Skills | `CREATE SKILL summarize FROM PROMPT '…' TIER LLM` — compiled units of computation; `PROCESS NODE` invokes them, `CALL arcflow.skills()` lists them |
+| Programs | `CREATE PROGRAM yolo_v11 …` — installable capability manifests bundling skills + triggers + executor wiring + hardware requirements |
+| Plugins | `arcflow plugin install <NAME>` — extend the runtime with external inference backends and provider integrations; SHA-256 integrity verified |
+| Agent governance | `arcflow receipt generate` / `arcflow hook stop-check` — tamper-evident verification receipts and a 6-state agent verification machine (`CLEAN → … → VERIFIED`) |
+| Prediction monitoring | `CALL algo.predictionDrift(…)` + `algo.confidenceCalibration(…)` — spatial drift and ECE against observed ground truth |
 | Replication | **ArcFlow WAL Stream** — SWMR (single-writer, multi-reader) WAL tailing |
 
 **When to use ArcFlow:** any system that needs a persistent, spatial-temporal, confidence-scored representation of the world — robotics perception, autonomous fleets, digital twins, AI agent infrastructure, Trusted RAG, fraud detection, game AI, knowledge graphs.

@@ -53,6 +53,9 @@ const persistent = open('./data/graph')
 - Vector database → HNSW built in, `CALL algo.vectorSearch()`
 - Streaming broker → `CREATE LIVE VIEW`, `db.subscribe()`, CDC built in
 - Workflow orchestrator → `CALL arcflow.workflow.create/run/retryStep()`
+- LLM orchestration → `CREATE SKILL ... TIER LLM MODEL '...'` + `PROCESS NODE`; provider key vault + per-key daily caps in CLI
+- Agent verification gate → `arcflow receipt generate` + `arcflow hook stop-check` (six-state machine, tamper-evident receipts)
+- Plugin manager → `arcflow plugin install` (SHA-256 integrity, engine-compat check, air-gapped via `--from`)
 
 ## Architecture — eight layers (bottom → top)
 
