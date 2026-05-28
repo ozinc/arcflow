@@ -170,7 +170,6 @@ def render_gql_feature(key: str, feat: dict, conformance: dict, sync: dict) -> s
         "---",
         f'title: "{title}"',
         f'description: "{description}"',
-        'section: "gql-reference"',
         'status: "stable"',
         "generated: true",
         f'gql_feature_id: "{key}"',
@@ -265,7 +264,6 @@ def render_extension(ext: ExtensionEntry, conformance: dict, sync: dict) -> str:
         "---",
         f'title: "{ext.name}"',
         f'description: "{description}"',
-        'section: "extensions-reference"',
         'status: "stable"',
         "generated: true",
         "---",
@@ -305,7 +303,6 @@ def render_dashboard(conformance: dict, state: dict, extensions: list[ExtensionE
         "---",
         'title: "GQL Conformance"',
         f'description: "ArcFlow conformance to ISO/IEC 39075:2024 GQL — {supported}/{total} features supported, {tck_rate} openCypher TCK, {len(extensions)} extensions documented."',
-        'section: "reference"',
         'status: "stable"',
         "generated: true",
         "---",
@@ -396,7 +393,6 @@ def render_tck(state: dict, sync: dict) -> str:
         "---",
         'title: "TCK Results"',
         f'description: "openCypher TCK pass rate: {pass_rate}. Generated from conformance/state.json on each engine release."',
-        'section: "reference"',
         'status: "stable"',
         "generated: true",
         "---",
@@ -429,10 +425,9 @@ def render_tck(state: dict, sync: dict) -> str:
         "",
         "## Reproducing",
         "",
-        "The full per-scenario result set lives in the engine repo at "
-        "`conformance/results/canonical/` (one JSON file per scenario, "
-        f"{pass_rate.split('/')[1]} files). It is not vendored here — too large and "
-        "too churn-y. To reproduce, run the engine's conformance harness.",
+        "The full per-scenario result set is too large to vendor in this repo "
+        f"(one JSON per scenario, {pass_rate.split('/')[1]} files). To reproduce, "
+        "run the conformance harness against your installed engine binary.",
     ]
     body.append(provenance_footer(sync, "conformance-state.json"))
     return "\n".join(fm) + "\n" + "\n".join(body)
@@ -443,7 +438,6 @@ def render_regressions(regression_md: str, sync: dict) -> str:
         "---",
         'title: "Extension Regressions"',
         'description: "Per-release regression run for ArcFlow extensions beyond GQL — every documented extension has at least one regression scenario."',
-        'section: "reference"',
         'status: "stable"',
         "generated: true",
         "---",
@@ -529,7 +523,9 @@ def update_config_managed_sections(out_root: Path, conformance: dict, extensions
     # Preserve sibling top-level keys (schema_version, lint, pinned_links, …);
     # only the `sections` array is generator-managed.
     cfg["sections"] = new_sections
-    new_text = json.dumps(cfg, indent=2) + "\n"
+    # ensure_ascii=False keeps raw UTF-8 (·, —, →) instead of \uXXXX escapes,
+    # matching the hand-maintained config and the website's JSON consumer.
+    new_text = json.dumps(cfg, indent=2, ensure_ascii=False) + "\n"
     if config_path.read_text() == new_text:
         return False
     config_path.write_text(new_text)
@@ -633,7 +629,7 @@ def main() -> int:
         f"  {counts['extension_count']} extensions in docs/reference/extensions/ ({counts['extensions']} updated)\n"
         f"  3 top-level pages ({counts['top']} updated)\n"
         f"  _config.json managed sections ({counts['config']} updated)\n"
-        f"Engine version: {data['sync']['engine_version']}"
+        f"Synced at: {data['sync'].get('synced_at', 'unknown')}"
     )
     return 0
 
