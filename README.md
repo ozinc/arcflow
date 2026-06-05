@@ -12,9 +12,9 @@ That's it. 5MB binary, no server, no Docker, no cloud account, no API key, no si
 
 ---
 
-**Free. 5 megabytes. One process. One query language. Eight engines.**
+**The World Model Engine. Free. 5 megabytes. One process. One query language.**
 
-ArcFlow is an embedded graph database that runs *inside* your application — like SQLite, but built from scratch for AI agents, world models, and real-time analytics. It speaks the **ISO/IEC 39075 GQL standard** (with 100% openCypher TCK conformance — 3,881 / 3,881), but bundles seven more engines behind that one query language: a temporal versioned store, a spatial index, a vector index, a full-text index, a live-query subscription surface, a graph-native event bus, a behavior engine, and a 40+ algorithm library.
+ArcFlow is a **world model engine** — the engine that records what's actually true about the world, the way a game engine renders a virtual one. *Neural world models (Genie, Cosmos, Sora) simulate possible futures; ArcFlow records what actually happened* — every fact spatial, temporal, and confidence-scored, queryable across its full history. It runs *inside* your process (5 MB, no server) and speaks the **ISO/IEC 39075 GQL standard** (100% openCypher TCK conformance — 3,881 / 3,881). Behind that one query language: a temporal versioned store, a spatial index, a vector index, a full-text index, a live-query subscription surface, a graph-native event bus, a behavior engine, and a 40+ algorithm library — one engine, not an assembled stack.
 
 ---
 
