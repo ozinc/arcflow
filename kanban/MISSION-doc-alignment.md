@@ -306,3 +306,11 @@ Priority by gap size × flagship value. Verdicts from the 2026-06-23 coverage au
   count 49→52. Closure DOC-AF-2026-06-23-006 mirrored to core. Also (separate ask): oz
   website C++ language scrubbed from ArcFlow positioning (branch fix/arcflow-drop-cpp-
   language pushed).
+- **2026-06-23 (iter 6)** — Deterministic-replay contract documented (AF-DOC-2026-06-13-002
+  RESOLVED): docs/temporal.mdx §Deterministic replay — the (query,seq)+pinned-version
+  byte-identity guarantee, exact canonicalization (row sort by _id, verbatim string bytes,
+  _created_at/_updated_at excluded, _confidence/_degree/_rel_types retained), per-version
+  scope (no cross-version promise), on-result accessor marked "arrives with EDGE-A2".
+  Verified vs edge_a5_replay_bit_identity.rs (FF-EDGE-06) + replay_digest.rs. Closure
+  DOC-AF-2026-06-23-007 mirrored to core. Also: git identity normalized — all unpushed
+  docs-branch commits + global config now Gudjon Mar Gudjonsson <gudjon@oz.com>.

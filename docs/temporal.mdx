@@ -225,6 +225,21 @@ CALL db.temporalReplay()
 
 Useful for auditing, debugging, and reconstructing how the graph evolved over time.
 
+### Deterministic replay (the contract)
+
+`AS OF seq N` is not just a feature — it is a **contract**. The same `(query, seq)` executed against the same pinned `(engine_version, plan_version)` yields a **byte-identical canonicalized result**, across a process restart and across a rebuild. Replay is reproducible, so a past answer can be re-derived and audited rather than trusted.
+
+**What "canonicalized" means.** The guarantee is over a canonical digest of the result, not incidental wire bytes:
+
+- rows are **totally ordered by `_id`** before hashing (not scan order);
+- cell strings are hashed **verbatim** (no re-parse, no reformat);
+- wall-clock-stamped keys (`_created_at`, `_updated_at`) are **excluded** — they are not deterministic on replay;
+- everything else, including `_confidence`, `_out_degree`, `_in_degree`, and `_rel_types`, **is** deterministic on replay and is part of the digest.
+
+**Per-version, by design.** Identity holds *within* a pinned `(engine_version, plan_version)`. Across versions the digest **may** differ — and that is intentional, not a bug. Both versions ride a separate field on the result envelope, so any change in a replayed answer is **attributable** to a version bump rather than a silent identity break. There is no cross-version identity promise.
+
+> **Availability:** the contract holds at the engine level today, enforced by an in-tree conformance test (FF-EDGE-06). The `(plan_version, engine_version)` accessor on the result envelope is **not yet exposed** on the daemon wire or the language SDKs — that exposure lands in a follow-up wave (EDGE-A2). Rely on the replay *semantics* now; reach for the on-result accessor when A2 ships it.
+
 ## Temporal Gate
 
 Conditional logic based on temporal state. Gate procedures validate that certain temporal preconditions hold before allowing a mutation:
