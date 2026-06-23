@@ -320,3 +320,13 @@ Priority by gap size × flagship value. Verdicts from the 2026-06-23 coverage au
   crates/arcflow-runtime/src/info_procs.rs — likely the Information Layer GQL CALL
   surface. WATCH: when it ships, update docs/concepts/information-layer.mdx (+AGENTS.md)
   to promote the CALL surface from "roadmap" to shipped.
+- **2026-06-23 (iter 7, Arm C — first positioning pass)** — Grounded docs positioning
+  in oz-platform's world-model thesis + DC-POSN audit. Finding: docs led with the
+  neural-vs-operational split; the real competitor is operational AMNESIA (DC-POSN-1.4).
+  Fix: docs/concepts/world-model.mdx now opens with "digital world queryable 30 yrs;
+  operational world remembered nothing — ArcFlow gives it persistent queryable memory"
+  before the two-definition disambiguation (kept as evaluation-criteria control,
+  DC-POSN-6.1/6.5; name/first-in-mind DC-POSN-5.3/5.4 intact; records wedge preserved).
+  Federated DOC-OZ-2026-06-23-001 (pushed on oz-platform branch fed/doc-oz-positioning-
+  2026-06-23) with a reciprocal rec: add the records-not-simulates wedge to the public
+  engine page. Next Arm-C pass due ~iter 10-11.
