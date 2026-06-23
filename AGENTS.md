@@ -1387,6 +1387,32 @@ assert(db.query("MATCH (n:Test) RETURN n.x").rows[0].get('x') === 1)
 
 See `docs/guides/agent-quickstart.mdx` for the complete 10-step recipe with every pattern.
 
+## Memory Engine (engine capability — GQL/SDK binding on roadmap)
+
+Durable, structured, versioned agent memory as first-class graph structure — the
+persistence tier of the World Model Engine. A memory is a node (`:MemoryItem`) in
+the same `GraphStore`, not a bolt-on vector store. Staleness is modeled as
+validity: a new version `SUPERSEDES` the old, which stays for audit/time-travel.
+
+Schema (queryable from WorldCypher now): `:MemoryItem {item_kind, body}` with edges
+`-[:ABOUT]->` subject, `-[:CITES]->` source, `-[:SUPERSEDES]->` prior version,
+`-[:CAUSED_BY]->` outcome. Memory nodes are content-addressed + idempotent.
+
+```cypher
+-- Current memories about a subject (exclude superseded versions):
+MATCH (m:MemoryItem)-[:ABOUT]->(s {id: $subject})
+WHERE NOT (:MemoryItem)-[:SUPERSEDES]->(m)
+RETURN m.body
+```
+
+The write+recall **helpers are engine-side (Rust) and not yet GQL/SDK-bound** (roadmap):
+`write_memory_item`, `write_memory_version` (+`SUPERSEDES`), `record_memory_provenance`
+(`CITES`/`CAUSED_BY`), `recall_memories_about` (all versions), `recall_current_memories_about`
+(latest-validity), `recall_relevant_memories_about` (structural+lexical+recency; semantic
+recall is deliberately out-of-process). The code-intelligence bridge `ingest_with_memory`
+records a `MemoryItem` per ingested symbol — a world model of the codebase. Semantic/HNSW
+recall and distillation are NOT shipped. Full treatment: `docs/concepts/memory.mdx`.
+
 ## Code Intelligence API
 
 ```typescript

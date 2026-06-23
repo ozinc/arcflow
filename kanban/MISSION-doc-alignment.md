@@ -157,7 +157,7 @@ Priority by gap size × flagship value. Verdicts from the 2026-06-23 coverage au
 
 | Capability | Coverage | Target docs | Engine source-of-truth |
 |---|---|---|---|
-| **World-Model Memory Engine** (I-INIT-0151) | **NONE** | new `docs/concepts/memory.mdx` + `docs/guides/world-model-memory.mdx`; `### Memory` in AGENTS.md after Code Intelligence API; llms.txt Python surface | `crates/arcflow-core/src/worldgraph/memory.rs` (`write_memory_item`, `write_memory_version`+SUPERSEDES, `record_memory_provenance` CITES/CAUSED_BY, `recall_memories_about`/`recall_current_memories_about`/`recall_relevant_memories_about`); `crates/code-intelligence/src/memory_bridge.rs` (`ingest_with_memory`, `record_symbol_memory`); `crates/code-intelligence-parsers/src/lib.rs` (`parse_python`) |
+| **World-Model Memory Engine** (I-INIT-0151) | **DONE (concept)** — `docs/concepts/memory.mdx` + AGENTS.md §Memory Engine + llms.txt (iter 3). Schema/signatures verified; staleness-as-validity + out-of-process semantic recall stated correctly; binding marked roadmap. Optional follow-on: a step-by-step guide. | done iter 3 | `crates/arcflow-core/src/worldgraph/memory.rs` (`write_memory_item`, `write_memory_version`+SUPERSEDES, `record_memory_provenance` CITES/CAUSED_BY, `recall_memories_about`/`recall_current_memories_about`/`recall_relevant_memories_about`); `crates/code-intelligence/src/memory_bridge.rs` (`ingest_with_memory`, `record_symbol_memory`); `crates/code-intelligence-parsers/src/lib.rs` (`parse_python`) |
 | **Information-theory / compression** ("compression = intelligence") | **DONE (concept)** — `docs/concepts/information-layer.mdx` + AGENTS.md §Information Layer + llms.txt; signatures verified; binding marked roadmap. Reframe threading through existing pages still open (ask -002). | done iter 2 | `crates/arcflow-core/src/information.rs`, `similarity.rs` (`ncd`, `ncd_similarity`), `graph_information.rs` (`label_property_entropy`, `node_surprisal`, `node_ncd`, `label_property_kl`), `mape_flywheel.rs` (SSoT) — **Rust-only, no Cypher CALL surface yet** |
 | **Sync / LAN named primitives** | **THIN/GOOD** (drift) | extend `docs/sync.mdx` + `docs/architecture/sync.mdx`; new `### Sync / LAN` in AGENTS.md | `crates/arcflow-runtime/src/sync_server.rs` (`serve_sync`, `POST /api/sync/push`, `GET /api/sync/pull?since=N`), `sync_transport.rs` (`SyncTransport` trait), `crates/arcflow-storage/src/sync_engine.rs` |
 | **Executor-ring / IPC** (I-INIT-0105) | NONE | new section under deployment/architecture | `crates/arcflow-runtime/src/executor_client.rs` (`ShmRing`, `dispatch_shm`, `dispatch_shm_poll`), `bin/arcflow-echo-sidecar.rs` |
@@ -199,4 +199,13 @@ Priority by gap size × flagship value. Verdicts from the 2026-06-23 coverage au
   vaporware). Registered in AGENTS.md + llms.txt. Reframe ask `2026-06-23-002`
   IN PROGRESS (foundation laid; cross-capability threading pending). Closure
   `DOC-AF-2026-06-23-003` mirrored to core.
+- **2026-06-23 (iter 3)** — World-Model Memory Engine documented (biggest gap,
+  flagship): new `docs/concepts/memory.mdx` (MemoryItem schema + ABOUT/SUPERSEDES/
+  CITES/CAUSED_BY, staleness-as-validity, structural/current/hybrid recall,
+  semantic recall correctly framed as out-of-process per ANTI-0020, the
+  ingest_with_memory codebase world-model, runnable WorldCypher reading the memory
+  graph). Schema/signatures verified against engine src; helpers Rust-only so
+  binding marked roadmap. Registered in AGENTS.md (§Memory Engine) + llms.txt.
+  Status `DOC-AF-2026-06-23-004` mirrored to core (proactive — WMM had no direct
+  ask; shipped via broadcast a965fbbb).
 </content>

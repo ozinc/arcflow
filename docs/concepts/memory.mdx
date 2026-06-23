@@ -1,0 +1,87 @@
+---
+title: "The Memory Engine"
+kind: concept
+description: "Durable, structured, versioned agent memory as first-class graph structure — MemoryItem nodes with ABOUT, SUPERSEDES, CITES, and CAUSED_BY edges. Staleness is modeled as validity (supersede, never delete), so every memory stays auditable and time-travelable. No new storage engine, no bolt-on vector store — the world model remembers itself."
+status: "stable"
+---
+
+# The Memory Engine
+
+A neural world model simulates possible futures; ArcFlow records what actually happened — and the Memory Engine is how those recordings *persist* as durable, structured, versioned memory. It is the persistence tier of the [World Model Engine](/docs/concepts/world-model): not a bolt-on vector store beside the graph, but typed memory **inside** the same graph that already holds your facts.
+
+The design decision that matters: a **memory is a node**. There is no separate memory subsystem, no second database to keep in sync. A `MemoryItem` is an ordinary node in the `GraphStore`, written through the same delta-apply path as every other fact, with edges to what it is about, what it cites, what it superseded, and what caused it. That is why the memory is queryable, auditable, and time-travelable with the tools you already use.
+
+> **Status — engine capability, GQL/SDK binding on the roadmap.** The write and recall *helpers* (`write_memory_item`, `recall_*_about`, `ingest_with_memory`, …) are shipped, tested, stable engine functions (pure Rust). They are **not yet bound to a WorldCypher `CALL` surface or the language SDKs** — that binding is on the [roadmap](/docs/reference/versioning). But because a memory is just graph structure, **the memory graph these helpers produce is fully queryable from WorldCypher today** — the `MATCH` examples below run now; the write/recall convenience functions arrive with the binding.
+
+## The shape of a memory
+
+A `MemoryItem` node carries its kind and body; edges carry its relationships:
+
+```cypher
+-- A memory item is ABOUT a subject, CITES its sources,
+-- may SUPERSEDE an older version, and may be CAUSED_BY an outcome.
+(m:MemoryItem {item_kind: 'fact', body: 'authenticate() validates the JWT signature'})
+  -[:ABOUT]->     (sym:Symbol {name: 'authenticate'})
+(m)-[:CITES]->    (src:Evidence)
+(m)-[:CAUSED_BY]->(ev:Event)
+(m)-[:SUPERSEDES]->(old:MemoryItem)
+```
+
+| Element | Meaning |
+|---|---|
+| `:MemoryItem` | The durable memory node. `item_kind` is free (e.g. `fact`, `decision`, `summary`); `body` is the text. |
+| `-[:ABOUT]->` | What the memory is about — its subject entity. The read side traverses this edge. |
+| `-[:CITES]->` | A source / evidence node the memory draws on (provenance). |
+| `-[:SUPERSEDES]->` | This (newer) version replaces an older one. Staleness as validity, not deletion. |
+| `-[:CAUSED_BY]->` | The outcome or event that produced this memory (attribution lineage). Shares the discipline of [Causal Edges](/docs/concepts/causal-edges). |
+
+Memory items are **content-addressed and idempotent**: the node id derives from `(domain, item_kind, key)` and the content hash from the body, so re-recording an unchanged memory is a no-op upsert. Recording the same logical memory twice does not duplicate it.
+
+## Staleness is validity, not deletion
+
+When a memory changes, the engine does **not** overwrite it. `write_memory_version` writes a *new* `MemoryItem` (keyed by body content hash, so each distinct body is a distinct node) and draws a `SUPERSEDES` edge from the new version to the old. The old version stays in the graph — for audit and for time-travel.
+
+This gives two reads over the same data:
+
+```cypher
+-- Every memory ever recorded about a subject (full history, incl. superseded):
+MATCH (m:MemoryItem)-[:ABOUT]->(s {id: $subject})
+RETURN m.body
+
+-- Only the CURRENT memories — exclude any that a newer version superseded:
+MATCH (m:MemoryItem)-[:ABOUT]->(s {id: $subject})
+WHERE NOT (:MemoryItem)-[:SUPERSEDES]->(m)
+RETURN m.body
+```
+
+The engine exposes both as helpers — `recall_memories_about` (all versions) and `recall_current_memories_about` (latest-validity, superseded excluded) — built on an `O(in-degree)` reverse traversal of the `ABOUT` edge, never a full scan. Because superseded versions persist, an `AS OF` time-travel query reconstructs exactly what the memory said at any past point. Nothing is lost; that is the precondition for treating the store as a lossless record of belief over time.
+
+## Recall: structural, lexical, recency — and why semantic is deliberately out-of-process
+
+`recall_relevant_memories_about` ranks the current memories about a subject by fusing three signals: **structural** (the `ABOUT` traversal), **lexical** (case-insensitive term hits in the body), and **recency** (`updated_at` tiebreak), most relevant first.
+
+It stops there on purpose. The fourth signal — **semantic** similarity (embeddings / HNSW) — is intentionally *not* computed inside the engine: model inference runs **outside** the engine process (a separate crash domain, per the engine's no-in-process-inference rule). A semantic re-rank layers on at the SDK or a sidecar over this structural+lexical+recency base. The engine gives you the model-free foundation; for model-free *similarity* that does run in-process, see NCD in [the Information Layer](/docs/concepts/information-layer).
+
+## A world model of the codebase
+
+The first real consumer of the Memory Engine is the code-intelligence bridge. `ingest_with_memory` ingests a code delta **and** records a durable `MemoryItem` about each added symbol — so every function, class, and module in your codebase carries durable, versioned, provenance-tracked memory. The codebase becomes a queryable world model that remembers what it learned about each symbol, survives restarts, and tracks how that knowledge changed.
+
+```cypher
+-- After ingest_with_memory: query the codebase's own memory.
+MATCH (m:MemoryItem {item_kind: 'symbol'})-[:ABOUT]->(fn:Function {name: 'authenticate'})
+WHERE NOT (:MemoryItem)-[:SUPERSEDES]->(m)
+RETURN m.body
+```
+
+## What is shipped vs. on the roadmap
+
+- **Shipped (engine):** `MemoryItem` schema + `ABOUT`/`SUPERSEDES`/`CITES`/`CAUSED_BY` edges; content-addressed idempotent writes; append-only versioning with `SUPERSEDES`; provenance recording; structural / current / hybrid recall; the code-intelligence `ingest_with_memory` bridge; a tree-sitter Python AST front-end feeding ingestion. The resulting memory graph is queryable from WorldCypher now.
+- **Roadmap / NOT yet shipped (do not design against these):** a WorldCypher `CALL` / SDK binding for the write+recall helpers; semantic (embedding/HNSW) recall fusion; distillation (TranscriptSegment → FactDelta); operational-knowledge-frame projection. These are gated (some on an out-of-process embedding model) and must not be documented as callable.
+
+## See Also
+
+- [The World Model Engine](/docs/concepts/world-model) — the category this is the persistence tier of.
+- [Causal Edges](/docs/concepts/causal-edges) — the `CAUSED_BY` discipline memory provenance shares.
+- [The Information Layer](/docs/concepts/information-layer) — model-free similarity (NCD) and surprise-weighted recall.
+- [Time travel & snapshots](/docs/concepts/snapshots) — reconstructing what a memory said at a past point.
+</content>
