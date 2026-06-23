@@ -298,3 +298,11 @@ Priority by gap size × flagship value. Verdicts from the 2026-06-23 coverage au
   <gudjon@oz.com>). Git diagnosis: docs-repo 403 is a repo-permission gap on the
   gh-authed account (Gaurav-Gilalkar lacks push on ozinc/arcflow; has it on
   oz-platform + arcflow-core) — NOT a local-config/passphrase issue.
+- **2026-06-23 (iter 5)** — view.* push-stream surface documented (AF-DOC-2026-06-13-001
+  RESOLVED): docs/protocol/jsonrpc-v1.md new "Live views (push streaming)" section —
+  view.subscribe/credit/unsubscribe + view.delta notification, the 3 consumer must-knows
+  (non-contiguous seq, credit backpressure + dropped_for_credit, duplex), framing caveat
+  (newline default, --frame; P3.15 flip pending). Verified vs handlers_view.rs; method
+  count 49→52. Closure DOC-AF-2026-06-23-006 mirrored to core. Also (separate ask): oz
+  website C++ language scrubbed from ArcFlow positioning (branch fix/arcflow-drop-cpp-
+  language pushed).

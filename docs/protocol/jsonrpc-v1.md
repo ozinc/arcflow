@@ -2,7 +2,7 @@
 
 The wire protocol the ArcFlow daemon speaks over Unix Domain Sockets. This is the **public, stable, semver-versioned** interface contract — closed engine implementation, open protocol surface. Anyone can reimplement a daemon serving this protocol.
 
-**Status:** Stable as of 2026-05-13. 49 methods. Specification version `v1`.
+**Status:** Stable as of 2026-05-13. 52 methods. Specification version `v1`.
 
 **License of this document:** Apache 2.0 (reimplementation-permissive — see end of file).
 
@@ -585,6 +585,53 @@ Execute Cypher over the wire. Read queries route through the read-optimized engi
 `gqlstatus` follows ISO/IEC 39075:2024 — `"00000"` (success with rows), `"02000"` (success with zero rows). Errors return via the JSON-RPC error envelope.
 
 CALL procedures (e.g., `CALL algo.fusion.weighted_centroid(...)`) work via the same method.
+
+---
+
+### Live views (push streaming)
+
+A `CREATE LIVE VIEW` can be **subscribed to**: the daemon pushes a `view.delta` notification every time the view's frontier advances. Three control methods plus one notification, all duplex on the same connection.
+
+#### `view.subscribe` (streaming)
+
+Opens a push subscription to a registered LIVE VIEW. Like `consumer.subscribe`, this method does NOT use the standard response envelope — after the ACK the daemon streams `view.delta` notifications until the client disconnects or unsubscribes. `credit` is optional (default `64`). `VIEW_NOT_FOUND` if the name isn't a registered LIVE VIEW.
+
+```jsonrpc
+→ {"id":N, "method":"view.subscribe", "params": {"view": "hot_zones", "credit": 128}}
+← {"id":N, "subscribed": true, "view": "hot_zones", "subscription_id": "sub-7"}
+← {"notify": "view.delta", "view": "hot_zones", "seq": 1042, "added": [...], "removed": [...], "dropped_for_credit": 0}
+← ...
+```
+
+#### `view.credit`
+
+Grants `n` additional credit to a live subscription and wakes the push thread. Request/response control RPC; **same connection** as the subscription.
+
+```jsonrpc
+→ {"id":N, "method":"view.credit", "params": {"subscription_id": "sub-7", "n": 64}}
+← {"id":N, "credit": 64}
+```
+
+#### `view.unsubscribe`
+
+Tears down the subscription.
+
+```jsonrpc
+→ {"id":N, "method":"view.unsubscribe", "params": {"subscription_id": "sub-7"}}
+← {"id":N, "unsubscribed": true}
+```
+
+#### `view.delta` (notification)
+
+Pushed on frontier advance. Has **no `id`** (it is a notification, not a response). Fields: `view`, `seq`, `added`, `removed`, `dropped_for_credit`.
+
+Three behaviours a consumer MUST implement correctly:
+
+1. **`seq` is monotonic, NOT contiguous.** Detect gaps with `received_seq > last_seq`, never `received_seq == last_seq + 1`. Sequence numbers may skip.
+2. **Credit is backpressure.** You grant N credit, receive up to N deltas, then re-grant with `view.credit`. At zero credit the daemon **drops** deltas and counts them in `dropped_for_credit` (distinct from a slow-socket drop). A large credit grant does not pre-allocate buffers — the pending buffer has a fixed independent cap.
+3. **Duplex on one connection.** `view.credit` / `view.unsubscribe` ride the same connection as the push stream.
+
+> **Framing note:** the daemon's default frame is currently `newline`; length-prefixed framing is selectable with `--frame`. (A future change may flip the default — this spec will update in lockstep when it ships.)
 
 ---
 

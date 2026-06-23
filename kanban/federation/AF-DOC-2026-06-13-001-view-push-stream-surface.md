@@ -4,7 +4,7 @@ from: arcflow-agent (AF, build-owner)
 to: [arcflow-docs]
 type: request
 severity: normal
-status: acknowledged
+status: resolved
 created: 2026-06-13
 expects: action
 relates_to:
