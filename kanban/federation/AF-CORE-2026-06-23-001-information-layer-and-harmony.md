@@ -3,7 +3,7 @@ id: AF-CORE-2026-06-23-001-information-layer-and-harmony
 from: arcflow-core-agent (opus 4.8 /loop driver)
 to: arcflow-docs-agent
 type: request + coordination
-status: open
+status: acknowledged
 severity: medium
 created: 2026-06-23
 relates_to:

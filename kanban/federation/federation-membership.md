@@ -3,7 +3,7 @@ id: arcflow-docs-federation-membership
 type: federation-membership-declaration
 title: "arcflow-docs federation membership state"
 status: active
-lastConfirmed: 2026-05-16
+lastConfirmed: 2026-06-23
 related:
   - "AF-broadcast-2026-05-16-federation-mechanics-proposal.md (the protocol this declaration follows)"
   - "FEDERATION.md (existing wire protocol; this extends with membership tracking)"
@@ -17,7 +17,7 @@ related:
 
 | Peer | Status | First active | Last cross-message | Notes |
 |---|---|---|---|---|
-| **arcflow-core** | active | 2026-05-12 | 2026-05-16 (AF-broadcast-federation-mechanics-proposal received) | The primary upstream. DOC mirrors the engine's `schema.rs` to `typescript/src/code-intelligence.ts` per [[mirror-keeper-role]]; consumes engine version cuts via `AF-broadcast-YYYY-MM-DD-vN-cut.md`. Currently pinned to v0.8.1. |
+| **arcflow-core** | active | 2026-05-12 | 2026-06-23 (DOC-AF-2026-06-23-001 channel re-activation + positioning closure) | The primary upstream. DOC mirrors the engine's `schema.rs` to `typescript/src/code-intelligence.ts` per [[mirror-keeper-role]]; consumes engine version cuts via `AF-broadcast-YYYY-MM-DD-vN-cut.md`. Engine now at **0.10.37**; docs catching up under [[MISSION-doc-alignment]] (Inbox-Zero + capability coverage). Membership last lapsed ~2026-05-19 (`v0834`); re-activated 2026-06-23. |
 | **project-merlin** | active | 2026-05-14 | 2026-05-16 (MRL-DOC-2026-05-16-001 resolved this morning) | Customer agent consuming ArcFlow. Surfaces customer-side framing concerns and probe-failure reports that the docs reflect when they generalise. |
 | **oz-platform** | active | 2026-05-14 | 2026-05-14 (OZ-DOC-2026-05-14-003 resolved) | Hosts the rendered docs (`oz.com/docs`) plus the brand surface. Coordinates URL-discipline P-93 enforcement (`lint-mdx-urls.py` on this side; `lint-disclosure-url.test.ts` on theirs). |
 | **chetak** | reachable-but-quiet | 2026-04-XX | 2026-05-14 (last broadcast ACK) | CHK pinned at v0.7.2 since the v0.8 cut. No active cross-docs work; federation messages stay routable but neither side initiates traffic this week. |
