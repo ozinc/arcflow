@@ -1187,7 +1187,7 @@ ArcFlow measures its own information in bits. Prediction and compression are the
 operation, so the engine that records the world also scores how well it is understood —
 the proof layer beneath the "World Model Engine" category ("compression = intelligence").
 
-Six graph self-measurement metrics are **callable from WorldCypher** (each returns a
+Seven graph self-measurement metrics are **callable from WorldCypher** (each returns a
 single scalar row):
 
 ```cypher
@@ -1195,6 +1195,7 @@ CALL arcflow.info.labelEntropy('Player', 'team')         YIELD entropy_bits     
 CALL arcflow.info.labelEntropyBucketed('Player','speed',10) YIELD entropy_bits  -- continuous values, N equal-width bins
 CALL arcflow.info.labelRedundancy('Player', 'team')      YIELD redundancy       -- predictability/cacheability [0,1]
 CALL arcflow.info.labelKl('SensorA', 'SensorB', 'class') YIELD kl_bits          -- belief divergence between populations
+CALL arcflow.info.labelValueSurprise('Player','team','home') YIELD surprise_bits -- −log₂ p(value); +∞ if unobserved
 CALL arcflow.info.nodeSurprisal(42)                      YIELD surprisal_bits   -- −log₂ confidence
 CALL arcflow.info.nodeNcd(42, 99)                        YIELD ncd              -- model-free compression-distance similarity
 ```
@@ -1205,8 +1206,7 @@ no GPU, no embedding model) **not yet bound to `CALL`/SDK** — roadmap:
   `cross_entropy`, `kl_divergence`.
 - `similarity` — `ncd`, `ncd_similarity`, `compressed_len` (NCD = embedding-free, GPU-free
   similarity/dedup for the edge, e.g. Jetson/Tegra `sm_87`).
-- `graph_information` (engine-level, beyond the 5 bound above): `label_property_surprise`,
-  `label_property_entropy_normalized`.
+- `graph_information` (engine-level, beyond the 7 bound above): `label_property_entropy_normalized`.
 
 A fact's `confidence` is its model-relative probability, so `−log₂ confidence` is its
 information content. Context lowers conditional entropy, so the same facts are measurably

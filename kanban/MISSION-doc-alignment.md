@@ -391,3 +391,11 @@ Priority by gap size × flagship value. Verdicts from the 2026-06-23 coverage au
   crates/` — for any new marker, deep-groom (read source + WHY), document at top standard,
   flip to DONE(docs-needs): DATE — <doc path> (Federation: DOC-AF id), and close bilaterally.
   Target: arcflow-core TODO(docs-needs) count stays at 0.**
+- **2026-06-23 (iter 13)** — TODO(docs-needs) sweep: 0 (held). Manifest diff (manifest-b):
+  info CALL grew to 7 procs — documented labelValueSurprise (binds label_property_surprise;
+  YIELD surprise_bits) in info-layer.mdx + AGENTS.md; labelEntropyBucketed (ask -009) already
+  done iter10. Info Layer CALL coverage 7/7 = 100%. Manifest broadened to worldgraph::memory
+  section — confirmed 100% covered by memory.mdx (no new work). Family map (203 procs/32
+  families) acknowledged; AGENTS.md is per-proc SSoT. Closed asks -009/-010 via
+  DOC-AF-2026-06-23-013. NEXT: arcflow.executor Python SDK page (B6a), then compression-reframe
+  threading, sync/LAN naming, SSoT/version-cut, + due positioning pass; future: family-map audit.
