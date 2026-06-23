@@ -21,6 +21,8 @@ This page describes the edge as a discipline, the constraint that enforces it, a
 
 Read: *the value `0.83` on `player.confidence` was caused by `evidence`.*
 
+> **Information-theoretic view:** `confidence` is the probability a named model assigned to a fact, so the fact's *information content* is `−log₂ confidence` — a low-confidence-but-true fact carries the most bits. That makes the evidence field literally Shannon information, callable as `CALL arcflow.info.nodeSurprisal(id)`. See [the Information Layer](/docs/concepts/information-layer).
+
 The edge has three properties that make it load-bearing:
 
 - **It carries identity, not opinion.** The edge points at the anchor node that *justified* the belief — a sensor reading, a classifier output, an authored fact. Not "why we think this is true" in free text; an actual graph reference an audit can follow.

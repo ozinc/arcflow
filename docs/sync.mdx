@@ -49,6 +49,8 @@ console.log(db.fingerprint())  // "29553633"
 
 The sync WAL captures every mutating query automatically. Read queries are never captured.
 
+> **Information-theoretic view:** a WAL delta stream is *residual coding* — the materialized state at the receiver is the predictor, and only the **surprise** (the bits a reader couldn't predict) crosses the wire, so the stream tends toward the entropy rate of the world's change process. This is the "store/transmit only the surprise" principle the engine also measures directly — see [the Information Layer](/docs/concepts/information-layer).
+
 | Operation | Enters WAL? |
 |---|---|
 | `db.mutate("CREATE ...")` | Yes |

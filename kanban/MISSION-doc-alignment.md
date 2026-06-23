@@ -407,3 +407,11 @@ Priority by gap size × flagship value. Verdicts from the 2026-06-23 coverage au
   DOC-AF-2026-06-23-014. REMAINING: compression-reframe threading (2026-06-23-002), sync/LAN
   named primitives, SSoT/version-cut catch-up (AF-DOC-2026-05-16-003), positioning pass (Arm C
   due), 203-proc family-map audit vs AGENTS.md.
+- **2026-06-23 (iter 15 — Arm C + compression reframe)** — Standing sweeps green (TODO=0,
+  manifest 100%). Threaded the 'store only the surprise' narrative through 3 capability pages,
+  each anchored to a callable feature + linked to information-layer.mdx: causal-edges.mdx
+  (confidence=−log₂p → nodeSurprisal), sync.mdx (WAL delta=residual coding), live-queries.mdx
+  (view.delta=residual coding). No theory essays. Closes reframe ask -002 (DOC-AF-2026-06-23-015).
+  Compression=intelligence framing now coherent across info-layer + 3 capability pages. REMAINING:
+  sync/LAN named primitives (SyncTransport/ConcurrentStore sync server/executor-ring), SSoT/version-cut
+  catch-up (AF-DOC-2026-05-16-003), 203-proc family-map audit vs AGENTS.md.

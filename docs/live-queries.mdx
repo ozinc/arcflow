@@ -52,6 +52,8 @@ Kafka, Redis Streams, NATS — these systems solve a different problem: cross-se
 
 ArcFlow runs standing queries in the same process as your graph. When a mutation occurs, the live query engine computes the delta — what entered, what left — and delivers it to subscribers within milliseconds. No second system. No poll. No broker.
 
+> **Information-theoretic view:** delivering only the delta is *residual coding* — the subscriber already holds the prior result, so the engine sends only the **surprise** (what changed), never the whole result set. Same principle as WAL sync; the engine can also measure it directly — see [the Information Layer](/docs/concepts/information-layer).
+
 ---
 
 ## Three surfaces
