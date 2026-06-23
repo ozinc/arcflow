@@ -76,6 +76,28 @@ sharper frame than the market surface — or vice-versa — federate an `OZ-DOC-
 message to `oz-platform/kanban/federation/` so positioning converges both ways;
 (5) log findings (cite the `DC-*` IDs) in the progress log.
 
+## Arm D — Git hygiene / sync (operator directive 2026-06-23)
+
+**Occasionally** (end of an iteration batch, and before going idle) ensure git
+is tidy and integrated across all touched repos (arcflow-docs, arcflow-core,
+oz-platform):
+- Worktree clean; nothing uncommitted (commit or stash with intent).
+- All work committed on `docs/federation-alignment`.
+- Branch pushed/synced to `origin`.
+- Any open PRs merged.
+
+**Operator sign-off (2026-06-23):** this supersedes the earlier "never push /
+touch main without sign-off" guardrail for the push/sync/merge step — push and
+merge are now authorized as routine hygiene. (Still: no engine *source* edits —
+RULE 2 — and schema mirror changes need a paired core PR — RULE 3.)
+
+**KNOWN BLOCKER (2026-06-23):** `git push` to `origin` for **arcflow-docs**
+(`ozinc/arcflow`) returns **403** — the authed gh user `Gaurav-Gilalkar` lacks
+push access to that repo (it CAN push `ozinc/arcflow-core`). arcflow-core branch
+is pushed ✓. Until the operator grants docs-repo push access (or switches
+credentials), the loop keeps committing arcflow-docs **locally** and re-surfaces
+this blocker on each hygiene pass rather than retrying in a tight loop.
+
 ## Always-on discipline — deep grooming BEFORE acting (operator directive 2026-06-23)
 
 For EACH inbox item / capability, before writing a line of docs:
@@ -251,4 +273,9 @@ Priority by gap size × flagship value. Verdicts from the 2026-06-23 coverage au
   at `/home/ozer/oz-platform` (git repo w/ federation), so OZ-DOC is bilateral.
   Wired into the loop as an occasional pass (~every 3–4 iters + on positioning
   surfaces). First positioning pass: next iteration.
+- **2026-06-23 (queue add)** — Operator added **Arm D — git hygiene/sync** and
+  authorized routine push/merge. Hygiene pass run: worktrees clean, all
+  committed. `arcflow-core` branch **pushed to origin** ✓. `arcflow-docs` push
+  **BLOCKED (403)** — authed gh user lacks push access to `ozinc/arcflow`;
+  needs operator credential fix. No open PRs to merge.
 </content>
