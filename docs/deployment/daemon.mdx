@@ -776,6 +776,30 @@ table without a second round trip:
 }
 ```
 
+## Operator contracts — readiness, recovery & memory
+
+Two operator-facing contracts make the daemon safe to supervise in production: it tells you exactly when it is ready, and it degrades predictably instead of being OOM-killed.
+
+### Readiness & recovery — `--ready-file`, `/readyz`, `daemon.info`
+
+A supervisor learns the daemon is READY without an RPC poll loop:
+
+- **`--ready-file <path>`** — at the READY edge the daemon writes a single JSON line and nothing else: `{"event":"ready","ready_at":<ms>,"replayed_seq":N,"target_seq":N,"pid":...,"version":"..."}`. Watch it with inotify/kqueue or mtime. A stale ready line from a previous run is cleared at process start, so a restarted daemon never leaves an old line to be mistaken for the new run's readiness.
+- **`/readyz`** (on the HTTP/SSE bridge) — returns `503` with `recovering` while the WAL is replaying, `200` once ready.
+- **`daemon.info`** carries a `replay` block — `{replayed_seq, target_seq, started_at, complete}` — so recovery progress is observable over the wire.
+
+> **Honest scope:** recovery is currently pub/sub-only — graph crash-recovery and its `AS OF` exposure land in a follow-up wave. The replay bound is **linear** in WAL length, not sublinear. Don't assume a bounded-time restart on a long WAL.
+
+### Memory degradation — `--memory-cap-bytes`
+
+Under memory pressure the daemon degrades down a ladder rather than being killed:
+
+- **Threshold** — if a cgroup-v2 memory controller is present the daemon tracks its `memory.high` (soft); otherwise it uses `--memory-cap-bytes` with `soft_high = cap × 0.85` and `refuse = cap × 0.95`.
+- **At the refuse watermark**, *new* admission-class requests are rejected with a classified `RESOURCE_EXHAUSTED` (error class `Resource`, SQLSTATE `53000`) — work already in flight keeps running.
+- **`daemon.info`** carries a `degradation` block — `{rung, per-rung counters, last-event}`; Prometheus `/metrics` exposes degradation gauges for alerting.
+
+> **Honest scope:** under sustained pressure the daemon **refuses new work rather than reclaiming** (graceful shed-and-reclaim is a follow-up wave). Never-OOM is **best-effort** — only guarded allocation sites are covered, so a pathological workload can still be killed.
+
 ## When NOT to use the daemon
 
 Use **in-process** instead when:

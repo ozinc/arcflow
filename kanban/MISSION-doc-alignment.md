@@ -379,3 +379,15 @@ Priority by gap size × flagship value. Verdicts from the 2026-06-23 coverage au
   arcflow.executor Python SDK (B6a, 06-14-006 — new SDK page), daemon readiness/recovery
   (A2b, 06-13-004) + memory-degradation (A3a, 06-13-007) operator contracts (deployment/
   daemon doc). Then: compression-reframe threading, sync/LAN naming, SSoT/version-cut.
+- **2026-06-23 (iter 12 — TODO(docs-needs) annotation Inbox Zero + STANDING discipline)** —
+  Operator directive: deep-groom TODO(docs-needs) in arcflow-core to Inbox Zero. Swept core:
+  exactly 4 markers. 3 (replay_digest.rs:67, handlers_view.rs:46, handlers_view_replay.rs:40)
+  already documented (iters 6/5/11) and being cleared by the core agent concurrently (staged).
+  4th (readiness_signal.rs:3) documented THIS iter + flipped to DONE(docs-needs) by DOC (.rs
+  annotation edits are in-scope per operator; Rust-logic no-edit rule unaffected). Shipped
+  docs/deployment/daemon.mdx §"Operator contracts — readiness, recovery & memory" (A2b ask
+  -004 + A3a ask -007, both with honest caveats). DOC-AF-2026-06-23-012 mirrored to core.
+  **STANDING DISCIPLINE (added to loop): each cycle, re-sweep `grep -rn "TODO(docs-needs)"
+  crates/` — for any new marker, deep-groom (read source + WHY), document at top standard,
+  flip to DONE(docs-needs): DATE — <doc path> (Federation: DOC-AF id), and close bilaterally.
+  Target: arcflow-core TODO(docs-needs) count stays at 0.**
