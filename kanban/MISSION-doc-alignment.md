@@ -39,6 +39,43 @@ cross-refs, site-relative `/docs/...` links per P-93). No vaporware (see the
 do-not-document list). The World-Model-Engine wedge ("records the real world;
 neural models simulate") rides every new page.
 
+## Arm C — Positioning alignment with oz-platform (operator directive 2026-06-23)
+
+**Occasionally** (every ~3–4 iterations, and whenever authoring/upgrading a
+positioning-bearing surface — hero lines, concept-page framing, the WME wedge,
+README/llms positioning) run a **positioning-alignment pass** to keep the docs'
+high-level positioning grounded in how OZ + ArcFlow are positioned company-wide.
+
+**oz-platform IS available locally** at `/home/ozer/oz-platform` (git repo, has
+`kanban/federation/`). This corrects the earlier "not cloned locally" note —
+OZ-DOC federation can now be bilateral, and the positioning sources are readable
+directly.
+
+Grounding resources (read on a positioning pass):
+- **Current positioning in market** — `oz-platform/apps/cloud/website` (107 MDXs).
+  Lead sources: the world-model-thesis interview/blog posts under
+  `content/blog/posts/en/general/` (e.g. `...world-model-thesis.mdx`,
+  `...what-arcflow-is-really-building-toward.mdx`, `...the-five-layers.mdx`,
+  `every-camera-is-an-intelligence-endpoint.mdx`), plus `apps/cloud/website/llms.txt`.
+- **Positioning theory** — `oz-platform/kanban/references/knowledge-base/02-positioning-books-deep-concepts.md`
+  (15 books, `DC-POSN-*` concepts). Use **Run Type A — Positioning Audit**:
+  for each relevant `DC-POSN-*`, ask *"does our docs positioning violate or
+  leverage this principle?"* and flag contradictions as action items. Cite
+  `DC-POSN-*` IDs per the file's EARS triggers.
+- **Discovery / customer-understanding** — `oz-platform/kanban/references/knowledge-base/07-Product-Discovery-Customer-Understanding-Leadership.md`
+  (`DC-PDCL-*`). Pull discovery questions to interrogate our framing — real
+  competitive alternative, status-quo-as-competitor, customer truth vs. our
+  assumptions — and let the answers sharpen the docs' "why a developer reaches
+  for this."
+
+**Positioning-pass protocol:** (1) read the website positioning sources + this
+repo's current positioning surfaces; (2) run the DC-POSN audit + DC-PDCL
+discovery questions; (3) apply findings to docs positioning (keep the
+records-not-simulates WME wedge as the invariant); (4) where docs reveal a
+sharper frame than the market surface — or vice-versa — federate an `OZ-DOC-*`
+message to `oz-platform/kanban/federation/` so positioning converges both ways;
+(5) log findings (cite the `DC-*` IDs) in the progress log.
+
 ## Always-on discipline — deep grooming BEFORE acting (operator directive 2026-06-23)
 
 For EACH inbox item / capability, before writing a line of docs:
@@ -52,10 +89,9 @@ For EACH inbox item / capability, before writing a line of docs:
    not just the API. Docs explain why a developer reaches for it.
 4. **oz-platform market-promise tie-in** — connect the capability to the
    public positioning we make on the oz-platform cloud/website/market surface.
-   oz-platform is NOT cloned locally; derive the tie-in from positioning
-   messages + this repo's positioning prose, and stage an `OZ-DOC-*` outbox
-   note (mirrors when oz-platform is reachable) when a capability changes the
-   market story.
+   oz-platform IS available at `/home/ozer/oz-platform` (read its website MDXs +
+   the Arm-C grounding resources directly); federate an `OZ-DOC-*` message to
+   `oz-platform/kanban/federation/` when a capability changes the market story.
 
 ---
 
@@ -208,4 +244,11 @@ Priority by gap size × flagship value. Verdicts from the 2026-06-23 coverage au
   binding marked roadmap. Registered in AGENTS.md (§Memory Engine) + llms.txt.
   Status `DOC-AF-2026-06-23-004` mirrored to core (proactive — WMM had no direct
   ask; shipped via broadcast a965fbbb).
+- **2026-06-23 (queue add)** — Operator added **Arm C — positioning alignment**:
+  occasionally ground docs positioning in oz-platform's website MDXs + the
+  knowledge-base harnesses (`02` DC-POSN positioning books / Run Type A audit;
+  `07` DC-PDCL discovery questions). Corrected stale note — oz-platform IS local
+  at `/home/ozer/oz-platform` (git repo w/ federation), so OZ-DOC is bilateral.
+  Wired into the loop as an occasional pass (~every 3–4 iters + on positioning
+  surfaces). First positioning pass: next iteration.
 </content>
