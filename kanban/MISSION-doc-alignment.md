@@ -446,3 +446,12 @@ Priority by gap size × flagship value. Verdicts from the 2026-06-23 coverage au
   threshold) YIELD name, status` (FUSE-0003, verified lib.rs:21917) from catalog-level to verified
   signature in AGENTS.md. Family-signature progress: 3/8 verified (lag, counterfactual, vector);
   remaining: evidence, world, graph, temporal, session, job, fusion.
+- **2026-06-23 (iter 20 — idle-poll + accuracy finding)** — Still Inbox Zero (TODO=0, manifest
+  unchanged, new core commits = I-INIT-0125 refactors only). Deepening the 'thin families' surfaced
+  a real conflation: arcflow.{evidence.latest, job.*, world_model.lookup, spatial.nearest,
+  temporal.replay_gate} are GatewayRpcMethod (OpenClaw gateway RPC, lib.rs:25966), NOT WorldCypher
+  CALL procs; arcflow.graph.query is a workflow step type. Verified-CALL families: session.* +
+  fusion.* (real handlers/tests). Corrected AGENTS.md (verified sigs for lag/counterfactual/vector/
+  session/fusion; reclassified the gateway names as a distinct surface). Flagged manifest
+  categorization + naming mismatch (world.lookup vs world_model.lookup) to core via DOC-AF-2026-06-23-019.
+  Family-map coverage now ACCURATE: all genuine CALL families documented; gateway pseudo-families reclassified.

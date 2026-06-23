@@ -1196,23 +1196,30 @@ CALL arcflow.counterfactual.branchAt('scenario-a', 14207)   -- (name, seq)
 -- Register a vector-similarity standing query (FUSE-0003).
 CALL arcflow.vector.registerSimilarity('near_dupes', 'embedding', [0.1, 0.2, 0.9], 0.85)
   YIELD name, status                          -- (name, property_key, [vec], threshold) → status "registered"
+
+-- Session lifecycle (scopes a working set of named sessions).
+CALL arcflow.session.open('alpha')   YIELD name, session_id, status         -- status "opened"
+CALL arcflow.session.list            YIELD name, session_id, query_count, created_at
+CALL arcflow.session.close('alpha')  YIELD name, session_id, status
+
+-- Multi-source fusion: vector / spatial similarity composed with graph context.
+CALL arcflow.fusion.vectorGraph('Doc', 'emb', [1.0, 0.0], 5, 2)   YIELD nodeId, backend, ...  -- (label, prop, [vec], k, hops)
+CALL arcflow.fusion.spatialGraph('Sensor', 'loc', 0.0, 0.0, 100.0, 2)  YIELD nodeId, ...      -- (label, prop, x, y, radius, hops)
 ```
 
-These additional families are advertised in the engine's own capability catalog
-(`CALL arcflow.capabilities`), which returns the authoritative one-line purpose for
-each; per-proc signatures are being groomed into this reference:
+> **Not WorldCypher `CALL` procedures — OpenClaw Gateway RPC.** The engine's
+> capability catalog also advertises `arcflow.evidence.latest`, `arcflow.job.{submit,
+> status,cancel}`, `arcflow.world_model.lookup`, `arcflow.spatial.nearest`, and
+> `arcflow.temporal.replay_gate`. These are **`GatewayRpcMethod` variants** — the RPC
+> surface ArcFlow exposes to the OpenClaw gateway/control plane, **not** procedures you
+> call from a WorldCypher query. (`arcflow.graph.query` is likewise a workflow *step
+> type*, not a standalone `CALL`.) `CALL arcflow.capabilities` lists them by their
+> gateway names; treat that surface as distinct from the `CALL` families above.
 
-| Procedure | Purpose (engine catalog) |
-|---|---|
-| `arcflow.fusion.vectorGraph` / `arcflow.fusion.spatialGraph` | multi-source fusion over vector / spatial + graph |
-| `arcflow.evidence.latest` | latest evidence artifact from the flywheel |
-| `arcflow.world.lookup` | world-model lookup by node ID or label |
-| `arcflow.graph.query` | execute a read-only graph query |
-| `arcflow.temporal.replayGate` | temporal replay gate for time-travel queries |
-| `arcflow.session.open` / `list` / `close` | session lifecycle management |
-| `arcflow.job.submit` / `status` | submit / poll an async job |
-
-> Coverage note: this reference is the per-proc SSoT for the [public-surface manifest](https://github.com/ozinc/arcflow-core)'s CALL family map. The verified-signature set grows each docs cycle; `CALL arcflow.capabilities` is always the live source of truth for what a given engine build exposes.
+> Coverage note: this reference is the per-proc SSoT for the public-surface manifest's
+> CALL family map (in `arcflow-core/kanban/PUBLIC-SURFACE.md`). Verified-signature
+> coverage grows each docs cycle; `CALL arcflow.capabilities` is the live source of
+> truth for what a given engine build exposes.
 
 ### Information Layer
 
