@@ -439,3 +439,10 @@ Priority by gap size × flagship value. Verdicts from the 2026-06-23 coverage au
   federation inbox drained, TODO(docs-needs)=0, manifest coverage 100% at tracked granularity.**
   Continuous-improvement tail: deepen per-proc YIELD for the 8 catalog-level families (1-2/cycle).
   DOC-AF-2026-06-23-018 mirrored to core. SHIFTING TO IDLE-POLL.
+- **2026-06-23 (iter 19 — idle-poll)** — Still Inbox Zero. Standing sweeps green (TODO=0,
+  manifest unchanged). New core commits since last = pure I-INIT-0125 refactors (parse_return_list
+  decomposition) — no new public surface. Docs push still 403 (Gaurav, no ozinc/arcflow access).
+  Continuous improvement: deepened `arcflow.vector.registerSimilarity(name, property_key, [vec],
+  threshold) YIELD name, status` (FUSE-0003, verified lib.rs:21917) from catalog-level to verified
+  signature in AGENTS.md. Family-signature progress: 3/8 verified (lag, counterfactual, vector);
+  remaining: evidence, world, graph, temporal, session, job, fusion.

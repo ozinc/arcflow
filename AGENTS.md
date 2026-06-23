@@ -1192,6 +1192,10 @@ CALL arcflow.lag.by_topic
 
 -- Branch a counterfactual world at a WAL sequence (causal what-if).
 CALL arcflow.counterfactual.branchAt('scenario-a', 14207)   -- (name, seq)
+
+-- Register a vector-similarity standing query (FUSE-0003).
+CALL arcflow.vector.registerSimilarity('near_dupes', 'embedding', [0.1, 0.2, 0.9], 0.85)
+  YIELD name, status                          -- (name, property_key, [vec], threshold) → status "registered"
 ```
 
 These additional families are advertised in the engine's own capability catalog
@@ -1200,7 +1204,6 @@ each; per-proc signatures are being groomed into this reference:
 
 | Procedure | Purpose (engine catalog) |
 |---|---|
-| `arcflow.vector.registerSimilarity` | register a vector similarity function |
 | `arcflow.fusion.vectorGraph` / `arcflow.fusion.spatialGraph` | multi-source fusion over vector / spatial + graph |
 | `arcflow.evidence.latest` | latest evidence artifact from the flywheel |
 | `arcflow.world.lookup` | world-model lookup by node ID or label |
