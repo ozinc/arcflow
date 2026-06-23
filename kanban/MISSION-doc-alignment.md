@@ -9,7 +9,7 @@ operator: studio@oz.is
 cadence: self-paced loop (drain backlog, then idle-poll arcflow-core for new commits)
 working_branch:
   arcflow-docs: docs/federation-alignment
-  arcflow-core: docs/federation-alignment
+  arcflow-core: main   # core agent merged docs/federation-alignment into main + deleted it (2026-06-23); core-side federation mirrors now commit on main and push to origin/main. NEVER disturb core's uncommitted engine-source edits (RULE 2).
 related:
   - "kanban/federation/FEDERATION.md (wire protocol)"
   - "kanban/federation/federation-membership.md (doctrine-translator role)"
@@ -314,3 +314,9 @@ Priority by gap size × flagship value. Verdicts from the 2026-06-23 coverage au
   Verified vs edge_a5_replay_bit_identity.rs (FF-EDGE-06) + replay_digest.rs. Closure
   DOC-AF-2026-06-23-007 mirrored to core. Also: git identity normalized — all unpushed
   docs-branch commits + global config now Gudjon Mar Gudjonsson <gudjon@oz.com>.
+- **2026-06-23 (topology + watch)** — arcflow-core merged docs/federation-alignment
+  into main + deleted the branch; core-side mirrors now go on main (DOC-007 pushed to
+  origin/main, b2b536bd..6bf7f776). Core agent has uncommitted engine edits incl. NEW
+  crates/arcflow-runtime/src/info_procs.rs — likely the Information Layer GQL CALL
+  surface. WATCH: when it ships, update docs/concepts/information-layer.mdx (+AGENTS.md)
+  to promote the CALL surface from "roadmap" to shipped.
