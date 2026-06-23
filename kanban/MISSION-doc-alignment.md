@@ -362,3 +362,11 @@ Priority by gap size × flagship value. Verdicts from the 2026-06-23 coverage au
   manifest. This is the harmony protocol's first reconciliation. NEXT: read the public-surface
   manifest, run a docs-side COVERAGE CHECK (every public symbol/capability has a docs entry),
   report gaps as federation tasks, confirm open TODO(docs-needs) count, reply on that thread.
+- **2026-06-23 (iter 10 — RECONCILIATION EVENT #1)** — Ran docs-side coverage check vs
+  arcflow-core/kanban/PUBLIC-SURFACE.md v1 (Information Layer scope). Result: 22/22 symbols
+  documented = 100%. Gap found+fixed: label_property_entropy_bucketed + CALL
+  arcflow.info.labelEntropyBucketed(label,key,buckets) YIELD entropy_bits were shipped but
+  docs had bucketed as roadmap — now documented (info-layer.mdx + AGENTS.md; 6 CALL procs).
+  Manifest finding reported to core: its CALL section omits labelEntropyBucketed (recommend
+  add). Closed reconciliation -008 via DOC-AF-2026-06-23-010 (mirrored to core main). Open
+  TODO(docs-needs) for Information Layer = 0. Harmony loop's first reconciliation: GREEN.

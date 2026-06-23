@@ -1187,11 +1187,12 @@ ArcFlow measures its own information in bits. Prediction and compression are the
 operation, so the engine that records the world also scores how well it is understood —
 the proof layer beneath the "World Model Engine" category ("compression = intelligence").
 
-Five graph self-measurement metrics are **callable from WorldCypher** (each returns a
+Six graph self-measurement metrics are **callable from WorldCypher** (each returns a
 single scalar row):
 
 ```cypher
 CALL arcflow.info.labelEntropy('Player', 'team')         YIELD entropy_bits     -- compression floor (bits)
+CALL arcflow.info.labelEntropyBucketed('Player','speed',10) YIELD entropy_bits  -- continuous values, N equal-width bins
 CALL arcflow.info.labelRedundancy('Player', 'team')      YIELD redundancy       -- predictability/cacheability [0,1]
 CALL arcflow.info.labelKl('SensorA', 'SensorB', 'class') YIELD kl_bits          -- belief divergence between populations
 CALL arcflow.info.nodeSurprisal(42)                      YIELD surprisal_bits   -- −log₂ confidence

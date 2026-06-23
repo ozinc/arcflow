@@ -13,7 +13,7 @@ The thesis is Shannon's, run forward: **information is `−log₂ p`**; **entrop
 
 This is the proof layer beneath the [World Model Engine](/docs/concepts/world-model) category: "compression = intelligence" is not a slogan here, it is a set of first-class, callable functions over the same typed graph that holds your facts.
 
-> **Status — five metrics callable from WorldCypher today; the rest is an engine capability.** The graph self-measurement metrics are now reachable from a query round-trip via [`CALL arcflow.info.*`](#callable-from-worldcypher) — shipped, tested, stable. The lower-level primitives (`information`, `similarity`) and `label_property_surprise` / `_normalized` are stable engine functions not yet bound to a `CALL` surface or the language SDKs; that binding is tracked on the [roadmap](/docs/reference/versioning). All of it is fast native code that runs on the CPU and at the edge (Tegra), with no GPU and no embedding model required.
+> **Status — six metrics callable from WorldCypher today; the rest is an engine capability.** The graph self-measurement metrics are now reachable from a query round-trip via [`CALL arcflow.info.*`](#callable-from-worldcypher) — shipped, tested, stable. The lower-level primitives (`information`, `similarity`) and `label_property_surprise` / `_normalized` are stable engine functions not yet bound to a `CALL` surface or the language SDKs; that binding is tracked on the [roadmap](/docs/reference/versioning). All of it is fast native code that runs on the CPU and at the edge (Tegra), with no GPU and no embedding model required.
 
 ## Three modules, one vocabulary
 
@@ -64,6 +64,7 @@ The primitives, applied over the typed graph. These take a `GraphStore` and read
 |---|---|
 | `label_property_entropy(store, label, key)` | How **unpredictable** a property is across all nodes of a label. |
 | `label_property_entropy_normalized(store, label, key)` | The same as a `[0,1]` efficiency. |
+| `label_property_entropy_bucketed(store, label, key, buckets)` | Entropy of **continuous** values histogrammed into `buckets` equal-width bins — use where exact-value entropy would be inflated. |
 | `label_property_redundancy(store, label, key)` | `1 − normalized entropy` — how **compressible / cacheable** that region of the model is. |
 | `label_property_surprise(store, label, key, value)` | The surprise of seeing a **specific value** for that property. |
 | `node_surprisal(store, id) -> Option<f64>` | A node's surprise given its `confidence`: `−log₂ confidence`. A low-confidence-but-true fact is the *most* informative. |
@@ -72,11 +73,14 @@ The primitives, applied over the typed graph. These take a `GraphStore` and read
 
 ### Callable from WorldCypher
 
-Five of these metrics are bound to a `CALL` surface, so entropy and predictability are reachable from an ordinary query — no engine embedding required. Each returns a single scalar row.
+Six of these metrics are bound to a `CALL` surface, so entropy and predictability are reachable from an ordinary query — no engine embedding required. Each returns a single scalar row.
 
 ```cypher
 -- How unpredictable is a property across a label (bits = the compression floor)?
 CALL arcflow.info.labelEntropy('Player', 'team')        YIELD entropy_bits
+
+-- Same, for continuous values — histogrammed into N equal-width bins.
+CALL arcflow.info.labelEntropyBucketed('Player', 'speed', 10) YIELD entropy_bits
 
 -- How compressible / cacheable is that region (1 = fully predictable, 0 = uniform)?
 CALL arcflow.info.labelRedundancy('Player', 'team')     YIELD redundancy
@@ -101,9 +105,9 @@ This is the same through-line that explains the rest of the engine: incremental 
 
 ## What is shipped vs. on the roadmap
 
-- **Shipped & callable from WorldCypher:** `CALL arcflow.info.{labelEntropy, labelRedundancy, labelKl, nodeSurprisal, nodeNcd}` — the graph self-measurement metrics, reachable from a query.
+- **Shipped & callable from WorldCypher:** `CALL arcflow.info.{labelEntropy, labelEntropyBucketed, labelRedundancy, labelKl, nodeSurprisal, nodeNcd}` — the graph self-measurement metrics, reachable from a query.
 - **Shipped (engine level):** all functions in `information`, `similarity`, and `graph_information` — tested, stable, CPU/Tegra-viable.
-- **Roadmap:** a `CALL` / SDK surface for the remaining metrics and primitives (`information` / `similarity`, `label_property_surprise`, `_normalized`); bucketed entropy for continuous properties; surprise-weighted (mutual-information) recall in the Memory Engine, ranking the memory that most *reduces uncertainty* about a query above mere surface similarity. Don't design a shipping integration against the not-yet-callable items.
+- **Roadmap:** a `CALL` / SDK surface for the remaining metrics and primitives (`information` / `similarity`, `label_property_surprise`, `_normalized`); surprise-weighted (mutual-information) recall in the Memory Engine, ranking the memory that most *reduces uncertainty* about a query above mere surface similarity. Don't design a shipping integration against the not-yet-callable items.
 
 ## See Also
 
