@@ -350,3 +350,15 @@ Priority by gap size × flagship value. Verdicts from the 2026-06-23 coverage au
   primitives, label_property_surprise, *_normalized) — verify exactly in source first.
   Close the new fed(request)s. THEN resume remaining mail/outbox EDGE asks (B6a executor
   SDK, B7a gpu-admission, daemon ops contracts, view-replay re-sync).
+- **2026-06-23 (iter 9 — WATCH closed)** — Promoted Information Layer docs to the shipped
+  CALL surface: docs/concepts/information-layer.mdx + AGENTS.md §Information Layer now show
+  arcflow.info.{labelEntropy YIELD entropy_bits, labelRedundancy YIELD redundancy, labelKl
+  YIELD kl_bits, nodeSurprisal YIELD surprisal_bits, nodeNcd YIELD ncd} as callable, with
+  runnable examples; primitives (information/similarity) + label_property_surprise/_normalized
+  kept engine-level. Verified vs info_procs.rs. Closed fed-requests 005/006/007 via
+  DOC-AF-2026-06-23-009 (mirrored to core main).
+- **2026-06-23 (TOP NEXT)** — arcflow-core filed reconciliation-event #1:
+  mail/outbox/arcflow-docs/arcflow-core-2026-06-23-008-reconciliation-event-v1-public-surface-
+  manifest. This is the harmony protocol's first reconciliation. NEXT: read the public-surface
+  manifest, run a docs-side COVERAGE CHECK (every public symbol/capability has a docs entry),
+  report gaps as federation tasks, confirm open TODO(docs-needs) count, reply on that thread.

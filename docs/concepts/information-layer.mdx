@@ -13,7 +13,7 @@ The thesis is Shannon's, run forward: **information is `−log₂ p`**; **entrop
 
 This is the proof layer beneath the [World Model Engine](/docs/concepts/world-model) category: "compression = intelligence" is not a slogan here, it is a set of first-class, callable functions over the same typed graph that holds your facts.
 
-> **Status — engine capability, GQL/SDK binding on the roadmap.** The functions below are shipped, tested, and stable in the engine — fast native code that runs on the CPU and at the edge (Tegra), with no GPU and no embedding model required. They are not yet bound to a WorldCypher `CALL` surface or the language SDKs — that binding is tracked on the [roadmap](/docs/reference/versioning). Document and design against the capabilities now; reach for them from GQL/Python when the binding ships.
+> **Status — five metrics callable from WorldCypher today; the rest is an engine capability.** The graph self-measurement metrics are now reachable from a query round-trip via [`CALL arcflow.info.*`](#callable-from-worldcypher) — shipped, tested, stable. The lower-level primitives (`information`, `similarity`) and `label_property_surprise` / `_normalized` are stable engine functions not yet bound to a `CALL` surface or the language SDKs; that binding is tracked on the [roadmap](/docs/reference/versioning). All of it is fast native code that runs on the CPU and at the edge (Tegra), with no GPU and no embedding model required.
 
 ## Three modules, one vocabulary
 
@@ -70,6 +70,29 @@ The primitives, applied over the typed graph. These take a `GraphStore` and read
 | `label_property_kl(store, label_p, label_q, key)` | **Divergence** between two populations' distributions for the same property — the information-theoretic form of multi-source disagreement. |
 | `node_ncd(store, a, b) -> Option<f64>` | Compression-distance similarity between two nodes' full descriptions — entity resolution and dedup without a model. |
 
+### Callable from WorldCypher
+
+Five of these metrics are bound to a `CALL` surface, so entropy and predictability are reachable from an ordinary query — no engine embedding required. Each returns a single scalar row.
+
+```cypher
+-- How unpredictable is a property across a label (bits = the compression floor)?
+CALL arcflow.info.labelEntropy('Player', 'team')        YIELD entropy_bits
+
+-- How compressible / cacheable is that region (1 = fully predictable, 0 = uniform)?
+CALL arcflow.info.labelRedundancy('Player', 'team')     YIELD redundancy
+
+-- How far do two populations' distributions diverge (belief disagreement, bits)?
+CALL arcflow.info.labelKl('SensorA', 'SensorB', 'class') YIELD kl_bits
+
+-- Surprisal of a node given its confidence (−log₂ confidence): low-confidence-but-true = most informative.
+CALL arcflow.info.nodeSurprisal(42)                     YIELD surprisal_bits
+
+-- Compression-distance similarity between two nodes (0 = identical), model-free.
+CALL arcflow.info.nodeNcd(42, 99)                       YIELD ncd
+```
+
+`label_property_surprise`, `label_property_entropy_normalized`, and the `information` / `similarity` primitives are not bound to `CALL` yet — reach for them at the engine level until the binding lands.
+
 ## Why the graph is a better compressor than a lake
 
 Context lowers conditional entropy: the more you condition on, the fewer bits the next symbol costs. A graph exposes *more* conditioning context than a flat table — every edge is structure a table throws away — so the **same facts are measurably more compressible as a graph** than as rows. With `graph_information` you can show this rather than assert it: compare the entropy rate of the graph model against a flat projection of the same data. The structure *is* a compressor, and now it carries the ruler to prove it.
@@ -78,12 +101,13 @@ This is the same through-line that explains the rest of the engine: incremental 
 
 ## What is shipped vs. on the roadmap
 
-- **Shipped (engine):** all functions above — `information`, `similarity`, `graph_information` — tested and stable, CPU/Tegra-viable.
-- **Roadmap:** a WorldCypher `CALL` surface and SDK bindings so these are reachable from GQL/Python; bucketed entropy for continuous properties; surprise-weighted (mutual-information) recall in the Memory Engine, ranking the memory that most *reduces uncertainty* about a query above mere surface similarity. None of these are callable yet — do not design a shipping integration against them.
+- **Shipped & callable from WorldCypher:** `CALL arcflow.info.{labelEntropy, labelRedundancy, labelKl, nodeSurprisal, nodeNcd}` — the graph self-measurement metrics, reachable from a query.
+- **Shipped (engine level):** all functions in `information`, `similarity`, and `graph_information` — tested, stable, CPU/Tegra-viable.
+- **Roadmap:** a `CALL` / SDK surface for the remaining metrics and primitives (`information` / `similarity`, `label_property_surprise`, `_normalized`); bucketed entropy for continuous properties; surprise-weighted (mutual-information) recall in the Memory Engine, ranking the memory that most *reduces uncertainty* about a query above mere surface similarity. Don't design a shipping integration against the not-yet-callable items.
 
 ## See Also
 
 - [The World Model Engine](/docs/concepts/world-model) — the category this layer proves out.
 - [Causal Edges](/docs/concepts/causal-edges) — `confidence` as model-relative probability; `−log₂ confidence` is a fact's information.
-- [Versioning & roadmap](/docs/reference/versioning) — when the GQL/SDK binding lands.
+- [Versioning & roadmap](/docs/reference/versioning) — when the remaining bindings land.
 </content>
