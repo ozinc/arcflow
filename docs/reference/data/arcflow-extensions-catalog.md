@@ -1,6 +1,6 @@
 # ArcFlow Extensions Catalog
 
-**Version:** v0.8.0  
+**Version:** v1.6.0  
 **Date:** 2026-04-07  
 **Initiative:** I-INIT-0052 (GQL-Native Extensions)
 
@@ -26,7 +26,7 @@ DROP LIVE VIEW friends
 
 ---
 
-## Triggered Write-Back Views (EXT-0005)
+## Reactive Write-Back Views (EXT-0005)
 
 **Syntax:**
 ```gql
@@ -38,7 +38,7 @@ CREATE LIVE VIEW doc_embeddings AS
 
 **GQL compatibility:** MATCH/WHERE/RETURN are standard GQL; SET inside LIVE VIEW is ArcFlow extension.  
 **Semantics:** Fires imperatively after each graph mutation. Enables AI-in-the-database pipelines with zero application code.  
-**Evidence:** EXT-0005, write-back live views field in GraphStore
+**Evidence:** EXT-0005
 
 ---
 
@@ -161,8 +161,8 @@ CALL algo.leiden()        -- community detection
 CREATE TRIGGER auto_tag ON :Article WHEN CREATED RUN SKILL tag_skill
 ```
 
-**GQL compatibility:** No GQL equivalent.
-**Semantics:** Event-driven skill execution on CDC events. Skills fire when graph conditions match.
+**GQL compatibility:** No GQL equivalent.  
+**Semantics:** Event-driven skill execution on CDC events. Skills fire when graph conditions match.  
 **Evidence:** I-INIT-0035, PAT-0037
 
 ---

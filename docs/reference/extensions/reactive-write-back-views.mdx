@@ -1,23 +1,26 @@
 ---
-title: "Triggers"
-description: "ArcFlow extension beyond ISO/IEC 39075 GQL — Triggers."
+title: "Reactive Write-Back Views"
+description: "ArcFlow extension beyond ISO/IEC 39075 GQL — Reactive Write-Back Views."
 status: "stable"
 generated: true
 ---
 
 {/* GENERATED — do not hand-edit. Source: docs/reference/data/. Regenerate with scripts/generate-reference.py. */}
 
-# Triggers
+# Reactive Write-Back Views
 
 **Type:** ArcFlow extension beyond GQL
 
 **Syntax:**
 ```gql
-CREATE TRIGGER auto_tag ON :Article WHEN CREATED RUN SKILL tag_skill
+CREATE LIVE VIEW doc_embeddings AS
+  MATCH (d:Document) WHERE d.embedding IS NULL
+  SET d.embedding = arcflow.embed(d.content)
+  RETURN d
 ```
 
-**GQL compatibility:** No GQL equivalent.  
-**Semantics:** Event-driven skill execution on CDC events. Skills fire when graph conditions match.
+**GQL compatibility:** MATCH/WHERE/RETURN are standard GQL; SET inside LIVE VIEW is ArcFlow extension.  
+**Semantics:** Fires imperatively after each graph mutation. Enables AI-in-the-database pipelines with zero application code.
 
 ## Standards relationship
 

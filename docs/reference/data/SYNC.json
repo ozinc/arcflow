@@ -1,4 +1,6 @@
 {
-  "_comment": "Sync receipt for docs/reference/data/. Captures the source-of-truth read at last sync. The engine-version field that used to live here was retired 2026-05-16 — gql-conformance.json no longer carries a version pin, the dashboard no longer renders one, and lint-version-literals.py no longer allowlists this file. See docs/reference/versioning for the full version chain.",
-  "synced_at": "2026-05-16T08:04:04Z"
+  "engine_version": "null",
+  "synced_at": "2026-06-23T10:07:14Z",
+  "source": "local:/home/ozer/code/arcflow-core",
+  "source_commit": "eb562bc09c458f0a54f53b57378fb278329c6ccf"
 }

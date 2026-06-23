@@ -422,3 +422,12 @@ Priority by gap size × flagship value. Verdicts from the 2026-06-23 coverage au
   sync.mdx split shipped-LAN-server vs planned-cloud-API. Anti-vaporware: no HttpSyncTransport
   (verified). DOC-AF-2026-06-23-016 status mirrored to core main. REMAINING: SSoT/version-cut
   catch-up (AF-DOC-2026-05-16-003 conformance re-run), 203-proc family-map audit vs AGENTS.md.
+- **2026-06-23 (iter 17)** — Standing sweeps green. SSoT/version-cut catch-up (AF-DOC-2026-05-16-003
+  RESOLVED): re-ran sync-conformance-data.sh (from arcflow-core) + generate-reference.py — clean
+  (version stripped, no 1.6.42, deprecated reactive gone; legit Reactive Write-Back Views EXT-0005
+  page added), --check + lint-version-literals green, allowlist 3 entries already dropped. Caught
+  docs conformance data up to engine current. Family-map audit (203/32): large families well-covered;
+  THIN CALL-ref in AGENTS.md for arcflow.{vector,evidence,job,lag,world,temporal,graph} (+verify
+  session/fusion) → NEW Arm-B backlog. Closed -003 via DOC-AF-2026-06-23-017.
+  **STATUS: federation inbox + TODO(docs-needs) at Inbox Zero; family-map audit opened a fresh
+  coverage backlog — NOT full Inbox Zero. NEXT: groom + document the thin CALL families in AGENTS.md.**
