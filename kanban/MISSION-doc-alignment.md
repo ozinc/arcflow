@@ -399,3 +399,11 @@ Priority by gap size × flagship value. Verdicts from the 2026-06-23 coverage au
   families) acknowledged; AGENTS.md is per-proc SSoT. Closed asks -009/-010 via
   DOC-AF-2026-06-23-013. NEXT: arcflow.executor Python SDK page (B6a), then compression-reframe
   threading, sync/LAN naming, SSoT/version-cut, + due positioning pass; future: family-map audit.
+- **2026-06-23 (iter 14)** — Standing sweeps: TODO(docs-needs)=0; manifest unchanged since
+  family-map (no new section). Documented arcflow.executor Python SDK (B6a, ask -006): new
+  docs/guides/python-executor-sdk.mdx (Executor/@skill/SkillContext/EdgeOutput, UDS arcflow-llm
+  wire, typed errors; edge-emitting core driveable-directly, engine-spawn marked B6b follow-up).
+  Verified vs python/src/arcflow/executor/*. Registered in llms.txt. Closed -006 via
+  DOC-AF-2026-06-23-014. REMAINING: compression-reframe threading (2026-06-23-002), sync/LAN
+  named primitives, SSoT/version-cut catch-up (AF-DOC-2026-05-16-003), positioning pass (Arm C
+  due), 203-proc family-map audit vs AGENTS.md.

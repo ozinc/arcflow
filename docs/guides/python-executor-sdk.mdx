@@ -1,0 +1,69 @@
+---
+title: "Python Executor SDK"
+description: "Write an edge-emitting executor in pure Python — a sidecar the engine drives to enrich the world model with derived relationships. Register skills, return typed edges, serve over a Unix socket. Stdlib-only, no dependencies."
+status: "stable"
+---
+
+# Python Executor SDK
+
+A neural world model simulates; ArcFlow records — and an **executor** is how you feed it derived structure. `arcflow.executor` is a pure-Python, stdlib-only SDK for writing a small **server** the engine drives: it receives a node and its context, runs your logic, and returns typed **edges** that land in the world model as first-class, confidence-scored relationships. Think framework-convention detectors, entity resolvers, or any "given this node, what does it connect to?" skill — computed out-of-process, then recorded.
+
+The role split: the **engine is the client**, your **executor is the server**. The engine connects over a Unix domain socket and calls your registered skills; you reply with edges. Inference and custom logic run in your process, never inside the engine — the same separation that keeps the engine a stable records-tier.
+
+> **Status — edge-emitting core shipped; engine-spawn is a follow-up.** `arcflow.executor` ships the safe edge-emitting surface in the `oz-arcflow` wheel. You **drive it directly** today (bind a socket, run it, point a client at it). The engine cannot yet *spawn* a Python executor automatically — that spawn path, plus the `Register` RPC, heartbeat loop, generic non-LLM dispatch, and typed-schema validation, land in a follow-up wave. Document and design against the edge-emitting core; don't assume engine-managed spawn yet.
+
+## Quick start
+
+```python
+from arcflow.executor import Executor, SkillContext, EdgeOutput
+
+executor = Executor(name="detector")
+
+@executor.skill("propose_edges")
+def propose_edges(ctx: SkillContext) -> list[EdgeOutput]:
+    # ctx.method is the invoked skill; ctx.properties carries the request params.
+    return [
+        EdgeOutput(
+            target_node_id=42,
+            rel_type="SHADOWS",
+            confidence=0.9,
+            properties={"angle": 0.1},
+        )
+    ]
+
+executor.serve()   # parses --socket <PATH> from argv, binds the UDS, serves until EOF
+```
+
+That is a complete executor. Register one or more skills with `@executor.skill("<method>")`, each a handler taking a `SkillContext` and returning a `list[EdgeOutput]`, then call `serve()`.
+
+## The pieces
+
+**`Executor(name=...)`** — a named executor (the manifest identity). `@executor.skill("method")` registers a handler under a method name; `serve(argv=None)` parses `--socket <PATH>` from `argv` (default `sys.argv`), unlinks any stale socket, binds `AF_UNIX`, accepts the engine's connection, and runs the line-delimited serve-loop until EOF. (`serve_on(path)` skips argv parsing — handy in tests.)
+
+**`SkillContext`** — the dict-IO input handed to a handler. `ctx.method` is the invoked skill name; `ctx.properties` is the request's parameter map (envelope routing keys stripped).
+
+**`EdgeOutput`** — one emitted edge:
+
+| Field | Type | Notes |
+|---|---|---|
+| `target_node_id` | `int` | The node the edge points to (read by the engine as `as_u64`). |
+| `rel_type` | `str` | The relationship type. |
+| `confidence` | `float` | Edge confidence in `[0, 1]`; **defaults to `0.5`** to match the engine. |
+| `properties` | `dict` | Scalar property map; defaults to empty. |
+
+## The wire (for reimplementers)
+
+The executor speaks the already-shipped arcflow-llm sidecar wire: **newline-delimited JSON over the UDS**.
+
+- `Ping` → `Pong`: `{"id": N, "ok": "pong", "version": "X.Y.Z"}`.
+- Skill result (edge envelope): `{"id": N, "edges": [{"target_node_id": 42, "rel_type": "SHADOWS", "confidence": 0.9, "properties": {...}}]}`.
+- Typed error: `{"id": N, "ok": "err", "code": "<CODE>", "message": "..."}`. Codes are a **stable wire ABI** — `UNKNOWN_METHOD`, `MALFORMED_REQUEST`, `INTERNAL`. Raise `ExecutorError(code, message)` for a typed reply; an uncaught exception is wrapped as `INTERNAL` so the serve-loop survives.
+
+You rarely touch the wire directly — return `EdgeOutput`s and the SDK encodes the envelope.
+
+## See Also
+
+- [Skills](/docs/skills) — how derived edges and skills fit the engine's four execution tiers.
+- [Causal Edges](/docs/concepts/causal-edges) — emitted beliefs carry confidence + provenance.
+- [Daemon (UDS)](/docs/deployment/daemon) — the Unix-socket transport model.
+</content>
