@@ -131,11 +131,25 @@ arcflow sync scopes   # List registered sync scopes
 arcflow sync announce # Print this node's announcement JSON
 ```
 
+## LAN sync server
+
+Two instances on the same machine or LAN can sync directly over plain HTTP — no cloud round-trip. One instance runs a receive-server over its `ConcurrentStore`; the other pushes and pulls WAL deltas against it. Two routes:
+
+| Route | Body / query | Effect |
+|---|---|---|
+| `POST /api/sync/push` | a `SyncPayload` JSON | applies the incoming WAL deltas (`sync_import`) |
+| `GET /api/sync/pull?since=N` | `since` = last-seen sequence | returns the WAL since `N` as a `SyncPayload` |
+
+The client side is the **`SyncTransport`** contract — `push(payload) -> SyncAck` and `pull(peer_id, since) -> SyncPullResponse`, over the payload types `SyncPayload` / `SyncAck` / `SyncPullResponse`. Two implementations ship: `MemoryTransport` (in-process, for tests and loopback) and `OzWorldTransport` (HTTP to the hosted world). Pointing `OzWorldTransport` at a peer's `serve_sync` address is all a LAN pairing needs.
+
+> **Note:** the swarm/mesh path uses [LAN Discovery](#lan-discovery) (UDP multicast) + WebSocket delta-push, not a separate HTTP transport type. The HTTP `serve_sync` server above is the direct point-to-point LAN lane.
+
 ## Supported transports
 
 | Transport | How |
 |---|---|
-| HTTP push/pull | `arcflow sync push/pull` |
+| HTTP push/pull | `arcflow sync push/pull`; the `SyncTransport` contract (`push`/`pull`) with `MemoryTransport` / `OzWorldTransport` impls |
+| LAN sync server | `serve_sync` over `ConcurrentStore` — `POST /api/sync/push`, `GET /api/sync/pull?since=N` |
 | Background auto-sync | `arcflow sync start` daemon |
 | LAN peer discovery | UDP multicast announce |
 | WebSocket delta-push | Live delta stream over WS |

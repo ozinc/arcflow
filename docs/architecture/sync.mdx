@@ -222,7 +222,18 @@ The sync engine provides all the primitives needed for local-first architectures
 | Full state snapshot | `db.snapshotJson()` — complete graph for initial peer sync |
 | Replication modes | Primary / Replica / Edge — runtime-configurable |
 
-## HTTP API endpoints (planned)
+## HTTP API endpoints
+
+**LAN sync server (shipped).** A receive-server runs over a `ConcurrentStore` so two instances sync point-to-point over the LAN with no cloud round-trip:
+
+```
+POST   /api/sync/push          — body = SyncPayload JSON; applies WAL deltas (sync_import)
+GET    /api/sync/pull?since=N   — returns the WAL since sequence N as a SyncPayload
+```
+
+The client side is the `SyncTransport` trait (`push`/`pull` over `SyncPayload` / `SyncAck` / `SyncPullResponse`), with `MemoryTransport` (in-process / loopback) and `OzWorldTransport` (HTTP) implementations. See [the sync capability page](/docs/sync#lan-sync-server).
+
+**Hosted cloud API (planned).** The richer per-graph cloud surface is still planned:
 
 ```
 POST   /v1/graphs/:id/sync     — push delta, receive remote changes

@@ -415,3 +415,10 @@ Priority by gap size × flagship value. Verdicts from the 2026-06-23 coverage au
   Compression=intelligence framing now coherent across info-layer + 3 capability pages. REMAINING:
   sync/LAN named primitives (SyncTransport/ConcurrentStore sync server/executor-ring), SSoT/version-cut
   catch-up (AF-DOC-2026-05-16-003), 203-proc family-map audit vs AGENTS.md.
+- **2026-06-23 (iter 16)** — Standing sweeps green (TODO=0, manifest 100%). Documented sync/LAN
+  named primitives (proactive, Arm B): docs/sync.mdx new "LAN sync server" section (serve_sync
+  over ConcurrentStore, POST /api/sync/push + GET /api/sync/pull?since=N; SyncTransport contract
+  push/pull with MemoryTransport/OzWorldTransport; transports table named). docs/architecture/
+  sync.mdx split shipped-LAN-server vs planned-cloud-API. Anti-vaporware: no HttpSyncTransport
+  (verified). DOC-AF-2026-06-23-016 status mirrored to core main. REMAINING: SSoT/version-cut
+  catch-up (AF-DOC-2026-05-16-003 conformance re-run), 203-proc family-map audit vs AGENTS.md.
