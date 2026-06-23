@@ -11,7 +11,7 @@ A neural world model simulates possible futures; ArcFlow records what actually h
 
 The design decision that matters: a **memory is a node**. There is no separate memory subsystem, no second database to keep in sync. A `MemoryItem` is an ordinary node in the `GraphStore`, written through the same delta-apply path as every other fact, with edges to what it is about, what it cites, what it superseded, and what caused it. That is why the memory is queryable, auditable, and time-travelable with the tools you already use.
 
-> **Status — engine capability, GQL/SDK binding on the roadmap.** The write and recall *helpers* (`write_memory_item`, `recall_*_about`, `ingest_with_memory`, …) are shipped, tested, stable engine functions (pure Rust). They are **not yet bound to a WorldCypher `CALL` surface or the language SDKs** — that binding is on the [roadmap](/docs/reference/versioning). But because a memory is just graph structure, **the memory graph these helpers produce is fully queryable from WorldCypher today** — the `MATCH` examples below run now; the write/recall convenience functions arrive with the binding.
+> **Status — engine capability, GQL/SDK binding on the roadmap.** The write and recall *helpers* (`write_memory_item`, `recall_*_about`, `ingest_with_memory`, …) are shipped, tested, stable engine functions. They are **not yet bound to a WorldCypher `CALL` surface or the language SDKs** — that binding is on the [roadmap](/docs/reference/versioning). But because a memory is just graph structure, **the memory graph these helpers produce is fully queryable from WorldCypher today** — the `MATCH` examples below run now; the write/recall convenience functions arrive with the binding.
 
 ## The shape of a memory
 

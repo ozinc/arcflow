@@ -13,7 +13,7 @@ The thesis is Shannon's, run forward: **information is `−log₂ p`**; **entrop
 
 This is the proof layer beneath the [World Model Engine](/docs/concepts/world-model) category: "compression = intelligence" is not a slogan here, it is a set of first-class, callable functions over the same typed graph that holds your facts.
 
-> **Status — engine capability, GQL/SDK binding on the roadmap.** The functions below are shipped, tested, and stable in the engine (pure Rust, CPU/Tegra-viable, no GPU and no embedding model). They are not yet bound to a WorldCypher `CALL` surface or the language SDKs — that binding is tracked on the [roadmap](/docs/reference/versioning). Document and design against the capabilities now; reach for them from GQL/Python when the binding ships.
+> **Status — engine capability, GQL/SDK binding on the roadmap.** The functions below are shipped, tested, and stable in the engine — fast native code that runs on the CPU and at the edge (Tegra), with no GPU and no embedding model required. They are not yet bound to a WorldCypher `CALL` surface or the language SDKs — that binding is tracked on the [roadmap](/docs/reference/versioning). Document and design against the capabilities now; reach for them from GQL/Python when the binding ships.
 
 ## Three modules, one vocabulary
 
@@ -46,7 +46,7 @@ Two things are "similar" if describing them *together* compresses better than de
 NCD(a, b) = (C(ab) − min(C(a), C(b))) / max(C(a), C(b))
 ```
 
-where `C(x)` is the compressed length under any real compressor (ArcFlow uses the pure-Rust `miniz_oxide` codec already in the storage layer).
+where `C(x)` is the compressed length under any real compressor (ArcFlow uses the fast native codec already built into the storage layer).
 
 | Function | Meaning |
 |---|---|

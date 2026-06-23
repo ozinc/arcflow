@@ -68,6 +68,16 @@ Grounding resources (read on a positioning pass):
   assumptions — and let the answers sharpen the docs' "why a developer reaches
   for this."
 
+**Messaging invariant — de-emphasize "Rust" (operator 2026-06-23).** ArcFlow's
+identity is **ultra-fast binaries** and striving to be **the industry's fastest
+fully-featured operational world model engine** — not "written in Rust."
+Implementation language is a detail, not the story. When describing what a
+capability *is*, frame in outcomes (fast native code, edge/Tegra-viable, no GPU,
+5 MB in-process binary), not the language. Keep "Rust" only where it's a genuine
+SDK target (ArcFlow runs in Rust, Python, Node/WASM) — that's a binding, not the
+identity. (Applied to information-layer.mdx, memory.mdx, AGENTS.md in the first
+alignment pass.)
+
 **Positioning-pass protocol:** (1) read the website positioning sources + this
 repo's current positioning surfaces; (2) run the DC-POSN audit + DC-PDCL
 discovery questions; (3) apply findings to docs positioning (keep the

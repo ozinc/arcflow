@@ -1180,9 +1180,9 @@ ArcFlow measures its own information in bits. Prediction and compression are the
 operation, so the engine that records the world also scores how well it is understood —
 the proof layer beneath the "World Model Engine" category ("compression = intelligence").
 
-These are shipped, tested engine functions (pure Rust, CPU/Tegra-viable, no GPU, no
-embedding model). They are **not yet bound to a WorldCypher `CALL` surface or the
-language SDKs** — that binding is on the roadmap. Do not design a shipping integration
+These are shipped, tested engine capabilities — fast native code, CPU/Tegra-viable, no
+GPU and no embedding model. They are **not yet bound to a WorldCypher `CALL` surface or
+the language SDKs** — that binding is on the roadmap. Do not design a shipping integration
 against a GQL/SDK call yet; design against the capabilities.
 
 - `information` — Shannon primitives: `information(p) = −log₂ p` (surprise),
@@ -1405,7 +1405,7 @@ WHERE NOT (:MemoryItem)-[:SUPERSEDES]->(m)
 RETURN m.body
 ```
 
-The write+recall **helpers are engine-side (Rust) and not yet GQL/SDK-bound** (roadmap):
+The write+recall **helpers are engine-internal and not yet GQL/SDK-bound** (roadmap):
 `write_memory_item`, `write_memory_version` (+`SUPERSEDES`), `record_memory_provenance`
 (`CITES`/`CAUSED_BY`), `recall_memories_about` (all versions), `recall_current_memories_about`
 (latest-validity), `recall_relevant_memories_about` (structural+lexical+recency; semantic
