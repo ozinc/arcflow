@@ -370,3 +370,12 @@ Priority by gap size × flagship value. Verdicts from the 2026-06-23 coverage au
   Manifest finding reported to core: its CALL section omits labelEntropyBucketed (recommend
   add). Closed reconciliation -008 via DOC-AF-2026-06-23-010 (mirrored to core main). Open
   TODO(docs-needs) for Information Layer = 0. Harmony loop's first reconciliation: GREEN.
+- **2026-06-23 (iter 11)** — Drained 2 more mail/outbox EDGE asks (verified in source):
+  view.replay re-sync (B1, 06-13-009) → jsonrpc-v1.md §Live views (inclusive from_seq;
+  gap:false replayed vs gap:true resume-floor; no auto-rematerialize); install-time GPU
+  admission CREATE PROGRAM REQUIRES GPU(SM,VRAM) + program.spend (B7a, 06-14-009) →
+  jsonrpc-v1.md §Programs (total-VRAM coarse, no cost meter, refuse-not-reroute). Method
+  count 52→59. Closure DOC-AF-2026-06-23-011 mirrored to core main. REMAINING mail/outbox:
+  arcflow.executor Python SDK (B6a, 06-14-006 — new SDK page), daemon readiness/recovery
+  (A2b, 06-13-004) + memory-degradation (A3a, 06-13-007) operator contracts (deployment/
+  daemon doc). Then: compression-reframe threading, sync/LAN naming, SSoT/version-cut.

@@ -2,7 +2,7 @@
 
 The wire protocol the ArcFlow daemon speaks over Unix Domain Sockets. This is the **public, stable, semver-versioned** interface contract — closed engine implementation, open protocol surface. Anyone can reimplement a daemon serving this protocol.
 
-**Status:** Stable as of 2026-05-13. 52 methods. Specification version `v1`.
+**Status:** Stable as of 2026-05-13. 59 methods. Specification version `v1`.
 
 **License of this document:** Apache 2.0 (reimplementation-permissive — see end of file).
 
@@ -678,6 +678,44 @@ Tumbling/sliding windows keyed by a [clock domain](/docs/temporal) tick rather t
 Windows **fire on `CALL clock.advance(domain, tick)`**; the fired rows (`window_start`, `window_end`, `aggregate`, `clock_domain`) arrive on the window's `view.delta` push.
 
 > **Honest scope:** lateness is **drop-only** at this revision — an `event_tick` below the watermark is dropped and counted, with no grace period or retraction. The window-delta `seq` is monotonic but **not durable across a daemon restart** until a follow-up wave.
+
+#### `view.replay` (gap recovery)
+
+When a subscriber detects a gap (`received_seq > last_seq`, or a non-zero `dropped_for_credit`), it re-syncs with a one-shot `view.replay`. `from_seq` is **inclusive** — pass `last_processed_seq + 1`.
+
+```jsonrpc
+-- In retention: the missed deltas, replayed in order.
+→ {"id":N, "method":"view.replay", "params": {"view": "hot_zones", "from_seq": 1043}}
+← {"id":N, "gap": false, "replayed": [{"seq":1043,"added":[...],"removed":[...]}, ...], "next_seq": 1051}
+
+-- Evicted past the ring: a SUCCESS (not an error) carrying the resume floor.
+← {"id":N, "gap": true, "requested_seq": 1043, "earliest_available_seq": 1200, "dropped_count": 157, "recovery_hint": "..."}
+```
+
+> **Honest scope:** on `gap: true` the daemon does **not** auto-rematerialize — the client re-subscribes fresh and resumes at `>= earliest_available_seq`. There is no engine-driven snapshot rebuild at this revision.
+
+### Programs
+
+#### `program.spend`
+
+The per-program trigger-fire count.
+
+```jsonrpc
+→ {"id":N, "method":"program.spend", "params": {"name": "hazard_watch"}}
+← {"id":N, "program_name": "hazard_watch", "invocation_count": 4096}
+```
+
+An unknown program name returns `invocation_count: 0` (not an error). There are **no** `gpu_seconds` / `usd` fields — this is an invocation counter, not a cost meter.
+
+**Install-time GPU admission.** A program can declare a hardware floor in its WorldCypher definition:
+
+```cypher
+CREATE PROGRAM hazard_watch ... REQUIRES GPU (SM >= 87, VRAM >= 8)
+```
+
+At install the daemon refuses the program with `RESOURCE_EXHAUSTED` if the box can't satisfy it (no GPU, or total device VRAM below the declared floor). CPU-only programs (no `REQUIRES`) always admit.
+
+> **Honest scope:** the VRAM check reads **total** device memory (`cuDeviceTotalMem`), not live free VRAM — a coarse install guardrail, not a runtime fence, so an admitted program can still OOM under load. There is no silent CPU downgrade: a program that requires a GPU is **refused**, never re-routed.
 
 ---
 
