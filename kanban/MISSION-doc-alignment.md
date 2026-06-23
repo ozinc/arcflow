@@ -330,3 +330,12 @@ Priority by gap size × flagship value. Verdicts from the 2026-06-23 coverage au
   Federated DOC-OZ-2026-06-23-001 (pushed on oz-platform branch fed/doc-oz-positioning-
   2026-06-23) with a reciprocal rec: add the records-not-simulates wedge to the public
   engine page. Next Arm-C pass due ~iter 10-11.
+- **2026-06-23 (iter 8)** — Drained 4 mail/outbox EDGE-B asks (all verified in source):
+  cypher.execute_arrow (B4a) + per-view governance WITH(max_state_bytes,priority) +
+  view.governance/_list (B3a) + event-time windows window.register_event_time/feed (B2a)
+  → docs/protocol/jsonrpc-v1.md; provenance.bundle CALL (B8a) → AGENTS.md. Honest-scope
+  caveats carried (single-batch arrow, GLOBAL refuse-to-grow, drop-only lateness, sentinel
+  receipts/budget). Consolidated closure DOC-AF-2026-06-23-008 mirrored to core main.
+  Remaining mail/outbox: executor Python SDK (B6a), install-time GPU admission (B7a),
+  daemon readiness/recovery + memory-degradation operator contracts (06-13-004/007),
+  view-replay re-sync (06-13-009).

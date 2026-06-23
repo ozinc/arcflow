@@ -586,6 +586,18 @@ Execute Cypher over the wire. Read queries route through the read-optimized engi
 
 CALL procedures (e.g., `CALL algo.fusion.weighted_centroid(...)`) work via the same method.
 
+#### `cypher.execute_arrow`
+
+A typed-columnar read lane: same query semantics as `cypher.execute`, but the result comes back as an **Arrow IPC stream** instead of row arrays. Columns are typed from the runtime's typed path (`Int`→`int64`, `Float`→`float64`, `Bool`→`boolean`, `String`→`utf8`). Decode `arrow_ipc_base64` (standard base64) with an Arrow `RecordBatchStreamReader`. **Reads only** — a mutating query is rejected with `MALFORMED_PARAMS` (writes go through `cypher.execute`).
+
+```jsonrpc
+→ {"id":N, "method":"cypher.execute_arrow", "params": {"query": "MATCH (p:Player) RETURN p.name, p.speed"}}
+← {"id":N, "format": "arrow.ipc.stream", "arrow_ipc_base64": "QVJST1cx...",
+   "schema_json": ["p.name:utf8", "p.speed:float64"], "row_count": 22, "byte_length": 1184}
+```
+
+Single-batch only at this revision; base64-in-JSON carries a ~33% size tax. The binary length-prefixed frame with fd-passing zero-copy is a follow-up wave.
+
 ---
 
 ### Live views (push streaming)
@@ -632,6 +644,40 @@ Three behaviours a consumer MUST implement correctly:
 3. **Duplex on one connection.** `view.credit` / `view.unsubscribe` ride the same connection as the push stream.
 
 > **Framing note:** the daemon's default frame is currently `newline`; length-prefixed framing is selectable with `--frame`. (A future change may flip the default — this spec will update in lockstep when it ships.)
+
+#### `view.governance` / `view.governance_list`
+
+A LIVE VIEW can declare a per-view resource budget at creation with a trailing, optional clause — a view without it is unchanged:
+
+```cypher
+CREATE LIVE VIEW hot_zones AS <query> WITH (max_state_bytes = 1048576, priority = 10)
+```
+
+`max_state_bytes` is a coarse budget checked against a `row_count × 64` heuristic (a guardrail, **not** a hard RSS fence); `priority` is the shed-order rank (lower sheds first). Inspect governance state on the wire:
+
+```jsonrpc
+→ {"id":N, "method":"view.governance", "params": {"name": "hot_zones"}}
+← {"id":N, "max_state_bytes": 1048576, "priority": 10, "estimated_state_bytes": 720000,
+   "shed_order_rank": 3, "over_cap_refused_count": 0}
+→ {"id":N, "method":"view.governance_list"}
+← {"id":N, "views": [ ... in shed order ... ]}
+```
+
+> **Honest scope:** refuse-to-grow is **global** — a mutation that would grow *any* capped view already at budget is refused with `RESOURCE_EXHAUSTED`, which stalls all view-feeding writes (not just that one view). There is no active eviction at this revision; capped views refuse rather than evict.
+
+### Event-time windows
+
+Tumbling/sliding windows keyed by a [clock domain](/docs/temporal) tick rather than arrival time. Register a window, feed events, and the fired aggregate arrives on a `view.subscribe` push under a view named after the window.
+
+```jsonrpc
+→ {"id":N, "method":"window.register_event_time", "params": {"name": "goals_5t", "size_ticks": 5, "step_ticks": 5, "clock_domain": "swclock.tick", "aggregator": "count"}}
+→ {"id":N, "method":"window.feed_event_time", "params": {"name": "goals_5t", "event_tick": 12, "value": 1}}
+← {"id":N, "fired": [], "late_dropped": false}
+```
+
+Windows **fire on `CALL clock.advance(domain, tick)`**; the fired rows (`window_start`, `window_end`, `aggregate`, `clock_domain`) arrive on the window's `view.delta` push.
+
+> **Honest scope:** lateness is **drop-only** at this revision — an `event_tick` below the watermark is dropped and counted, with no grace period or retraction. The window-delta `seq` is monotonic but **not durable across a daemon restart** until a follow-up wave.
 
 ---
 

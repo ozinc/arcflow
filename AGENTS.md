@@ -972,7 +972,14 @@ CALL arcflow.skills.import(json)               YIELD name, version, skill_count
 -- Provenance chain walk — trace a node's derivation back through skills
 CALL db.provenance(42)
   YIELD nodeId, label, name, confidence, depth
+
+-- Per-edge provenance bundle — the skill + model that created one relationship
+CALL provenance.bundle(relId)
+  YIELD target_rel_id, skill_id, skill_version, model_fingerprint,
+        provenance_hash, receipts_status, budget_status
 ```
+
+`provenance.bundle(relId)` returns the provenance of a single edge — which skill (and at which version/model fingerprint) produced it. A static or manually-authored edge yields `NULL` provenance fields; an unknown `relId` returns `REL_NOT_FOUND`. It is a Cypher `CALL` (via `cypher.execute`), not a daemon RPC. `receipts_status` and `budget_status` are **honest sentinels** (e.g. `unavailable_in_engine` / `deferred`) — per-edge receipts and budget are a later wave, and per-edge cost is intentionally not reported (budget metering is per-API-key, not per-edge).
 
 ### Account login (optional — for hosted features)
 ```bash
