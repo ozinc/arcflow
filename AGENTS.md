@@ -1174,6 +1174,32 @@ Verification layers:
 3. **State** — `verification.state_reached` must be `VERIFIED`
 4. **Diff-hash freshness** (optional, with `--base`/`--head`) — recomputed `git diff` hash must match `repository.diff_hash`
 
+### Information Layer (engine capability — GQL/SDK binding on roadmap)
+
+ArcFlow measures its own information in bits. Prediction and compression are the same
+operation, so the engine that records the world also scores how well it is understood —
+the proof layer beneath the "World Model Engine" category ("compression = intelligence").
+
+These are shipped, tested engine functions (pure Rust, CPU/Tegra-viable, no GPU, no
+embedding model). They are **not yet bound to a WorldCypher `CALL` surface or the
+language SDKs** — that binding is on the roadmap. Do not design a shipping integration
+against a GQL/SDK call yet; design against the capabilities.
+
+- `information` — Shannon primitives: `information(p) = −log₂ p` (surprise),
+  `shannon_entropy` / `shannon_entropy_from_counts` (the compression floor),
+  `normalized_entropy`, `cross_entropy`, `kl_divergence`.
+- `similarity` — compression distance, model-free and GPU-free: `ncd`, `ncd_similarity`,
+  `compressed_len`. NCD is the embedding-free similarity/dedup primitive for the edge
+  (e.g. Jetson/Tegra `sm_87` where cuVS/embeddings are infeasible).
+- `graph_information` — the metrics over the typed graph: `label_property_entropy`
+  (+`_normalized`), `label_property_redundancy`, `label_property_surprise`,
+  `node_surprisal` (`−log₂ confidence`), `label_property_kl`, `node_ncd`.
+
+A fact's `confidence` is its model-relative probability, so `−log₂ confidence` is its
+information content. Context lowers conditional entropy, so the same facts are measurably
+more compressible as a graph than as a table — the structure is a compressor.
+Full treatment: `docs/concepts/information-layer.mdx`.
+
 ### Prediction drift and flywheel tuning
 
 Two procedures for prediction-quality monitoring and query-performance self-tuning.

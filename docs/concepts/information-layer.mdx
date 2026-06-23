@@ -1,0 +1,89 @@
+---
+title: "The Information Layer"
+kind: concept
+description: "ArcFlow measures its own information. Every fact carries its surprise (−log₂ p), every region its entropy (the compression floor), every pair of sources its divergence, every entity its compression-distance to every other. Prediction and compression are the same operation — so the engine that records the world also scores how well it is understood."
+status: "stable"
+---
+
+# The Information Layer
+
+A neural world model simulates possible futures; ArcFlow records what actually happened. The Information Layer is what lets ArcFlow also **measure** what it has recorded — in bits.
+
+The thesis is Shannon's, run forward: **information is `−log₂ p`**; **entropy is the average information per symbol, which is the compression floor**; **prediction and compression are mathematically the same operation**. A model that predicts the next state of a world well *is* a compressor of that world's history. ArcFlow is built to store and transmit only the *surprise* — the bits a reader could not have predicted — so the engine that records the world is, by construction, scoring how well that world is understood.
+
+This is the proof layer beneath the [World Model Engine](/docs/concepts/world-model) category: "compression = intelligence" is not a slogan here, it is a set of first-class, callable functions over the same typed graph that holds your facts.
+
+> **Status — engine capability, GQL/SDK binding on the roadmap.** The functions below are shipped, tested, and stable in the engine (pure Rust, CPU/Tegra-viable, no GPU and no embedding model). They are not yet bound to a WorldCypher `CALL` surface or the language SDKs — that binding is tracked on the [roadmap](/docs/reference/versioning). Document and design against the capabilities now; reach for them from GQL/Python when the binding ships.
+
+## Three modules, one vocabulary
+
+| Module | What it is | The one-line read |
+|---|---|---|
+| `information` | pure bits math (Shannon's toolkit) | "surprise, entropy, divergence — native" |
+| `similarity` | compression distance over bytes | "similarity without embeddings" |
+| `graph_information` | the metrics applied over the typed graph | "the world model, self-measured" |
+
+## `information` — the primitives (bits)
+
+The Shannon toolkit as plain functions over probability distributions.
+
+| Function | Meaning |
+|---|---|
+| `information(p) -> f64` | **Surprise** of an event: `−log₂ p`. A certain event (`p = 1`) carries 0 bits; a one-in-a-million event carries ~20. |
+| `shannon_entropy(probs) -> f64` | **Entropy** `H = −Σ p·log₂ p` — the average surprise, i.e. the compression floor for a source with this distribution. |
+| `shannon_entropy_from_counts(counts) -> f64` | Same, computed from raw observation counts (the engine normalizes). |
+| `normalized_entropy(probs) -> f64` | Entropy as a `[0,1]` efficiency — how close the source is to maximal unpredictability. |
+| `cross_entropy(p, q) -> f64` | "How well does model `q` predict reality `p`" — the LLM pre-training objective, expressed directly. |
+| `kl_divergence(p, q) -> f64` | The **extra** bits paid for using the wrong model `q` instead of the true `p`; belief divergence. |
+
+The load-bearing identity: **`confidence` on a node or edge is literally Shannon information.** The probability a named model assigned to a fact is `p`; the fact's information content is `−log₂ p`. ArcFlow already carries `(source, confidence)` on beliefs — see [Causal Edges](/docs/concepts/causal-edges) — so the evidence field *is* the information field.
+
+## `similarity` — compression distance (model-free, GPU-free)
+
+Two things are "similar" if describing them *together* compresses better than describing them apart. That is **Normalized Compression Distance**:
+
+```
+NCD(a, b) = (C(ab) − min(C(a), C(b))) / max(C(a), C(b))
+```
+
+where `C(x)` is the compressed length under any real compressor (ArcFlow uses the pure-Rust `miniz_oxide` codec already in the storage layer).
+
+| Function | Meaning |
+|---|---|
+| `compressed_len(data) -> usize` | The `C(x)` term — bytes after compression. |
+| `ncd(a, b) -> f64` | Normalized compression distance in `[0, ~1]`; 0 = identical, higher = more dissimilar. |
+| `ncd_similarity(a, b) -> f64` | `1 − ncd`, for when you want a similarity score. |
+
+Why this matters operationally: NCD needs **no embedding model and no GPU**. Where vector search is infeasible — notably Jetson/Tegra `sm_87`, where cuVS and embedding inference are not viable — NCD gives a model-free similarity, dedup, and clustering primitive that runs on the CPU codecs the engine already ships. It is the answer to "how do I find near-duplicates at the edge."
+
+## `graph_information` — the world model, self-measured
+
+The primitives, applied over the typed graph. These take a `GraphStore` and read real distributions out of your data.
+
+| Function | Meaning |
+|---|---|
+| `label_property_entropy(store, label, key)` | How **unpredictable** a property is across all nodes of a label. |
+| `label_property_entropy_normalized(store, label, key)` | The same as a `[0,1]` efficiency. |
+| `label_property_redundancy(store, label, key)` | `1 − normalized entropy` — how **compressible / cacheable** that region of the model is. |
+| `label_property_surprise(store, label, key, value)` | The surprise of seeing a **specific value** for that property. |
+| `node_surprisal(store, id) -> Option<f64>` | A node's surprise given its `confidence`: `−log₂ confidence`. A low-confidence-but-true fact is the *most* informative. |
+| `label_property_kl(store, label_p, label_q, key)` | **Divergence** between two populations' distributions for the same property — the information-theoretic form of multi-source disagreement. |
+| `node_ncd(store, a, b) -> Option<f64>` | Compression-distance similarity between two nodes' full descriptions — entity resolution and dedup without a model. |
+
+## Why the graph is a better compressor than a lake
+
+Context lowers conditional entropy: the more you condition on, the fewer bits the next symbol costs. A graph exposes *more* conditioning context than a flat table — every edge is structure a table throws away — so the **same facts are measurably more compressible as a graph** than as rows. With `graph_information` you can show this rather than assert it: compare the entropy rate of the graph model against a flat projection of the same data. The structure *is* a compressor, and now it carries the ruler to prove it.
+
+This is the same through-line that explains the rest of the engine: incremental WAL deltas and `view.delta` push are **residual coding** (transmit only what the reader could not predict); append-only versioning with `SUPERSEDES` is **lossless history** (supersede, never destroy — see [the Memory Engine](/docs/concepts/world-model)); `confidence` is the model-relative probability Shannon insisted you cannot omit. "Store only the surprise" and "be intelligent about the world" are the same sentence.
+
+## What is shipped vs. on the roadmap
+
+- **Shipped (engine):** all functions above — `information`, `similarity`, `graph_information` — tested and stable, CPU/Tegra-viable.
+- **Roadmap:** a WorldCypher `CALL` surface and SDK bindings so these are reachable from GQL/Python; bucketed entropy for continuous properties; surprise-weighted (mutual-information) recall in the Memory Engine, ranking the memory that most *reduces uncertainty* about a query above mere surface similarity. None of these are callable yet — do not design a shipping integration against them.
+
+## See Also
+
+- [The World Model Engine](/docs/concepts/world-model) — the category this layer proves out.
+- [Causal Edges](/docs/concepts/causal-edges) — `confidence` as model-relative probability; `−log₂ confidence` is a fact's information.
+- [Versioning & roadmap](/docs/reference/versioning) — when the GQL/SDK binding lands.
+</content>

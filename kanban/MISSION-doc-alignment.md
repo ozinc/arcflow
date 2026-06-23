@@ -158,7 +158,7 @@ Priority by gap size × flagship value. Verdicts from the 2026-06-23 coverage au
 | Capability | Coverage | Target docs | Engine source-of-truth |
 |---|---|---|---|
 | **World-Model Memory Engine** (I-INIT-0151) | **NONE** | new `docs/concepts/memory.mdx` + `docs/guides/world-model-memory.mdx`; `### Memory` in AGENTS.md after Code Intelligence API; llms.txt Python surface | `crates/arcflow-core/src/worldgraph/memory.rs` (`write_memory_item`, `write_memory_version`+SUPERSEDES, `record_memory_provenance` CITES/CAUSED_BY, `recall_memories_about`/`recall_current_memories_about`/`recall_relevant_memories_about`); `crates/code-intelligence/src/memory_bridge.rs` (`ingest_with_memory`, `record_symbol_memory`); `crates/code-intelligence-parsers/src/lib.rs` (`parse_python`) |
-| **Information-theory / compression** ("compression = intelligence") | **NONE** | new `docs/concepts/compression.mdx`; algorithm-library entry; AGENTS.md + llms.txt | `crates/arcflow-core/src/information.rs`, `similarity.rs` (`ncd`, `ncd_similarity`), `graph_information.rs` (`label_property_entropy`, `node_surprisal`, `node_ncd`, `label_property_kl`), `mape_flywheel.rs` (SSoT) — **Rust-only, no Cypher CALL surface yet** |
+| **Information-theory / compression** ("compression = intelligence") | **DONE (concept)** — `docs/concepts/information-layer.mdx` + AGENTS.md §Information Layer + llms.txt; signatures verified; binding marked roadmap. Reframe threading through existing pages still open (ask -002). | done iter 2 | `crates/arcflow-core/src/information.rs`, `similarity.rs` (`ncd`, `ncd_similarity`), `graph_information.rs` (`label_property_entropy`, `node_surprisal`, `node_ncd`, `label_property_kl`), `mape_flywheel.rs` (SSoT) — **Rust-only, no Cypher CALL surface yet** |
 | **Sync / LAN named primitives** | **THIN/GOOD** (drift) | extend `docs/sync.mdx` + `docs/architecture/sync.mdx`; new `### Sync / LAN` in AGENTS.md | `crates/arcflow-runtime/src/sync_server.rs` (`serve_sync`, `POST /api/sync/push`, `GET /api/sync/pull?since=N`), `sync_transport.rs` (`SyncTransport` trait), `crates/arcflow-storage/src/sync_engine.rs` |
 | **Executor-ring / IPC** (I-INIT-0105) | NONE | new section under deployment/architecture | `crates/arcflow-runtime/src/executor_client.rs` (`ShmRing`, `dispatch_shm`, `dispatch_shm_poll`), `bin/arcflow-echo-sidecar.rs` |
 | **EDGE clock-domain / view.* / replay** | NONE | see Arm A items 2–4 (filed as doc-asks) | per Arm A |
@@ -192,4 +192,11 @@ Priority by gap size × flagship value. Verdicts from the 2026-06-23 coverage au
   `fed` tool; **12 doc-asks** sat unread in `mail/outbox/arcflow-docs/`.
   Adopted core's harmony protocol; recorded dual-inbox sweep + 12 asks into
   Arm A/B backlog. ACK staged as `DOC-AF-2026-06-23-002`.
+- **2026-06-23 (iter 2)** — Information Layer documented (ask `2026-06-23-003`
+  RESOLVED): new `docs/concepts/information-layer.mdx` (surprise/entropy/KL/NCD,
+  graph self-measurement, compression=intelligence beneath the WME category),
+  signatures verified against engine source, binding marked roadmap (anti-
+  vaporware). Registered in AGENTS.md + llms.txt. Reframe ask `2026-06-23-002`
+  IN PROGRESS (foundation laid; cross-capability threading pending). Closure
+  `DOC-AF-2026-06-23-003` mirrored to core.
 </content>

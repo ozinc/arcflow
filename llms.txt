@@ -284,6 +284,7 @@ Cookbook index: https://staging.oz.com/docs/cookbooks-index
 - docs/concepts/snapshots.mdx — snapshot URI scheme, query_at, --at-snapshot, arcflow rerun, MCP/HTTP envelopes
 - docs/cli/project.mdx — arcflow project: deterministic on-disk layout, the agent-grep workflow
 - docs/concepts/world-model.mdx — what a world model is: spatial-temporal, confidence-scored, observed/inferred/predicted
+- docs/concepts/information-layer.mdx — the engine measures its own information: surprise (−log₂ p), entropy, KL, NCD compression-distance similarity (model-free, no GPU); compression = intelligence (engine capability; GQL/SDK binding on roadmap)
 - docs/guides/world-model.mdx — step-by-step: entities in space, spatial queries, temporal replay, live monitoring
 - docs/use-cases/autonomous-systems.mdx — robot fleets, UAVs, shared world model, multi-agent coordination
 - docs/use-cases/digital-twins.mdx — live spatial replica of physical facilities, temporal history, anomaly detection
