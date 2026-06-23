@@ -289,3 +289,12 @@ Priority by gap size × flagship value. Verdicts from the 2026-06-23 coverage au
   **BLOCKED (403)** — authed gh user lacks push access to `ozinc/arcflow`;
   needs operator credential fix. No open PRs to merge.
 </content>
+- **2026-06-23 (iter 4)** — Clock-domain surface documented (AF-DOC-2026-06-12-001
+  RESOLVED): `docs/temporal.mdx` §Querying AS OF a domain tick — `AS OF <domain>
+  <tick>`, clock.register/advance/resolve, clock.resolve daemon method, floor-with-
+  disclosure + 5 typed errors, EDGE-A2 durability caveat marked. Verified vs
+  clock_domain_registry.rs + handlers_clock.rs. Closure DOC-AF-2026-06-23-005
+  mirrored to core. Commit identity aligned to oz-platform (Gudjon Mar Gudjonsson
+  <gudjon@oz.com>). Git diagnosis: docs-repo 403 is a repo-permission gap on the
+  gh-authed account (Gaurav-Gilalkar lacks push on ozinc/arcflow; has it on
+  oz-platform + arcflow-core) — NOT a local-config/passphrase issue.

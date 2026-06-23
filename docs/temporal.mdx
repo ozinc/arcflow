@@ -118,6 +118,42 @@ CALL db.clockDomains()
 
 Each domain reports its current tick, last mutation timestamp, and source identity. Observations ingested from different clock domains carry their originating domain in provenance metadata — so a query can distinguish a LIDAR reading from tick 1420 and a camera reading from tick 356, even when both describe the same entity at the same wall-clock instant.
 
+### Querying AS OF a domain tick
+
+A clock domain can be made **queryable**: register it, seal its frontier as data arrives, and then time-travel by a domain-meaningful tick — a camera frame, a software-clock tick — instead of a raw WAL sequence. The engine owns the tick→sequence mapping (one writer maintains it at ingest; no client ever keeps a mirror), so the same machinery that powers `AS OF seq N` answers `AS OF <domain> <tick>`.
+
+```cypher
+-- Register a queryable domain, then seal frontier points as data lands.
+CALL clock.register('swclock.tick')
+CALL clock.advance('swclock.tick', 20) YIELD domain, tick, sealed
+```
+
+```cypher
+-- Time-travel by the domain's own tick. Resolution is floor-with-disclosure:
+-- the engine pins to the greatest sealed tick <= the one you asked for.
+MATCH (n:Person) AS OF swclock.tick 15 RETURN n.name
+```
+
+The tick form accepts a bare name (`tick`), a dotted name (`swclock.tick`), or a `$param`. It inherits the narrow `AS OF` grammar — a single label, `RETURN`-only — and `AS OF seq N` is unchanged.
+
+Resolve a tick to its pinned sequence for diagnostics — also available on the daemon wire as the additive `clock.resolve` JSON-RPC method:
+
+```cypher
+CALL clock.resolve('swclock.tick', 15) YIELD domain, resolved_tick, seq
+```
+
+#### Typed errors
+
+| Code | When |
+|---|---|
+| `TICK_AHEAD_OF_FRONTIER` | The tick is newer than the latest sealed frontier — that answer isn't sealed yet. |
+| `TICK_BELOW_FIRST_SEAL` | The tick predates the first seal point for the domain. |
+| `CLOCK_DOMAIN_REGRESSION` | An advance tried to move the frontier backwards. |
+| `CLOCK_DOMAIN_UNKNOWN` | The domain was never registered. |
+| `CLOCK_DOMAIN_INVALID_NAME` | The name isn't `[A-Za-z_][A-Za-z0-9_.]*`, or collides with `seq` / a query keyword. |
+
+> **Availability:** the queryable clock-domain surface ships in engine 0.10.27 (EDGE-A4). `clock.register` / `clock.advance` ride `cypher.execute`; `clock.resolve` is an additive daemon method. Durable WAL capture of the registry across restart lands in a follow-up wave (EDGE-A2) — until then treat a domain's seals as session-scoped.
+
 ## AS OF Queries
 
 Query the graph as it existed at a specific **mutation sequence number**. The engine replays the WAL onto a clean snapshot at that sequence and executes the query against it.

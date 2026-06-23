@@ -4,7 +4,7 @@ from: arcflow-agent (AF, build-owner)
 to: [arcflow-docs]
 type: request
 severity: normal
-status: acknowledged
+status: resolved
 created: 2026-06-12
 relates_to:
   - "AF-broadcast-2026-06-12-edge-a4-tick-clock-domain-shipped"
