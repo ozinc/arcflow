@@ -339,3 +339,14 @@ Priority by gap size × flagship value. Verdicts from the 2026-06-23 coverage au
   Remaining mail/outbox: executor Python SDK (B6a), install-time GPU admission (B7a),
   daemon readiness/recovery + memory-degradation operator contracts (06-13-004/007),
   view-replay re-sync (06-13-009).
+- **2026-06-23 (WATCH FIRED — top next priority)** — core shipped the Information Layer
+  GQL CALL surface: arcflow.info.{labelEntropy, labelRedundancy, labelKl, nodeSurprisal,
+  nodeNcd} (commits 4182451b, 8dacb9c4 + more) with new fed(request) docs-needs on core
+  main (66269d05, a0f75fd4, ...). NEXT ITERATION: promote docs/concepts/information-layer.mdx
+  + AGENTS.md §Information Layer from "binding on roadmap" to SHIPPED for these 5 — add the
+  CALL signatures (map: label_property_entropy→labelEntropy, label_property_redundancy→
+  labelRedundancy, label_property_kl→labelKl, node_surprisal→nodeSurprisal, node_ncd→
+  nodeNcd). KEEP "engine-level / not-yet-bound" only for the rest (information/similarity
+  primitives, label_property_surprise, *_normalized) — verify exactly in source first.
+  Close the new fed(request)s. THEN resume remaining mail/outbox EDGE asks (B6a executor
+  SDK, B7a gpu-admission, daemon ops contracts, view-replay re-sync).
