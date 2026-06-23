@@ -455,3 +455,7 @@ Priority by gap size × flagship value. Verdicts from the 2026-06-23 coverage au
   session/fusion; reclassified the gateway names as a distinct surface). Flagged manifest
   categorization + naming mismatch (world.lookup vs world_model.lookup) to core via DOC-AF-2026-06-23-019.
   Family-map coverage now ACCURATE: all genuine CALL families documented; gateway pseudo-families reclassified.
+- **2026-06-23 (iter 21 — idle heartbeat)** — Still Inbox Zero. TODO(docs-needs)=0, manifest
+  unchanged, new core commits = I-INIT-0125 refactors (parse_decay_fn) + annotation batches (no
+  public surface). No new inbound asks; no reply yet to DOC-AF-019 (manifest CALL-vs-Gateway split).
+  Docs push still gated (ozinc/arcflow). Nothing to document.
