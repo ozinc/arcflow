@@ -431,3 +431,11 @@ Priority by gap size × flagship value. Verdicts from the 2026-06-23 coverage au
   session/fusion) → NEW Arm-B backlog. Closed -003 via DOC-AF-2026-06-23-017.
   **STATUS: federation inbox + TODO(docs-needs) at Inbox Zero; family-map audit opened a fresh
   coverage backlog — NOT full Inbox Zero. NEXT: groom + document the thin CALL families in AGENTS.md.**
+- **2026-06-23 (iter 18 — INBOX ZERO)** — Family-map coverage closed: AGENTS.md new
+  "Additional CALL procedures (smaller families)" section covers all 32 manifest families —
+  verified signatures for arcflow.lag.by_topic + counterfactual.branchAt; family-level coverage
+  (engine capabilities-catalog one-liners) for vector/fusion/evidence/world/graph/temporal/
+  session/job, with CALL arcflow.capabilities named as live SoT. **STATUS: INBOX ZERO —
+  federation inbox drained, TODO(docs-needs)=0, manifest coverage 100% at tracked granularity.**
+  Continuous-improvement tail: deepen per-proc YIELD for the 8 catalog-level families (1-2/cycle).
+  DOC-AF-2026-06-23-018 mirrored to core. SHIFTING TO IDLE-POLL.

@@ -1181,6 +1181,36 @@ Verification layers:
 3. **State** — `verification.state_reached` must be `VERIFIED`
 4. **Diff-hash freshness** (optional, with `--base`/`--head`) — recomputed `git diff` hash must match `repository.diff_hash`
 
+### Additional CALL procedures (smaller families)
+
+Verified signatures:
+
+```cypher
+-- Per-topic consumer lag across the event bus (no args).
+CALL arcflow.lag.by_topic
+  YIELD topic, head_seq, count_consumers, max_lag, mean_lag, total_lag
+
+-- Branch a counterfactual world at a WAL sequence (causal what-if).
+CALL arcflow.counterfactual.branchAt('scenario-a', 14207)   -- (name, seq)
+```
+
+These additional families are advertised in the engine's own capability catalog
+(`CALL arcflow.capabilities`), which returns the authoritative one-line purpose for
+each; per-proc signatures are being groomed into this reference:
+
+| Procedure | Purpose (engine catalog) |
+|---|---|
+| `arcflow.vector.registerSimilarity` | register a vector similarity function |
+| `arcflow.fusion.vectorGraph` / `arcflow.fusion.spatialGraph` | multi-source fusion over vector / spatial + graph |
+| `arcflow.evidence.latest` | latest evidence artifact from the flywheel |
+| `arcflow.world.lookup` | world-model lookup by node ID or label |
+| `arcflow.graph.query` | execute a read-only graph query |
+| `arcflow.temporal.replayGate` | temporal replay gate for time-travel queries |
+| `arcflow.session.open` / `list` / `close` | session lifecycle management |
+| `arcflow.job.submit` / `status` | submit / poll an async job |
+
+> Coverage note: this reference is the per-proc SSoT for the [public-surface manifest](https://github.com/ozinc/arcflow-core)'s CALL family map. The verified-signature set grows each docs cycle; `CALL arcflow.capabilities` is always the live source of truth for what a given engine build exposes.
+
 ### Information Layer
 
 ArcFlow measures its own information in bits. Prediction and compression are the same
