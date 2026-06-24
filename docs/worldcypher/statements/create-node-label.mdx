@@ -1,0 +1,49 @@
+---
+title: "CREATE NODE LABEL"
+kind: clause
+description: "Declare a typed node label — either owned (rows stored in the graph) or VIRTUAL, backed directly by lakehouse parquet partitions addressed with a lake:// URI. Virtual labels query the lake in place, no ingest."
+status: "stable"
+---
+
+# CREATE NODE LABEL
+
+`CREATE NODE LABEL` declares a typed label with an explicit column list. A label is either **owned** (rows live in the graph store) or **virtual** — backed directly by lakehouse parquet partitions, queried in place with no ingest step.
+
+```cypher
+-- Owned, typed label
+CREATE NODE LABEL Robot (id STRING, battery FLOAT, x FLOAT, y FLOAT)
+
+-- Virtual label backed by lakehouse parquet (no materialization)
+CREATE NODE LABEL Frame
+  VIRTUAL FROM PARTITION 'lake://nfl/frames/{game}/{week}/*.parquet'
+  (game STRING, week INT, frame INT, x FLOAT, y FLOAT)
+```
+
+## Syntax
+
+```
+CREATE NODE LABEL <Name>
+  [VIRTUAL FROM PARTITION '<lake-uri-template>']
+  [(<col> <TYPE>, …)]
+```
+
+- **`(<col> <TYPE>, …)`** — the typed column list (omit for a legacy untyped owned label).
+- **`VIRTUAL FROM PARTITION '<template>'`** — make the label **virtual**: its rows are read from parquet at query time, never copied into the graph.
+
+### The `lake://` URI template
+
+Virtual partitions are addressed with the `lake://` scheme, using brace-delimited placeholders — one per partition column:
+
+```
+lake://<mount>/<table>/{var}[/{var}]…/<file-glob>.parquet
+```
+
+Each `{var}` binds to a partition column declared in the column list. Predicates on those columns push down through the Smart Reader, so a query reads only the partitions it needs — `MATCH (f:Frame) WHERE f.game = 'g1' AND f.week = 12` scans just that partition glob.
+
+Virtual labels compose with graph traversal, spatial, and temporal in one statement, and can carry [virtual computed columns](/docs/concepts/virtual-computed-columns) (derived properties evaluated at scan time).
+
+## See Also
+
+- [Virtual computed columns](/docs/concepts/virtual-computed-columns) — derived properties on virtual labels.
+- [Perception Lake](/docs/concepts/layers/perception-lake) · [World Store](/docs/concepts/layers/world-store) — the lakehouse substrate `lake://` addresses.
+</content>
