@@ -181,7 +181,7 @@ MATCH (n:Person) AS OF seq 1 RETURN n.name
 
 Only mutations up to and including sequence N are visible.
 
-> **Deprecated:** `AS OF <unix_timestamp>` is deprecated and will emit a warning. Use `AS OF seq N` instead — it is exact and requires no timestamp-to-sequence mapping.
+> **Sequence is the temporal axis.** `AS OF` takes a WAL sequence (`AS OF seq N`) — exact and replayable. Wall-clock timestamps are not a temporal axis: `AS OF <timestamp>` is rejected (`DEPRECATED_AS_OF_TIMESTAMP`).
 
 ### Nodes As Of
 

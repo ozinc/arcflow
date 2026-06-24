@@ -39,7 +39,7 @@ CALL arcflow.skills.import(json)               YIELD name, version, skill_count
 
 ```cypher
 DROP SKILL summarize
-DROP REACTIVE SKILL match_similar
+DROP TRIGGER match_similar   -- a skill that runs on mutation is a TRIGGER (see /docs/worldcypher/statements/trigger)
 ```
 
 ---
