@@ -108,6 +108,41 @@ is pushed ✓. Until the operator grants docs-repo push access (or switches
 credentials), the loop keeps committing arcflow-docs **locally** and re-surfaces
 this blocker on each hygiene pass rather than retrying in a tight loop.
 
+## Arm E — SSoT / coherence audit (operator directive 2026-06-24, LATER round)
+
+A dedicated pass over the **full docs** for single-source-of-truth hygiene: find
+**conflicting or repeated concepts** documented in more than one place (divergently),
+collapse to one canonical home with cross-links, remove drift. Targets: same concept in
+multiple pages with different wording/signatures; AGENTS.md (per-proc SSoT) vs MDX vs
+llms.txt divergence; the no-duplication rule (harmony §3.5) — a concept lives in docs
+(public) XOR core kanban/AGENTS-ENGINE (internal), never both. Method: concept→locations
+index → flag multi-home concepts → pick canonical surface → others link to it. Run as a
+sweep after the gap-matrix drain (LATER); fix glaring contradictions opportunistically.
+
+## Arm F — Upstream feedback to arcflow-core via Federation (operator directive 2026-06-24)
+
+Documenting the engine is a high-value audit of it. **When doc work reveals an engine-side
+problem** — contradicting feature, catalog/implementation mismatch, naming inconsistency,
+missing-but-obvious improvement, dead/vaporware surface — **file a federation message to
+arcflow-core** (DOC-AF, type `bug`/`proposal`) with the precise finding + source pointers,
+instead of silently working around it in docs. Closes the loop both ways. Precedents this
+run: DOC-AF-2026-06-23-019 (manifest CALL-vs-GatewayRpcMethod + naming mismatch),
+DOC-AF-2026-06-24-002 (release pipeline un-triggered), DOC-AF-2026-06-24-003 (CREATE WORKFLOW
+catalog vaporware). Keep surfacing them.
+
+## Arm G — Greenfield vocabulary: latest terms only (operator directive 2026-06-24)
+
+**The product has NOT publicly launched — docs are 100% greenfield.** No back-compat, no
+historical baggage. Use ONLY the current/latest vocabulary everywhere; do NOT carry
+deprecated terms, "renamed from X", migration notes between unreleased versions, or
+"Deprecated: …" framing as if users had migrated. When the engine has a current term and
+an old one, docs use the current term outright and drop the old. Examples to purge:
+"reactive skill" → TRIGGER; "Deprecated: AS OF <unix_timestamp>" framing; v0.7→v0.8
+migration guides for never-shipped pins; any "formerly/legacy/old name" prose. Sweep for
+deprecated/legacy/renamed/migration language across docs and modernize (a sibling of
+Arm E). Keep genuinely-useful conceptual history only where it aids understanding, not as
+compatibility cruft.
+
 ## Always-on discipline — deep grooming BEFORE acting (operator directive 2026-06-23)
 
 For EACH inbox item / capability, before writing a line of docs:
