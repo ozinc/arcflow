@@ -61,7 +61,7 @@ RETURN arcflow.path_confidence(r)
 
 **Syntax:**
 ```gql
-CREATE SKILL similar_docs FROM EMBEDDING THRESHOLD 0.8 ALLOWED ON Document
+CREATE SKILL similar_docs FROM EMBEDDING embedding THRESHOLD 0.8 ALLOWED ON [Document] TIER NEURAL
 CALL arcflow.processNode('Document')
 CALL arcflow.skills()
 ```
