@@ -469,3 +469,8 @@ Priority by gap size × flagship value. Verdicts from the 2026-06-23 coverage au
   Added install-doc-keeper role to federation-membership.md. DOC never cuts (RULE 4). Pushed to core.
   Awaiting build-deploy agent to confirm + cut the 0.10.37 line. (Earlier this turn: DOC-AF-020
   stale-release flag.) Push-as-gudjon still blocked (gh=Gaurav); 27 commits queued locally.
+- **2026-06-24 (ARM D RESOLVED — PUSHED)** — gh re-authed as gudjon (operator); 403 cleared.
+  Pushed docs/federation-alignment + fast-forwarded main: origin/main 39dfcf0 (Jun 5) → 6be39d4,
+  **30 commits live** on ozinc/arcflow. Entire mission (Information Layer, Memory Engine, all
+  EDGE surfaces, daemon contracts, executor SDK, sync, positioning, conformance refresh, family
+  coverage, release-artifact contract) now public. KNOWN BLOCKER cleared.
