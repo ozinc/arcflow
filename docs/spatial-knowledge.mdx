@@ -404,6 +404,31 @@ Most graph databases reach for vector similarity indexes (HNSW) or random-walk s
 ### ROS2 / Nav2
 ArcFlow complements Nav2: Nav2 handles real-time path planning with hard latency guarantees; ArcFlow provides the persistent spatial knowledge layer — mission planning, post-incident replay, spatial-temporal reasoning. The multi-clock domain system maps directly to ROS2's multi-rate sensor model.
 
+## Geometry functions
+
+Beyond point distance, WorldCypher exposes geometry functions over `LineString` and `Polygon` properties — usable inline in `RETURN`/`WHERE`:
+
+```cypher
+-- Arc length of a route (LineString)
+MATCH (r:Route) RETURN arcflow.length(r.path) AS metres
+
+-- Polygon area; point-in-polygon; geometry intersection
+MATCH (z:Zone) RETURN arcflow.area(z.boundary) AS area
+MATCH (z:Zone), (a:Agent) WHERE arcflow.contains(z.boundary, a.loc) RETURN a.id
+MATCH (r:Route), (z:Zone) WHERE arcflow.intersects(r.path, z.boundary) RETURN r.id, z.name
+
+-- Aggregate convex hull over a set of points
+MATCH (a:Agent) RETURN arcflow.convexHull(a.loc) AS hull
+```
+
+| Function | Returns |
+|---|---|
+| `arcflow.length(line)` | Arc length of a `LineString`. |
+| `arcflow.area(polygon)` | Area of a `Polygon`. |
+| `arcflow.contains(polygon, point)` | `true` if the point lies inside the polygon. |
+| `arcflow.intersects(geom_a, geom_b)` | `true` if the two geometries intersect. |
+| `arcflow.convexHull(point)` | Aggregate — the convex hull of a `Point` property across matched rows. |
+
 ## See Also
 
 - [Spatial Reference](/worldcypher/spatial) — full spatial query syntax, R*-tree, frustum, and raycast

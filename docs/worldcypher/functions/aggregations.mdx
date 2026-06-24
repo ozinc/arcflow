@@ -49,6 +49,27 @@ MATCH (n:Transaction)
 RETURN count(DISTINCT n.account_id) AS unique_accounts
 ```
 
+## Confidence aggregates
+
+Confidence-weighted aggregates fold each row's `_confidence` (or any confidence column) into the result, so low-credibility observations don't anchor the answer:
+
+```cypher
+MATCH (s:Sensor)-[d:DETECTED]->(r:Robot)
+RETURN AVG_CONF(r.speed, d.confidence)   AS trusted_avg_speed,
+       SUM_CONF(r.load, d.confidence)    AS trusted_total_load,
+       COUNT_CONF(d.confidence, 0.8)     AS high_conf_count    -- count rows with confidence ≥ threshold
+```
+
+| Function | Result |
+|---|---|
+| `AVG_CONF(value, confidence)` | Confidence-weighted mean of `value`. |
+| `SUM_CONF(value, confidence)` | Confidence-weighted sum. |
+| `COUNT_CONF(confidence[, threshold])` | Count of rows (optionally only those with `confidence ≥ threshold`). |
+| `MIN_CONF(value, confidence[, threshold])` | Minimum `value` among rows meeting the confidence threshold. |
+| `MAX_CONF(value, confidence[, threshold])` | Maximum `value` among rows meeting the confidence threshold. |
+
+These compose with the engine's [confidence model](/docs/concepts/causal-edges) — the same `_confidence` that decays via a [decay policy](/docs/worldcypher/statements/decay-policy) and traces back through provenance.
+
 ---
 
 ## Window Functions (7)
