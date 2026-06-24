@@ -1,0 +1,63 @@
+---
+title: "CREATE LIVE VIEW"
+kind: clause
+description: "Register a standing query the engine maintains incrementally — results update as the graph mutates, with optional per-view resource governance. The ArcFlow extension for continuous, push-deliverable query results."
+status: "stable"
+---
+
+# CREATE LIVE VIEW
+
+A **live view** is a named standing query the engine keeps current as the graph changes — no polling, no re-execution. When a mutation affects the view's result, the engine computes the **delta** (what entered, what left) incrementally and makes it available to subscribers. This is ArcFlow's extension beyond ISO GQL for continuous results.
+
+```cypher
+CREATE LIVE VIEW hot_zones AS
+  MATCH (r:Robot)-[:OCCUPIES]->(z:Zone)
+  WHERE z.hazard > 0.15
+  RETURN z.name, count(r) AS robots
+```
+
+The view `hot_zones` now exists; query it like any view, or **subscribe** to its deltas over the daemon wire (`view.subscribe` → `view.delta`) — see [the JSON-RPC live-view surface](/docs/protocol/jsonrpc-v1) and the [Live Queries](/docs/live-queries) guide.
+
+## Per-view resource governance
+
+A trailing, optional `WITH (...)` clause bounds a view's resources:
+
+```cypher
+CREATE LIVE VIEW hot_zones AS <query>
+  WITH (max_state_bytes = 1048576, priority = 10)
+```
+
+- `max_state_bytes` — a per-view byte budget, checked against a `row_count × 64` heuristic (a coarse guardrail, **not** a hard RSS fence).
+- `priority` — shed-order rank; lower sheds first under pressure.
+
+Inspect governance state on the wire with `view.governance` / `view.governance_list`.
+
+> **Honest scope:** refuse-to-grow is **global** — a mutation that would grow *any* capped view already at budget is refused with `RESOURCE_EXHAUSTED`, stalling all view-feeding writes (not just that one view). There is no active eviction at this revision; capped views refuse rather than evict.
+
+A view without a `WITH` clause is ungoverned (unchanged behavior).
+
+## Anonymous live views — `LIVE MATCH` / `LIVE CALL`
+
+For a one-off standing query you don't need to name, run the query directly with the `LIVE` prefix:
+
+```cypher
+LIVE MATCH (s:Sensor) WHERE s.reliability < 0.5 RETURN s.id
+LIVE CALL algo.pageRank()
+```
+
+These register an anonymous live view and stream results without a `CREATE`/`DROP` lifecycle.
+
+## Lifecycle
+
+```cypher
+DROP LIVE VIEW hot_zones
+```
+
+List registered views with `CALL db.views()`; list live/standing queries with `CALL db.liveQueries()`.
+
+## See Also
+
+- [Live Queries](/docs/live-queries) — the incremental-maintenance model and delta delivery.
+- [JSON-RPC v1 — Live views](/docs/protocol/jsonrpc-v1) — `view.subscribe` / `view.credit` / `view.unsubscribe` / `view.delta` + governance on the daemon wire.
+- [Triggers](/docs/reference/extensions/triggers) — for *acting* on changes (run a skill on mutation), as distinct from *observing* them with a live view.
+</content>
