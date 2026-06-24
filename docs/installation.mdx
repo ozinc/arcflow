@@ -33,31 +33,6 @@ they were live.
 
 <InstallMatrix />
 
-## Upgrading from a pre-2026-05-14 install (the `v1.x` line)
-
-If you have an `arcflow` binary installed from before 2026-05-14 — anything reporting `v1.x.y` when you run `arcflow --version` — your `arcflow upgrade` command **cannot migrate you to the current line**. The v1.x line was retired 2026-05-14 when ArcFlow re-versioned to alpha (current line: `v0.7.x` and `v0.8.x`); legacy `v1.x` binaries hold their own retired upgrade-channel URLs in their compiled bytes and cannot self-correct.
-
-**Recovery: reinstall via the canonical install script.**
-
-```bash
-curl -fsSL https://staging.oz.com/install/arcflow | sh
-```
-
-(See [Quick install](#quick-install-cli-today) at the top of this page for the URL-stability context — the install URL standardized on `staging.oz.com` is what works today; the production-canonical `oz.com/install/arcflow` resolves once the oz-platform `dev → production` deploy lands, but the docs publish the working URL.)
-
-After reinstall, verify:
-
-```bash
-arcflow --version    # should show v0.7.x or v0.8.x (current line)
-arcflow upgrade      # works correctly from v0.7.x+; pulls the latest cut
-```
-
-**If you're already on `v0.7.x` or `v0.8.x`:** nothing to do. `arcflow upgrade` works correctly on the current line; you can keep using it.
-
-### Why this happens (one paragraph)
-
-ArcFlow moved from `1.x` to `0.x` versioning per an explicit operator directive — the alpha line restarts at `0.x`, with `v1.0` reserved for the first production-ready release. The `arcflow upgrade` code in any binary shipped before that pivot was compiled against the retired `v1.x` release channel; it has no awareness of the line move. The fix is to download a current binary via the install script (above), which then has the corrected upgrade-channel awareness for every future `arcflow upgrade` call. This is a one-time recovery per machine; no further intervention needed.
-
 ## Using ArcFlow from Python or Node today
 
 If your project's `pyproject.toml` or `package.json` depends on `oz-arcflow` / `@ozinc/arcflow` and `pip install` / `npm install` returns *"No matching distribution found"*, the cause is the publish gap shown in the matrix above — the SDK wheels are not yet on the public registries.

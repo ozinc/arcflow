@@ -27,7 +27,7 @@ CREATE NODE LABEL <Name>
   [(<col> <TYPE>, …)]
 ```
 
-- **`(<col> <TYPE>, …)`** — the typed column list (omit for a legacy untyped owned label).
+- **`(<col> <TYPE>, …)`** — the typed column list (omit for an untyped owned label).
 - **`VIRTUAL FROM PARTITION '<template>'`** — make the label **virtual**: its rows are read from parquet at query time, never copied into the graph.
 
 ### The `lake://` URI template
