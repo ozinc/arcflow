@@ -32,6 +32,8 @@ const snapshot = db.query(`MATCH (n:Person) AS OF seq ${currentSeq - 100} RETURN
 
 > **Sequence is the temporal axis.** Use `AS OF seq N` — exact and replayable. Wall-clock timestamps are not a temporal axis: `AS OF <timestamp>` is rejected (`DEPRECATED_AS_OF_TIMESTAMP`).
 
+This page is the query-syntax reference; see [Temporal Queries](/temporal) for the canonical treatment of clock domains, domain-tick queries, and deterministic replay.
+
 ## Temporal procedures
 
 ### temporal.velocity — rate of change

@@ -537,3 +537,6 @@ Priority by gap size × flagship value. Verdicts from the 2026-06-23 coverage au
   + dbscan, all w/ YIELD). Remaining gap-matrix backlog: worldcypher statements section (all extension DDL),
   trajectory.* sigs, db.* introspection (~30), confidence-agg + spatial-geometry functions, SDK gaps (TS
   sync/mesh+workspace, WASM API, Python sharded/TYPE_*), daemon.rpcCatalog + window/group families.
+
+### Steady-state reached — 2026-06-24 (iter 50)
+Gap matrix drained (worldcypher statements, trajectory, db.* introspection, functions, WASM, Python, TS bindings, daemon RPC). Arm-G greenfield-vocab sweep complete (migration page retired, v1.x cruft removed). Arm-E SSoT coherence pass complete (6/6: confidence/provenance, observation-classes+planes, evidence-algebra, live-views, lake://-virtual-labels, clock-domains/temporal). Loop → idle-poll (~1h): standing sweeps + WBF (I-INIT-WBF) public-surface watch. Document new public surface as it ships.
