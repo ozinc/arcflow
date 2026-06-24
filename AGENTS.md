@@ -666,14 +666,29 @@ CALL arcflow.multi_source_disagreement(
   disagreement_kind: "categorical")
 
 -- Trajectory analytics (sports / tracking / autonomous-vehicle telemetry)
-CALL arcflow.trajectory.nearestAtFrame(entity_label: "Player",
-  frame_property: "frame", x_property: "x", y_property: "y",
-  frame: 1024, qx: 50.0, qy: 23.5, k: 5)
-CALL arcflow.trajectory.leverageGain(...)
-CALL arcflow.trajectory.releasePoint(...)
-CALL arcflow.trajectory.shadowedBy(...)
-CALL arcflow.trajectory.firstFrameWithin(...)    -- first frame the trajectory enters a radius
-CALL arcflow.trajectory.minDistanceToPoint(...)  -- catch-radius heuristic; min distance over the trajectory
+-- Nearest entities to a point at a given frame
+CALL arcflow.trajectory.nearestAtFrame(entity_label, frame_property, x_property, y_property, frame, qx, qy, k)
+  YIELD other_node_id, other_label, distance, frame
+-- Per-frame closing/opening distance between a chaser set and a target set
+CALL arcflow.trajectory.leverageGain(entity_label, chaser_filter_property, chaser_filter_value,
+  target_filter_property, target_filter_value, frame_property, x_property, y_property)
+  YIELD frame, delta
+-- The frame a filtered entity's trajectory "releases" (direction/turn point)
+CALL arcflow.trajectory.releasePoint(entity_label, filter_property, filter_value, frame_property, x_property, y_property)
+  YIELD frame
+-- The frame an attacker→target line is shadowed (blocked) by a defender, within angle tolerance
+CALL arcflow.trajectory.shadowedBy(entity_label, attacker_filter_property, attacker_filter_value,
+  target_filter_property, target_filter_value, defender_filter_property, defender_filter_value,
+  frame_property, x_property, y_property, angle_tol_rad)
+  YIELD frame
+-- First frame a chaser comes within `threshold` of a target (radius entry)
+CALL arcflow.trajectory.firstFrameWithin(entity_label, chaser_filter_property, chaser_filter_value,
+  target_filter_property, target_filter_value, threshold, frame_property, x_property, y_property)
+  YIELD frame
+-- Minimum distance from a filtered entity's trajectory to a fixed point (catch-radius heuristic)
+CALL arcflow.trajectory.minDistanceToPoint(entity_label, filter_property, filter_value, target_x, target_y,
+  frame_property, x_property, y_property)
+  YIELD distance
 
 -- Counterfactual branching (fork the World Graph at a WAL seq)
 CALL arcflow.counterfactual.branchAt(name: 'rollout-1', seq: 42)
