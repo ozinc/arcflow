@@ -1,0 +1,47 @@
+---
+title: "Sessions & Transactions"
+kind: clause
+description: "Per-session parameters (SET SESSION / SESSION RESET) including the PBAC actor & role, and ISO-GQL transaction control (START TRANSACTION / COMMIT / ROLLBACK with read mode and isolation level)."
+status: "stable"
+---
+
+# Sessions & Transactions
+
+## Session parameters
+
+A session carries parameters that scope the statements run on it — most importantly the **acting principal and role** used for permission-based access control (PBAC):
+
+```cypher
+SET SESSION ACTOR 'svc-ingest' ROLE 'editor'
+SET SESSION key = value           -- general session parameter (alias: SESSION SET key = value)
+```
+
+Reset session state with:
+
+```cypher
+SESSION RESET PARAMETERS        -- clear set parameters
+SESSION RESET CHARACTERISTICS   -- reset transaction characteristics
+SESSION RESET ALL               -- both
+```
+
+## Transaction control
+
+ArcFlow supports ISO-GQL transaction statements:
+
+```cypher
+START TRANSACTION READ WRITE
+  -- … statements …
+COMMIT      -- or: ROLLBACK
+```
+
+- **`START TRANSACTION [READ ONLY | READ WRITE]`** — open an explicit transaction; declare the access mode.
+- **`ISOLATION LEVEL SERIALIZABLE | REPEATABLE READ | READ COMMITTED | READ UNCOMMITTED`** — optional isolation clause (e.g. `START TRANSACTION READ WRITE ISOLATION LEVEL SERIALIZABLE`).
+- **`COMMIT`** / **`ROLLBACK`** — finish the transaction.
+
+Outside an explicit transaction, each statement commits on its own (autocommit).
+
+## See Also
+
+- [Constraints](/docs/worldcypher/schema/constraints) — integrity rules enforced at commit.
+- [Causal Edges](/docs/concepts/causal-edges) — same-transaction provenance discipline.
+</content>

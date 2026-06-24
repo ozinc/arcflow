@@ -33,6 +33,16 @@ Or in the REPL:
 :indexes
 ```
 
+## Full-text indexes
+
+Full-text indexes power BM25 keyword retrieval. List them with `CALL db.fulltextIndexes()`. After a bulk load that bypassed the incremental indexer, rebuild one explicitly:
+
+```cypher
+REFRESH FULLTEXT INDEX article_body
+```
+
+`REFRESH FULLTEXT INDEX <name>` re-tokenizes the indexed property across all matching nodes — use it when documents were ingested out-of-band and the index needs to catch up.
+
 ## See Also
 
 - [Constraints](/worldcypher/schema/constraints) — UNIQUE constraints
