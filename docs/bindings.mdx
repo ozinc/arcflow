@@ -392,6 +392,37 @@ with ThreadPoolExecutor(max_workers=8) as pool:
 
 See [Threading Model](/docs/concepts/threading-model) for the complete read/write matrix, the typed-error payload, and substrate detail (`writer_busy: AtomicBool` + RAII `WriterClaim` guard).
 
+### Sharded engine (`arcflow.sharded`)
+
+For parallel writes across independent partitions, open a **sharded** engine — N independent store handles fronted by partition-key routing, so writes to different shards never contend:
+
+```python
+from arcflow.sharded import ArcflowSharded
+
+eng = ArcflowSharded("/data/chetak", shard_count=5, partition_key="camera_id")
+shard = eng.shard("cam-03")          # ShardHandle — routed by partition key
+shard.execute("CREATE (f:Frame {camera_id: 'cam-03', ts: 1024})")
+shard.close()
+```
+
+- `ArcflowSharded(data_dir, shard_count, partition_key)` — open a sharded engine; rows route to a shard by `partition_key`.
+- `ShardHandle` — a per-shard handle (`.shard_id`, `.execute(query)`, `.close()`).
+- `ArcflowShardedError(status, context)` — raised on routing/handle errors; `status` is one of the `SHARDED_*` codes: `SHARDED_OK` (0), `INVALID_UTF8` (1), `ZERO_SHARDS` (2), `PARTITION_KEY_MISMATCH` (3), `UNKNOWN_SHARD` (4), `STALE_FFI_HANDLE` (5), `HANDLE_CLOSED` (6), `NULL_POINTER` (7), `OPEN_FAILED` (8).
+
+### Result column types
+
+`QueryResult.column_type(i)` returns an integer tag for column `i`, matched against the `TYPE_*` constants:
+
+```python
+from arcflow import TYPE_INT, TYPE_POINT, TYPE_STRING
+
+res = db.execute("MATCH (s:Sensor) RETURN s.id, s.loc")
+if res.column_type(1) == TYPE_POINT:
+    ...
+```
+
+`TYPE_UNKNOWN` (-1), `TYPE_NULL` (0), `TYPE_BOOL` (1), `TYPE_INT` (2), `TYPE_FLOAT` (3), `TYPE_STRING` (4), `TYPE_NODE_ID` (5), `TYPE_REL_ID` (6), `TYPE_INT_LIST` (7), `TYPE_FLOAT_LIST` (8), `TYPE_STRING_LIST` (9), `TYPE_POINT` (10), `TYPE_EXTENT` (13), `TYPE_LINESTRING` (14), `TYPE_POLYGON` (15).
+
 ## TypeScript / Node.js
 
 napi-rs native addon. The Rust engine runs in-process inside Node.js — function calls, not HTTP, no serialization, microsecond latency.
