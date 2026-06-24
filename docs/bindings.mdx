@@ -600,7 +600,42 @@ All bindings target one engine. Pick the layer that matches your use case:
                       (browser / edge — zero-copy)
 ```
 
-One engine. No protocol translation. Function calls go directly into the Rust engine. For the browser, the WASM build runs the same engine with zero serialization via the WASM memory model.
+One engine. No protocol translation. Function calls go directly into the engine. For the browser, the WASM build runs the same engine via the WASM memory model.
+
+## WASM API (browser / edge)
+
+The WASM build (`@ozinc/arcflow`-wasm) runs the full engine in the browser or an edge worker. Every entry point is a plain function; query/result payloads are JSON strings.
+
+```js
+import init, { execute, stats, snapshot, restore } from '@ozinc/arcflow/wasm'
+
+await init()                                  // initialize the engine (call once)
+const res = execute('MATCH (n) RETURN count(*)')   // → JSON string result envelope
+const s   = stats()                           // → JSON store stats
+const snap = snapshot()                        // → JSON full-graph snapshot
+restore(snap)                                  // restore from a snapshot JSON
+reset()                                        // clear the graph
+```
+
+| Function | Purpose |
+|---|---|
+| `init()` | Initialize the engine (once, before any call). |
+| `execute(query)` → JSON | Run a WorldCypher query; returns the result envelope as a JSON string. |
+| `reset()` → JSON | Drop all nodes/relationships. |
+| `stats()` → JSON | Store statistics. |
+| `snapshot()` / `restore(json)` → JSON | Export / restore the full graph as JSON. |
+
+**Multi-workspace** (isolated graphs in one WASM instance):
+
+```js
+create_workspace('tenant-a')
+execute_in('tenant-a', 'CREATE (n:Doc {id: 1})')
+list_workspaces()                              // → JSON list
+snapshot_workspace('tenant-a')                 // → JSON; restore_workspace('tenant-a', json)
+drop_workspace('tenant-a')
+```
+
+`create_workspace(id)` / `drop_workspace(id)` / `list_workspaces()` / `execute_in(workspace_id, query)` / `snapshot_workspace(workspace_id)` / `restore_workspace(workspace_id, json)` — each returns a JSON string.
 
 ---
 
