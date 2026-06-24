@@ -78,13 +78,27 @@ For traversals that hop frequently between partitions, the single-shard executor
 
 ## 4. Domain-agnostic spatial primitives
 
-Three spatial primitives compose into a wide range of domain-specific operations:
+Three spatial primitives compose into a wide range of domain-specific operations. Each is a `CALL` procedure over a labelled, positioned node set (not a scalar function); the position is read from `position_property`:
 
-| Primitive | What it computes |
+```cypher
+-- Nodes inside a cone (tip at cone_apex, axis cone_axis, half-angle in radians).
+CALL arcflow.spatial.cone_intersection('Node', 'position', $apex, $axis, 0.4, 50.0)
+  YIELD nodeId, distance, angle_rad
+
+-- k-th nearest, ranked by a velocity-aware distance over a time horizon.
+CALL arcflow.spatial.kth_nearest_with_velocity('Node', 'position', $query_point, $query_velocity, 10, 0.5)
+  YIELD nodeId, predicted_distance
+
+-- How many occluders sit between a viewpoint and a direction (within a cone).
+CALL arcflow.spatial.occlusion_area('Node', 'position', $viewpoint, $direction, 100.0, 0.3)
+  YIELD occluder_count, nearest_distance
+```
+
+| Procedure | What it computes |
 |---|---|
-| `cone_intersection(origin, direction, half_angle, points)` | The subset of `points` that lies inside a cone whose tip is at `origin`, axis along `direction`, half-angle `half_angle`. |
-| `kth_nearest_with_velocity(point, candidates, k, velocity_field)` | The `k`-th nearest candidate to `point`, ranked by a distance metric that incorporates the candidate's velocity. |
-| `occlusion_area(viewer, obstacles, target_plane)` | The area on `target_plane` that is hidden from `viewer` by `obstacles`. |
+| `arcflow.spatial.cone_intersection(point_label, position_property, cone_apex, cone_axis, half_angle_rad, max_distance?)` | Nodes whose position falls inside a cone (tip at `cone_apex`, axis `cone_axis`, half-angle `half_angle_rad`). |
+| `arcflow.spatial.kth_nearest_with_velocity(point_label, position_property, query_point, query_velocity?, k?, time_horizon?, max_distance?)` | The k-th nearest node to `query_point`, ranked by a distance metric that incorporates each candidate's velocity over `time_horizon`. |
+| `arcflow.spatial.occlusion_area(occluder_label, position_property, viewpoint, direction, max_distance?, half_angle_rad)` | The count of occluders (and nearest distance) hiding the view from `viewpoint` along `direction`. |
 
 These primitives are deliberately *domain-agnostic*. An agent working on autonomous navigation, sports analytics, or industrial inspection composes them into the operation it actually needs. The domain-specific name — *release point at throw*, *catch radius*, *shadowed-by* — lives in the agent's adapter layer, not in the engine.
 

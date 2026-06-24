@@ -492,3 +492,13 @@ Priority by gap size × flagship value. Verdicts from the 2026-06-23 coverage au
   algo.nearestNodes). Docs previously used vague "spatial entities". Added §"Spatial entries" to
   docs/spatial-knowledge.mdx naming SpatialEntry as the engine's spatial primitive (real shape +
   composes-with-graph). Recorded vocabulary rule in memory. No TEC scrub needed (already 0).
+- **2026-06-24 (iter 26 — systematic deep dive + P0/P1 corrections)** — Ran 3-agent systematic audit of
+  arcflow-core public surface vs docs; recorded prioritized gap matrix in kanban/doc-gap-matrix.md. Fixed
+  P0 ACTIVELY-WRONG docs (verified in source): scale-patterns.mdx documented arcflow.spatial.* as scalar
+  functions — corrected to CALL procs w/ real sigs (cone_intersection/kth_nearest_with_velocity/occlusion_area);
+  algorithm-library.mdx moransI/localMoransI/getisOrdGStar wrong arg order — fixed (coords_property first).
+  P1: added full Statistical & spatial-analytics procedure reference to AGENTS.md (chiSquare/mannWhitneyU/
+  kolmogorovSmirnov/biasDetection/moransI/localMoransI/getisOrdGStar/ripleysK/localOutlierFactor + spatial.*
+  + dbscan, all w/ YIELD). Remaining gap-matrix backlog: worldcypher statements section (all extension DDL),
+  trajectory.* sigs, db.* introspection (~30), confidence-agg + spatial-geometry functions, SDK gaps (TS
+  sync/mesh+workspace, WASM API, Python sharded/TYPE_*), daemon.rpcCatalog + window/group families.

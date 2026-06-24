@@ -711,6 +711,48 @@ family: `simd_sum` cross-lane reductions on Apple8+, native `atomic_float` on Ap
 Accelerate framework (AMX/SME). Same binary across every Apple device generation;
 dispatch is per-host. See [`docs/gpu.mdx`](/docs/gpu) §"Per-family kernel selection".
 
+### Statistical & spatial-analytics procedures
+
+Hypothesis tests and spatial statistics, callable directly over typed labels — no export to a stats package. Bias/Moran's I optionally weight rows by `_confidence`.
+
+```cypher
+-- Hypothesis tests (over list literals or collected columns)
+CALL arcflow.chiSquare(observed_counts, expected_counts)   YIELD chi2_stat, p_value, df
+CALL arcflow.mannWhitneyU(group_a, group_b)                YIELD u_stat, p_value, effect_size, n_a, n_b
+CALL arcflow.kolmogorovSmirnov(group_a, group_b)           YIELD ks_stat, p_value, n_a, n_b
+
+-- Bias detection: group a label by category, run a test per group
+CALL arcflow.biasDetection(label, group_by, target, test)  -- test = chi_square | mann_whitney_u | kolmogorov_smirnov
+  YIELD group_value, observed, expected, chi2_stat, p_value, df, n
+
+-- Spatial autocorrelation (coords_property BEFORE value_property)
+CALL arcflow.moransI(label, coords_property, value_property, k, confidence_weighted)
+  YIELD morans_i, expected, variance, z_score, p_value, n, k
+CALL arcflow.localMoransI(label, coords_property, value_property, k, significance_threshold)
+  YIELD node_id, value, z_value, neighbor_z_mean, local_i, expected, z_score, p_value, quadrant
+CALL arcflow.getisOrdGStar(label, coords_property, value_property, k, significance_threshold)
+  YIELD node_id, value, g_star, expected, z_score, p_value, classification
+
+-- Point-pattern + anomaly
+CALL arcflow.ripleysK(label, coords_property, r_min, r_max, n_steps)
+  YIELD r, k_observed, l_observed, k_csr, l_csr, classification, n_pairs_within_r
+CALL arcflow.localOutlierFactor(label, coords_property, k, outlier_threshold)
+  YIELD node_id, k_dist, lrd, lof, classification
+```
+
+Geometry-aware spatial procedures (positioned node sets; see `docs/spatial-knowledge.mdx`):
+
+```cypher
+CALL arcflow.spatial.cone_intersection(point_label, position_property, cone_apex, cone_axis, half_angle_rad, max_distance)
+  YIELD nodeId, distance, angle_rad
+CALL arcflow.spatial.kth_nearest_with_velocity(point_label, position_property, query_point, query_velocity, k, time_horizon, max_distance)
+  YIELD nodeId, predicted_distance
+CALL arcflow.spatial.occlusion_area(occluder_label, position_property, viewpoint, direction, max_distance, half_angle_rad)
+  YIELD occluder_count, nearest_distance
+CALL arcflow.spatial.dbscan(label, locationKey, epsilon, minPoints)
+  YIELD nodeId, clusterId, backend
+```
+
 ### Database procedures
 ```cypher
 CALL db.stats()
