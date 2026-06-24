@@ -795,6 +795,50 @@ CALL db.liveViews()      -- list active LIVE VIEWs
 CALL db.viewStats()      -- live view performance metrics
 ```
 
+### Database introspection procedures
+
+Read-only `CALL db.*` procedures that report engine, store, index, and live-view state. Most take no arguments.
+
+```cypher
+-- Temporal / observation / planes
+CALL db.nodesAsOf()        YIELD nodeId, labels, createdAt          -- nodes as of the current sequence
+CALL db.temporalCompare()  YIELD changeCount, fromSequence, toSequence, index, operation
+CALL db.temporalReplay()   YIELD sequence, operation, timestamp
+CALL db.temporalGate()     YIELD valid, violationCount, violation
+CALL db.observationClasses() YIELD class, count                    -- observed / inferred / predicted counts
+CALL db.nodesByObservation.observed()   YIELD nodeId, labels       -- also .inferred() / .predicted()
+CALL db.nodesByPlane.semantic()         YIELD nodeId, labels       -- also .scene()
+CALL db.causalChain(origin, depth)      YIELD origin, depth, target, target_labels, confidence
+CALL db.clockDomains()     YIELD domain, count
+
+-- Store / index / vector / GPU
+CALL db.version()          YIELD name, version, crates, waves, tests, functions, algorithms, procedures, backend
+CALL db.backends()         YIELD id, available, async_copy, graph_capture, unified_memory, message
+CALL db.storageInfo()      YIELD ...                               -- store layout + dense-store stats
+CALL db.schemaRegistry()   YIELD label, property, type
+CALL db.checkpointMeta()   YIELD generation, nodes, relationships, skills, mutation_sequence
+CALL db.vectorIndexes()    YIELD name, label, property, dimensions, similarity
+CALL db.embeddingStats()   YIELD model, version, count, oldest_embedded_at
+CALL db.fulltextIndexes()  YIELD name, label, properties
+CALL db.gpuCsrStatus()     YIELD resident, size_bytes, mutation_sequence
+CALL db.gpuVectorSearch(query, label, property, k) YIELD nodeId, score, backend
+CALL db.explainSpatialJoin(left_label, left_key, right_label, right_key) YIELD strategy, left_count, right_count, threshold
+CALL db.extensions()       YIELD extension, syntax_example, gql_compatibility, evidence
+CALL db.idFrom(...)        YIELD nodeId, keys                       -- content-addressed id from keys
+
+-- Live views / subscriptions / mutation log
+CALL db.views()            YIELD name, query
+CALL db.liveAlgorithms()   YIELD name, algorithm, result_count, frontier
+CALL db.arrangements()     YIELD name, algorithm, result_count, frontier
+CALL db.liveQueries()      YIELD name, query
+CALL db.subscriptions()    YIELD name, topic, query, active
+CALL db.mutations()        YIELD sequence, operation, timestamp
+CALL db.topics()           YIELD id, name, events
+CALL db.nodeCount()        YIELD count
+CALL db.relationshipCount() YIELD count                            -- alias: db.relCount()
+CALL db.stats.json()       YIELD ...                               -- db.stats as a single JSON column
+```
+
 ### Storage and performance procedures
 ```cypher
 -- CSR (Compressed Sparse Row) cache — accelerates multi-hop traversal
