@@ -38,9 +38,12 @@ CALL arcflow.skills.import(json)               YIELD name, version, skill_count
 ## Lifecycle
 
 ```cypher
+EVOLVE SKILL classify_topic  -- auto-version the skill and re-evaluate it against current data
 DROP SKILL summarize
 DROP TRIGGER match_similar   -- a skill that runs on mutation is a TRIGGER (see /docs/worldcypher/statements/trigger)
 ```
+
+`EVOLVE SKILL <name>` bumps the skill to a new version and re-runs it across the entities it's allowed on — how you improve a skill's rule and re-derive its relationships without dropping and recreating it.
 
 ---
 

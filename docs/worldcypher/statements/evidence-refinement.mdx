@@ -1,0 +1,39 @@
+---
+title: "REFINE EDGE / REPROCESS EDGES"
+kind: clause
+description: "Update an edge's evidence after the fact — REFINE EDGE adjusts a relationship's confidence and observation class; REPROCESS EDGES re-runs refinement across edges, optionally filtered by confidence. The mutation surface of the engine's evidence algebra."
+status: "stable"
+---
+
+# REFINE EDGE / REPROCESS EDGES
+
+Beliefs change as evidence arrives. These two statements are the mutation surface of the engine's **evidence algebra** — they revise the confidence and observation class carried on relationships, rather than deleting and re-creating them.
+
+## REFINE EDGE — revise one edge's evidence
+
+```cypher
+MATCH (a:Player)-[r:SHADOWS]->(b:Player)
+REFINE EDGE r SET confidence = 0.95, observation = 'observed'
+```
+
+`REFINE EDGE <var> SET …` updates the evidence fields on a bound relationship:
+
+- **`confidence = <0..1>`** — the revised belief in the edge.
+- **`observation = '<class>'`** — the observation class (`observed` / `inferred` / `predicted`).
+
+The edge keeps its identity and history; only its evidence is refined. (`REFINE EDGE` accepts the `confidence` and `observation` fields — other properties are set with ordinary `SET`.)
+
+## REPROCESS EDGES — re-run refinement in bulk
+
+```cypher
+REPROCESS EDGES                       -- re-process all edges
+REPROCESS EDGES WHERE confidence < 0.5  -- only the low-confidence ones
+```
+
+`REPROCESS EDGES [WHERE confidence < N]` re-runs evidence refinement across edges, optionally scoped by a confidence threshold — useful after new evidence lands or a skill changes, to recompute beliefs without touching graph structure.
+
+## See Also
+
+- [Causal Edges](/docs/concepts/causal-edges) — confidence + observation class as first-class, provenance-backed evidence.
+- [CREATE DECAY POLICY](/docs/worldcypher/statements/decay-policy) — let confidence decay with age automatically.
+</content>
