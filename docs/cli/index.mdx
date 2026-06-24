@@ -146,6 +146,19 @@ See [REPL Commands](/cli/repl) for the full command reference.
 
 ---
 
+## Upgrading — `arcflow upgrade`
+
+Keep the CLI current without re-running the install script:
+
+```bash
+arcflow upgrade           # fetch the latest release and replace this binary in place
+arcflow upgrade --check   # report whether a newer version exists; change nothing
+```
+
+`upgrade` resolves the latest version from `ozinc/arcflow` GitHub Releases (the same source as the [install script](/docs/installation)), compares it to the running binary, and self-replaces only if it's strictly newer. Set `ARCFLOW_REPO=<owner>/<repo>` to upgrade from a mirror or fork instead.
+
+---
+
 ## Server Modes
 
 Add a flag to serve the same engine over the network:

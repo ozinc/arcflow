@@ -13,12 +13,33 @@ Teach the world model a new relationship it can recognize. Describe the rule in 
 
 ## Syntax
 
+A skill is defined from a **rule source** and runs at one of four **tiers**. Two sources:
+
 ```cypher
+-- From a natural-language rule (Symbolic pattern, or LLM judgment)
 CREATE SKILL <name>
   FROM PROMPT '<rule_or_instruction>'
   ALLOWED ON [<Label>, ...]
-  TIER SYMBOLIC
+  TIER SYMBOLIC | LLM | WASM
+  [INPUT VIEW <view_name>]          -- optional: scope the skill's input to a live view
+  [MODEL '<provider>/<model>']      -- optional (LLM tier): pin the model, e.g. 'cli/claude-code'
+
+-- From embedding similarity (Neural tier)
+CREATE SKILL <name>
+  FROM EMBEDDING <property | arcflow.cosine(source.prop, target.prop)>
+  THRESHOLD <0..1>
+  ALLOWED ON [<Label>, ...]
+  TIER NEURAL
 ```
+
+| Clause | Meaning |
+|---|---|
+| `FROM PROMPT '<rule>'` | Natural-language rule — pattern-matched (Symbolic), executed in WASM, or judged by an LLM, per `TIER`. |
+| `FROM EMBEDDING <expr> THRESHOLD <f>` | Link nodes whose embedding similarity ≥ threshold (Neural tier). |
+| `ALLOWED ON [Labels]` | The labels the skill may run against. |
+| `TIER SYMBOLIC \| NEURAL \| LLM \| WASM` | The execution tier (see [Skills](/docs/skills)). |
+| `INPUT VIEW <view>` | Optional — restrict the skill's input to a [live view](/docs/worldcypher/statements/live-views). |
+| `MODEL '<provider>/<model>'` | Optional, LLM tier — pin the model from the provider catalog. |
 
 ## Example
 
