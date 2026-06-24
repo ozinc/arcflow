@@ -9,18 +9,26 @@ playground:
 
 # Constraints
 
-UNIQUE constraints prevent duplicate property values across all nodes with a given label.
+Constraints enforce entity-identity rules at the schema level. Declare them with the ISO-GQL `FOR … REQUIRE … IS` form:
 
 ```cypher
-CREATE CONSTRAINT ON (n:Person) ASSERT n.email IS UNIQUE
+CREATE CONSTRAINT person_email FOR (n:Person) REQUIRE n.email IS UNIQUE
+CREATE CONSTRAINT person_id    FOR (n:Person) REQUIRE n.id    IS PRIMARY KEY
+CREATE CONSTRAINT robot_serial FOR (r:Robot)  REQUIRE r.serial IS NOT NULL
 ```
 
-Attempting to create a node with a duplicate value will return a typed error.
+| Form | Enforces |
+|---|---|
+| `IS UNIQUE` | No two nodes of the label share the property value. |
+| `IS PRIMARY KEY` | Unique **and** present — the node's identity key. |
+| `IS NOT NULL` | The property must be present on every node of the label. |
+
+A write that violates a constraint returns a typed error and rolls back.
 
 ## Drop a constraint
 
 ```cypher
-DROP CONSTRAINT ON (n:Person) ASSERT n.email IS UNIQUE
+DROP CONSTRAINT person_email
 ```
 
 ## List constraints
@@ -43,6 +51,30 @@ CREATE CONSTRAINT FOR (n:Player)
 Writes that violate the constraint fail at commit with a typed
 `CAUSED_BY_VIOLATION` error and roll back the entire transaction. See
 [Causal Edges](/docs/concepts/causal-edges) for the full discipline.
+
+To apply the rule going forward without rejecting data that predates it, add `WITH GRANDFATHER_EXISTING`:
+
+```cypher
+CREATE CONSTRAINT FOR (n:Player)
+  REQUIRE confidence CAUSED_BY (:Evidence) WITH GRANDFATHER_EXISTING
+```
+
+## Semantic unique constraints
+
+A **semantic unique** constraint dedups by *embedding similarity* rather than exact value — two nodes are "the same" if their vectors are within a threshold, scoped to a partition property:
+
+```cypher
+CREATE SEMANTIC UNIQUE CONSTRAINT fact_semantic_dedup
+  ON :Fact(embedding)
+  WITHIN PROPERTY workspaceId
+  THRESHOLD 0.92
+```
+
+- `ON :Label(property)` — the embedding property to compare.
+- `WITHIN PROPERTY <prop>` — the partition scope (uniqueness is enforced per distinct value of this property, e.g. per workspace).
+- `THRESHOLD <0..1>` — similarity at or above which two nodes are treated as duplicates.
+
+This is how the engine prevents near-duplicate facts (paraphrases, re-ingested records) from accumulating, without an exact-match key.
 
 ## See Also
 
