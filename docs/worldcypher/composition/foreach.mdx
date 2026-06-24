@@ -1,0 +1,36 @@
+---
+title: "FOREACH"
+kind: clause
+description: "Run mutations once per element of a list — FOREACH (x IN list | CREATE/SET/MERGE …). The write-side counterpart to UNWIND: instead of expanding rows, it applies updates for each item."
+status: "stable"
+---
+
+# FOREACH
+
+`FOREACH` runs a block of **mutations** once for each element of a list. Where [`UNWIND`](/docs/worldcypher/composition/unwind) expands a list into rows you can read, `FOREACH` iterates a list to *write* — create, set, or merge per element — in a single statement.
+
+```cypher
+FOREACH (x IN [1, 2, 3] | CREATE (n:Sample {val: x}))
+```
+
+## Syntax
+
+```
+FOREACH (<var> IN <listExpr> | <mutation> [<mutation> …])
+```
+
+- **`<var> IN <listExpr>`** — the loop variable and the list to iterate (a literal, a parameter, or a collected column).
+- **`| <mutations>`** — one or more mutation clauses (`CREATE`, `SET`, `MERGE`, `REMOVE`, `DELETE`) applied for each element. Read clauses are not allowed inside the block.
+
+A common pattern is to drive `FOREACH` from a collected list:
+
+```cypher
+MATCH (z:Zone) WITH collect(z) AS zones
+FOREACH (z IN zones | SET z.swept = true)
+```
+
+## See Also
+
+- [UNWIND](/docs/worldcypher/composition/unwind) — the read-side counterpart (list → rows).
+- [WITH](/docs/worldcypher/composition/with) — collect values to feed into `FOREACH`.
+</content>

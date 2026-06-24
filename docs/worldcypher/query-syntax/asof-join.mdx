@@ -1,0 +1,34 @@
+---
+title: "ASOF JOIN"
+kind: clause
+description: "Temporal join — for each left row, match the most recent right row at or before its timestamp. The as-of join that aligns streams sampled at different rates without exploding into a cross product."
+status: "stable"
+---
+
+# ASOF JOIN
+
+An **as-of join** aligns two time-series by matching each left row to the **most recent** right row at or before its timestamp — the standard way to join sensor/event streams that tick at different rates, without an exact-timestamp match or a Cartesian blow-up.
+
+```cypher
+MATCH (a:Reading)
+ASOF JOIN (b:Calibration) ON a.sensor = b.sensor AND a.ts >= b.ts
+RETURN a.sensor, a.value, b.offset
+```
+
+For each `:Reading`, this finds the latest `:Calibration` for the same sensor whose `ts` is at or before the reading's `ts`, and joins it on.
+
+## Syntax
+
+```
+ASOF [LEFT] JOIN (<var>:<Label>) ON <eq-key> AND <left>.<time> >= <right>.<time>
+```
+
+- **`ON <eq-key>`** — the equality key(s) that scope the match (e.g. `a.sensor = b.sensor`).
+- **`<left>.<time> >= <right>.<time>`** — the as-of condition: match the **most recent** right row not after the left row's time.
+- **`LEFT`** — keep left rows that have no qualifying right match (the right columns are null), instead of dropping them.
+
+## See Also
+
+- [Temporal Queries](/docs/temporal) — sequence-based time travel and clock domains.
+- [MATCH](/docs/worldcypher/query-syntax/match) — the pattern the join extends.
+</content>
