@@ -1,0 +1,41 @@
+---
+title: "CREATE WINDOW"
+kind: clause
+description: "Declare a sliding-window aggregation over a stream — fixed SIZE, optional STEP overlap, and an aggregation KIND (count, sum, mean, min, max, stddev, first, last). The engine maintains the rolling aggregate incrementally as values arrive."
+status: "stable"
+---
+
+# CREATE WINDOW
+
+A **window** maintains a rolling aggregate over the most recent values in a stream — a moving average, a peak over the last minute, a running count — updated incrementally as new values arrive. You declare the size, the step, and the aggregation; the engine keeps it current.
+
+```cypher
+CREATE WINDOW velocity_avg SIZE 10 KIND mean
+CREATE WINDOW peak_load    SIZE 60 STEP 10 KIND max
+```
+
+## Syntax
+
+```
+CREATE WINDOW <name> SIZE <int> [STEP <int>] KIND <aggregation>
+```
+
+- **`SIZE <int>`** — the window width (number of values retained in the window).
+- **`STEP <int>`** — how far the window advances between emissions; defaults to `1` (maximum overlap — emit on every value).
+- **`KIND <aggregation>`** — one of `count`, `sum`, `mean`, `min`, `max`, `stddev`, `first`, `last`.
+
+## Lifecycle
+
+```cypher
+DROP WINDOW velocity_avg
+```
+
+## Relation to event-time windows
+
+`CREATE WINDOW` is a count-based sliding aggregate over the stream of values. For windows keyed by a **clock-domain tick** with watermark firing (e.g. "every 5 ticks of `swclock.tick`"), use the daemon's event-time windows — see [JSON-RPC v1 § Event-time windows](/docs/protocol/jsonrpc-v1) and [clock domains](/docs/temporal).
+
+## See Also
+
+- [Live Queries](/docs/live-queries) — standing queries and incremental maintenance.
+- [Temporal Queries](/docs/temporal) — clock domains and the event-time window variant.
+</content>

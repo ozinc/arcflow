@@ -1,0 +1,43 @@
+---
+title: "CREATE DECAY POLICY"
+kind: clause
+description: "Make confidence fade with time — declare a half-life so a fact's confidence decays as it ages, with a floor below which it won't drop. Attach the policy to a label so staleness is modeled as decaying belief, not a manual sweep."
+status: "stable"
+---
+
+# CREATE DECAY POLICY
+
+A **decay policy** makes a fact's `confidence` fade as it ages. Instead of a cron job that re-scores stale data, you declare a **half-life**: confidence halves every interval, decaying toward a floor. Attach the policy to a label and the engine applies it as time passes — staleness becomes *decaying belief*, queryable like any other confidence.
+
+```cypher
+CREATE DECAY POLICY job_title_decay HALF_LIFE 180 DAYS FLOOR_CONFIDENCE 0.05
+```
+
+## Syntax
+
+```
+CREATE DECAY POLICY <name> HALF_LIFE <N> [DAYS] [FLOOR_CONFIDENCE <F>]
+```
+
+- **`HALF_LIFE <N> [DAYS]`** — the interval over which confidence halves. `DAYS` is the unit keyword (optional but conventional).
+- **`FLOOR_CONFIDENCE <F>`** — the floor confidence never drops below (default `0.05`). A decayed fact stays weakly believed rather than vanishing.
+
+## Attach a policy to a label
+
+A policy is inert until bound to a label:
+
+```cypher
+ALTER LABEL Employee SET DECAY POLICY job_title_decay
+```
+
+Every `:Employee` node's confidence now decays on the `job_title_decay` curve. Confidence-aware reads (and confidence thresholds in queries) see the decayed value automatically — a six-month-old job title is trusted less than yesterday's, without any rescan.
+
+## Why this matters
+
+The world changes; records age. Modeling staleness as a decaying confidence — rather than a boolean "fresh/stale" flag or a manual re-scoring pass — lets every downstream query weigh old facts correctly by composing with the engine's [confidence model](/docs/concepts/causal-edges). It pairs naturally with [time travel](/docs/temporal): the raw fact is preserved; only its present-day *belief* decays.
+
+## See Also
+
+- [Causal Edges](/docs/concepts/causal-edges) — confidence as model-relative probability.
+- [Temporal Queries](/docs/temporal) — staleness, supersession, and time-travel.
+</content>
