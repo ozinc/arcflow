@@ -52,6 +52,8 @@ lake://<mount>/<table>/{var}[/{var}]…/<file-glob>.parquet
 
 The brace-delimited placeholder binds to a partition column at registration; the planner discovers the actual key/value pairs at scan time from the directory layout. Combining placeholders with literal `key=value` segments in the registration pattern (e.g. `{season}=2024`) is rejected at DDL time — that mixes registration syntax with filter syntax.
 
+> [`CREATE NODE LABEL`](/docs/worldcypher/statements/create-node-label) is the canonical reference for the `VIRTUAL FROM PARTITION` DDL and the `lake://` URI-template grammar; this guide applies it in a worked pipeline.
+
 For the worked-example schema above:
 
 | Class | Partition pattern |
