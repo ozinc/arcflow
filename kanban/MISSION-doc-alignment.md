@@ -459,3 +459,13 @@ Priority by gap size × flagship value. Verdicts from the 2026-06-23 coverage au
   unchanged, new core commits = I-INIT-0125 refactors (parse_decay_fn) + annotation batches (no
   public surface). No new inbound asks; no reply yet to DOC-AF-019 (manifest CALL-vs-Gateway split).
   Docs push still gated (ozinc/arcflow). Nothing to document.
+- **2026-06-24 (iter 23 — release-artifact federation contract)** — Operator: releases on
+  ozinc/arcflow way too old + set up proper federation with core for binary builds. Confirmed:
+  ozinc/arcflow Latest = v0.8.34 (May 19), engine 0.10.37; arcflow-core tags stuck v1.6.5 (old line).
+  Root cause: cut-broadcast contract went dormant after v0.8.34 — no release cut since. Filed
+  DOC-AF-2026-06-24-001: standing 4-clause release-artifact contract to build-deploy+AF (per-version
+  cut to ozinc/arcflow, tag-scheme reconciliation, re-activated release-broadcast, reconciliation
+  gate released-latest==engine-version) + new roles (release-cutter/version-SoT/install-doc-keeper).
+  Added install-doc-keeper role to federation-membership.md. DOC never cuts (RULE 4). Pushed to core.
+  Awaiting build-deploy agent to confirm + cut the 0.10.37 line. (Earlier this turn: DOC-AF-020
+  stale-release flag.) Push-as-gudjon still blocked (gh=Gaurav); 27 commits queued locally.
