@@ -2,7 +2,7 @@
 
 The wire protocol the ArcFlow daemon speaks over Unix Domain Sockets. This is the **public, stable, semver-versioned** interface contract — closed engine implementation, open protocol surface. Anyone can reimplement a daemon serving this protocol.
 
-**Status:** Stable as of 2026-05-13. 59 methods. Specification version `v1`.
+**Status:** Stable as of 2026-05-13. Specification version `v1`. The daemon's authoritative, self-describing method list is returned by [`daemon.rpcCatalog`](#health--introspection) — treat that as the source of truth; the family table below is a guide.
 
 **License of this document:** Apache 2.0 (reimplementation-permissive — see end of file).
 
@@ -64,11 +64,11 @@ Default socket path: `/tmp/arcflow.sock` (override with `--socket /path/to/sock`
 
 ## Methods
 
-49 methods across 9 families. Each family is documented in its own section below.
+Methods are grouped into the families below; each has its own section. Call [`daemon.rpcCatalog`](#health--introspection) for the live, authoritative list — the counts here are indicative and may lag the engine.
 
 | Family | Methods | Purpose |
 |---|---|---|
-| [Health + introspection](#health--introspection) | 3 | `ping`, `daemon.info`, `daemon.audit` |
+| [Health + introspection](#health--introspection) | 4 | `ping`, `daemon.info`, `daemon.audit`, `daemon.rpcCatalog` |
 | [Topics](#topics) | 11 | Topic lifecycle, publish, replay |
 | [Consumers](#consumers) | 8 | Durable consumer registration + ack/nack |
 | [Consumer groups](#consumer-groups) | 7 | Multi-consumer queue-group sharing |
@@ -77,7 +77,10 @@ Default socket path: `/tmp/arcflow.sock` (override with `--socket /path/to/sock`
 | [Request-reply](#request-reply) | 6 | Synchronous request-reply over the bus |
 | [Stream functions](#stream-functions) | 5 | Lag/Lead/Delta scalar derivatives |
 | [Snapshot](#snapshot) | 1 | Coherent per-topic watermark for fusion reads |
-| [Cypher](#cypher) | 1 | Generic Cypher execution over the wire |
+| [Cypher](#cypher) | 2 | Cypher execution over the wire (`cypher.execute`, `cypher.execute_arrow`) |
+| [Live views](#live-views-push-streaming) | — | Push-streaming view deltas + governance |
+| [Event-time windows](#event-time-windows) | — | Clock-domain windows with watermark firing |
+| [Programs](#programs) | — | Program spend + GPU-admission |
 
 Method names use dot-separated namespaces (`topic.publish`, `consumer.register`). Bare method names (`ping`, `request`, `reply`) are reserved for protocol-fundamental operations.
 
@@ -126,6 +129,22 @@ Run consistency + operational audits.
 ```
 
 `healthy` is gated on invariant audits only (orphan consumers, consumers ahead of head, orphan DLQ nodes). Operational summaries (lagging consumers, cross-workspace edges) don't gate it.
+
+#### `daemon.rpcCatalog`
+
+Returns the daemon's own method list — the self-describing catalog. Use it to discover exactly which methods this build serves rather than relying on a hard-coded list (the set grows across releases).
+
+```jsonrpc
+→ {"id":N, "method":"daemon.rpcCatalog"}
+← {"id":N, "result": {
+    "methods": ["ping", "daemon.info", "daemon.audit", "daemon.rpcCatalog",
+                "topic.create", "topic.publish", "consumer.register",
+                "group.ack", "group.nack", "group.pending", "group.list", "group.subscribe",
+                "window.register", "window.feed", "window.drop", "window.list", ...]
+  }}
+```
+
+This is the authoritative source for the method set — the [family table](#methods) above is a curated guide that may lag the engine.
 
 ---
 
