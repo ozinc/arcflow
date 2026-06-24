@@ -1,0 +1,56 @@
+---
+title: "CREATE PROGRAM"
+kind: clause
+description: "Declare a versioned, self-contained unit of engine behavior — the capability it provides, its inputs/outputs, hardware floor, model/executor, and the skills + triggers it bundles. The engine admits it only if the host can satisfy its requirements."
+status: "stable"
+---
+
+# CREATE PROGRAM
+
+A **program** is a named, versioned bundle of engine behavior — the skills it runs, the triggers that fire them, the capability it provides, and the resources it needs — declared in one statement and admitted as a unit. The engine checks the declared requirements against the host at install time and refuses a program the box can't satisfy, rather than failing later at runtime.
+
+```cypher
+CREATE PROGRAM hazard_watch VERSION '1.0.0' (
+  PROVIDES hazard_detection
+  CARDINALITY SINGLETON
+  REQUIRES GPU (SM >= 87, VRAM >= 8)
+  SKILLS classify_hazard, score_severity
+  TRIGGERS ON :Zone WHEN MODIFIED
+)
+```
+
+## Clauses
+
+All clauses are optional and live inside the `( … )` body after `VERSION`:
+
+| Clause | Meaning |
+|---|---|
+| `PROVIDES <capability>` | The capability name this program exposes. |
+| `CARDINALITY SINGLETON \| SHARDED BY <key>` | One instance, or one per shard key. |
+| `INPUT …` / `OUTPUT …` | Declared input/output contract. |
+| `REQUIRES GPU (SM >= X, VRAM >= Y)` | Hardware floor — install-time admission (see below). |
+| `MODEL <…>` | The model the program binds to. |
+| `EXECUTOR <…> [HEARTBEAT <ms>]` | An out-of-process executor + optional liveness heartbeat. |
+| `EVIDENCE <tier>` | Evidence/provenance tier for what the program writes. |
+| `SKILLS <a, b, …>` | The skills the program bundles. |
+| `TRIGGERS [ON :Label WHEN CREATED\|MODIFIED\|DELETED]` | The triggers that fire the program's skills. |
+
+## Install-time GPU admission
+
+A program that declares `REQUIRES GPU (SM >= X, VRAM >= Y)` is **refused at install** with `RESOURCE_EXHAUSTED` if the host can't satisfy it (no GPU, or total device VRAM below the floor). CPU-only programs (no `REQUIRES`) always admit.
+
+> **Honest scope:** the VRAM check reads **total** device memory (not live-free), so it's a coarse install guardrail — an admitted program can still OOM under load. A program that requires a GPU is **refused, never silently re-routed** to CPU.
+
+## Lifecycle & observability
+
+```cypher
+DROP PROGRAM hazard_watch
+```
+
+Track per-program activity with `CALL program.spend({name})` → `{program_name, invocation_count}` (the trigger-fire count) — see [JSON-RPC v1 § Programs](/docs/protocol/jsonrpc-v1).
+
+## See Also
+
+- [CREATE TRIGGER](/docs/worldcypher/statements/trigger) · [Skills](/docs/skills) — the pieces a program bundles.
+- [JSON-RPC v1 — Programs](/docs/protocol/jsonrpc-v1) — `program.spend` + the GPU-admission wire behavior.
+</content>

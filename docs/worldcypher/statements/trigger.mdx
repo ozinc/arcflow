@@ -1,0 +1,48 @@
+---
+title: "CREATE TRIGGER"
+kind: clause
+description: "Run a skill automatically when nodes of a label change — the engine's reactive primitive. CREATE TRIGGER name ON :Label WHEN CREATED|MODIFIED|DELETED RUN SKILL skill_name."
+status: "stable"
+---
+
+# CREATE TRIGGER
+
+A **trigger** runs a [skill](/docs/skills) automatically whenever nodes of a given label change. Where a [live view](/docs/worldcypher/statements/live-views) lets you *observe* changes, a trigger lets you *act* on them inside the engine — enrich a node, synthesize an edge, recompute a derived value — with no external worker loop.
+
+```cypher
+CREATE TRIGGER tag_articles ON :Article WHEN CREATED RUN SKILL classify_topic
+```
+
+After this, every newly-created `:Article` runs the `classify_topic` skill.
+
+## Syntax
+
+```
+CREATE TRIGGER <name> ON :<Label> WHEN CREATED | MODIFIED | DELETED RUN [SKILL] <skill_name>
+```
+
+- **`ON :Label`** — the label whose mutations the trigger watches.
+- **`WHEN`** — the mutation event: `CREATED`, `MODIFIED`, or `DELETED`.
+- **`RUN [SKILL] <name>`** — the skill to execute (the `SKILL` keyword is optional).
+
+The skill runs in the same transaction boundary as the mutation, so any edges or values it produces carry the engine's provenance ([Causal Edges](/docs/concepts/causal-edges)).
+
+## Lifecycle
+
+```cypher
+DROP TRIGGER tag_articles
+```
+
+## Trigger vs. live view
+
+| Use | Statement |
+|---|---|
+| **Act** on a change (run a skill, write derived structure) | `CREATE TRIGGER … RUN SKILL …` |
+| **Observe** a change (stream deltas to a subscriber) | [`CREATE LIVE VIEW`](/docs/worldcypher/statements/live-views) |
+
+## See Also
+
+- [Skills](/docs/skills) — the four execution tiers a triggered skill can run at.
+- [CREATE LIVE VIEW](/docs/worldcypher/statements/live-views) — observe changes instead of acting on them.
+- [Programs](/docs/worldcypher/statements/create-program) — bundle skills + triggers into a declared, versioned unit.
+</content>
