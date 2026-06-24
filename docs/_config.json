@@ -624,8 +624,8 @@
               "order": 14
             },
             {
-              "slug": "migrations/v0.7-to-v0.8-lakehouse-fastpath",
-              "title": "v0.7 → v0.8 Lakehouse Fast-Path",
+              "slug": "guides/lakehouse-fast-path",
+              "title": "Lakehouse Fast-Path",
               "order": 15
             }
           ]
@@ -1220,8 +1220,8 @@
               "order": 1
             },
             {
-              "slug": "reference/extensions/triggered-write-back-views",
-              "title": "Triggered Write-Back Views",
+              "slug": "reference/extensions/reactive-write-back-views",
+              "title": "Reactive Write-Back Views",
               "order": 2
             },
             {
