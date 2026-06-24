@@ -474,3 +474,13 @@ Priority by gap size × flagship value. Verdicts from the 2026-06-23 coverage au
   **30 commits live** on ozinc/arcflow. Entire mission (Information Layer, Memory Engine, all
   EDGE surfaces, daemon contracts, executor SDK, sync, positioning, conformance refresh, family
   coverage, release-artifact contract) now public. KNOWN BLOCKER cleared.
+- **2026-06-24 (iter 24 — e2e install: greatness + oz-platform federation)** — Reviewed install
+  workflow to greatness + federated the full install chain. install/install.sh is strong (platform+libc
+  detect, /latest resolution, per-binary tarballs, SHA256 verify, attestation hint, PATH setup, helpful
+  errors). Fixed the one parity drift: SoT adopted the deployed copy's better line (release-binaries.yml
+  ref) → install-script-parity GREEN vs live staging.oz.com/install/arcflow (sha 176bbe69). Federated
+  DOC-OZ-2026-06-24-001 (e2e install contract) to oz-platform [pushed branch fed/doc-oz-e2e-install-2026-06-24]:
+  chain ownership (BUILD cuts releases / DOC owns install.sh SoT / OZ serves staging.oz.com via next.config.ts
+  rewrite), parity discipline, staging→prod cutover signal, InstallMatrix freshness (PAT-0043). The ONE
+  broken link is releases stale at v0.8.34 (fix in flight w/ BUILD, DOC-AF-2026-06-24-002) — e2e fully works
+  the moment 0.10.37 is cut. install-doc-keeper role active.
