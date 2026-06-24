@@ -477,6 +477,28 @@ try { db.query("INVALID") } catch (e) {
 db.close()
 ```
 
+### Sync, mesh & workspaces
+
+Beyond `open`/`execute`, the napi addon exposes the engine's sync, mesh, workspace, and live-view surfaces as direct methods. They all run in-process — no daemon required for the local operations.
+
+```typescript
+// Pull/push deltas between peers
+const manifest = db.sync_export()                 // local change manifest
+db.sync_import(peerDelta)                          // apply a peer's delta
+db.sync_ack(seq)                                   // advance the cursor
+const open = db.sync_conflicts()                   // unresolved conflicts
+```
+
+| Family | Methods |
+|---|---|
+| **Sync** | `sync_export` · `sync_import` · `sync_ack` · `sync_status` · `sync_pending` · `sync_conflicts` · `sync_manifest` · `sync_manifest_diff` · `sync_set_epoch` · `sync_snapshot_export` · `sync_snapshot_import` |
+| **Scopes** | `sync_add_scope` · `sync_remove_scope` · `sync_list_scopes` · `sync_export_scope` · `sync_scope_fingerprint` |
+| **Mesh** | `sync_discover` · `sync_announce` · `sync_mesh_health` · `sync_with_cloud` · `sync_update_peer` · `start_sync_daemon` |
+| **Workspaces** | `create_workspace` · `drop_workspace` · `list_workspaces` · `workspace_count` · `workspace_stats` |
+| **Live views** | `subscribe_live_view` · `unsubscribe_live_view` · `poll_live_view` · `poll_live_view_delta` · `list_live_views` · `live_view_status` |
+
+For the wire-protocol form of these (when driving the engine remotely over a socket), see [JSON-RPC v1](/docs/protocol/jsonrpc-v1).
+
 ### Install
 
 See the [Installation page](/installation) for the manifest-driven install
