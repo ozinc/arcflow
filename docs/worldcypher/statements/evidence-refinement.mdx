@@ -30,10 +30,11 @@ REPROCESS EDGES                       -- re-process all edges
 REPROCESS EDGES WHERE confidence < 0.5  -- only the low-confidence ones
 ```
 
-`REPROCESS EDGES [WHERE confidence < N]` re-runs evidence refinement across edges, optionally scoped by a confidence threshold — useful after new evidence lands or a skill changes, to recompute beliefs without touching graph structure.
+`REPROCESS EDGES [WHERE confidence < N]` re-runs the compiled skill patterns against current data and recomputes edge confidence — without touching graph structure. See **[REPROCESS EDGES](/docs/skills/reprocess-edges)** for the full treatment (when to use it, the skill re-run model, worked examples).
 
 ## See Also
 
+- [REPROCESS EDGES](/docs/skills/reprocess-edges) — the canonical guide to bulk re-refinement.
 - [Causal Edges](/docs/concepts/causal-edges) — confidence + observation class as first-class, provenance-backed evidence.
 - [CREATE DECAY POLICY](/docs/worldcypher/statements/decay-policy) — let confidence decay with age automatically.
 </content>
