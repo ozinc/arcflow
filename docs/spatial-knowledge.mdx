@@ -45,6 +45,16 @@ The R\*-tree uses **forced reinsertion on node overflow** — instead of immedia
 
 ## Spatial Primitives
 
+### Spatial entries
+
+The unit ArcFlow indexes is the **`SpatialEntry`** — the engine's spatial primitive. When a node is given a position, the engine materializes a `SpatialEntry` for it and stores it in the R\*-tree:
+
+```
+SpatialEntry { node_id, coords: [x, y, z], crs }
+```
+
+Three fields, ~32 bytes, cache-line friendly: the `node_id` it belongs to, native 3D `coords` (2D points set `z = 0.0`), and the coordinate reference system (`crs`). Every spatial query — K-nearest, radius, bounding-box, frustum — matches over `SpatialEntry` records and returns the **nodes** they point back to, so spatial results compose directly with graph traversal. This is ArcFlow's own term for a positioned thing in the world model; one node has at most one `SpatialEntry` per indexed position.
+
 ### Point Types
 
 ```cypher

@@ -484,3 +484,11 @@ Priority by gap size × flagship value. Verdicts from the 2026-06-23 coverage au
   rewrite), parity discipline, staging→prod cutover signal, InstallMatrix freshness (PAT-0043). The ONE
   broken link is releases stale at v0.8.34 (fix in flight w/ BUILD, DOC-AF-2026-06-24-002) — e2e fully works
   the moment 0.10.37 is cut. install-doc-keeper role active.
+- **2026-06-24 (iter 25 — spatial vocabulary: SpatialEntry not TEC)** — Operator: docs should use
+  SpatialEntry, not oz-platform's TEC. Findings: TEC = "Tracked-Entity-Class" (oz-platform perception/
+  framing domain term, NOT an engine concept) — confirmed 0 occurrences across docs/AGENTS/llms/README
+  (correctly absent). SpatialEntry = engine R*-tree primitive {node_id, coords[x,y,z], crs}
+  (spatial.rs:72), pub-but-engine-internal (not SDK-bound; dev surface is point()/Point3d/
+  algo.nearestNodes). Docs previously used vague "spatial entities". Added §"Spatial entries" to
+  docs/spatial-knowledge.mdx naming SpatialEntry as the engine's spatial primitive (real shape +
+  composes-with-graph). Recorded vocabulary rule in memory. No TEC scrub needed (already 0).
