@@ -2,7 +2,7 @@
 id: arcflow-docs-agent-presence
 type: agent-presence-registry
 title: "Active agent sessions in arcflow-docs"
-lastUpdated: 2026-05-18
+lastUpdated: 2026-06-29
 related:
   - "AF-broadcast-2026-05-16-federation-mechanics-proposal.md (the protocol this registry follows)"
 ---
@@ -15,6 +15,7 @@ Per the federation-mechanics proposal, each repo maintains a presence registry f
 
 | Session ID | Started | Scope (DDD bounded contexts) | Build owner | Status |
 |---|---|---|---|---|
+| doc-session-2026-06-29 | 2026-06-29 | Standing doc-alignment `/loop` (mission steady-state). Synced with arcflow-core federation 2026-06-29: inbox-zero confirmed, `PUBLIC-SURFACE.md` delta clean, WBF held on DEFER. **Fed-initialized the docs↔core channel** — hand-delivered docs-agent-online presence to core `mail/inbox/arcflow-docs/new/` + registered peer in core `.sync-state.json`. Watching inbound **NG-DOC** (NAMEGR naming-change waves: reactive→Trigger, proc-namespace unify, C-header/FFI, CLI flags). | **yes** | active |
 | doc-session-2026-05-18T12:37:00Z | 2026-05-18 12:37Z | Top-level docs surface — README.md, AGENTS.md, llms.txt, llms-full.txt, ARCFLOW_FOR_AI_AGENTS.md, LICENSE-CORE / LICENSE-FAQ, ROADMAP, CHANGELOG, REPO-SPLIT. Operator brief: "make sure all documentation is at top level, and also the README." Pulled-in from the substantial uncommitted working tree (~100+ files modified across 2026-05-17/18) — first task: triage what's safely committable. | **yes** | active |
 | ~~doc-session-2026-05-16T05:30:00Z~~ | 2026-05-16 05:30Z | Federation triage, 8-layer doctrine adoption, PAT-0050 brand-stack reframe, cookbook authoring, hero-page reframe | (was yes) | completed (rolled over; commits 7f2e868..06590f9 + 100+ uncommitted working-tree edits inherited by next session) |
 
