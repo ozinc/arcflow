@@ -8,7 +8,7 @@
  *   schemas/schema-snapshot.json
  *
  * The snapshot is derived from the engine's source of truth:
- *   arcflow/sdk/code-intelligence/src/schema.rs
+ *   arcflow/crates/code-intelligence/src/schema.rs
  *
  * Protocol:
  *   - When schema.rs changes in the engine repo, update schema-snapshot.json

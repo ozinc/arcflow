@@ -17,7 +17,7 @@ machine-readable API context for coding agents.
 | Belongs here | Belongs in the engine (internal) |
 |---|---|
 | TypeScript SDK (`sdk/src/`) | Rust engine source (`crates/`) |
-| Schema constants mirror (`sdk/src/code-intelligence.ts`) | Schema constants source of truth (`sdk/code-intelligence/src/schema.rs`) |
+| Schema constants mirror (`sdk/src/code-intelligence.ts`) | Schema constants source of truth (`crates/code-intelligence/src/schema.rs`) |
 | MCP npm package (`mcp/`) | MCP binary (`crates/wc-mcp/`) |
 | React hooks (`react/`) | GPU kernels, WAL, MVCC |
 | MDX documentation (`docs/`) | Roadmap + waves (`kanban/`) |
@@ -129,7 +129,7 @@ scan for them before editing any file, address them before closing a PR.
 | Documentation planning | ✓ `planning/` | |
 | SDK implementation planning | | ✓ `planning/` |
 | Engine primitive implementation | | ✓ |
-| Schema constants (source of truth) | | ✓ `sdk/code-intelligence/src/schema.rs` |
+| Schema constants (source of truth) | | ✓ `crates/code-intelligence/src/schema.rs` |
 | Benchmark results | | ✓ `kanban/`, `docs/benchmarks/` |
 | Wave / roadmap tracking | | ✓ `kanban/` |
 

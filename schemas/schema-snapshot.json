@@ -1,6 +1,6 @@
 {
-  "_comment": "Snapshot of arcflow/sdk/code-intelligence/src/schema.rs constants. Update this file whenever schema.rs changes in the engine repo, in the same PR that updates sdk/src/code-intelligence.ts. The check-schema-sync.js script validates that code-intelligence.ts matches this file.",
-  "_source": "arcflow/sdk/code-intelligence/src/schema.rs",
+  "_comment": "Snapshot of arcflow/crates/code-intelligence/src/schema.rs constants. Update this file whenever schema.rs changes in the engine repo, in the same PR that updates sdk/src/code-intelligence.ts. The check-schema-sync.js script validates that code-intelligence.ts matches this file.",
+  "_source": "arcflow/crates/code-intelligence/src/schema.rs",
   "_updated": "2026-04-16",
   "labels": [
     "File",
