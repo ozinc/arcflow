@@ -1044,7 +1044,7 @@ CREATE SKILL match_similar
     TIER NEURAL
 
 DROP SKILL summarize
-DROP REACTIVE SKILL match_similar
+DROP TRIGGER match_similar   -- a skill that runs on mutation is a TRIGGER (DROP REACTIVE SKILL is deprecated, removed v0.9.0)
 ```
 
 Skill kinds:
