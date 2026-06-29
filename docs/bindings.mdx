@@ -597,6 +597,8 @@ const char* err = arcflow_last_error();
 | `arcflow_last_error()` | Last error message (thread-local) |
 | `arcflow_version()` | ArcFlow version string. See [`reference/versioning`](/docs/reference/versioning) |
 
+The table above is the essential subset. The shipped `arcflow.h` declares the **complete** `arcflow_*` export surface — runtime/session lifecycle, sharded handles, pub/sub, virtual-partition registration, typed result accessors, and the `ARCFLOW_TYPE_*` / `TRANSPORT_LANE_*` constants. Header coverage is checked in CI against the engine's exported symbols, so `arcflow.h` never drifts from what the library actually exports — treat the header itself as the canonical, exhaustive C reference.
+
 ## C++
 
 Header-only RAII wrapper over the C ABI. Include `arcflow.hpp` and link with `-larcflow`.
