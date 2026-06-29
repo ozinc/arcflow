@@ -65,7 +65,6 @@ The roadmap is operator-curated, not algorithmic. If you have a strong case for 
 
 ## Related
 
-- [CHANGELOG.md](./CHANGELOG.md) — what's already shipped
 - [LICENSE-FAQ.md](./LICENSE-FAQ.md) — what's free, what's paid, what changes
 - [oz.com/pricing](https://staging.oz.com/pricing) — current pricing tiers
 - [docs/protocol/jsonrpc-v1.md](./docs/protocol/jsonrpc-v1.md) — stable wire-protocol surface (paid tiers don't change the protocol)

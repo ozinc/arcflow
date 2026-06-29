@@ -13,7 +13,7 @@ When an external surface is documented elsewhere (DDL, procedures, the SDK), thi
 
 ## Section 1 — `arcflow.worldgraph` module structure
 
-The World Graph layer is implemented as a single top-level module, `arcflow_core::worldgraph::*`, replacing the previously scattered store / mvcc / mmap-store / WAL modules. The decomposition follows two patterns.
+The World Graph layer is implemented as a single top-level module, `arcflow_core::worldgraph::*`. The decomposition follows two patterns.
 
 **Six bounded-capability submodules**, each owning *what* it does:
 

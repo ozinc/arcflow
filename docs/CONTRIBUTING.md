@@ -23,7 +23,7 @@ editing rules:
 | Layer | What it is | Editing model | Lives in |
 |---|---|---|---|
 | **Domain concepts** | Durable knowledge — mental model, decision rules, when-to-use, when-not-to-use, failure modes | Hand-authored, refined over time, owned by humans | `concepts/`, `guides/`, `tutorials/`, `recipes/`, `use-cases/`, top-level capability pages, `worldcypher/` syntax pages |
-| **Reference / intake** | Machine-derived facts — feature lists, conformance status, syntax specs, error codes | Generated from upstream engine data, **never hand-edited** | `reference/gql/`, `reference/extensions/`, `reference/gql-conformance.mdx`, `reference/tck.mdx`, `reference/extensions-regressions.mdx` |
+| **Reference / intake** | Machine-derived facts — feature lists, conformance status, syntax specs, error codes | Generated from upstream engine data, **never hand-edited** | `reference/gql/`, `reference/extensions/`, `reference/gql-conformance.mdx`, `reference/tck.mdx` |
 
 The reader doesn't see the split — they follow a clean Learn → Build → Reference
 path through the sidebar. Contributors *do* see the split, because it dictates
@@ -130,10 +130,9 @@ linter will flag it. Either register it or delete it.
 
 ## Generated content — the rules
 
-Pages under `docs/reference/gql/`, `docs/reference/extensions/`, and the three
-top-level pages (`gql-conformance.mdx`, `tck.mdx`,
-`extensions-regressions.mdx`) are **regenerated from upstream engine data on
-every engine release**.
+Pages under `docs/reference/gql/`, `docs/reference/extensions/`, and the two
+top-level pages (`gql-conformance.mdx`, `tck.mdx`) are **regenerated from
+upstream engine data**.
 
 - Source data: `docs/reference/data/` (vendored from the engine repo)
 - Generator: `scripts/generate-reference.py`

@@ -316,10 +316,10 @@ at **16 MiB** (`16 777 216` bytes). Override with
 `--max-line-bytes <N>`. Floor: `1024` (1 KiB) — anything below
 will reject normal JSON-RPC envelopes and is rejected at startup.
 
-Why this exists: the UDS reader was previously unbounded, so a
-buggy client streaming bytes without a terminating `\n` could
-OOM the daemon. The bounded path closes the connection with a
-typed error after the first oversized line:
+Why this exists: without a line bound, a buggy client streaming
+bytes without a terminating `\n` could OOM the daemon. The bounded
+path closes the connection with a typed error after the first
+oversized line:
 
 ```jsonc
 {"id": null, "result": null,
@@ -384,7 +384,7 @@ returns the slot rather than leaking it.
 
 ### Wire framing — `--frame`
 
-The UDS request/response stream defaults to **newline-delimited JSON-RPC** (`--frame=newline`) for backwards compatibility — every request is one `\n`-terminated line, every response is one `\n`-terminated line. Operators handling large payloads or binary blobs can opt in to length-prefix framing:
+The UDS request/response stream defaults to **newline-delimited JSON-RPC** (`--frame=newline`) — every request is one `\n`-terminated line, every response is one `\n`-terminated line. Operators handling large payloads or binary blobs can opt in to length-prefix framing:
 
 ```bash
 arcflow-daemon --socket /var/run/arcflow.sock --frame length-prefix-u32-le
@@ -841,7 +841,7 @@ Use **in-process** instead when:
     `wal_pending: ok (N)`, `wal_last_flush_us: ok (N)`) when every
     subsystem check passes; 503 + the same report listing failed
     checks otherwise. Failure here means *drain traffic*, not restart.
-  - `/healthz` is kept as a backward-compat alias for `/livez`.
+  - `/healthz` is an alias for `/livez`.
 - **Shutdown:** the daemon traps SIGINT and SIGTERM. After the
   signal:
   1. The accept loop stops (no new connections);

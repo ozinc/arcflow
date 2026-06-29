@@ -36,7 +36,7 @@ VERSION_PATTERN = re.compile(
 # Categories:
 #   (a) The actual SoT (SYNC.json)
 #   (b) Build-time consumers that pin literal versions (cookbook pyproject.toml)
-#   (c) Historical record (CHANGELOG, federation receipts)
+#   (c) Historical record (federation receipts)
 #   (d) Scripts that resolve runtime versions (install.sh — has example values)
 #   (e) Illustrative samples in prose (license clauses, attestation walkthroughs,
 #       sample JSON responses) — bumped on release; TODO(refactor): replace with
@@ -92,8 +92,6 @@ ALLOWLIST_PATTERNS = [
     re.compile(r"^examples/[^/]+/README\.md$"),
     # Federation receipts — immutable audit trail
     re.compile(r"^kanban/federation/"),
-    # Historical CHANGELOG
-    re.compile(r"^CHANGELOG\.md$"),
     # npm/yarn package locks contain unrelated third-party package versions
     re.compile(r"(^|/)package-lock\.json$"),
     re.compile(r"(^|/)yarn\.lock$"),

@@ -6,13 +6,11 @@ Inputs (vendored by scripts/sync-conformance-data.sh):
     docs/reference/data/gql-conformance.json
     docs/reference/data/arcflow-extensions-catalog.md
     docs/reference/data/conformance-state.json
-    docs/reference/data/extension-regression.md
     docs/reference/data/SYNC.json
 
 Outputs (regenerated each run, never hand-edited):
     docs/reference/gql-conformance.mdx     — dashboard
     docs/reference/tck.mdx                 — TCK summary
-    docs/reference/extensions-regressions.mdx
     docs/reference/gql/{slug}.mdx          — one per features.{key}
     docs/reference/extensions/{slug}.mdx   — one per ## section in catalog .md
 
@@ -75,7 +73,6 @@ def load_data() -> dict:
         "state": json.loads((DATA / "conformance-state.json").read_text()),
         "sync": json.loads((DATA / "SYNC.json").read_text()),
         "extensions_md": (DATA / "arcflow-extensions-catalog.md").read_text(),
-        "regression_md": (DATA / "extension-regression.md").read_text(),
     }
 
 
@@ -289,7 +286,7 @@ def render_extension(ext: ExtensionEntry, conformance: dict, sync: dict) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Dashboard / TCK / regression pages
+# Dashboard / TCK pages
 # ---------------------------------------------------------------------------
 
 def render_dashboard(conformance: dict, state: dict, extensions: list[ExtensionEntry], sync: dict) -> str:
@@ -378,9 +375,8 @@ def render_dashboard(conformance: dict, state: dict, extensions: list[ExtensionE
         "",
         "## Test corpus",
         "",
-        f"The full openCypher TCK ({state['tck_pass_rate']}) plus ArcFlow's regression "
-        "corpus runs on every engine release. See [TCK Results](/reference/tck) and "
-        "[Extension Regressions](/reference/extensions-regressions).",
+        f"The full openCypher TCK ({state['tck_pass_rate']}) passes. See "
+        "[TCK Results](/reference/tck).",
     ]
     body.append(provenance_footer(sync, "gql-conformance.json"))
     return "\n".join(fm) + "\n" + "\n".join(body)
@@ -433,30 +429,6 @@ def render_tck(state: dict, sync: dict) -> str:
     return "\n".join(fm) + "\n" + "\n".join(body)
 
 
-def render_regressions(regression_md: str, sync: dict) -> str:
-    fm = [
-        "---",
-        'title: "Extension Regressions"',
-        'description: "Per-release regression run for ArcFlow extensions beyond GQL — every documented extension has at least one regression scenario."',
-        'status: "stable"',
-        "generated: true",
-        "---",
-    ]
-    body = [
-        "",
-        GENERATED_HEADER,
-        "",
-        "# Extension Regressions",
-        "",
-        "Every documented ArcFlow extension has at least one regression scenario "
-        "that runs on each engine release. This page is the latest run.",
-        "",
-        regression_md.strip(),
-    ]
-    body.append(provenance_footer(sync, "extension-regression.md"))
-    return "\n".join(fm) + "\n" + "\n".join(body)
-
-
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -487,7 +459,6 @@ def update_config_managed_sections(out_root: Path, conformance: dict, extensions
                 "children": [
                     {"slug": "reference/gql-conformance", "title": "Conformance Dashboard", "order": 1},
                     {"slug": "reference/tck", "title": "openCypher TCK Results", "order": 2},
-                    {"slug": "reference/extensions-regressions", "title": "Extension Regressions", "order": 3},
                 ],
             },
             {
@@ -572,8 +543,6 @@ def write_all(out_root: Path, data: dict) -> dict:
     if write_if_changed(ref / "gql-conformance.mdx", render_dashboard(conformance, state, extensions, sync)):
         written["top"] += 1
     if write_if_changed(ref / "tck.mdx", render_tck(state, sync)):
-        written["top"] += 1
-    if write_if_changed(ref / "extensions-regressions.mdx", render_regressions(data["regression_md"], sync)):
         written["top"] += 1
 
     if update_config_managed_sections(out_root, conformance, extensions):

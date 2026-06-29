@@ -133,7 +133,6 @@ ArcFlow Core executes locally in Your process or on Your infrastructure. There i
 Material pricing or licensing changes apply **only to future versions** released after the announcement, and **only after at least 180 days of prior notice**, published in:
 
 - This LICENSE-CORE.md file (with the prior version preserved as `LICENSE-CORE-v1.0.md` etc. for historical reference);
-- The CHANGELOG.md release notes;
 - The [oz.com/pricing](https://staging.oz.com/pricing) page;
 - A direct notice email to organizations with active paid contracts (if any).
 

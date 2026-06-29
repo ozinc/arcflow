@@ -594,11 +594,6 @@
               "order": 8
             },
             {
-              "slug": "guides/migration",
-              "title": "Migrate from Cypher / Neo4j",
-              "order": 9
-            },
-            {
               "slug": "guides/sql-to-gql",
               "title": "From SQL to GQL",
               "order": 10
@@ -868,11 +863,6 @@
               "slug": "reference/conformance/tck",
               "title": "openCypher TCK",
               "order": 2
-            },
-            {
-              "slug": "reference/conformance/regressions",
-              "title": "Extension Regressions",
-              "order": 3
             }
           ]
         }
@@ -896,11 +886,6 @@
               "slug": "reference/tck",
               "title": "openCypher TCK Results",
               "order": 2
-            },
-            {
-              "slug": "reference/extensions-regressions",
-              "title": "Extension Regressions",
-              "order": 3
             }
           ]
         },

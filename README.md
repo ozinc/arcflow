@@ -429,4 +429,4 @@ The ArcFlow Core runtime binary (fetched by `install/install.sh` from GitHub Rel
 
 ## Status
 
-Alpha. Substantive v0.8.x line — the World Graph substrate has shipped, with the Behavior Engine (TRIGGER + SKILL + PROGRAM) and Algorithm Library (40+ primitives) actively expanding. v1.0 reserved for first production-ready release. See [`ROADMAP.md`](ROADMAP.md), [`CHANGELOG.md`](CHANGELOG.md), and the [live install matrix](https://staging.oz.com/docs/installation) for what works today.
+Alpha. The World Graph substrate, the Behavior Engine (TRIGGER + SKILL + PROGRAM), and the Algorithm Library (40+ primitives) are in active development. v1.0 is reserved for the first production-ready release. See [`ROADMAP.md`](ROADMAP.md) and the [live install matrix](https://staging.oz.com/docs/installation) for what works today.

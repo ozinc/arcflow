@@ -341,9 +341,8 @@ MATCH (n:Person) RETURN n.name ORDER BY n.age DESC LIMIT 10
 
 ### Temporal
 ```cypher
--- AS OF seq N — preferred form (WAL-based exact snapshot by mutation sequence)
+-- AS OF seq N — WAL-based exact snapshot by mutation sequence
 MATCH (n:Person) AS OF seq 42 RETURN n.name
--- AS OF <timestamp> is deprecated; use AS OF seq N
 ```
 
 ### Indexes
@@ -633,7 +632,7 @@ CREATE SKILL match_similar
     TIER NEURAL
 
 DROP SKILL summarize
-DROP TRIGGER match_similar   -- a skill that runs on mutation is a TRIGGER (DROP REACTIVE SKILL is deprecated, removed v0.9.0)
+DROP TRIGGER match_similar   -- a skill that runs on mutation is a TRIGGER
 
 -- Query-time skill invocation
 PROCESS NODE (n:Document)

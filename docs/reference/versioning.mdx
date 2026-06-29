@@ -79,8 +79,8 @@ Lake, World Graph, Query Engine, Live Surface, Event Bus, Behavior
 Engine, Algorithm Library). SemVer is keyed to **which layer's surface
 changes**, not to commit count or release cadence.
 
-- **Patch (`0.7.1 → 0.8.0`)** — bug fix where the documented behavior was wrong. No surface change.
-- **Minor (`0.7.x → 0.8.0`)** — additive surface in any layer (new `CALL` procedure, new algorithm, new RPC method, new release artifact). Existing surface unchanged. The `0.7.x → 0.8.0` cut shipped the **World Store** substrate — Iceberg-shaped manifests, the `lake://` URI scheme, virtual labels, `register_virtual_partition` FFI, the `ResidencyClass` + `TierBudget` vocabulary, and the ARC1 hot-tier format — and the **World Graph** typed-entity layer that sits as a view over the Store.
+- **Patch (`0.8.1 → 0.8.2`)** — bug fix where the documented behavior was wrong. No surface change.
+- **Minor (`0.8.x → 0.9.0`)** — additive surface in any layer (new `CALL` procedure, new algorithm, new RPC method, new release artifact). Existing surface unchanged.
 - **Major (`0.x.y → 1.0.0` or later)** — breaking change to a contract-bearing layer (query semantics, payload shape, FFI ABI, on-disk format, RPC signature). Requires migration dossier + pre-release `-rc.N` sequence + operator sign-off.
 - **Pre-release (`X.Y.Z-rc.N`)** — sequenced ship-gate validation against consumers before a major bump or large-minor cut.
 
@@ -144,11 +144,8 @@ curl -fsSL https://staging.oz.com/install/arcflow | sh
    literal.
 3. **When pinning dependencies in cookbooks / project templates**, match
    the value in `release-matrix.json` `engine.version`.
-4. **`0.x` is alpha, not a downgrade.** Earlier `1.x` line numbers
-   were a labelling convention; every fix and feature shipped under
-   `1.x` is present in the current `0.x` release. The convention
-   reversal makes the alpha boundary unambiguous; `1.0` is reserved
-   for the first production-ready release.
+4. **`0.x` is alpha.** `1.0` is reserved for the first
+   production-ready release.
 
 ## See also
 

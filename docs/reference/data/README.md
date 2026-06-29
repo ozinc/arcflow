@@ -11,7 +11,6 @@ when the engine ships a new release.
 | `gql-conformance.json` | `docs/conformance/gql-conformance.json` | `reference/gql-conformance.mdx`, `reference/gql/*.mdx` |
 | `arcflow-extensions-catalog.md` | `docs/conformance/arcflow-extensions-catalog.md` | `reference/extensions/*.mdx` |
 | `conformance-state.json` | `conformance/state.json` | `reference/tck.mdx` |
-| `extension-regression.md` | `conformance/reports/extensions.md` | `reference/extensions-regressions.mdx` |
 | `SYNC.json` | (synthesized at sync time) | provenance footer on every generated page |
 
 ## Why mirror instead of fetch-at-build
