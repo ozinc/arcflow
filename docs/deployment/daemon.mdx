@@ -626,7 +626,7 @@ Routes:
 |---|---|
 | `GET /livez` | Liveness probe — 200 OK + `ok\n`; 503 only mid-shutdown |
 | `GET /readyz` | Readiness probe — 200 OK + per-check report; 503 if any check fails |
-| `GET /healthz` | Backward-compat alias for `/livez` |
+| `GET /healthz` | Alias for `/livez` |
 | `GET /metrics` | Prometheus exposition (counters + gauges) |
 | `GET /v1/sse/events?consumer=…&topic=…&poll_ms=…` | SSE stream of pub/sub events for a consumer |
 | `GET /v1/sse/group?group=…&member=…&topic=…&poll_ms=…` | SSE stream for a queue-group member |

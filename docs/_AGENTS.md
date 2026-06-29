@@ -55,7 +55,7 @@ status: stable | beta | deprecated                                         # OPT
 ---
 ```
 
-**Deprecated** (do not use; deleted at restructure time): `section:` (config is now sole SSOT).
+**Do not use** `section:` — `_config.json` is the sole SSOT for placement/ordering.
 
 ## Boundary case ledger
 

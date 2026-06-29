@@ -80,7 +80,8 @@ arcflow --data-dir ./graph --http 8080
 
 - `POST /query` — execute WorldCypher queries
 - `GET /status` — engine metadata
-- `GET /health` — readiness probe
+- `GET /livez` — liveness probe
+- `GET /readyz` — readiness probe
 
 ### TCP Server
 
