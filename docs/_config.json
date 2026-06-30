@@ -198,6 +198,16 @@
           "slug": "concepts/typed-id-contract",
           "title": "Typed ID Contract",
           "order": 18
+        },
+        {
+          "slug": "concepts/information-layer",
+          "title": "The Information Layer",
+          "order": 19
+        },
+        {
+          "slug": "concepts/memory",
+          "title": "The Memory Engine",
+          "order": 20
         }
       ]
     },
@@ -264,6 +274,51 @@
               "slug": "worldcypher/statements/remove",
               "title": "REMOVE",
               "order": 9
+            },
+            {
+              "slug": "worldcypher/query-syntax/asof-join",
+              "title": "ASOF JOIN",
+              "order": 10
+            },
+            {
+              "slug": "worldcypher/statements/create-node-label",
+              "title": "CREATE NODE LABEL",
+              "order": 11
+            },
+            {
+              "slug": "worldcypher/statements/create-program",
+              "title": "CREATE PROGRAM",
+              "order": 12
+            },
+            {
+              "slug": "worldcypher/statements/trigger",
+              "title": "CREATE TRIGGER",
+              "order": 13
+            },
+            {
+              "slug": "worldcypher/statements/live-views",
+              "title": "CREATE LIVE VIEW",
+              "order": 14
+            },
+            {
+              "slug": "worldcypher/statements/window",
+              "title": "CREATE WINDOW",
+              "order": 15
+            },
+            {
+              "slug": "worldcypher/statements/decay-policy",
+              "title": "CREATE DECAY POLICY",
+              "order": 16
+            },
+            {
+              "slug": "worldcypher/statements/evidence-refinement",
+              "title": "REFINE EDGE / REPROCESS EDGES",
+              "order": 17
+            },
+            {
+              "slug": "worldcypher/statements/session-and-transactions",
+              "title": "Sessions & Transactions",
+              "order": 18
             }
           ]
         },
@@ -290,6 +345,11 @@
               "slug": "worldcypher/composition/case",
               "title": "CASE",
               "order": 4
+            },
+            {
+              "slug": "worldcypher/composition/foreach",
+              "title": "FOREACH",
+              "order": 5
             }
           ]
         },
@@ -622,6 +682,11 @@
               "slug": "guides/lakehouse-fast-path",
               "title": "Lakehouse Fast-Path",
               "order": 15
+            },
+            {
+              "slug": "guides/python-executor-sdk",
+              "title": "Python Executor SDK",
+              "order": 16
             }
           ]
         },
