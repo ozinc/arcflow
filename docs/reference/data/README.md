@@ -15,7 +15,7 @@ when the engine ships a new release.
 
 ## Why mirror instead of fetch-at-build
 
-These files are public conformance claims (e.g. "3,881/3,881 TCK"). Vendoring
+These files are public conformance claims (e.g. "2,192/3,881 TCK"). Vendoring
 them keeps the full history auditable in `git log`, so a skeptical reader can
 verify which version of the engine produced which claim. Fetch-at-build hides
 that lineage.

@@ -10,14 +10,14 @@ playground:
 
 # GQL Reference
 
-ArcFlow implements [ISO/IEC 39075 GQL](https://www.iso.org/standard/76120.html) as **WorldCypher** — its native query dialect. All standard GQL syntax works as specified. WorldCypher adds extensions for temporal snapshots, live queries, confidence scoring, and graph algorithms that GQL leaves to implementations.
+ArcFlow implements [ISO/IEC 39075 GQL](https://www.iso.org/standard/76120.html) as **WorldCypher** — its native query dialect. Conformance is measured against the openCypher TCK (~56% strict canonical today, hardening in progress — see below). WorldCypher adds extensions for temporal snapshots, live queries, confidence scoring, and graph algorithms that GQL leaves to implementations.
 
 **Standards conformance:**
 
 | Standard | Status |
 |---|---|
-| openCypher TCK | ✅ 100% — 3881/3881 scenarios pass |
-| ISO GQL V2 (ISO/IEC 39075) | ✅ Full — GQLSTATUS codes, `IS LABELED`, `ELEMENT_ID`, `NEXT WHEN/THEN/ELSE/END`, constraints, transaction control |
+| openCypher TCK | 🔧 ~56% strict canonical — 2192/3881 (release 2024.3, measured 2026-06-29; hardening under I-INIT-GQLC) |
+| ISO GQL V2 (ISO/IEC 39075) | ✅ Substantial — GQLSTATUS codes, `IS LABELED`, `ELEMENT_ID`, `NEXT WHEN/THEN/ELSE/END`, constraints, transaction control |
 
 For a narrative overview of GQL lineage, how WorldCypher relates to Cypher and ISO GQL, and a comparison with other implementations, see the [GQL Conformance](./gql-conformance) page.
 

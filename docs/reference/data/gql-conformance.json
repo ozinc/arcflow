@@ -2,7 +2,7 @@
   "standard": "ISO/IEC 39075:2024",
   "standard_version": "GQL Edition 1 + V2 accepted proposals",
   "implementation": "ArcFlow WorldCypher",
-  "conformance_level": "full",
+  "conformance_level": "partial",
   "initiative": "I-INIT-0088",
   "initiative_status": "CLOSED",
   "phases": {
@@ -108,7 +108,7 @@
     "arcflow_graphrag_procedure": { "status": "SUPPORTED", "since": "EXT-0001", "note": "CALL arcflow.graphrag(query, k) — GraphRAG retrieval pipeline" }
   },
   "known_gaps": {},
-  "tck_pass_rate": "3881/3881",
+  "tck_pass_rate": "2192/3881",
   "test_counts": {
     "total_tests": 2580,
     "gql_0002_tests": 9,

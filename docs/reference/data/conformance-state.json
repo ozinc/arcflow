@@ -1,9 +1,9 @@
 {
   "pass_baseline": 1531,
-  "pass_current": 3881,
+  "pass_current": 2192,
   "attempted": ["Temporal9", "Temporal3", "Temporal1", "Temporal10", "Temporal2", "List1", "GQLC-0001", "GQLC-0002", "GQLC-0003", "GQLC-0004", "GQLC-0005", "GQLC-0006", "GQLC-0007", "GQLC-0008", "GQLC-0009", "GQLC-0010", "GQLC-0011", "GQLC-0012", "GQLC-0013"],
   "completed": ["GQLC-0001", "GQLC-0002", "GQLC-0003", "GQLC-0004", "GQLC-0005", "GQLC-0006", "GQLC-0007", "GQLC-0008", "GQLC-0009", "GQLC-0010", "GQLC-0011", "GQLC-0012", "GQLC-0013"],
   "iteration": 7,
-  "tck_pass_rate": "3881/3881",
-  "full_conformance_date": "2026-04-11"
+  "tck_pass_rate": "2192/3881",
+  "full_conformance_date": null
 }

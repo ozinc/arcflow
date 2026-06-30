@@ -209,7 +209,7 @@ plus __snapshot.toml. Two projections of the same snapshot are byte-identical. `
 returns `{snapshot_uri, node_count, edge_count, layout_version}`. Agents reason about
 the world model with `rg`, `grep`, `cat`, `jq` — no MCP, no Cypher. See docs/cli/project.mdx.
 
-## GQL / WorldCypher (ISO/IEC 39075 GQL) — 100% openCypher TCK (3881/3881)
+## GQL / WorldCypher (ISO/IEC 39075 GQL) — ~56% openCypher TCK strict canonical (2192/3881, measured 2026-06-29)
 
 CREATE, MATCH, MERGE, SET, DELETE, DETACH DELETE, REMOVE,
 WITH, UNWIND, WHERE, RETURN, ORDER BY, LIMIT,

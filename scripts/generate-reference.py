@@ -278,7 +278,7 @@ def render_extension(ext: ExtensionEntry, conformance: dict, sync: dict) -> str:
         "## Standards relationship",
         "",
         f"This is an extension to {conformance['standard']} ({conformance['standard_version']}). "
-        "It does not affect the engine's full conformance to the ISO standard — "
+        "It does not affect the engine's conformance to the ISO standard — "
         "the extension surface is opt-in syntax that GQL leaves to implementations.",
     ]
     body.append(provenance_footer(sync, "arcflow-extensions-catalog.md"))
@@ -317,7 +317,7 @@ def render_dashboard(conformance: dict, state: dict, extensions: list[ExtensionE
         "",
         "| Surface | Result | Detail |",
         "|---|---|---|",
-        f"| openCypher TCK | **{state['tck_pass_rate']}** | release 2024.3, full suite |",
+        f"| openCypher TCK | **{state['tck_pass_rate']}** | release 2024.3, ~56% strict canonical |",
         f"| ISO GQL features | **{supported}/{total}** supported | {unsupported} unsupported (vendor choice) |",
         f"| ArcFlow extensions | **{len(extensions)} documented** | beyond-standard surface |",
         "",
@@ -375,8 +375,9 @@ def render_dashboard(conformance: dict, state: dict, extensions: list[ExtensionE
         "",
         "## Test corpus",
         "",
-        f"The full openCypher TCK ({state['tck_pass_rate']}) passes. See "
-        "[TCK Results](/reference/tck).",
+        f"ArcFlow passes {state['tck_pass_rate']} openCypher TCK scenarios (~56% "
+        "strict canonical, release 2024.3); hardening is in progress under I-INIT-GQLC. "
+        "See [TCK Results](/reference/tck).",
     ]
     body.append(provenance_footer(sync, "gql-conformance.json"))
     return "\n".join(fm) + "\n" + "\n".join(body)
@@ -401,14 +402,16 @@ def render_tck(state: dict, sync: dict) -> str:
         "",
         f"**Pass rate:** `{pass_rate}` (openCypher TCK release 2024.3)  ",
         f"**Iteration:** `{state.get('iteration', 'n/a')}`  ",
-        f"**Full conformance achieved:** `{state.get('full_conformance_date', 'n/a')}`",
+        "**Conformance level:** Partial (measured) — hardening in progress under I-INIT-GQLC",
         "",
         "## What this means",
         "",
-        "Every TCK scenario in the upstream openCypher conformance suite executes "
-        "against ArcFlow and produces the expected result. The TCK is the "
-        "industry-standard cross-vendor compatibility surface for Cypher; passing "
-        "the full suite is the strongest possible behavioural-conformance claim.",
+        f"ArcFlow passes **{pass_rate}** openCypher TCK scenarios at strict canonical "
+        "equivalence (~56%, release 2024.3, measured 2026-06-29). Remaining scenarios fail "
+        "on result values (~16%), error type/code (~11%), result shape (~8%), error phase "
+        "(~7.5%), and ordering (~0.6%). Conformance hardening is in active progress under "
+        "I-INIT-GQLC. The TCK is the industry-standard cross-vendor compatibility surface "
+        "for Cypher.",
         "",
         "## Phases completed",
         "",

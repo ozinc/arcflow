@@ -1,19 +1,19 @@
 ---
 title: "GQL Conformance"
 kind: reference
-description: "ArcFlow conformance to ISO/IEC 39075:2024 GQL — 57/60 features supported, 3881/3881 openCypher TCK, 13 extensions documented."
+description: "ArcFlow conformance to ISO/IEC 39075:2024 GQL — 57/60 features supported, ~56% openCypher TCK (2192/3881 strict canonical), 13 extensions documented."
 status: "stable"
 ---
 
 # GQL Conformance
 
-ArcFlow implements **ISO/IEC 39075:2024** (GQL Edition 1 + V2 accepted proposals) at conformance level **full**.
+ArcFlow implements **ISO/IEC 39075:2024** (GQL Edition 1 + V2 accepted proposals) at conformance level **partial (measured)** — a substantial GQL/openCypher surface with hardening in active progress under I-INIT-GQLC.
 
 ## At a glance
 
 | | Surface | Result | Detail |
 |:-:|---|---|---|
-| ✅ | openCypher TCK | **3881 / 3881** | release 2024.3, full suite |
+| 🔧 | openCypher TCK | **2192 / 3881** | ~56% strict canonical, release 2024.3 (measured 2026-06-29) |
 | 🟡 | ISO GQL features | **57 / 60** supported | 3 unsupported (vendor choice — see below) |
 | 🔌 | ArcFlow extensions | **13 documented** | beyond-standard surface; opt-in only |
 | 🏷️ | Engine version | `0.8.0` | current release |
@@ -74,7 +74,7 @@ ISO GQL allows implementations to opt out of specific features. ArcFlow's 3 unsu
 | ❌ | `gql_directories` | Multi-graph directories deferred; ArcFlow targets single-graph-per-store deployments |
 | ❌ | `gql_flagger` | GQL flagger linter not provided; ArcFlow's own parser carries equivalent diagnostics through GQLSTATUS codes |
 
-The other **57 / 60** ISO features are supported at conformance level full. The full feature inventory is verified continuously by the regression suite (see TCK + Regressions below).
+The other **57 / 60** ISO features are supported. Behavioral conformance is measured continuously against the openCypher TCK (see TCK below).
 
 ## 🔌 ArcFlow extensions beyond GQL
 
@@ -96,4 +96,4 @@ Extensions do not affect ISO conformance — they are opt-in syntax the standard
 
 ## 🧪 Test corpus
 
-The full openCypher TCK (3881/3881) passes. See [openCypher TCK Results](/reference/conformance/tck).
+ArcFlow passes 2,192 of 3,881 openCypher TCK scenarios (~56% strict canonical, release 2024.3, measured 2026-06-29); conformance hardening is in progress under I-INIT-GQLC. See [openCypher TCK Results](/reference/conformance/tck).

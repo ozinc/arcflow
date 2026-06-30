@@ -45,7 +45,7 @@ One engine for graphs, vectors, full-text search, algorithms, time-series, live 
 | CLI binary | `arcflow query '...'` — shell-native agents (Claude Code, Codex, Gemini CLI) |
 | MCP server | `npx arcflow-mcp` — cloud chat UIs only (Claude.ai and similar, no local shell) |
 | Typed results | Numbers are numbers, not strings |
-| openCypher conformance | **100%** (3881/3881 TCK) |
+| openCypher conformance | **~56%** strict canonical (2192/3881 TCK, measured 2026-06-29) |
 | ISO GQL | **39075:2024 (Edition 1) + accepted V2 proposals** |
 | Workflow engine | **Built-in** (graph-native durable workflows) |
 | Skills | `CREATE SKILL summarize FROM PROMPT '…' TIER LLM` — compiled units of computation; `PROCESS NODE` invokes them, `CALL arcflow.skills()` lists them |
@@ -423,7 +423,7 @@ projections is a true graph-state diff.
 
 ## GQL / WorldCypher — ArcFlow's ISO GQL dialect
 
-**Conformance:** 100% openCypher TCK (3881/3881 scenarios). Implements ISO/IEC 39075:2024 (GQL Edition 1) plus accepted V2 proposals.
+**Conformance:** ~56% openCypher TCK strict canonical (2192/3881 scenarios, measured 2026-06-29; hardening under I-INIT-GQLC). Implements ISO/IEC 39075:2024 (GQL Edition 1) plus accepted V2 proposals.
 
 ### CRUD
 ```cypher

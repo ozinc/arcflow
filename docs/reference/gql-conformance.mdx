@@ -1,6 +1,6 @@
 ---
 title: "GQL Conformance"
-description: "ArcFlow conformance to ISO/IEC 39075:2024 GQL — 57/60 features supported, 3881/3881 openCypher TCK, 13 extensions documented."
+description: "ArcFlow conformance to ISO/IEC 39075:2024 GQL — 57/60 features supported, 2192/3881 openCypher TCK, 13 extensions documented."
 status: "stable"
 generated: true
 ---
@@ -9,13 +9,13 @@ generated: true
 
 # GQL Conformance
 
-ArcFlow implements **ISO/IEC 39075:2024** (GQL Edition 1 + V2 accepted proposals) at conformance level **full**.
+ArcFlow implements **ISO/IEC 39075:2024** (GQL Edition 1 + V2 accepted proposals) at conformance level **partial**.
 
 ## At a glance
 
 | Surface | Result | Detail |
 |---|---|---|
-| openCypher TCK | **3881/3881** | release 2024.3, full suite |
+| openCypher TCK | **2192/3881** | release 2024.3, ~56% strict canonical |
 | ISO GQL features | **57/60** supported | 3 unsupported (vendor choice) |
 | ArcFlow extensions | **13 documented** | beyond-standard surface |
 
@@ -77,7 +77,7 @@ Extensions do not affect ISO conformance — they are opt-in syntax the standard
 
 ## Test corpus
 
-The full openCypher TCK (3881/3881) passes. See [TCK Results](/reference/tck).
+ArcFlow passes 2192/3881 openCypher TCK scenarios (~56% strict canonical, release 2024.3); hardening is in progress under I-INIT-GQLC. See [TCK Results](/reference/tck).
 
 ---
 

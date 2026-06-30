@@ -1,6 +1,6 @@
 ---
 title: "TCK Results"
-description: "openCypher TCK pass rate: 3881/3881. Generated from conformance/state.json on each engine release."
+description: "openCypher TCK pass rate: 2192/3881. Generated from conformance/state.json on each engine release."
 status: "stable"
 generated: true
 ---
@@ -9,13 +9,13 @@ generated: true
 
 # openCypher TCK Results
 
-**Pass rate:** `3881/3881` (openCypher TCK release 2024.3)  
+**Pass rate:** `2192/3881` (openCypher TCK release 2024.3)  
 **Iteration:** `7`  
-**Full conformance achieved:** `2026-04-11`
+**Conformance level:** Partial (measured) — hardening in progress under I-INIT-GQLC
 
 ## What this means
 
-Every TCK scenario in the upstream openCypher conformance suite executes against ArcFlow and produces the expected result. The TCK is the industry-standard cross-vendor compatibility surface for Cypher; passing the full suite is the strongest possible behavioural-conformance claim.
+ArcFlow passes **2192/3881** openCypher TCK scenarios at strict canonical equivalence (~56%, release 2024.3, measured 2026-06-29). Remaining scenarios fail on result values (~16%), error type/code (~11%), result shape (~8%), error phase (~7.5%), and ordering (~0.6%). Conformance hardening is in active progress under I-INIT-GQLC. The TCK is the industry-standard cross-vendor compatibility surface for Cypher.
 
 ## Phases completed
 

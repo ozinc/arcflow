@@ -15,7 +15,7 @@ The Query Engine is what makes the storage layers feel like a single graph. An a
 
 | Surface | What it does |
 |---|---|
-| Parser | openCypher TCK + ISO/IEC 39075 GQL syntax. 100% TCK conformance. |
+| Parser | openCypher TCK + ISO/IEC 39075 GQL syntax. ~56% strict-canonical TCK conformance (hardening in progress). |
 | Planner | Predicate pushdown, projection elimination, virtual-label rewriting, join ordering. |
 | Executor | Mixed in-memory + columnar execution; SIMD on Owned tables, Arrow Compute on Lake partitions. |
 | Cost model | Per-column scan rates, CSR traversal cost, vector-index probe cost. |
