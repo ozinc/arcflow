@@ -90,8 +90,9 @@ ALLOWLIST_PATTERNS = [
     # Cookbook README "Pins:" header line — currently bumped by hand each release
     # TODO(refactor): replace with manifest-render at MDX render time on oz-platform side.
     re.compile(r"^examples/[^/]+/README\.md$"),
-    # Federation receipts — immutable audit trail
-    re.compile(r"^kanban/federation/"),
+    # Internal planning / roadmap / federation receipts — not a customer-facing
+    # version surface (per CLAUDE.md, all of kanban/ is internal planning).
+    re.compile(r"^kanban/"),
     # npm/yarn package locks contain unrelated third-party package versions
     re.compile(r"(^|/)package-lock\.json$"),
     re.compile(r"(^|/)yarn\.lock$"),
